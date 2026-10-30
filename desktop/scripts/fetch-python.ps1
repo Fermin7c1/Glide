@@ -15,7 +15,7 @@
 # download the file once and put its SHA-256 (Get-FileHash) here.
 param(
   [string]$Version = "3.12.10",
-  [string[]]$Packages = @("numpy==2.5.3"),
+  [string[]]$Packages = @("numpy==2.5.4"),
   [string[]]$Models = @()
 )
 $ErrorActionPreference = "Stop"
