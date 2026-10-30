@@ -103,7 +103,7 @@ WoW with the Glide addon -> pixel strip -> engine (capture -> decode -> state ->
 | `companion/app.py` | The engine. It captures the strip, tracks state and XP/hour, runs the rules, calls the AI model, and speaks. |
 | `start-glide.cmd` | Starts the engine from a source checkout (the development path). It also archives SavedVariables and the quest cache in the background, so no separate window is needed (`--no-archive` turns this off). |
 
-**Addon version check.** The engine reads the addon version it expects from `addon\Glide\Glide.toc` (0.16.0 today) and compares it with two others:
+**Addon version check.** The engine reads the addon version it expects from `addon\Glide\Glide.toc` and compares it with two others:
 
 - the copy installed in the game's AddOns folder;
 - the version the running addon reports.

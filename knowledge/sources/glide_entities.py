@@ -5,8 +5,8 @@ creature, creature_spawn, gameobject, gameobject_spawn, trainer (from creature s
 "Warrior Trainer" / "Journeyman Tailor" plus recorder TRAINER_SHOW visits), poi kind 'inn' (Innkeeper).
 
 Provenance: glide.db's `sources` becomes `src`, `field_sources` becomes quest.field_src (json), conf is
-the best source's confidence (store.SOURCE_CONF: wdb 1.0, obs 0.95, scan 0.9, frc 0.8, whd/whz 0.7,
-fg 0.6, frq 0.5). Rows that only exist because the ID sweep found them (the server answered nothing)
+the best source's confidence (store.SOURCE_CONF: wdb 1.0, obs 0.95, scan 0.9,
+fg 0.6). Rows that only exist because the ID sweep found them (the server answered nothing)
 get src 'scan' and conf 0.3.
 
 Extra fields read straight from the client quest cache (data/archive/wdb/*/questcache.wdb, plus the
@@ -35,7 +35,6 @@ OBJ_TYPES = {"monster": ("kill", "npc"), "kill": ("kill", "npc"), "item": ("coll
              "10": ("explore", "area"), "19": ("explore", "area"), "20": ("explore", "area")}
 INFO_TYPE = {1: "elite", 41: "pvp", 62: "raid", 81: "dungeon", 84: "escort", 85: "dungeon", 88: "raid", 89: "raid"}
 SIDES = {"alliance": "Alliance", "horde": "Horde", "both": "Both"}
-FRC_RANK = {"normal": 0, "elite": 1, "rareelite": 2, "worldboss": 3, "rare": 4}
 NEAR_CONF = 0.5          # recorder "near" sightings: the player's position when the nameplate showed up
 
 
@@ -97,7 +96,7 @@ def _map_row(um, name, parent, area_id, sm, how):
     cont = None
     if mtype in (0, 1):                 # cosmic / world maps span several instances
         how["world:null"] += 1
-    elif sm.get("map") is not None:     # instance (continent) id the UiMap is assigned to (forever-ref maps.js)
+    elif sm.get("map") is not None:     # instance (continent) id the UiMap is assigned to, when the seed has it
         cont = as_int(sm.get("map"))
         how["seed"] += 1
     elif parent in (1414, 1415):
@@ -144,14 +143,12 @@ def load_areas(conn, g):
 def load_entities(conn, g, seed):
     src = seed.get("sources") or {}
     member = {
-        "npc": [("fg", src.get("fg_npcs") or {}), ("frq", src.get("frq_npcs") or {}),
-                ("frc", (src.get("frc") or {}).get("npcs") or {}), ("whz", src.get("whz_npcpos") or {})],
-        "object": [("fg", src.get("fg_objects") or {}), ("frq", src.get("frq_objects") or {})],
+        "npc": [("fg", src.get("fg_npcs") or {})],
+        "object": [("fg", src.get("fg_objects") or {})],
     }
     obs_seen = collections.defaultdict(set)
     for kind, eid in g.execute("SELECT DISTINCT kind, entity_id FROM spawns WHERE source='obs'"):
         obs_seen[kind].add(eid)
-    frc_npcs = (src.get("frc") or {}).get("npcs") or {}
     crows, orows = [], []
     for r in g.execute("SELECT * FROM entities"):
         kind, eid = r["kind"], r["id"]
@@ -164,14 +161,11 @@ def load_entities(conn, g, seed):
         s = store.merge_src("", ",".join(tags))
         name = store.clean_name(r["name"])
         if kind == "npc":
-            fr = frc_npcs.get(str(eid)) or {}
             rank = r["rank"]
-            if rank is None and fr.get("cls") in FRC_RANK:
-                rank = FRC_RANK[fr["cls"]]
             friendly = r["friendly"] if r["friendly"] in ("A", "H", "AH") else None
             crows.append({"id": eid, "name": name, "subname": store.clean_name(r["subname"]),
                           "min_level": r["min_level"], "max_level": r["max_level"], "rank": rank,
-                          "type": fr.get("ct"), "reaction": None,    # 'AH' also tags hostile beasts: not a reaction
+                          "type": None, "reaction": None,    # 'AH' also tags hostile beasts: not a reaction
                           "friendly_to": friendly, "src": s or "fg", "conf": store.src_conf(s),
                           "verified": store.is_verified(s)})
         else:
@@ -272,11 +266,6 @@ def quest_type(info, whd_type, suggested, classes):
 
 
 def load_quests(conn, g, seed, wdbx):
-    whd_type = {}
-    for dung in (seed.get("sources") or {}).get("whd") or []:
-        for q in as_list(dung.get("quests")):
-            if isinstance(q, dict) and q.get("id") and q.get("type"):
-                whd_type[as_int(q["id"])] = as_int(q["type"])
     forever_new = set((seed.get("ids") or {}).get("forever_new") or [])
     rows, types = [], collections.Counter()
     for r in g.execute("SELECT * FROM quests"):
@@ -288,7 +277,7 @@ def load_quests(conn, g, seed, wdbx):
             src = "scan"                                   # in the ID sweep; the server answered nothing
         x = wdbx.get(qid) or {}
         info = x.get("info")
-        t = quest_type(info, whd_type.get(qid), None, r["classes"])
+        t = quest_type(info, None, None, r["classes"])
         types[t] += 1
         xp_src = fs.get("xp") if r["xp"] is not None else None
         rows.append({
@@ -348,13 +337,13 @@ def drop_source(item, quest_map, spawn_idx):
 
 def load_prereqs(conn, g, seed):
     src = seed.get("sources") or {}
-    fgq, frqq = src.get("fg_quests") or {}, src.get("frq_quests") or {}
+    fgq = src.get("fg_quests") or {}
 
     def tags(q, p, kind):
-        f, r = fgq.get(str(q)) or {}, frqq.get(str(q)) or {}
+        f = fgq.get(str(q)) or {}
         out = []
-        keys = {"pre": (("pre", "fg", f), ("pre", "frq", r)), "pregroup": (("pregroup", "fg", f), ("preg", "frq", r)),
-                "breadcrumb": (("breadcrumbs", "fg", f),), "exclusive": (("excl", "fg", f), ("excl", "frq", r))}
+        keys = {"pre": (("pre", "fg", f),), "pregroup": (("pregroup", "fg", f),),
+                "breadcrumb": (("breadcrumbs", "fg", f),), "exclusive": (("excl", "fg", f),)}
         for key, tag, rec in keys.get(kind, ()):
             if p in [as_int(x) for x in as_list(rec.get(key))]:
                 out.append(tag)
@@ -365,7 +354,7 @@ def load_prereqs(conn, g, seed):
         s = tags(q, p, kind) or "fg"
         rows[(q, p, kind)] = {"quest_id": q, "pre_id": p, "kind": kind, "src": s, "conf": store.src_conf(s)}
     n_excl = 0
-    for book, tag in ((fgq, "fg"), (frqq, "frq")):          # exclusive groups: not migrated by build_db
+    for book, tag in ((fgq, "fg"),):          # exclusive groups: not migrated by build_db
         for q, rec in book.items():
             for x in as_list(rec.get("excl")):
                 q_, x_ = as_int(q), as_int(x)

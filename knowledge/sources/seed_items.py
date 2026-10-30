@@ -6,10 +6,10 @@ prices and stats are not in any repo source; they stay NULL until a DB2 export (
 the recorder provides them. Never invented.
 
   item            fg names; ids seen at recorder vendors (buy_price = lowest observed price)
-  creature_drop   fg (quest-item sources, rate unknown), frc drops (forever-ref observed loot counts)
-  object_loot     fg / frc, same for game objects
-  vendor_item     fg (item vendors), frq (npc 'sells'), obs (recorder MERCHANT_SHOW, with price)
-  quest_reward    Wowhead seeds (whz: itemrewards/itemchoices; whd: rew/choice)
+  creature_drop   fg (quest-item sources, rate unknown)
+  object_loot     fg, same for game objects
+  vendor_item     fg (item vendors), obs (recorder MERCHANT_SHOW, with price)
+  quest_reward    none from the seed (the addon reads the reward choices live)
   poi vendor      recorder vendor positions
 """
 import json
@@ -69,12 +69,6 @@ def load(conn, ctx):
             for v in as_list(r.get("vendors")):
                 if as_int(v):
                     vendors.put((as_int(v), i), {"npc_id": as_int(v), "item_id": i, "src": "fg", "conf": 0.6})
-        for nid, r in (src.get("frq_npcs") or {}).items():
-            for i in as_list((r or {}).get("sells")):
-                if as_int(nid) and as_int(i):
-                    vendors.put((as_int(nid), as_int(i)), {"npc_id": as_int(nid), "item_id": as_int(i), "src": "frq", "conf": 0.5})
-        res["frc_drops"] = frc_drops((src.get("frc") or {}).get("drops") or {}, drops, oloot)
-        res["quest_reward_seed"] = seed_rewards(src, rewards)
     res["obs_vendors"] = obs_vendors(conn, ctx, items, vendors)
     store.insert_rows(conn, "item", list(items.rows.values()))
     store.insert_rows(conn, "creature_drop", list(drops.rows.values()))
@@ -84,58 +78,6 @@ def load(conn, ctx):
     res.update({"item": len(items.rows), "creature_drop": len(drops.rows), "object_loot": len(oloot.rows),
                 "vendor_item": len(vendors.rows), "quest_reward": len(rewards.rows)})
     return res
-
-
-def frc_drops(frc, drops, oloot):
-    """forever-ref observed loot: item -> [["Creature:<id>", <times the item dropped>, <times looted>, name]].
-    When the first count exceeds the second it is a stack quantity, so no rate is derived."""
-    n = 0
-    for iid, lst in frc.items():
-        i = as_int(iid)
-        for e in as_list(lst):
-            if not isinstance(e, list) or len(e) < 3 or not isinstance(e[0], str) or ":" not in e[0]:
-                continue
-            kind, _, sid = e[0].partition(":")
-            sid, got, looted = as_int(sid), as_int(e[1]), as_int(e[2])
-            if not sid or not i:
-                continue
-            rate = round(got / looted, 3) if looted and got is not None and got <= looted else None
-            conf = round(0.8 * (looted or 0) / ((looted or 0) + 5), 3)
-            row = {"item_id": i, "rate": rate, "n_obs": looted, "src": "frc", "conf": conf}
-            if kind == "Creature":
-                drops.put((sid, i), dict(row, creature_id=sid))
-            elif kind == "GameObject":
-                oloot.put((sid, i), dict(row, object_id=sid))
-            n += 1
-    return n
-
-
-def _pairs(v):
-    out = []
-    for e in as_list(v):
-        if isinstance(e, list) and e and as_int(e[0]):
-            out.append((as_int(e[0]), as_int(e[1]) if len(e) > 1 else None))
-        elif as_int(e):
-            out.append((as_int(e), None))
-    return out
-
-
-def seed_rewards(src, rewards):
-    n = 0
-    for r in src.get("whz_list") or []:
-        q = as_int(r.get("id"))
-        for key, choice in (("itemrewards", 0), ("itemchoices", 1)):
-            for item, qty in _pairs(r.get(key)):
-                rewards.put((q, item, choice), {"quest_id": q, "item_id": item, "qty": qty, "choice": choice, "src": "whz"})
-                n += 1
-    for dung in src.get("whd") or []:
-        for r in as_list(dung.get("quests")):
-            q = as_int((r or {}).get("id"))
-            for key, choice in (("rew", 0), ("choice", 1)):
-                for item, qty in _pairs((r or {}).get(key)):
-                    rewards.put((q, item, choice), {"quest_id": q, "item_id": item, "qty": qty, "choice": choice, "src": "whd"})
-                    n += 1
-    return n
 
 
 def obs_vendors(conn, ctx, items, vendors):

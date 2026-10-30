@@ -73,7 +73,7 @@ def fit_params(kb):
         med = statistics.median(best.values())
         out["analyzer.drop.default_rate"] = {
             "value": round(max(0.3, min(0.9, med)), 2), "status": "unverified",
-            "evidence": "median best known drop rate of %d quest collect objectives in the KB (fg/frc/obs mix): "
+            "evidence": "median best known drop rate of %d quest collect objectives in the KB (fg/obs mix): "
                         "%.2f" % (len(best), med)}
     return out
 

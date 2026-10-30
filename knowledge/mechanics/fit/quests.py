@@ -37,9 +37,7 @@ def quest_section(conn, live, seed, now):
         n_live += 1
     src = (seed or {}).get("sources", {})
     fg = src.get("fg_quests", {})
-    frc = (src.get("frc") or {}).get("quests", {})
-    whz = {str(r.get("id")): r for r in src.get("whz_list", [])}
-    cmp = {"glide_db": [0, 0, 0], "fg": [0, 0], "frc": [0, 0], "whz": [0, 0]}
+    cmp = {"glide_db": [0, 0, 0], "fg": [0, 0]}
     rounding_cases = [0, 0]
     over, mism = [], []
     for o in obs:
@@ -51,8 +49,7 @@ def quest_section(conn, live, seed, now):
             cmp["glide_db"][0] += 1
             cmp["glide_db"][1] += p == o["xp"]
             cmp["glide_db"][2] += xsrc == "obs"
-        for name, rec, lk, xk in (("fg", fg.get(str(o["quest"])), "lvl", "xp"), ("frc", frc.get(str(o["quest"])), "lv", "xp"),
-                                  ("whz", whz.get(str(o["quest"])), "level", "xp")):
+        for name, rec, lk, xk in (("fg", fg.get(str(o["quest"])), "lvl", "xp"),):
             if not rec or rec.get(xk) is None or not rec.get(lk):
                 continue
             p = X.quest_xp(rec[xk], rec[lk], o["pl"])

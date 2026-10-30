@@ -31,8 +31,8 @@ DEFAULT_KB = os.path.join(ROOT, "data", "kb.db")
 SCHEMA_VERSION = 1
 
 # Confidence by source tag (README "Source tags"); a row's conf defaults to its best source.
-SOURCE_CONF = {"wdb": 1.0, "db2": 1.0, "obs": 0.95, "scan": 0.9, "frc": 0.8, "rxp": 0.75, "whd": 0.7,
-               "whz": 0.7, "fg": 0.6, "classic": 0.6, "fit": 0.6, "frq": 0.5, "inf": 0.5, "note": 0.5}
+SOURCE_CONF = {"wdb": 1.0, "db2": 1.0, "obs": 0.95, "scan": 0.9, "rxp": 0.75, "fg": 0.6, "classic": 0.6,
+               "fit": 0.6, "inf": 0.5, "note": 0.5}
 # Tags that mean "seen on the Forever server by us" (verified=1).
 VERIFIED_TAGS = ("wdb", "obs", "scan")
 # RestedXP's addon folder inside the WoW client folder (config.json wow_dir), used when reference/rxp is absent.

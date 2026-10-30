@@ -8,10 +8,9 @@ Inputs (all optional except the seed):
   data/archive/sv/RXPGuides*.lua + live RXPGuides.lua   RestedXP's own guide cache (best effort)
 
 Field precedence for quests, highest first:
-  wdb (server) > recorder (seen in game) > scan (API) > forever-ref collect > Wowhead >
-  ForeverGuide > QuestieDB
+  wdb (server) > recorder (seen in game) > scan (API) > ForeverGuide (its data from Questie)
 Usage:
-  python build_db.py [--wow "D:\\Blizzard\\World of Warcraft\\_classic_beta_"] [--out data/glide.db]
+  python build_db.py [--wow "C:\\Games\\World of Warcraft\\_classic_beta_"] [--out data/glide.db]
 """
 import argparse, glob, gzip, json, os, re, sqlite3, sys, tempfile, time, zlib
 
@@ -24,7 +23,7 @@ from knowledge.sources import _lua  # noqa: E402  (the SavedVariables reader)
 from knowledge.values import as_float, as_int  # noqa: E402
 from wowfiles import wdb  # noqa: E402
 
-PRIORITY = ["frq", "fg", "whd", "whz", "frc", "scan", "obs", "wdb"]   # low -> high
+PRIORITY = ["fg", "scan", "obs", "wdb"]   # low -> high
 # Every repo module this builder runs (itself, what it imports, and config.json's reader with its imports): part of
 # the input fingerprint by content, so a change to any of them rebuilds glide.db and an app update that only copies
 # them again does not. tests/test_build_install.py checks the list against what an import really loads.
@@ -184,9 +183,6 @@ def side_from_races(r):
     return "both"
 
 
-SIDE = {1: "alliance", 2: "horde", 3: "both", 0: "both"}
-
-
 class QuestBook:
     def __init__(self):
         self.q = {}       # id -> {field: (value, source)}
@@ -223,25 +219,6 @@ class QuestBook:
         cur = self.objs.get(as_int(qid))
         if items and (not cur or cur[0] <= rank):
             self.objs[as_int(qid)] = (rank, items, src)
-
-
-def ingest_frq(book, seed):
-    for qid, r in (seed["sources"].get("frq_quests") or {}).items():
-        book.set(qid, "frq", name=r.get("n"), level=r.get("lv"), min_level=r.get("rl"), races=r.get("races"),
-                 side=side_from_races(r.get("races")), zone_area=r.get("zone"), next_id=r.get("next"),
-                 objective_text=r.get("obj"), classes=r.get("classes"))
-        for role, key in (("start", "start"), ("end", "end")):
-            for k, kind in (("c", "npc"), ("o", "object"), ("i", "item")):
-                for eid in as_list((r.get(key) or {}).get(k)):
-                    book.ent(qid, role, kind, eid, "frq")
-        for p in as_list(r.get("pre")):
-            book.pre.setdefault(as_int(qid), set()).add((as_int(p), "pre"))
-        objs = []
-        for k, kind in (("c", "monster"), ("i", "item"), ("o", "object")):
-            for o in as_list((r.get("objs") or {}).get(k)):
-                tid = o[0] if isinstance(o, list) else o
-                objs.append({"type": kind, "target": as_int(tid), "amount": None, "text": None})
-        book.objectives(qid, "frq", objs)
 
 
 def ingest_fg(book, seed):
@@ -281,46 +258,6 @@ def ingest_fg(book, seed):
                 for p in pts(pp):
                     book.points.append((as_int(qid), "objective", None, None, as_int(m), p[0], p[1], "fg"))
         book.objectives(qid, "fg", objs)
-
-
-def ingest_wowhead(book, seed):
-    src = seed["sources"]
-    for r in src.get("whz_list") or ():
-        book.set(r["id"], "whz", name=r.get("name"), level=r.get("level"), min_level=r.get("reqlevel"),
-                 side=SIDE.get(r.get("side")), xp=r.get("xp"), money=r.get("money"), zone_area=r.get("category"))
-    for qid, r in (src.get("whz_info") or {}).items():
-        book.set(qid, "whz", objective_text=r.get("obj"))
-        for role, key in (("start", "start"), ("end", "end")):
-            v = r.get(key)
-            if isinstance(v, list) and len(v) >= 2:
-                book.ent(qid, role, "object" if v[0] == "object" else v[0], v[1], "whz")
-        for pin in as_list(r.get("pins")):
-            for p in pts(pin.get("pts")):
-                book.points.append((as_int(qid), "objective", None, None, 2521 if pin.get("zone") == 16593 else None,
-                                    p[0], p[1], "whz"))
-    for dung in src.get("whd") or ():
-        for r in as_list(dung.get("quests")):
-            book.set(r["id"], "whd", name=r.get("n"), level=r.get("lv"), min_level=r.get("rl"),
-                     side=SIDE.get(r.get("side")), xp=r.get("xp"), money=r.get("money"), zone_area=dung.get("zone"),
-                     details=r.get("desc"))
-            for role in ("start", "end"):
-                for e in as_list(r.get(role)):
-                    if isinstance(e, list) and len(e) >= 2:
-                        book.ent(r["id"], role, e[0], e[1], "whd", e[2] if len(e) > 2 else None)
-
-
-def ingest_frc(book, seed):
-    for qid, r in ((seed["sources"].get("frc") or {}).get("quests") or {}).items():
-        book.set(qid, "frc", name=r.get("t"), level=r.get("lv"), details=r.get("txt"), objective_text=r.get("obj"),
-                 xp=r.get("xp"), money=r.get("money"))
-        for role, ek, pk in (("start", "giver", "gpos"), ("end", "ender", "epos")):
-            e = r.get(ek)
-            if isinstance(e, dict) and e.get("id"):
-                kind = "object" if e.get("k") == "GameObject" else "npc"
-                book.ent(qid, role, kind, e["id"], "frc", e.get("n"))
-            p = r.get(pk)
-            if isinstance(p, dict) and p.get("m"):
-                book.points.append((as_int(qid), role, None, None, p["m"], p.get("x"), p.get("y"), "frc"))
 
 
 def ingest_sessions(book, sessions):
@@ -567,10 +504,7 @@ def free_guide_texts(inputs, seed):
 def quest_book(seed, sessions, w):
     """Every quest source merged by field precedence (PRIORITY)."""
     book = QuestBook()
-    ingest_frq(book, seed)
     ingest_fg(book, seed)
-    ingest_wowhead(book, seed)
-    ingest_frc(book, seed)
     ingest_sessions(book, sessions)
     ingest_wdb(book, w)
     return book
@@ -641,18 +575,6 @@ def write_entities(db, seed, w, sessions):
                     spawns.append((kind, as_int(eid), p.get("m"), p.get("x"), p.get("y"), "exact", "obs"))
                 for p in as_list(e.get("near")):
                     spawns.append((kind, as_int(eid), p.get("m"), p.get("x"), p.get("y"), "near", "obs"))
-    for eid, r in ((src.get("frc") or {}).get("npcs") or {}).items():
-        put("npc", eid, "frc", name=r.get("n"), min_level=r.get("lmin"), max_level=r.get("lmax"))
-        for p in as_list(r.get("pos")):
-            spawns.append(("npc", as_int(eid), p.get("m"), p.get("x"), p.get("y"), "exact", "frc"))
-    for eid, r in (src.get("whz_npcpos") or {}).items():
-        put("npc", eid, "whz", name=r.get("_n"))
-        for area, pp in r.items():
-            if area.startswith("_"):
-                continue
-            for p in pts(pp):
-                spawns.append(("npc", as_int(eid), a2m.get(as_int(area)) or (2521 if area == "16593" else None),
-                               p[0], p[1], "db", "whz"))
     for kind, table in (("npc", "fg_npcs"), ("object", "fg_objects")):
         for eid, r in src[table].items():
             put(kind, eid, "fg", name=r.get("n"), min_level=r.get("min"), max_level=r.get("max"),
@@ -668,14 +590,6 @@ def write_entities(db, seed, w, sessions):
                     continue
                 for p in pts(pp):
                     spawns.append((kind, as_int(eid), m, p[0], p[1], "db", "fg"))
-    for kind, table in (("npc", "frq_npcs"), ("object", "frq_objects")):
-        for eid, r in (src.get(table) or {}).items():
-            put(kind, eid, "frq", name=r.get("n"), min_level=r.get("lmin"), max_level=r.get("lmax"),
-                friendly=r.get("friendly"), rank=r.get("rank"), subname=r.get("sub"), zone_area=r.get("zone"))
-            for area, pp in kv(r.get("spawns")):
-                m = a2m.get(as_int(area))
-                for p in pts(pp):
-                    spawns.append((kind, as_int(eid), m, p[0], p[1], "db", "frq"))
     db.executemany("INSERT INTO entities VALUES (?,?,?,?,?,?,?,?,?,?)",
                    [(k, i, e.get("name"), as_int(e.get("min_level")), as_int(e.get("max_level")), e.get("friendly"),
                      as_int(e.get("rank")), e.get("subname"), as_int(e.get("zone_area")), e["source"])

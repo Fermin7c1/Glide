@@ -1,8 +1,8 @@
-# Glide to 60: desktop app
+# Glide: desktop app
 
 One Windows app for the whole coach. It has these parts:
 
-- **Console:** the coach's dashboard.
+- **Coach screen:** the engine's own page, in the app's window.
 - **Voice output:** the app speaks the coach's lines.
 - **Overlay:** a click-through line over the game.
 - **Settings:** a page for everything in `config.json` (the engine's settings come from `companion/settings_manifest.json`; `npm run build` generates the page's schema from it with `scripts/gen-settings.js`).
@@ -18,7 +18,7 @@ Electron app (TypeScript)                                     Python engine (com
     engine.ts      start / restart / stop (stdin closes -> engine exits), first-start KB build, logs
     secrets.ts     API keys (Windows DPAPI) -> engine environment
     addon.ts       WoW folder detection, addon install / update
-  main window ── iframe ──> http://127.0.0.1:N/            (the dashboard, unchanged)
+  main window ── iframe ──> http://127.0.0.1:N/            (the coach screen)
               ── events ──> /events "speak"                 (voice output: Windows voices via speechSynthesis)
   overlay     ── events ──> /events state.overlay_step, message
 ```
@@ -84,6 +84,9 @@ Switch: Settings > General > Update automatically. Click the version under the s
 
 ## Where things live (installed)
 
+The folders keep the app's first name, "Glide to 60" (its `productName`): renaming them would leave every player's
+settings, saved keys and downloads behind in the old folder.
+
 | What | Where |
 |---|---|
 | App and bundled engine and Python | `%LOCALAPPDATA%\Programs\Glide to 60` (or the folder you picked) |
@@ -109,7 +112,7 @@ On top of those, **custom endpoints** (Settings > AI models & keys) add any Open
 
 - **Config:** they are saved in `companion.llm.endpoints`.
 - **Model ids:** `ep:<endpoint>:<model>`.
-- **Picking one:** the endpoint's models appear in the dashboard's Models panel. You can also click one in the endpoint's test list.
+- **Picking one:** the endpoint's models appear under Settings > AI models & keys > Choose models. You can also click one in the endpoint's test list.
 - **Keys:** a key is optional for local servers.
 
 ## Overlay
@@ -141,4 +144,4 @@ The key can be changed under Settings > Overlay (`companion.overlay.drag_key`, a
 
 ## Zoom
 
-**Ctrl + mouse wheel** zooms the whole window, the coach dashboard included, like a browser. Ctrl+= and Ctrl+- also zoom, and Ctrl+0 resets. The zoom level is remembered.
+**Ctrl + mouse wheel** zooms the whole window, the coach screen included, like a browser. Ctrl+= and Ctrl+- also zoom, and Ctrl+0 resets. The zoom level is remembered.

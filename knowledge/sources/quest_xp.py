@@ -9,7 +9,7 @@ quest.xp is the FULL reward (player at or below quest level + 5). Precedence, hi
      the table cell is known (QuestXP.csv from DB2: xp_src db2, conf 0.9; otherwise the table is fitted
      from the known rewards: the most common value per (level, difficulty) cell backed by >= 3 quests
      with >= 70% agreement, xp_src fit, conf 0.6)
-Disagreements between observations and the raw community values (seed: fg, frc, whz, whd) are reported
+Disagreements between observations and the raw community values (seed: fg) are reported
 (possible Forever changes). Quests whose client-cache RewardXPMultiplier is not 1 (on Forever: dungeon
 quests, x1.75 .. x2.675) while the community value equals the plain table value keep that value but get
 xp_conf 0.4 and are listed in meta 'quest_xp:multiplier': the community data most likely misses the
@@ -116,13 +116,6 @@ def community_xp(ctx):
         out[qid][tag] = xp
     for qid, r in (src.get("fg_quests") or {}).items():
         put(qid, "fg", (r or {}).get("xp"))
-    for qid, r in ((src.get("frc") or {}).get("quests") or {}).items():
-        put(qid, "frc", (r or {}).get("xp"))
-    for r in src.get("whz_list") or []:
-        put(r.get("id"), "whz", r.get("xp"))
-    for dung in src.get("whd") or []:
-        for r in dung.get("quests") or []:
-            put(r.get("id"), "whd", r.get("xp"))
     return out
 
 
