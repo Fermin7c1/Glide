@@ -154,8 +154,8 @@ function configChannels({ engine, overlay, ensureSpeech }: IpcDeps): void {
 /** API keys (values go in, never out: the window sees only which are set) and custom endpoint checks. */
 function keyChannels(): void {
   handle("keys:list", () => ({ known: KNOWN_KEYS, status: keyStatus(endpointKeyEnvs()) }));
-  handle("keys:set", (env: string, value: string) => {
-    setKey(env, value);
+  handle("keys:set", async (env: string, value: string) => {
+    await setKey(env, value);
     return keyStatus(endpointKeyEnvs());
   });
   handle("endpoint:test", async (baseUrl: string, keyEnv: string) => {

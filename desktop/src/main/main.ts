@@ -12,7 +12,7 @@ import { Engine } from "./engine";
 import { LogFile } from "./logfile";
 import { isDev, logsDir, syncEngine } from "./paths";
 import { ResourceSampler } from "./resources";
-import { secretsProblem } from "./secrets";
+import { loadSecrets, secretsProblem } from "./secrets";
 import { showUpdateSplash } from "./splash";
 import { Speech } from "./speech";
 import { appSettingsProblem } from "./store";
@@ -164,6 +164,7 @@ async function start(): Promise<void> {
   settings.load();
   engine.file?.header("app start", `Glide ${app.getVersion()}${isDev ? " (dev)" : ""}`, `Electron ${process.versions.electron}`);
   for (const problem of [appSettingsProblem(), secretsProblem()]) if (problem) engine.note(`[settings] ${problem}`);
+  await loadSecrets().catch((e: Error) => engine.note(`[settings] the saved API keys can't be read: ${e.message}`));
   try {
     syncEngine(engineHome(), app.getVersion()).forEach((d) => engine.note(d));
   } catch (e) {

@@ -481,3 +481,8 @@ they don't spell out.
   name must be a known one. The coach can't change its memory in an answer that read web results. The TACT key list
   is fetched at runtime (wowdev/TACTKeys) instead of shipped; `tools/build_seed.py` runs third-party Lua in a
   sandbox (`tools/lua_sandbox.py`). Electron 44.10.0. The player asked (2026-10-30).
+- **Electron's asynchronous safeStorage** (`desktop` probe re-recorded: `main/secrets.js` exports `loadSecrets`):
+  Electron 45 deprecates the synchronous `safeStorage` calls and 46 removes them. The key store is decrypted once at
+  start with the asynchronous ones (`loadSecrets`, before the engine starts) and kept in memory; `setKey` is async,
+  still starts from the file on disk, runs one at a time, and a key Windows asks to re-encrypt is saved again.
+  `secrets.json` keeps its format, and keys saved by earlier versions read as before. The player asked (2026-10-30).

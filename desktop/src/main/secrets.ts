@@ -1,6 +1,8 @@
 // API keys. They are kept encrypted with the Windows user's credentials (Electron safeStorage, DPAPI) in
 // userData/secrets.json, never in config.json, and handed to the engine as environment variables when it starts.
 // Keys already set in the environment (setx ANTHROPIC_API_KEY ...) still work; a key saved here wins.
+// safeStorage's asynchronous API (Electron 46 drops the synchronous one): the store is decrypted once at start
+// (loadSecrets) into memory, which the engine's environment and the settings page read; setKey saves through it.
 import { safeStorage } from "electron";
 import type { KeyStatus, KnownKey } from "../shared/ipc";
 import { secretsPath } from "./paths";
@@ -115,37 +117,61 @@ export function secretsProblem(): string | null {
       + " (then enter the keys again if it can't be fixed).";
 }
 
-function load(): Record<string, string> {
+/** The decrypted keys, as loadSecrets or the last setKey left them. */
+let keys: Record<string, string> = {};
+/** loadSecrets and setKey run one at a time: two saves at once would each write the file without the other's key. */
+let queue: Promise<unknown> = Promise.resolve();
+function queued<T>(job: () => Promise<T>): Promise<T> {
+  const run = queue.then(job);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+/** secrets.json decrypted; rotate: Windows asks for a key to be encrypted again (its key changed). */
+async function decryptFile(): Promise<{ keys: Record<string, string>; rotate: boolean }> {
   const raw = readJsonFile(secretsPath()).value;
   const out: Record<string, string> = {};
-  if (!safeStorage.isEncryptionAvailable()) return out;
+  let rotate = false;
+  if (!(await safeStorage.isAsyncEncryptionAvailable())) return { keys: out, rotate };
   for (const [k, v] of Object.entries(raw)) {
     if (!keyName(k) || typeof v !== "string") continue;
     try {
-      out[k] = safeStorage.decryptString(Buffer.from(v, "base64"));
+      const r = await safeStorage.decryptStringAsync(Buffer.from(v, "base64"));
+      out[k] = r.result;
+      rotate ||= r.shouldReEncrypt;
     } catch {
       /* written by another Windows user: ignore */
     }
   }
-  return out;
+  return { keys: out, rotate };
 }
 
-function save(keys: Record<string, string>): void {
+async function save(next: Record<string, string>): Promise<void> {
   const raw: Record<string, string> = {};
-  for (const [k, v] of Object.entries(keys)) if (v) raw[k] = safeStorage.encryptString(v).toString("base64");
+  for (const [k, v] of Object.entries(next)) if (v) raw[k] = (await safeStorage.encryptStringAsync(v)).toString("base64");
   writeJson(secretsPath(), raw);
+}
+
+/** Reads the key store into memory: once at start, before the engine starts (and after secrets.json changed outside
+ * the app). Keys Windows wants encrypted again are saved again. */
+export function loadSecrets(): Promise<void> {
+  return queued(async () => {
+    const file = await decryptFile();
+    keys = file.keys;
+    if (file.rotate && !secretsProblem()) await save(keys);
+  });
 }
 
 /** The environment variables to add to the engine's environment. */
 export function secretEnv(): Record<string, string> {
-  return load();
+  return { ...keys };
 }
 
 /** One key as the settings page sees it: saved here, or set in the environment, and its last four characters. */
 
 /** For the settings page: which keys are set, and where from. Values are never sent to the renderer. */
 export function keyStatus(extraEnvs: string[]): KeyStatus[] {
-  const saved = load();
+  const saved = keys;
   const envs = [...new Set([...KNOWN_KEYS.map((k) => k.env), ...extraEnvs, ...Object.keys(saved)])];
   return envs.map((env) => {
     const v = saved[env] || process.env[env] || "";
@@ -153,14 +179,18 @@ export function keyStatus(extraEnvs: string[]): KeyStatus[] {
   });
 }
 
-/** Set (non-empty value) or remove (empty value) one key. */
-export function setKey(env: string, value: string): void {
-  if (!keyName(env)) throw new Error(`not a key's variable name (it must end in _KEY or _TOKEN): ${env}`);
-  if (!safeStorage.isEncryptionAvailable()) throw new Error("Windows can't encrypt the key store for this user");
-  const problem = secretsProblem();
-  if (problem) throw new Error(problem);
-  const keys = load();
-  if (value.trim()) keys[env] = value.trim();
-  else delete keys[env];
-  save(keys);
+/** Set (non-empty value) or remove (empty value) one key. It starts from secrets.json as it is on disk, so a key
+ * saved meanwhile by another copy of the app isn't lost. */
+export function setKey(env: string, value: string): Promise<void> {
+  return queued(async () => {
+    if (!keyName(env)) throw new Error(`not a key's variable name (it must end in _KEY or _TOKEN): ${env}`);
+    if (!(await safeStorage.isAsyncEncryptionAvailable())) throw new Error("Windows can't encrypt the key store for this user");
+    const problem = secretsProblem();
+    if (problem) throw new Error(problem);
+    const next = (await decryptFile()).keys;
+    if (value.trim()) next[env] = value.trim();
+    else delete next[env];
+    await save(next);
+    keys = next;
+  });
 }

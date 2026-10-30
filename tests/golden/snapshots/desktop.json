@@ -177,6 +177,7 @@
  "main/secrets.js": [
   "KNOWN_KEYS:object",
   "keyStatus:function",
+  "loadSecrets:function",
   "secretEnv:function",
   "secretsProblem:function",
   "setKey:function"
