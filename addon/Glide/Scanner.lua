@@ -53,9 +53,9 @@ local function buildQueue(mode, a, b)
         for id = a, b do add(id) end
         return q
     end
-    for _, id in ipairs(rec.ForeverNewIDs or {}) do add(id) end
+    for _, id in ipairs(ns.ForeverNewIDs or {}) do add(id) end   -- Data/QuestIDs.lua: on ns, not rec
     if mode ~= "new" then
-        for _, r in ipairs(rec.QuestIDRanges or {}) do
+        for _, r in ipairs(ns.QuestIDRanges or {}) do
             for id = r[1], r[2] do add(id) end
         end
     end

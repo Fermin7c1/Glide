@@ -206,6 +206,17 @@ for _ in range(20):
 sc = s.scan
 assert sc[92460].h == "c" and sc[92465].h == "r" and sc[92465].t == "Quest 92465", "scan"
 assert not L.eval("GlideRecorder_scanrunning") , "x"
+# "new" and "all" queue the ID lists Data/QuestIDs.lua ships (they live on the addon's namespace, not the
+# recorder's: reading them from the wrong table queued nothing)
+new_ids = set(ns.ForeverNewIDs.values())
+all_ids = new_ids | {q for r in ns.QuestIDRanges.values() for q in range(r[1], r[2] + 1)}
+assert len(new_ids) > 1000, len(new_ids)
+for mode, want in (("new", len(new_ids)), ("all", len(all_ids))):
+    n = len(G.printed)
+    SC("scan " + mode)
+    start = [G.printed[i] for i in range(n + 1, len(G.printed) + 1) if "quest IDs" in G.printed[i]]
+    SC("scan stop")
+    assert start and int(start[0].split("scanning ")[1].split()[0]) == want, (mode, want, start)
 
 SC("rxpdump")
 assert db.rxp["RestedXP Forever Guide (H)||1-13 Zephras"].text.startswith("#group"), "rxp cache text"
