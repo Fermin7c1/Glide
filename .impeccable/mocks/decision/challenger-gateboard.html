@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:#1b1d22;color:#f2f2ee;font-family:Barlow,sans-serif}
+header{height:72px;display:flex;align-items:center;gap:30px;padding:0 34px;background:#121317;border-bottom:1px solid #2a2d34}
+header b{font-size:24px;margin-right:30px}header a{font-size:19px;color:#a3a6ad}header a.on{color:#ffb000}
+.wrap{display:grid;grid-template-columns:1fr 430px;gap:28px;padding:28px 34px}
+.board{background:#121317;border-radius:10px;overflow:hidden}
+.th,.tr{display:grid;grid-template-columns:80px 1fr 260px 130px 110px 140px;align-items:center;padding:0 22px}
+.th{height:48px;font-size:16px;color:#a3a6ad;background:#202228}
+.tr{height:74px;border-top:1px solid #2a2d34;font-size:24px;font-weight:600}
+.tr .num,.tr .eta,.tr .dist{font-variant-numeric:tabular-nums}
+.tr.now{background:#2a2412}.st{font-size:18px;padding:6px 10px;border-radius:6px;text-align:center}
+.st.go{background:#ffb000;color:#121317}.st.ok{color:#4cc38a}.st.q{color:#a3a6ad}
+.pass{background:#f2f2ee;color:#1b1d22;border-radius:14px;overflow:hidden}
+.pass .top{padding:22px 24px;border-bottom:2px dashed #c9c9c2}
+.pass h2{font-size:34px;line-height:1.1}.pass .k{font-size:16px;color:#5b5e65}
+.seg{display:grid;grid-template-columns:1fr 1fr;padding:18px 24px;gap:14px}.seg div span{display:block;font-size:15px;color:#5b5e65}.seg div b{font-size:34px;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
+.s{background:#25282e;border-radius:10px;padding:16px}.s b{font-size:38px;display:block}.s span{color:#a3a6ad;font-size:16px}
+</style></head><body>
+<header><b>Glide</b><a class="on">Route</a><a>Map</a><a>Coach</a><a>Gear</a><a>Settings</a></header>
+<div class="wrap">
+ <div class="board">
+  <div class="th"><span>Step</span><span>Objective</span><span>Where</span><span>Dist</span><span>ETA</span><span>Status</span></div>
+  <div class="tr now"><span class="num">12</span><span>Infestation Investigation</span><span>Thendal Grove</span><span class="dist">60 yd</span><span class="eta">0:20</span><span class="st go">Now</span></div>
+  <div class="tr"><span class="num">13</span><span>The Cirrusfly Queen</span><span>Thendal Grove</span><span class="dist">80 yd</span><span class="eta">0:40</span><span class="st q">Next</span></div>
+  <div class="tr"><span class="num">14</span><span>The Anchors of Zephras</span><span>Rorian's camp</span><span class="dist">240 yd</span><span class="eta">4:20</span><span class="st q">Later</span></div>
+  <div class="tr"><span class="num">15</span><span>Juvenile Vuldren (8)</span><span>East ridge</span><span class="dist">300 yd</span><span class="eta">9:25</span><span class="st q">Later</span></div>
+  <div class="tr"><span class="num">11</span><span>Pesky Cirrusflies</span><span>Thendal Grove</span><span class="dist">—</span><span class="eta">done</span><span class="st ok">Done</span></div>
+  <div class="tr"><span class="num">16</span><span>Harmony in Balance</span><span>Goldshire</span><span class="dist">590 yd</span><span class="eta">11:00</span><span class="st q">Later</span></div>
+ </div>
+ <div><div class="pass"><div class="top"><div class="k">Current step · Elwynn Forest</div><h2>Turn in Infestation Investigation</h2></div>
+  <div class="seg"><div><span>To</span><b>Elatrell</b></div><div><span>Distance</span><b>60 yd</b></div><div><span>Level</span><b>14 · 62%</b></div><div><span>XP</span><b>+450</b></div></div></div>
+  <div class="stats"><div class="s"><b>18.4k</b><span>XP / hour</span></div><div class="s"><b>16m</b><span>to level</span></div><div class="s"><b>+6%</b><span>Linen Cloak</span></div></div></div>
+</div></body></html>

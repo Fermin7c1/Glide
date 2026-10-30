@@ -1,0 +1,2965 @@
+{
+ "generated": "2026-10-04 21:31:00",
+ "inputs": {
+  "glide_db": "/home/claude/glide/data/glide.db",
+  "live_dir": "/home/claude/glide/data/live",
+  "live_files": 14,
+  "live_frames": 33164,
+  "sim_files_skipped": [
+   "20261003-175757.jsonl",
+   "20261003-175907.jsonl",
+   "20261003-180208.jsonl",
+   "20261004-082254.jsonl",
+   "20261004-085915.jsonl",
+   "20261004-092627.jsonl",
+   "20261004-101031.jsonl",
+   "20261004-101852.jsonl",
+   "20261004-101939.jsonl",
+   "20261004-102029.jsonl",
+   "20261004-102122.jsonl",
+   "20261004-105234.jsonl",
+   "20261004-111107.jsonl",
+   "20261004-130021.jsonl",
+   "20261004-141116.jsonl",
+   "20261004-142235.jsonl",
+   "20261004-144059.jsonl"
+  ],
+  "seed": true
+ },
+ "kill_xp": {
+  "n_kills": 334,
+  "n_known_level": 332,
+  "n_partial": 15,
+  "n_clean": 318,
+  "n_strict": 187,
+  "level_source": {
+   "rec": 196,
+   "live": 134,
+   "ent": 2,
+   "unknown": 2
+  },
+  "classic_agreement": 0.45,
+  "classic_agreement_all_known": 0.431,
+  "classic_agreement_strict": 0.476,
+  "hypotheses": [
+   {
+    "id": "classic",
+    "desc": "Classic formula as documented (base from player level), no rested bonus",
+    "clean": {
+     "n": 318,
+     "exact": 143,
+     "rate": 0.45,
+     "within1": 0.456,
+     "mae": 3.56
+    },
+    "strict": {
+     "n": 187,
+     "exact": 89,
+     "rate": 0.476,
+     "within1": 0.481,
+     "mae": 4.03
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 143,
+     "rate": 0.431,
+     "within1": 0.437,
+     "mae": 5.46
+    }
+   },
+   {
+    "id": "classic_floor",
+    "desc": "Classic formula, integer floor rounding (emulator style)",
+    "clean": {
+     "n": 318,
+     "exact": 133,
+     "rate": 0.418,
+     "within1": 0.459,
+     "mae": 3.57
+    },
+    "strict": {
+     "n": 187,
+     "exact": 81,
+     "rate": 0.433,
+     "within1": 0.487,
+     "mae": 4.06
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 133,
+     "rate": 0.401,
+     "within1": 0.44,
+     "mae": 5.46
+    }
+   },
+   {
+    "id": "classic_rested",
+    "desc": "Classic formula + rested bonus from the recorded pool (recorder missed the bonus text)",
+    "clean": {
+     "n": 318,
+     "exact": 147,
+     "rate": 0.462,
+     "within1": 0.469,
+     "mae": 2.72
+    },
+    "strict": {
+     "n": 187,
+     "exact": 92,
+     "rate": 0.492,
+     "within1": 0.497,
+     "mae": 2.76
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 147,
+     "rate": 0.443,
+     "within1": 0.449,
+     "mae": 4.65
+    }
+   },
+   {
+    "id": "classic_ml+1",
+    "desc": "Classic formula with the mob level off by one (recorded level + 1)",
+    "clean": {
+     "n": 318,
+     "exact": 9,
+     "rate": 0.028,
+     "within1": 0.05,
+     "mae": 11.26
+    },
+    "strict": {
+     "n": 187,
+     "exact": 6,
+     "rate": 0.032,
+     "within1": 0.043,
+     "mae": 11.34
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 9,
+     "rate": 0.027,
+     "within1": 0.048,
+     "mae": 13.32
+    }
+   },
+   {
+    "id": "classic_ml-1",
+    "desc": "Classic formula with the mob level off by one (recorded level - 1)",
+    "clean": {
+     "n": 318,
+     "exact": 0,
+     "rate": 0.0,
+     "within1": 0.003,
+     "mae": 14.78
+    },
+    "strict": {
+     "n": 187,
+     "exact": 0,
+     "rate": 0.0,
+     "within1": 0.0,
+     "mae": 15.61
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 0,
+     "rate": 0.0,
+     "within1": 0.003,
+     "mae": 15.64
+    }
+   },
+   {
+    "id": "classic_flat",
+    "desc": "Classic formula times one fitted flat multiplier",
+    "clean": {
+     "n": 318,
+     "exact": 1,
+     "rate": 0.003,
+     "within1": 0.013,
+     "mae": 3.92
+    },
+    "strict": {
+     "n": 187,
+     "exact": 1,
+     "rate": 0.005,
+     "within1": 0.011,
+     "mae": 4.51
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 1,
+     "rate": 0.003,
+     "within1": 0.012,
+     "mae": 5.71
+    },
+    "k": 0.9686
+   },
+   {
+    "id": "classic_zdfit",
+    "desc": "Classic formula with a ZD table fitted per player level",
+    "clean": {
+     "n": 318,
+     "exact": 186,
+     "rate": 0.585,
+     "within1": 0.667,
+     "mae": 5.87
+    },
+    "strict": {
+     "n": 187,
+     "exact": 112,
+     "rate": 0.599,
+     "within1": 0.679,
+     "mae": 6.26
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 186,
+     "rate": 0.56,
+     "within1": 0.639,
+     "mae": 7.39
+    },
+    "zd": {
+     "2": 2,
+     "3": 4,
+     "4": 2,
+     "5": 4,
+     "6": 4,
+     "7": 4,
+     "8": 2,
+     "9": 2
+    }
+   },
+   {
+    "id": "mobbase",
+    "desc": "lower-level mobs use base = 5*mob_level+45, no rested bonus",
+    "clean": {
+     "n": 318,
+     "exact": 287,
+     "rate": 0.903,
+     "within1": 0.906,
+     "mae": 1.5
+    },
+    "strict": {
+     "n": 187,
+     "exact": 169,
+     "rate": 0.904,
+     "within1": 0.904,
+     "mae": 2.1
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 287,
+     "rate": 0.864,
+     "within1": 0.867,
+     "mae": 3.36
+    }
+   },
+   {
+    "id": "mobbase_rested",
+    "desc": "base from mob level + rested bonus from the pool",
+    "clean": {
+     "n": 318,
+     "exact": 296,
+     "rate": 0.931,
+     "within1": 0.931,
+     "mae": 0.54
+    },
+    "strict": {
+     "n": 187,
+     "exact": 175,
+     "rate": 0.936,
+     "within1": 0.936,
+     "mae": 0.68
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 296,
+     "rate": 0.892,
+     "within1": 0.892,
+     "mae": 2.45
+    }
+   },
+   {
+    "id": "forever",
+    "desc": "base from mob level + rested bonus + Well Fed (1248422) +5%",
+    "clean": {
+     "n": 318,
+     "exact": 315,
+     "rate": 0.991,
+     "within1": 0.991,
+     "mae": 0.31
+    },
+    "strict": {
+     "n": 187,
+     "exact": 185,
+     "rate": 0.989,
+     "within1": 0.989,
+     "mae": 0.47
+    },
+    "all_known": {
+     "n": 332,
+     "exact": 315,
+     "rate": 0.949,
+     "within1": 0.949,
+     "mae": 2.22
+    }
+   }
+  ],
+  "best": "forever",
+  "best_rate": 0.991,
+  "forever_by_level_diff": {
+   "-4": {
+    "n": 2,
+    "exact": 2,
+    "player_levels": [
+     11,
+     11
+    ]
+   },
+   "-3": {
+    "n": 11,
+    "exact": 11,
+    "player_levels": [
+     5,
+     10
+    ]
+   },
+   "-2": {
+    "n": 81,
+    "exact": 79,
+    "player_levels": [
+     3,
+     12
+    ]
+   },
+   "-1": {
+    "n": 180,
+    "exact": 179,
+    "player_levels": [
+     2,
+     12
+    ]
+   },
+   "0": {
+    "n": 196,
+    "exact": 196,
+    "player_levels": [
+     1,
+     12
+    ]
+   },
+   "1": {
+    "n": 60,
+    "exact": 58,
+    "player_levels": [
+     1,
+     10
+    ]
+   },
+   "2": {
+    "n": 7,
+    "exact": 7,
+    "player_levels": [
+     4,
+     8
+    ]
+   }
+  },
+  "rounding": {
+   "model_scores": {
+    "half_even": {
+     "n": 318,
+     "exact": 315,
+     "rate": 0.991,
+     "within1": 0.991,
+     "mae": 0.31
+    },
+    "half_up": {
+     "n": 318,
+     "exact": 308,
+     "rate": 0.969,
+     "within1": 0.991,
+     "mae": 0.33
+    },
+    "floor": {
+     "n": 318,
+     "exact": 286,
+     "rate": 0.899,
+     "within1": 0.978,
+     "mae": 0.41
+    }
+   },
+   "half_cases": [
+    {
+     "pl": 1,
+     "ml": 2,
+     "raw": 52.5,
+     "wf": false,
+     "xp": 52,
+     "half_at": "base",
+     "half_value": 52.5,
+     "fits": {
+      "half_even": true,
+      "half_up": false,
+      "floor": true
+     },
+     "src": "glide",
+     "n": 3
+    },
+    {
+     "pl": 5,
+     "ml": 6,
+     "raw": 73.5,
+     "wf": false,
+     "xp": 74,
+     "half_at": "base",
+     "half_value": 73.5,
+     "fits": {
+      "half_even": true,
+      "half_up": true,
+      "floor": false
+     },
+     "src": "glide",
+     "n": 2
+    },
+    {
+     "pl": 6,
+     "ml": 8,
+     "raw": 82.5,
+     "wf": false,
+     "xp": 82,
+     "half_at": "base",
+     "half_value": 82.5,
+     "fits": {
+      "half_even": true,
+      "half_up": false,
+      "floor": true
+     },
+     "src": "glide",
+     "n": 4
+    },
+    {
+     "pl": 8,
+     "ml": 10,
+     "raw": 93.5,
+     "wf": true,
+     "xp": 99,
+     "half_at": "base",
+     "half_value": 93.5,
+     "fits": {
+      "half_even": true,
+      "half_up": true,
+      "floor": false
+     },
+     "src": "glide",
+     "n": 2
+    },
+    {
+     "pl": 9,
+     "ml": 9,
+     "raw": 90.0,
+     "wf": true,
+     "xp": 94,
+     "half_at": "well_fed",
+     "half_value": 94.5,
+     "fits": {
+      "half_even": true,
+      "half_up": false,
+      "floor": true
+     },
+     "src": "glide",
+     "n": 6
+    },
+    {
+     "pl": 9,
+     "ml": 10,
+     "raw": 94.5,
+     "wf": true,
+     "xp": 99,
+     "half_at": "base",
+     "half_value": 94.5,
+     "fits": {
+      "half_even": true,
+      "half_up": false,
+      "floor": false
+     },
+     "src": "glide",
+     "n": 3
+    },
+    {
+     "pl": 4,
+     "ml": 6,
+     "raw": 71.5,
+     "wf": false,
+     "xp": 72,
+     "half_at": "base",
+     "half_value": 71.5,
+     "fits": {
+      "half_even": true,
+      "half_up": true,
+      "floor": false
+     },
+     "src": "live",
+     "n": 1
+    },
+    {
+     "pl": 9,
+     "ml": 10,
+     "raw": 94.5,
+     "wf": true,
+     "xp": 91,
+     "half_at": "base",
+     "half_value": 94.5,
+     "fits": {
+      "half_even": false,
+      "half_up": false,
+      "floor": false
+     },
+     "src": "live",
+     "n": 1
+    },
+    {
+     "pl": 9,
+     "ml": 10,
+     "raw": 94.5,
+     "wf": false,
+     "xp": 94,
+     "half_at": "base",
+     "half_value": 94.5,
+     "fits": {
+      "half_even": true,
+      "half_up": false,
+      "floor": true
+     },
+     "src": "live",
+     "n": 6
+    },
+    {
+     "pl": 12,
+     "ml": 11,
+     "raw": 87.5,
+     "wf": false,
+     "xp": 88,
+     "half_at": "base",
+     "half_value": 87.5,
+     "fits": {
+      "half_even": true,
+      "half_up": true,
+      "floor": false
+     },
+     "src": "live",
+     "n": 2
+    }
+   ],
+   "half_tally": {
+    "half_even": 9,
+    "half_up": 4,
+    "floor": 4
+   }
+  },
+  "zd": {
+   "mob_base": {
+    "2": {
+     "n": 15,
+     "classic_zd": 5,
+     "classic_hits": 15,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 15
+    },
+    "3": {
+     "n": 10,
+     "classic_zd": 5,
+     "classic_hits": 10,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 10
+    },
+    "4": {
+     "n": 36,
+     "classic_zd": 5,
+     "classic_hits": 36,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 36
+    },
+    "5": {
+     "n": 35,
+     "classic_zd": 5,
+     "classic_hits": 33,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 33
+    },
+    "6": {
+     "n": 20,
+     "classic_zd": 5,
+     "classic_hits": 20,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 20
+    },
+    "7": {
+     "n": 32,
+     "classic_zd": 5,
+     "classic_hits": 31,
+     "best_zd": [
+      5
+     ],
+     "best_hits": 31
+    },
+    "8": {
+     "n": 10,
+     "classic_zd": 6,
+     "classic_hits": 10,
+     "best_zd": [
+      6
+     ],
+     "best_hits": 10
+    },
+    "9": {
+     "n": 11,
+     "classic_zd": 6,
+     "classic_hits": 11,
+     "best_zd": [
+      6
+     ],
+     "best_hits": 11
+    },
+    "10": {
+     "n": 26,
+     "classic_zd": 7,
+     "classic_hits": 26,
+     "best_zd": [
+      7
+     ],
+     "best_hits": 26
+    },
+    "11": {
+     "n": 49,
+     "classic_zd": 7,
+     "classic_hits": 49,
+     "best_zd": [
+      7
+     ],
+     "best_hits": 49
+    },
+    "12": {
+     "n": 4,
+     "classic_zd": 8,
+     "classic_hits": 4,
+     "best_zd": [
+      8
+     ],
+     "best_hits": 4
+    }
+   },
+   "player_base": {
+    "2": {
+     "n": 15,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "3": {
+     "n": 10,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      4
+     ],
+     "best_hits": 3
+    },
+    "4": {
+     "n": 36,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "5": {
+     "n": 35,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      4
+     ],
+     "best_hits": 12
+    },
+    "6": {
+     "n": 20,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      4
+     ],
+     "best_hits": 20
+    },
+    "7": {
+     "n": 32,
+     "classic_zd": 5,
+     "classic_hits": 0,
+     "best_zd": [
+      4
+     ],
+     "best_hits": 18
+    },
+    "8": {
+     "n": 10,
+     "classic_zd": 6,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "9": {
+     "n": 11,
+     "classic_zd": 6,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "10": {
+     "n": 26,
+     "classic_zd": 7,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "11": {
+     "n": 49,
+     "classic_zd": 7,
+     "classic_hits": 0,
+     "best_zd": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+     ],
+     "best_hits": 0
+    },
+    "12": {
+     "n": 4,
+     "classic_zd": 8,
+     "classic_hits": 0,
+     "best_zd": [
+      6
+     ],
+     "best_hits": 2
+    }
+   },
+   "verified_through": 12
+  },
+  "rested": {
+   "rest_column_null": 334,
+   "n_kills": 334,
+   "n_rested_kills": 15,
+   "xp_exact": 15,
+   "pool_exact": 13,
+   "pool_known": 15,
+   "cases": [
+    {
+     "pl": 6,
+     "ml": 5,
+     "pool": 182,
+     "xp": 112,
+     "pred": 112,
+     "bonus": 56,
+     "pool_after": 70,
+     "pred_pool_after": 70,
+     "src": "glide"
+    },
+    {
+     "pl": 6,
+     "ml": 6,
+     "pool": 70,
+     "xp": 110,
+     "pred": 110,
+     "bonus": 35,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "glide"
+    },
+    {
+     "pl": 2,
+     "ml": 3,
+     "pool": 236,
+     "xp": 116,
+     "pred": 116,
+     "bonus": 58,
+     "pool_after": 120,
+     "pred_pool_after": 120,
+     "src": "glide"
+    },
+    {
+     "pl": 2,
+     "ml": 3,
+     "pool": 120,
+     "xp": 116,
+     "pred": 116,
+     "bonus": 58,
+     "pool_after": 4,
+     "pred_pool_after": 4,
+     "src": "glide"
+    },
+    {
+     "pl": 2,
+     "ml": 2,
+     "pool": 4,
+     "xp": 57,
+     "pred": 57,
+     "bonus": 2,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "glide"
+    },
+    {
+     "pl": 6,
+     "ml": 5,
+     "pool": 186,
+     "xp": 112,
+     "pred": 112,
+     "bonus": 56,
+     "pool_after": 74,
+     "pred_pool_after": 74,
+     "src": "glide"
+    },
+    {
+     "pl": 6,
+     "ml": 5,
+     "pool": 74,
+     "xp": 93,
+     "pred": 93,
+     "bonus": 37,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "glide"
+    },
+    {
+     "pl": 7,
+     "ml": 6,
+     "pool": 2,
+     "xp": 61,
+     "pred": 61,
+     "bonus": 1,
+     "pool_after": 2,
+     "pred_pool_after": 0,
+     "src": "glide"
+    },
+    {
+     "pl": 8,
+     "ml": 7,
+     "pool": 4,
+     "xp": 69,
+     "pred": 69,
+     "bonus": 2,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "glide"
+    },
+    {
+     "pl": 6,
+     "ml": 5,
+     "pool": 140,
+     "xp": 112,
+     "pred": 112,
+     "bonus": 56,
+     "pool_after": 140,
+     "pred_pool_after": 28,
+     "src": "live"
+    },
+    {
+     "pl": 6,
+     "ml": 6,
+     "pool": 28,
+     "xp": 89,
+     "pred": 89,
+     "bonus": 14,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "live"
+    },
+    {
+     "pl": 8,
+     "ml": 8,
+     "pool": 2,
+     "xp": 86,
+     "pred": 86,
+     "bonus": 1,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "live"
+    },
+    {
+     "pl": 8,
+     "ml": 8,
+     "pool": 8,
+     "xp": 89,
+     "pred": 89,
+     "bonus": 4,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "live"
+    },
+    {
+     "pl": 10,
+     "ml": 7,
+     "pool": 2,
+     "xp": 47,
+     "pred": 47,
+     "bonus": 1,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "live"
+    },
+    {
+     "pl": 12,
+     "ml": 11,
+     "pool": 4,
+     "xp": 90,
+     "pred": 90,
+     "bonus": 2,
+     "pool_after": 0,
+     "pred_pool_after": 0,
+     "src": "live"
+    }
+   ]
+  },
+  "well_fed": {
+   "spell": "1248422",
+   "n": 62,
+   "exact_by_bonus": {
+    "0.0": 0,
+    "0.03": 0,
+    "0.04": 27,
+    "0.05": 61,
+    "0.06": 6,
+    "0.1": 0
+   },
+   "best_bonus": 0.05,
+   "best_exact": 61,
+   "live_coverage": 330,
+   "camp_benefits": {
+    "n": 21,
+    "exact_no_bonus": 21,
+    "exact_with_5pct": 0
+   }
+  },
+  "elite": [
+   {
+    "name": "Shinyfinder Narf",
+    "npc": 248362,
+    "pl": 5,
+    "ml": 3,
+    "xp": 108,
+    "normal_pred": 36,
+    "ratio": 3.0,
+    "elite_known": false,
+    "rank": null,
+    "tc": null,
+    "src": "glide"
+   },
+   {
+    "name": "Vagash",
+    "npc": 1388,
+    "pl": 10,
+    "ml": 11,
+    "xp": 125,
+    "normal_pred": 100,
+    "ratio": 1.25,
+    "elite_known": true,
+    "rank": 1,
+    "tc": "elite",
+    "src": "live"
+   }
+  ],
+  "anchors_l14": {
+   "rows": [
+    {
+     "name": "Riverpaw Outrunner",
+     "pl": 14,
+     "ml": 10,
+     "elite": false,
+     "xp": 96,
+     "classic": 58,
+     "classic_rested": 116,
+     "classic_ml+1": 72,
+     "mobbase": 48,
+     "mobbase_rested": 96
+    },
+    {
+     "name": "Riverpaw Outrunner",
+     "pl": 14,
+     "ml": 9,
+     "elite": false,
+     "xp": 68,
+     "classic": 43,
+     "classic_rested": 86,
+     "classic_ml+1": 58,
+     "mobbase": 34,
+     "mobbase_rested": 68
+    },
+    {
+     "name": "Hogger",
+     "pl": 14,
+     "ml": 11,
+     "elite": true,
+     "xp": 250,
+     "classic": 144,
+     "classic_rested": 288,
+     "classic_ml+1": 172,
+     "mobbase": 125,
+     "mobbase_rested": 250
+    }
+   ],
+   "fit": {
+    "classic": 0,
+    "classic_rested": 0,
+    "classic_ml+1": 0,
+    "mobbase": 0,
+    "mobbase_rested": 3
+   },
+   "note": "README observations (paladin level 14, session 20261003-165647 recorded no kills)"
+  },
+  "level_disagree_rec_live": [
+   {
+    "name": "Defias Thug",
+    "pl": 5,
+    "rec": 4,
+    "live": 3,
+    "xp": 36
+   }
+  ],
+  "mismatches": [
+   {
+    "session": "20261004-095220",
+    "t": 1791123058,
+    "name": "Shinyfinder Narf",
+    "pl": 5,
+    "ml": 3,
+    "ml_src": "rec",
+    "ml_live": 3,
+    "xp": 108,
+    "pred": 36,
+    "classic": 42,
+    "pool": 0,
+    "wf": false,
+    "elite": false
+   },
+   {
+    "session": "20261004-095220",
+    "t": 1791123478,
+    "name": "Defias Thug",
+    "pl": 5,
+    "ml": 4,
+    "ml_src": "rec",
+    "ml_live": 3,
+    "xp": 36,
+    "pred": 52,
+    "classic": 56,
+    "pool": 0,
+    "wf": false,
+    "elite": false
+   },
+   {
+    "session": "20261004-111955",
+    "t": 1791127548,
+    "name": "Kobold Miner",
+    "pl": 7,
+    "ml": 5,
+    "ml_src": "live",
+    "ml_live": 5,
+    "xp": 33,
+    "pred": 42,
+    "classic": 48,
+    "pool": 0,
+    "wf": false,
+    "elite": false
+   }
+  ],
+  "n_mismatch": 3,
+  "partial": {
+   "n": 67,
+   "ratio_median": 0.226,
+   "examples": [
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 7,
+     "xp": 12,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 7,
+     "xp": 1,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 6,
+     "xp": 33,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Tunneler",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Tunneler",
+     "pl": 7,
+     "ml": 5,
+     "xp": 15,
+     "src": "glide"
+    },
+    {
+     "name": "Kobold Miner",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Rumbler",
+     "pl": 7,
+     "ml": 6,
+     "xp": 23,
+     "src": "glide"
+    },
+    {
+     "name": "Snow Leopard Prowler",
+     "pl": 5,
+     "ml": 6,
+     "xp": 35,
+     "src": "glide"
+    },
+    {
+     "name": "Wendigo",
+     "pl": 6,
+     "ml": null,
+     "xp": 17,
+     "src": "glide"
+    },
+    {
+     "name": "Wendigo",
+     "pl": 6,
+     "ml": 7,
+     "xp": 7,
+     "src": "glide"
+    },
+    {
+     "name": "Wendigo",
+     "pl": 6,
+     "ml": 7,
+     "xp": 24,
+     "src": "glide"
+    },
+    {
+     "name": "Winter Wolf",
+     "pl": 9,
+     "ml": 7,
+     "xp": 2,
+     "src": "glide"
+    }
+   ],
+   "note": "XP < 60% of the lowest normal prediction for the levels seen: group split or NPC/other damage share; excluded from the formula fit"
+  },
+  "live_only": {
+   "n_kills": 271,
+   "n_partial": 52,
+   "n_clean": 219,
+   "levels": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+   ],
+   "classic": {
+    "n": 219,
+    "exact": 73,
+    "rate": 0.333,
+    "within1": 0.379,
+    "mae": 3.93
+   },
+   "forever": {
+    "n": 219,
+    "exact": 217,
+    "rate": 0.991,
+    "within1": 0.991,
+    "mae": 0.38
+   },
+   "mismatches": [
+    {
+     "t": 1791150835,
+     "name": "Leper Gnome",
+     "pl": 9,
+     "ml": 10,
+     "xp": 91,
+     "pred": 99,
+     "elite": false,
+     "pool": 0,
+     "wf": true
+    },
+    {
+     "t": 1791154102,
+     "name": "Vagash",
+     "pl": 10,
+     "ml": 11,
+     "xp": 125,
+     "pred": 200,
+     "elite": true,
+     "pool": 0,
+     "wf": false
+    }
+   ]
+  }
+ },
+ "level_xp": {
+  "rows": [
+   {
+    "level": 1,
+    "observed": {
+     "400": 640
+    },
+    "classic": 400,
+    "brief_table": 400,
+    "agree": true,
+    "n_obs_xp": 15,
+    "n_live": 625
+   },
+   {
+    "level": 2,
+    "observed": {
+     "900": 1062
+    },
+    "classic": 900,
+    "brief_table": 900,
+    "agree": true,
+    "n_obs_xp": 35,
+    "n_live": 1027
+   },
+   {
+    "level": 3,
+    "observed": {
+     "1400": 1843
+    },
+    "classic": 1400,
+    "brief_table": 1400,
+    "agree": true,
+    "n_obs_xp": 60,
+    "n_live": 1783
+   },
+   {
+    "level": 4,
+    "observed": {
+     "2100": 2722
+    },
+    "classic": 2100,
+    "brief_table": 2100,
+    "agree": true,
+    "n_obs_xp": 70,
+    "n_live": 2652
+   },
+   {
+    "level": 5,
+    "observed": {
+     "2800": 2203
+    },
+    "classic": 2800,
+    "brief_table": 2800,
+    "agree": true,
+    "n_obs_xp": 51,
+    "n_live": 2152
+   },
+   {
+    "level": 6,
+    "observed": {
+     "3600": 4272
+    },
+    "classic": 3600,
+    "brief_table": 3600,
+    "agree": true,
+    "n_obs_xp": 62,
+    "n_live": 4210
+   },
+   {
+    "level": 7,
+    "observed": {
+     "4500": 3905
+    },
+    "classic": 4500,
+    "brief_table": 4500,
+    "agree": true,
+    "n_obs_xp": 63,
+    "n_live": 3842
+   },
+   {
+    "level": 8,
+    "observed": {
+     "5400": 6249
+    },
+    "classic": 5400,
+    "brief_table": 5400,
+    "agree": true,
+    "n_obs_xp": 44,
+    "n_live": 6205
+   },
+   {
+    "level": 9,
+    "observed": {
+     "6500": 2154
+    },
+    "classic": 6500,
+    "brief_table": 6500,
+    "agree": true,
+    "n_obs_xp": 15,
+    "n_live": 2139
+   },
+   {
+    "level": 10,
+    "observed": {
+     "7600": 2731
+    },
+    "classic": 7600,
+    "brief_table": 7600,
+    "agree": true,
+    "n_obs_xp": 0,
+    "n_live": 2731
+   },
+   {
+    "level": 11,
+    "observed": {
+     "8800": 3371
+    },
+    "classic": 8800,
+    "brief_table": 8700,
+    "agree": true,
+    "n_obs_xp": 0,
+    "n_live": 3371
+   },
+   {
+    "level": 12,
+    "observed": {
+     "10100": 2427
+    },
+    "classic": 10100,
+    "brief_table": 9800,
+    "agree": true,
+    "n_obs_xp": 0,
+    "n_live": 2427
+   }
+  ],
+  "shape": {
+   "sum_1_59": 4084700,
+   "monotone": true,
+   "formula_mismatch": [],
+   "brief_sum": 2549900,
+   "brief_differs_from_classic_at": [
+    11,
+    12,
+    13,
+    14,
+    15
+   ],
+   "brief_contradicted_by_obs": [
+    11,
+    12
+   ]
+  },
+  "verified_levels": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ]
+ },
+ "quest_xp": {
+  "n_obs": 123,
+  "n_live_added": 55,
+  "vs_glide_db": {
+   "n": 123,
+   "exact": 122,
+   "circular_obs_source": 104,
+   "note": "quests.xp prefers recorder values (build_db precedence) so most of this is circular"
+  },
+  "vs_community": {
+   "fg": {
+    "n": 121,
+    "exact": 121,
+    "rate": 1.0
+   },
+   "frc": {
+    "n": 0,
+    "exact": 0,
+    "rate": null
+   },
+   "whz": {
+    "n": 0,
+    "exact": 0,
+    "rate": null
+   }
+  },
+  "rounding_cases_fg": {
+   "n": 70,
+   "exact": 70,
+   "note": "ForeverGuide raw XP differs from the server value until rounded (5/10/25/50)"
+  },
+  "player_minus_quest_level": {
+   "-4": 2,
+   "-3": 4,
+   "-2": 12,
+   "-1": 15,
+   "0": 36,
+   "1": 33,
+   "2": 16,
+   "3": 2,
+   "5": 3
+  },
+  "over_level": {
+   "n": 0,
+   "cases": []
+  },
+  "mismatches": []
+ },
+ "speed": {
+  "trail": {
+   "n_segments": 1456,
+   "mode": 6.88,
+   "median_near_mode": 6.855,
+   "n_near_mode": 1077,
+   "maps_with_size": {
+    "1415": [
+     35199.0,
+     23466.0
+    ],
+    "1426": [
+     4924.0,
+     3283.0
+    ],
+    "1429": [
+     3470.0,
+     2314.0
+    ],
+    "1432": [
+     2758.0,
+     1839.0
+    ],
+    "1453": [
+     1737.0,
+     1158.0
+    ],
+    "1455": [
+     790.0,
+     527.0
+    ]
+   },
+   "note": "3 s trail points out of combat, ghost windows excluded; integer timestamps add +-1 s jitter"
+  },
+  "get_unit_speed": {
+   "alive": [
+    {
+     "sp10": 70,
+     "frames": 12780,
+     "yd_s": 7.0,
+     "label": "run"
+    },
+    {
+     "sp10": 35,
+     "frames": 153,
+     "yd_s": 3.5,
+     "label": "stealth x0.5"
+    },
+    {
+     "sp10": 105,
+     "frames": 66,
+     "yd_s": 10.5,
+     "label": "sprint x1.5"
+    },
+    {
+     "sp10": 47,
+     "frames": 29,
+     "yd_s": 4.722,
+     "label": "swim"
+    },
+    {
+     "sp10": 67,
+     "frames": 8,
+     "yd_s": 6.75,
+     "label": null
+    },
+    {
+     "sp10": 66,
+     "frames": 6,
+     "yd_s": 6.65,
+     "label": null
+    }
+   ],
+   "ghost": [
+    {
+     "sp10": 87,
+     "frames": 1677,
+     "yd_s": 8.75,
+     "label": "ghost x1.25"
+    }
+   ],
+   "taxi": [
+    {
+     "sp10": 303,
+     "frames": 108,
+     "yd_s": 30.35,
+     "label": null
+    }
+   ]
+  },
+  "live_positions": {
+   "n": 11117,
+   "median": 6.862,
+   "note": "1 s frame pairs both at GetUnitSpeed 7.0: position change / time (checks the map sizes)"
+  }
+ },
+ "ttk": {
+  "by_class": {
+   "ROGUE": {
+    "fights": 251,
+    "single_kill_fights": 238,
+    "levels": [
+     1,
+     12
+    ],
+    "ttk_median_s": 13.7,
+    "ratio_median": 0.895,
+    "ratio_iqr": [
+     0.677,
+     1.171
+    ],
+    "log_ratio_slope_per_level": 0.0584,
+    "by_level": {
+     "1": {
+      "n": 8,
+      "ttk_median_s": 7.5,
+      "model_s": 10.9,
+      "mob_minus_player": 0.0
+     },
+     "2": {
+      "n": 12,
+      "ttk_median_s": 8.5,
+      "model_s": 15.9,
+      "mob_minus_player": 1.0
+     },
+     "3": {
+      "n": 15,
+      "ttk_median_s": 11.0,
+      "model_s": 12.9,
+      "mob_minus_player": 0
+     },
+     "4": {
+      "n": 12,
+      "ttk_median_s": 8.5,
+      "model_s": 12.3,
+      "mob_minus_player": -0.5
+     },
+     "5": {
+      "n": 7,
+      "ttk_median_s": 7.4,
+      "model_s": 11.8,
+      "mob_minus_player": -1
+     },
+     "6": {
+      "n": 25,
+      "ttk_median_s": 8.6,
+      "model_s": 14.7,
+      "mob_minus_player": 0
+     },
+     "7": {
+      "n": 8,
+      "ttk_median_s": 12.4,
+      "model_s": 15.2,
+      "mob_minus_player": 0.0
+     },
+     "8": {
+      "n": 39,
+      "ttk_median_s": 14.2,
+      "model_s": 15.8,
+      "mob_minus_player": 0
+     },
+     "9": {
+      "n": 32,
+      "ttk_median_s": 18.0,
+      "model_s": 16.0,
+      "mob_minus_player": 0.0
+     },
+     "10": {
+      "n": 36,
+      "ttk_median_s": 12.2,
+      "model_s": 14.1,
+      "mob_minus_player": -1.0
+     },
+     "11": {
+      "n": 51,
+      "ttk_median_s": 16.4,
+      "model_s": 14.2,
+      "mob_minus_player": -2
+     },
+     "12": {
+      "n": 6,
+      "ttk_median_s": 19.7,
+      "model_s": 15.6,
+      "mob_minus_player": -1.0
+     }
+    },
+    "sources": {
+     "glide": 46,
+     "live": 205
+    }
+   },
+   "WARRIOR": {
+    "fights": 243,
+    "single_kill_fights": 224,
+    "levels": [
+     1,
+     9
+    ],
+    "ttk_median_s": 14.0,
+    "ratio_median": 0.986,
+    "ratio_iqr": [
+     0.837,
+     1.154
+    ],
+    "log_ratio_slope_per_level": 0.0516,
+    "by_level": {
+     "1": {
+      "n": 8,
+      "ttk_median_s": 9.5,
+      "model_s": 12.0,
+      "mob_minus_player": 0.0
+     },
+     "2": {
+      "n": 19,
+      "ttk_median_s": 8.0,
+      "model_s": 9.8,
+      "mob_minus_player": -1
+     },
+     "3": {
+      "n": 36,
+      "ttk_median_s": 12.0,
+      "model_s": 14.2,
+      "mob_minus_player": 0.0
+     },
+     "4": {
+      "n": 42,
+      "ttk_median_s": 12.0,
+      "model_s": 12.2,
+      "mob_minus_player": -1.0
+     },
+     "5": {
+      "n": 29,
+      "ttk_median_s": 10.0,
+      "model_s": 10.8,
+      "mob_minus_player": -2
+     },
+     "6": {
+      "n": 28,
+      "ttk_median_s": 14.0,
+      "model_s": 14.4,
+      "mob_minus_player": -1.0
+     },
+     "7": {
+      "n": 34,
+      "ttk_median_s": 15.5,
+      "model_s": 14.6,
+      "mob_minus_player": -1.0
+     },
+     "8": {
+      "n": 37,
+      "ttk_median_s": 19.0,
+      "model_s": 17.3,
+      "mob_minus_player": 0
+     },
+     "9": {
+      "n": 10,
+      "ttk_median_s": 21.0,
+      "model_s": 17.1,
+      "mob_minus_player": 0.0
+     }
+    },
+    "sources": {
+     "glide": 243
+    }
+   }
+  },
+  "n_fights": 494,
+  "note": "TTK = (last kill - combat start)/kills; fights with deaths or partial-XP kills excluded"
+ },
+ "rested": {
+  "accrual": {
+   "n_intervals": 7,
+   "median_rate_per_8h": 0.0494,
+   "intervals": [
+    {
+     "level": 8,
+     "xp_max": 5400,
+     "d_pool": 2,
+     "dt": 216.3,
+     "rate_per_8h": 0.04933
+    },
+    {
+     "level": 8,
+     "xp_max": 5400,
+     "d_pool": 2,
+     "dt": 210.3,
+     "rate_per_8h": 0.05073
+    },
+    {
+     "level": 8,
+     "xp_max": 5400,
+     "d_pool": 2,
+     "dt": 216.1,
+     "rate_per_8h": 0.04937
+    },
+    {
+     "level": 12,
+     "xp_max": 10100,
+     "d_pool": 2,
+     "dt": 110.0,
+     "rate_per_8h": 0.05183
+    },
+    {
+     "level": 12,
+     "xp_max": 10100,
+     "d_pool": 2,
+     "dt": 116.0,
+     "rate_per_8h": 0.04916
+    },
+    {
+     "level": 12,
+     "xp_max": 10100,
+     "d_pool": 2,
+     "dt": 111.0,
+     "rate_per_8h": 0.05138
+    },
+    {
+     "level": 12,
+     "xp_max": 10100,
+     "d_pool": 2,
+     "dt": 115.9,
+     "rate_per_8h": 0.04919
+    }
+   ],
+   "classic": 0.05
+  },
+  "jumps": [
+   {
+    "t": 1791123989,
+    "level": 6,
+    "d_pool": 180,
+    "frac": 0.05,
+    "camp": false,
+    "resting": false,
+    "gap_s": 1.0
+   },
+   {
+    "t": 1791131481,
+    "level": 6,
+    "d_pool": 180,
+    "frac": 0.05,
+    "camp": true,
+    "resting": false,
+    "gap_s": 1.0
+   },
+   {
+    "t": 1791143976,
+    "level": 5,
+    "d_pool": 140,
+    "frac": 0.05,
+    "camp": true,
+    "resting": false,
+    "gap_s": 1.0
+   }
+  ],
+  "camp_fracs": [
+   0.05,
+   0.05
+  ]
+ },
+ "hearth": {
+  "casts": [
+   {
+    "t": 1791157021,
+    "hs_after": 3598,
+    "gap_s": 1.31,
+    "cd_range": [
+     3598,
+     3600.3
+    ]
+   }
+  ]
+ },
+ "death": {
+  "deaths": [
+   {
+    "t": 1791120900,
+    "level": 2,
+    "spirit_res": false,
+    "release_s": 6,
+    "dead_to_alive_s": 33,
+    "ghost_s": 27,
+    "corpse_dist_yd": 167.0,
+    "implied_ghost_yd_s": 6.17,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791126584,
+    "level": 7,
+    "spirit_res": false,
+    "release_s": 4,
+    "dead_to_alive_s": 122,
+    "ghost_s": 118,
+    "corpse_dist_yd": 411.0,
+    "implied_ghost_yd_s": 3.48,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791126848,
+    "level": 7,
+    "spirit_res": false,
+    "release_s": 5,
+    "dead_to_alive_s": 82,
+    "ghost_s": 77,
+    "corpse_dist_yd": 493.0,
+    "implied_ghost_yd_s": 6.41,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791127630,
+    "level": 7,
+    "spirit_res": false,
+    "release_s": 14,
+    "dead_to_alive_s": 98,
+    "ghost_s": 84,
+    "corpse_dist_yd": 458.0,
+    "implied_ghost_yd_s": 5.45,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791130694,
+    "level": 5,
+    "spirit_res": true,
+    "release_s": 4,
+    "dead_to_alive_s": 12,
+    "ghost_s": 8,
+    "corpse_dist_yd": 333.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791134126,
+    "level": 6,
+    "spirit_res": true,
+    "release_s": 2,
+    "dead_to_alive_s": 8,
+    "ghost_s": 6,
+    "corpse_dist_yd": 256.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791135489,
+    "level": 7,
+    "spirit_res": true,
+    "release_s": 1,
+    "dead_to_alive_s": 7,
+    "ghost_s": 6,
+    "corpse_dist_yd": 427.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791136226,
+    "level": 8,
+    "spirit_res": true,
+    "release_s": 3,
+    "dead_to_alive_s": 8,
+    "ghost_s": 5,
+    "corpse_dist_yd": 1096.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791137325,
+    "level": 8,
+    "spirit_res": false,
+    "release_s": 2,
+    "dead_to_alive_s": 199,
+    "ghost_s": 197,
+    "corpse_dist_yd": 1143.0,
+    "implied_ghost_yd_s": 5.8,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791140005,
+    "level": 8,
+    "spirit_res": true,
+    "release_s": 2,
+    "dead_to_alive_s": 23,
+    "ghost_s": 21,
+    "corpse_dist_yd": 1138.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791141007,
+    "level": 9,
+    "spirit_res": true,
+    "release_s": 2,
+    "dead_to_alive_s": 5,
+    "ghost_s": 3,
+    "corpse_dist_yd": 1103.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791142720,
+    "level": 4,
+    "spirit_res": true,
+    "release_s": 2,
+    "dead_to_alive_s": 5,
+    "ghost_s": 3,
+    "corpse_dist_yd": 333.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791143108,
+    "level": 4,
+    "spirit_res": false,
+    "release_s": 3,
+    "dead_to_alive_s": 219,
+    "ghost_s": 216,
+    "corpse_dist_yd": 998.0,
+    "implied_ghost_yd_s": 4.62,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791144856,
+    "level": 6,
+    "spirit_res": true,
+    "release_s": 3,
+    "dead_to_alive_s": 7,
+    "ghost_s": 4,
+    "corpse_dist_yd": 425.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791147550,
+    "level": 8,
+    "spirit_res": true,
+    "release_s": 3,
+    "dead_to_alive_s": 8,
+    "ghost_s": 5,
+    "corpse_dist_yd": 1080.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791148075,
+    "level": 8,
+    "spirit_res": false,
+    "release_s": 28,
+    "dead_to_alive_s": 213,
+    "ghost_s": 185,
+    "corpse_dist_yd": 1253.0,
+    "implied_ghost_yd_s": 6.77,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791148336,
+    "level": 8,
+    "spirit_res": true,
+    "release_s": 3,
+    "dead_to_alive_s": 7,
+    "ghost_s": 4,
+    "corpse_dist_yd": 1228.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791149706,
+    "level": 8,
+    "spirit_res": false,
+    "release_s": 4,
+    "dead_to_alive_s": 166,
+    "ghost_s": 162,
+    "corpse_dist_yd": 719.0,
+    "implied_ghost_yd_s": 4.44,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791151695,
+    "level": 9,
+    "spirit_res": true,
+    "release_s": 2,
+    "dead_to_alive_s": 6,
+    "ghost_s": 4,
+    "corpse_dist_yd": 1168.0,
+    "implied_ghost_yd_s": null,
+    "du_before": 100,
+    "du_loss_death": 0,
+    "du_loss_total": 0
+   },
+   {
+    "t": 1791152318,
+    "level": 10,
+    "spirit_res": false,
+    "release_s": 5,
+    "dead_to_alive_s": 122,
+    "ghost_s": 117,
+    "corpse_dist_yd": 781.0,
+    "implied_ghost_yd_s": 6.68,
+    "du_before": 88,
+    "du_loss_death": 8,
+    "du_loss_total": 8
+   },
+   {
+    "t": 1791152862,
+    "level": 10,
+    "spirit_res": false,
+    "release_s": 3,
+    "dead_to_alive_s": 175,
+    "ghost_s": 172,
+    "corpse_dist_yd": 1159.0,
+    "implied_ghost_yd_s": 6.74,
+    "du_before": 72,
+    "du_loss_death": 8,
+    "du_loss_total": 8
+   },
+   {
+    "t": 1791153100,
+    "level": 10,
+    "spirit_res": false,
+    "release_s": 4,
+    "dead_to_alive_s": 200,
+    "ghost_s": 196,
+    "corpse_dist_yd": 1162.0,
+    "implied_ghost_yd_s": 5.93,
+    "du_before": 64,
+    "du_loss_death": 8,
+    "du_loss_total": 8
+   }
+  ],
+  "below10": {
+   "n": 19,
+   "spirit_res": 11,
+   "durability_lost": 0
+  },
+  "level10plus": {
+   "n": 3,
+   "du_loss_death": [
+    8,
+    8,
+    8
+   ]
+  },
+  "res_sickness_aura_seen": 0
+ },
+ "training": {
+  "visits": [
+   {
+    "t": 1791121269,
+    "level": 3,
+    "cls": null,
+    "spells": [
+     6673
+    ],
+    "class_spells": [
+     6673
+    ],
+    "paid": 10,
+    "per_rank": 10,
+    "ranks_implied": 1.0,
+    "fits": true
+   },
+   {
+    "t": 1791122488,
+    "level": 4,
+    "cls": null,
+    "spells": [
+     1240951,
+     2580,
+     2656
+    ],
+    "class_spells": [],
+    "paid": 0,
+    "per_rank": 100,
+    "ranks_implied": null,
+    "fits": false
+   },
+   {
+    "t": 1791123671,
+    "level": 6,
+    "cls": null,
+    "spells": [
+     6343,
+     3127,
+     772
+    ],
+    "class_spells": [
+     6343,
+     3127,
+     772
+    ],
+    "paid": 400,
+    "per_rank": 100,
+    "ranks_implied": 4.0,
+    "fits": true
+   },
+   {
+    "t": 1791124021,
+    "level": 6,
+    "cls": null,
+    "spells": [
+     1240944,
+     2018
+    ],
+    "class_spells": [],
+    "paid": 10,
+    "per_rank": 100,
+    "ranks_implied": 0.1,
+    "fits": false
+   },
+   {
+    "t": 1791124065,
+    "level": 6,
+    "cls": null,
+    "spells": [
+     1240945,
+     2550
+    ],
+    "class_spells": [],
+    "paid": 100,
+    "per_rank": 100,
+    "ranks_implied": 1.0,
+    "fits": false
+   },
+   {
+    "t": 1791128683,
+    "level": 2,
+    "cls": "WARRIOR",
+    "spells": [
+     6673
+    ],
+    "class_spells": [
+     6673
+    ],
+    "paid": 10,
+    "per_rank": 10,
+    "ranks_implied": 1.0,
+    "fits": true
+   },
+   {
+    "t": 1791129470,
+    "level": 3,
+    "cls": "WARRIOR",
+    "spells": [
+     1240951,
+     2580,
+     2656
+    ],
+    "class_spells": [],
+    "paid": 0,
+    "per_rank": 10,
+    "ranks_implied": null,
+    "fits": false
+   },
+   {
+    "t": 1791130738,
+    "level": 5,
+    "cls": "WARRIOR",
+    "spells": [
+     772,
+     100
+    ],
+    "class_spells": [
+     772,
+     100
+    ],
+    "paid": 200,
+    "per_rank": 100,
+    "ranks_implied": 2.0,
+    "fits": true
+   },
+   {
+    "t": 1791131547,
+    "level": 6,
+    "cls": "WARRIOR",
+    "spells": [
+     6343,
+     3127
+    ],
+    "class_spells": [
+     6343,
+     3127
+    ],
+    "paid": 200,
+    "per_rank": 100,
+    "ranks_implied": 2.0,
+    "fits": true
+   },
+   {
+    "t": 1791132965,
+    "level": 6,
+    "cls": "WARRIOR",
+    "spells": [
+     1240944,
+     2018
+    ],
+    "class_spells": [],
+    "paid": 10,
+    "per_rank": 100,
+    "ranks_implied": 0.1,
+    "fits": false
+   },
+   {
+    "t": 1791134837,
+    "level": 7,
+    "cls": "WARRIOR",
+    "spells": [
+     1240927,
+     3273
+    ],
+    "class_spells": [],
+    "paid": 100,
+    "per_rank": 100,
+    "ranks_implied": 1.0,
+    "fits": false
+   },
+   {
+    "t": 1791134916,
+    "level": 7,
+    "cls": "WARRIOR",
+    "spells": [
+     1240945,
+     2550
+    ],
+    "class_spells": [],
+    "paid": 100,
+    "per_rank": 100,
+    "ranks_implied": 1.0,
+    "fits": false
+   },
+   {
+    "t": 1791136988,
+    "level": 8,
+    "cls": "WARRIOR",
+    "spells": [
+     1715
+    ],
+    "class_spells": [
+     1715
+    ],
+    "paid": 400,
+    "per_rank": 200,
+    "ranks_implied": 2.0,
+    "fits": true
+   },
+   {
+    "t": 1791142157,
+    "level": 3,
+    "cls": "ROGUE",
+    "spells": [
+     1240951,
+     2580,
+     2656
+    ],
+    "class_spells": [],
+    "paid": 0,
+    "per_rank": 10,
+    "ranks_implied": null,
+    "fits": false
+   },
+   {
+    "t": 1791142787,
+    "level": 4,
+    "cls": "ROGUE",
+    "spells": [
+     53,
+     1784,
+     921
+    ],
+    "class_spells": [
+     53,
+     1784,
+     921
+    ],
+    "paid": 210,
+    "per_rank": 100,
+    "ranks_implied": 2.1,
+    "fits": true
+   },
+   {
+    "t": 1791142831,
+    "level": 4,
+    "cls": "ROGUE",
+    "spells": [
+     1240952,
+     8613,
+     1278068
+    ],
+    "class_spells": [],
+    "paid": 10,
+    "per_rank": 100,
+    "ranks_implied": 0.1,
+    "fits": false
+   },
+   {
+    "t": 1791144028,
+    "level": 6,
+    "cls": "ROGUE",
+    "spells": [
+     1240927,
+     3273
+    ],
+    "class_spells": [],
+    "paid": 100,
+    "per_rank": 100,
+    "ranks_implied": 1.0,
+    "fits": false
+   },
+   {
+    "t": 1791144133,
+    "level": 6,
+    "cls": "ROGUE",
+    "spells": [
+     1240944,
+     2018
+    ],
+    "class_spells": [],
+    "paid": 10,
+    "per_rank": 100,
+    "ranks_implied": 0.1,
+    "fits": false
+   },
+   {
+    "t": 1791144940,
+    "level": 6,
+    "cls": "ROGUE",
+    "spells": [
+     1776
+    ],
+    "class_spells": [
+     1776
+    ],
+    "paid": 200,
+    "per_rank": 100,
+    "ranks_implied": 2.0,
+    "fits": true
+   },
+   {
+    "t": 1791145964,
+    "level": 7,
+    "cls": "ROGUE",
+    "spells": [
+     1240945,
+     2550
+    ],
+    "class_spells": [],
+    "paid": 100,
+    "per_rank": 100,
+    "ranks_implied": 1.0,
+    "fits": false
+   },
+   {
+    "t": 1791147589,
+    "level": 8,
+    "cls": "ROGUE",
+    "spells": [
+     5277
+    ],
+    "class_spells": [
+     5277
+    ],
+    "paid": 400,
+    "per_rank": 200,
+    "ranks_implied": 2.0,
+    "fits": true
+   },
+   {
+    "t": 1791151871,
+    "level": 10,
+    "cls": "ROGUE",
+    "spells": [
+     674,
+     5171,
+     2983,
+     6770
+    ],
+    "class_spells": [
+     674,
+     5171,
+     2983,
+     6770
+    ],
+    "paid": 1200,
+    "per_rank": 300,
+    "ranks_implied": 4.0,
+    "fits": true
+   }
+  ],
+  "class_visits": 10,
+  "fit": 10,
+  "note": "trainer visit = learn events within 15 s; payment should be a multiple of the per-rank price (rank upgrades do not always fire LEARNED_SPELL_IN_SKILL_LINE; one 10c old rank allowed)"
+ },
+ "downtime": {
+  "by_class": {
+   "ROGUE": {
+    "channel_s": 456,
+    "uses": 42,
+    "kills": 275,
+    "s_per_kill": 1.66
+   },
+   "WARRIOR": {
+    "channel_s": 240,
+    "uses": 20,
+    "kills": 157,
+    "s_per_kill": 1.53
+   }
+  },
+  "note": "Food/Drink/First Aid channel time per kill (lower bound; natural regen not visible: health is secret). Report only, no override"
+ },
+ "overrides": {
+  "xp.kill.low_base": {
+   "value": "mob",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "318 clean kills: model with base=5*mob_level+45 for lower mobs 315/318 exact (99.1%) vs Classic 143/318 (45.0%); mob-base alone 287/318; live-only kills 217/219 exact; with this base the Classic ZD is the best ZD at every player level through 12 (245/248 lower-mob kills)"
+  },
+  "xp.kill.rounding": {
+   "value": "half_even",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "9 distinct x.5 cases (29 kills) all round half to even; half-up fits 4, floor fits 4; full model exact: half_even 315, half_up 308, floor 286 of 318"
+  },
+  "xp.kill.rested_mult": {
+   "value": 2.0,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "rested kills earn a bonus equal to the kill XP while the pool lasts: 15/15 exact; the README level-14 kills (96/68/250) are exactly double the mob-base XP"
+  },
+  "rested.bonus_ratio": {
+   "value": 0.5,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "15 rested kills: bonus = min(xp, pool/2) exact 15/15; pool drop = 2*bonus 13/15; recorder 'rest' column NULL on 334/334 kills (bonus text not parsed)"
+  },
+  "xp.mod.well_fed": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "62 kills under Well Fed (spell 1248422): +5% on the rounded kill XP, rounded half-even, exact 61/62 (without bonus 0/62)"
+  },
+  "rested.camp_benefits_xp_mod": {
+   "value": 0.0,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "21 kills under Camp Benefits (1229741) without rested pool or Well Fed: 21 exact with no XP modifier (0 with +5%)"
+  },
+  "xp.kill.base_mul": {
+   "value": 5,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "same-level kills = 5*level+45: 196/196 exact at player levels 1-12"
+  },
+  "xp.kill.base_add": {
+   "value": 45,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "same-level kills = 5*level+45: 196/196 exact at player levels 1-12"
+  },
+  "xp.kill.high_step": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "higher-level kills base(player)*(1+0.05*diff): 65/67 exact for diff +1:60/+2:7 (the +4 cap is untested)"
+  },
+  "xp.zd.verified_through": {
+   "value": 12,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "with base from the mob level, the Classic ZD is the unique best ZD at every player level through 12 and reproduces 245/248 clean lower-mob kills (no rested pool, no Well Fed)"
+  },
+  "xp.level.1": {
+   "value": 400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 1 = 400 (15 obs_xp rows, 625 live frames)"
+  },
+  "xp.level.2": {
+   "value": 900,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 2 = 900 (35 obs_xp rows, 1027 live frames)"
+  },
+  "xp.level.3": {
+   "value": 1400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 3 = 1400 (60 obs_xp rows, 1783 live frames)"
+  },
+  "xp.level.4": {
+   "value": 2100,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 4 = 2100 (70 obs_xp rows, 2652 live frames)"
+  },
+  "xp.level.5": {
+   "value": 2800,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 5 = 2800 (51 obs_xp rows, 2152 live frames)"
+  },
+  "xp.level.6": {
+   "value": 3600,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 6 = 3600 (62 obs_xp rows, 4210 live frames)"
+  },
+  "xp.level.7": {
+   "value": 4500,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 7 = 4500 (63 obs_xp rows, 3842 live frames)"
+  },
+  "xp.level.8": {
+   "value": 5400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 8 = 5400 (44 obs_xp rows, 6205 live frames)"
+  },
+  "xp.level.9": {
+   "value": 6500,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 9 = 6500 (15 obs_xp rows, 2139 live frames)"
+  },
+  "xp.level.10": {
+   "value": 7600,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 10 = 7600 (0 obs_xp rows, 2731 live frames)"
+  },
+  "xp.level.11": {
+   "value": 8800,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 11 = 8800 (0 obs_xp rows, 3371 live frames)"
+  },
+  "xp.level.12": {
+   "value": 10100,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 12 = 10100 (0 obs_xp rows, 2427 live frames)"
+  },
+  "xp.quest.rounding": {
+   "value": "bands",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "121 turn-ins vs ForeverGuide raw XP through 5/10/25/50 rounding: 121 exact; 70 cases where rounding changes the value all exact; over-level reduction not exercised (0 cases)"
+  },
+  "travel.run_speed": {
+   "value": 7.0,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed 7.0 in 12780 moving frames; trail fit mode 6.88 yd/s (n=1456); 1 s position deltas median 6.862 yd/s (n=11117)"
+  },
+  "travel.plane_speed_ratio": {
+   "value": 0.98,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "running at GetUnitSpeed 7.0 covers 6.862 yd/s of map distance (1 s live pairs n=11117; 3 s trail segments 6.855 yd/s n=1077): slopes and turns; map sizes from the client (Z pages)"
+  },
+  "travel.ghost_speed": {
+   "value": 8.75,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed while a ghost: 1677 frames at 8.7..8.8 yd/s (x1.25 run)"
+  },
+  "travel.taxi_speed": {
+   "value": 30.35,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed on a flight path: 108 frames at 30.3..30.4 yd/s (instantaneous; one flight observed)"
+  },
+  "combat.ttk_scale.ROGUE": {
+   "value": 0.9,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "251 fights (glide 46, live 205), levels 1-12: median observed/model 0.90 (IQR 0.68-1.17); combat start to kill; observed TTK grows +6.0%/level faster than the model, so do not extrapolate far above 12; this player's gear/skill"
+  },
+  "combat.ttk_scale.WARRIOR": {
+   "value": 0.99,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "243 fights (glide 243), levels 1-9: median observed/model 0.99 (IQR 0.84-1.15); combat start to kill; observed TTK grows +5.3%/level faster than the model, so do not extrapolate far above 9; this player's gear/skill"
+  },
+  "rested.rate_per_8h": {
+   "value": 0.05,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "7 in-session resting intervals (IsResting, pool +2 per tick): median 0.0494 of a level per 8 h (levels [8, 12])"
+  },
+  "rested.camp_bonus": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "2 campfire sits: pool jumped by 0.050, 0.050 of a level (Welcoming Campfire / Camp Benefits)"
+  },
+  "travel.hearth_cd_s": {
+   "value": 3600.0,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "hearthstone cooldown read right after 1 cast(s): [3598] s remaining -> 3600 s"
+  },
+  "death.durability.min_level": {
+   "value": 10,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "19 deaths at levels 2-9 (11 spirit-healer resurrections) lost no durability; deaths at 10+ lost [8, 8, 8] points on the weakest item (10% rule)"
+  },
+  "economy.train.per_spell_low": {
+   "value": {
+    "1": 10,
+    "2": 10,
+    "3": 10,
+    "4": 100,
+    "5": 100,
+    "6": 100,
+    "7": 100,
+    "8": 200,
+    "9": 200,
+    "10": 300
+   },
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "10 class-trainer visits at levels [2, 3, 4, 5, 6, 8, 10]: every payment is a multiple of the per-rank price (10c at 1-3, 1s at 4-7, 2s at 8-9, 3s at 10)"
+  }
+ },
+ "summary": {
+  "kills": 334,
+  "kills_clean": 318,
+  "classic_agreement": 0.45,
+  "best_hypothesis": "forever",
+  "best_agreement": 0.991,
+  "anchors_l14": {
+   "classic": 0,
+   "classic_rested": 0,
+   "classic_ml+1": 0,
+   "mobbase": 0,
+   "mobbase_rested": 3
+  },
+  "overrides": [
+   "combat.ttk_scale.ROGUE",
+   "combat.ttk_scale.WARRIOR",
+   "death.durability.min_level",
+   "economy.train.per_spell_low",
+   "rested.bonus_ratio",
+   "rested.camp_benefits_xp_mod",
+   "rested.camp_bonus",
+   "rested.rate_per_8h",
+   "travel.ghost_speed",
+   "travel.hearth_cd_s",
+   "travel.plane_speed_ratio",
+   "travel.run_speed",
+   "travel.taxi_speed",
+   "xp.kill.base_add",
+   "xp.kill.base_mul",
+   "xp.kill.high_step",
+   "xp.kill.low_base",
+   "xp.kill.rested_mult",
+   "xp.kill.rounding",
+   "xp.level.1",
+   "xp.level.10",
+   "xp.level.11",
+   "xp.level.12",
+   "xp.level.2",
+   "xp.level.3",
+   "xp.level.4",
+   "xp.level.5",
+   "xp.level.6",
+   "xp.level.7",
+   "xp.level.8",
+   "xp.level.9",
+   "xp.mod.well_fed",
+   "xp.quest.rounding",
+   "xp.zd.verified_through"
+  ],
+  "level_table_verified": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ],
+  "trail_run_speed": 6.855
+ }
+}

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: http://127.0.0.1:*; connect-src 'self' http://127.0.0.1:*; frame-src http://127.0.0.1:*; media-src blob:">
+<title>Glide</title>
+<link rel="stylesheet" href="glide.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<!--ICONS-->
+<nav id="rail" aria-label="Glide">
+  <div class="brand"><img id="brand-icon" src="icon.png" alt="" width="40" height="40"><span>Glide</span></div>
+  <button data-page="coach" class="on"><svg class="icon"><use href="#i-gauge"/></svg><span>Coach</span></button>
+  <button data-page="status"><svg class="icon"><use href="#i-circle-alert"/></svg><span>Status</span><b class="badge" id="status-badge" hidden></b></button>
+  <button data-page="memory"><svg class="icon"><use href="#i-brain"/></svg><span>Memory</span></button>
+  <button data-page="settings"><svg class="icon"><use href="#i-settings"/></svg><span>Settings</span></button>
+  <button data-page="addon"><svg class="icon"><use href="#i-puzzle"/></svg><span>Addon</span></button>
+  <button data-page="logs"><svg class="icon"><use href="#i-scroll-text"/></svg><span>Logs</span></button>
+  <div class="grow"></div>
+  <div class="engine" id="engine">
+    <span class="eng-cap">Coach</span>
+    <div class="eng-state"><span id="eng-state">Stopped</span></div>
+    <div class="eng-btns">
+      <button id="eng-start" title="Start the coach" aria-label="Start the coach"><svg class="icon"><use href="#i-play"/></svg></button>
+      <button id="eng-stop" title="Stop the coach" aria-label="Stop the coach"><svg class="icon"><use href="#i-square"/></svg></button>
+      <button id="eng-restart" title="Restart the coach (applies saved settings)" aria-label="Restart the coach"><svg class="icon"><use href="#i-rotate-cw"/></svg></button>
+    </div>
+    <button id="app-ver" class="ver" title="What's new in Glide"></button>
+  </div>
+</nav>
+
+<main>
+  <section id="page-coach" class="page on">
+    <iframe id="dash" title="Coach console" allow="autoplay"></iframe>
+    <div id="dash-empty" class="empty-state">
+      <h1 id="empty-title">The coach isn't running</h1>
+      <p id="empty-text">Start it to read the game and coach you. The first start builds the knowledge base, which takes a minute or two.</p>
+      <button id="empty-start" class="btn primary big"><svg class="icon"><use href="#i-play"/></svg>Start the coach</button>
+      <pre id="empty-log" class="log mini" aria-label="Recent log"></pre>
+    </div>
+  </section>
+
+  <section id="page-status" class="page">
+    <header class="pagehead">
+      <div><h1>Status</h1><p id="status-sum" class="lede">Checking…</p></div>
+      <div class="grow"></div>
+      <button id="reread" class="btn primary"><svg class="icon"><use href="#i-refresh-cw"/></svg>Re-read game data</button>
+      <button id="reread-force" class="btn" title="Re-extract maps and rebuild both databases even if they look current">Rebuild everything</button>
+    </header>
+    <div class="status-body">
+      <div id="status-plate"></div>
+      <div id="refresh-card" class="refresh" hidden></div>
+      <div id="checks"></div>
+      <p class="fine">Re-reading takes the map images, zone borders and flight paths from your WoW install, merges your new recordings into the quest database, and rebuilds the knowledge base. The coach keeps running meanwhile and switches over when it's done.</p>
+    </div>
+  </section>
+
+  <section id="page-memory" class="page">
+    <header class="pagehead">
+      <div><h1>Memory</h1><p class="lede">What the coach has learned about you and keeps between sessions. It's stored on this PC, outside the app, so it survives updates and reinstalls.</p></div>
+      <div class="grow"></div>
+      <label class="switch" title="Every so often the coach reviews your recent questions and feedback and updates its notes"><input type="checkbox" id="mem-learning"><span class="track"></span><span class="state">Learn from our sessions</span></label>
+      <button id="mem-reflect" class="btn"><svg class="icon"><use href="#i-sparkles"/></svg>Reflect now</button>
+    </header>
+    <div class="memory-body">
+      <form id="mem-add" class="mem-add">
+        <input id="mem-text" class="grow" placeholder="Tell the coach something to remember, like: I prefer short callouts" aria-label="Something to remember" autocomplete="off">
+        <select id="mem-kind" aria-label="Kind"><option value="">Kind: automatic</option><option value="preference">Preference</option><option value="request">Standing request</option><option value="goal">Goal</option><option value="feedback">Correction</option><option value="fact">About me</option></select>
+        <button class="btn primary" type="submit"><svg class="icon"><use href="#i-plus"/></svg>Remember</button>
+      </form>
+      <div id="mem-notes"></div>
+      <div class="sgroup reminders-block">
+        <h2>Reminders</h2>
+        <p>Things to do later: the coach says each one when its moment comes (near a vendor, in a place, at a level, after some minutes). Say "remind me to…" while playing, or add one here.</p>
+        <div class="fields" id="rem-list"></div>
+        <form id="rem-add" class="mem-add"><input id="rem-text" class="grow" placeholder="Remind me to buy 20 Ice Cold Milk" aria-label="New reminder" autocomplete="off"><button class="btn" type="submit"><svg class="icon"><use href="#i-bell"/></svg>Add reminder</button></form>
+      </div>
+    </div>
+  </section>
+
+  <section id="page-settings" class="page">
+    <header class="pagehead">
+      <div><h1>Settings</h1><p class="lede">Changes marked <svg class="icon inline" aria-label="restart"><use href="#i-rotate-cw"/></svg> apply when the coach restarts.</p></div>
+      <label class="set-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="set-search" placeholder="Search all settings" aria-label="Search all settings" autocomplete="off" spellcheck="false"><kbd id="set-search-key">Ctrl+F</kbd></label>
+      <div class="grow"></div>
+      <span id="set-dirty" class="dirty"></span>
+      <button id="set-revert" class="btn ghost">Revert</button>
+      <button id="set-save" class="btn">Save</button>
+      <button id="set-save-restart" class="btn primary">Save and restart coach</button>
+    </header>
+    <div class="settings">
+      <aside id="set-tabs" aria-label="Settings sections"></aside>
+      <div id="set-body"></div>
+    </div>
+  </section>
+
+  <section id="page-addon" class="page">
+    <header class="pagehead"><div><h1>Addon and game</h1><p class="lede">Where WoW is installed, and the Glide addon that sends the game to the coach.</p></div></header>
+    <div class="addon-body">
+      <div class="addon-hero" id="addon-hero"></div>
+      <div class="block">
+        <h2>World of Warcraft folder</h2>
+        <p class="help">The client folder for the version you play, such as <code>…\World of Warcraft\_classic_beta_</code>. The addon goes in its <code>Interface\AddOns</code>; the coach reads your recordings from <code>WTF</code> and the quest cache from <code>Cache\WDB</code>.</p>
+        <div class="row"><input id="wow-dir" class="grow" spellcheck="false" placeholder="Not set" aria-label="WoW folder">
+          <button id="wow-browse" class="btn"><svg class="icon"><use href="#i-folder-open"/></svg>Browse</button><button id="wow-detect" class="btn"><svg class="icon"><use href="#i-search"/></svg>Find it</button></div>
+        <div id="wow-found" class="found"></div>
+        <div id="wow-msg" class="note-line"></div>
+      </div>
+      <div class="block">
+        <h2>Glide addon</h2>
+        <dl class="facts" id="addon-table"></dl>
+        <div class="row"><button id="addon-install" class="btn primary"><svg class="icon"><use href="#i-download"/></svg>Install addon</button>
+          <button id="addon-open" class="btn"><svg class="icon"><use href="#i-folder-open"/></svg>Open AddOns folder</button></div>
+        <div id="addon-msg" class="note-line"></div>
+        <p class="help">After installing or updating, restart WoW completely; /reload doesn't load new addon files. Your addon settings and recordings are kept: they live in WTF\…\SavedVariables.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="page-whatsnew" class="page">
+    <header class="pagehead">
+      <div><h1>What's new</h1><p class="lede" id="wn-lede"></p></div>
+      <div class="grow"></div>
+      <span id="wn-upd" class="dirty"></span>
+      <button id="wn-check" class="btn">Check for updates</button>
+    </header>
+    <div id="wn-list" class="wn-list"></div>
+  </section>
+  <section id="page-logs" class="page">
+    <header class="pagehead"><div><h1>Logs</h1><p class="lede">What the coach and its background jobs are doing.</p></div><div class="grow"></div>
+      <input id="log-filter" placeholder="Filter" spellcheck="false" aria-label="Filter the log">
+      <label class="switch"><input type="checkbox" id="log-follow" checked><span class="track"></span><span class="state">Follow</span></label>
+      <button id="log-copy" class="btn"><svg class="icon"><use href="#i-copy"/></svg>Copy</button>
+      <button id="log-folder" class="btn"><svg class="icon"><use href="#i-folder-open"/></svg>Session logs</button>
+      <button id="log-files" class="btn" title="This log on disk, a file per day (the last 7 days)"><svg class="icon"><use href="#i-scroll-text"/></svg>Log files</button></header>
+    <pre id="log" class="log"></pre>
+  </section>
+  <footer id="sessionbar" aria-label="This session">
+    <div class="sb-item" data-sb="time" data-prio="3" title="Session length" aria-label="Session length"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><b id="sb-time" class="figure">–</b><span class="sb-l">session</span></div>
+    <div class="sb-item cost" data-sb="cost" data-prio="1" title="AI cost this session" aria-label="AI cost this session"><svg class="icon" aria-hidden="true"><use href="#i-coins"/></svg><b id="sb-cost" class="figure">–</b><span class="sb-l">AI cost</span></div>
+    <div class="sb-item" data-sb="calls" data-prio="6" title="AI calls this session" aria-label="AI calls this session"><svg class="icon" aria-hidden="true"><use href="#i-message-square"/></svg><b id="sb-calls" class="figure">–</b><span class="sb-l">calls</span></div>
+    <div class="sb-item" data-sb="cache" data-prio="7" title="Prompt cache hits: the share of input read from cache, at a tenth of the price" aria-label="Prompt cache hits"><svg class="icon" aria-hidden="true"><use href="#i-zap"/></svg><b id="sb-cache" class="figure">–</b><span class="sb-l">cached</span></div>
+    <div class="sb-task" data-sb="task" id="sb-task" hidden role="status" aria-live="polite">
+      <svg class="icon sb-task-ic" aria-hidden="true"><use href="#i-refresh-cw"/></svg>
+      <span class="sb-task-label" id="sb-task-label"></span>
+      <div class="sb-bar" id="sb-bar"><i id="sb-fill"></i></div>
+      <span class="sb-task-meta" id="sb-task-meta"></span>
+      <span class="sb-res" id="sb-res" title="CPU and memory used by Glide: the app, the coach and the jobs it runs"></span>
+    </div>
+    <button class="sb-update" data-sb="update" id="sb-update" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span id="sb-update-l">Restart to update</span></button>
+    <div class="grow" data-sb="grow"></div>
+    <button class="sb-model" data-sb="models" id="sb-models" title="Models and voice systems in use. Click to change them">
+      <span class="sb-item" data-prio="4" title="Model for callouts and spoken questions"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg><b id="sb-fast">–</b></span>
+      <span class="sb-item" data-prio="5" title="Model for typed questions and pace reviews"><svg class="icon" aria-hidden="true"><use href="#i-keyboard"/></svg><b id="sb-deep">–</b></span>
+      <span class="sb-idle" id="sb-idle">not in use</span>
+      <span class="sb-item" data-prio="8" id="sb-listen-wrap" title="Speech-to-text for push-to-talk"><svg class="icon" aria-hidden="true"><use href="#i-ear"/></svg><b id="sb-listen">–</b></span>
+      <span class="sb-item" data-prio="8" id="sb-speak-wrap" title="The narrator's voice"><svg class="icon" aria-hidden="true"><use href="#i-audio-lines"/></svg><b id="sb-speak">–</b></span>
+    </button>
+    <div class="sb-ptt" data-sb="ptt" id="sb-ptt" hidden role="status" aria-live="polite"><i aria-hidden="true"></i><span id="sb-ptt-l">Listening</span></div>
+    <div class="sb-vol" data-sb="mute" id="sb-vol-wrap">
+      <button class="sb-mute" id="sb-mute" type="button" aria-pressed="false" title="Mute the narrator (Ctrl+Alt+M)" aria-label="Mute the narrator"><svg class="icon" aria-hidden="true"><use href="#i-volume-2"/></svg></button>
+      <div class="sb-vol-pop" id="sb-vol-pop" role="group" aria-label="Narrator volume"><b id="sb-vol-v">100%</b><input type="range" id="sb-vol" min="0" max="1" step="0.05" value="1" aria-label="Narrator volume" aria-orientation="vertical"></div>
+    </div>
+    <div class="sb-item sb-mode" data-sb="mode" data-prio="2" id="sb-mode-wrap" title="Coach"><svg class="icon" id="sb-mode-ic" aria-hidden="true"><use href="#i-bot"/></svg><b id="sb-mode">–</b></div>
+  </footer>
+</main>
+<div id="toast" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

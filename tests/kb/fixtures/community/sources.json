@@ -1,0 +1,7 @@
+{
+  "about": "Synthetic source registry for the knowledge tests (tests/kb/fixture.py).",
+  "sources": [
+    {"id": "fixture-forum", "kind": "forum", "url": "https://example.invalid/forum", "access": "public", "status": "active"},
+    {"id": "fixture-git", "kind": "git", "url": "https://example.invalid/data.git", "access": "public", "status": "active"}
+  ]
+}

@@ -1,0 +1,108 @@
+# Builds the Windows installer and publishes it to the public Fermin7c1/Glide-releases repo whenever the desktop
+# app's version (desktop/package.json) changes on main, after the CI checks (ci.yml) pass. Installed apps check
+# that repo and update themselves.
+#
+# Needs the secret RELEASES_TOKEN in the "release" environment (Settings > Environments): a fine-grained GitHub
+# token with access to Fermin7c1/Glide-releases only, permission "Contents: Read and write", with an expiry. The
+# environment has a required reviewer and allows only main, so nothing else can reach the token or publish.
+name: Release desktop app
+
+on:
+  push:
+    branches: [main]
+    paths: [desktop/package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # the same checks as every push (ci.yml: tests, portable golden masters, linters, desktop build); a release is
+  # built only when they pass
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: test
+    runs-on: windows-latest
+    environment: release
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Version, and is it released already?
+        id: ver
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if (-not $env:GH_TOKEN) {
+            Write-Host "::error::The RELEASES_TOKEN secret is not set. Add it under Settings > Secrets and variables > Actions (a fine-grained token with Contents: Read and write on Fermin7c1/Glide-releases)."
+            exit 1
+          }
+          gh repo view Fermin7c1/Glide-releases --json name *> $null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::Can't reach Fermin7c1/Glide-releases with RELEASES_TOKEN. Create the public repo (with a README) and give the token access to it."
+            exit 1
+          }
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          "version=$v" >> $env:GITHUB_OUTPUT
+          # only a published release counts; a draft is a run that didn't finish, and this one finishes it
+          $draft = gh release view "v$v" --repo Fermin7c1/Glide-releases --json isDraft --jq .isDraft 2>$null
+          $exists = if ($LASTEXITCODE -eq 0 -and $draft -eq "false") { "true" } else { "false" }
+          "exists=$exists" >> $env:GITHUB_OUTPUT
+          Write-Host "desktop version $v, already released: $exists"
+          exit 0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
+        if: steps.ver.outputs.exists == 'false'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install
+        if: steps.ver.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Bundled Python
+        if: steps.ver.outputs.exists == 'false'
+        run: npm run python
+
+      # electron-builder uploads the installer and its blockmap in parallel, and each upload creates the release if
+      # it can't find one; two creates race and the loser fails the build. A draft made up front is found by both.
+      - name: Draft the release
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          $v = $env:VER
+          gh release view "v$v" --repo Fermin7c1/Glide-releases *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes "Glide $v"
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          exit 0
+
+      - name: Build and upload
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: npm run release
+
+      # installed apps only see published releases, so this goes last: a failed upload never reaches them
+      - name: Publish the release
+        if: steps.ver.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VER: ${{ steps.ver.outputs.version }}
+        run: gh release edit "v$env:VER" --repo Fermin7c1/Glide-releases --draft=false --latest

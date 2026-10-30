@@ -1,0 +1,35 @@
+#forever
+#season 0,1
+#version 1
+<< Alliance
+#group Fixture Forever Guide (A)
+#subgroup Fixture Guide 5-10
+#name 8-10 Loch Modan
+#defaultfor Dwarf/Gnome
+
+step
+    #label NormalRouteStart
+    .goto Loch Modan,35.0,45.0
+    >>Talk to |cRXP_FRIENDLY_Dorn Scout::90204|r
+    .target Dorn Scout::90204
+    .turnin 90005 >>Turn in Fixture Report
+    .accept 90007 >>Accept Fixture Bears
+step
+    .goto Loch Modan,40.0,30.0
+    >>Kill |cRXP_ENEMY_Fixture Bears|r
+    .complete 90007,1 --Fixture Bear slain (6)
+    .mob Fixture Bear
+step
+    #label NormalRouteEnd
+    .goto Loch Modan,35.0,45.0
+    .target Dorn Scout::90204
+    .turnin 90007 >>Turn in Fixture Bears
+    .accept 90008 >>Accept Fixture Errand
+step
+    .goto Loch Modan,33.0,50.0
+    >>Talk to |cRXP_FRIENDLY_Elin Keeper::90205|r
+    .target Elin Keeper::90205
+    .turnin 90008 >>Turn in Fixture Errand
+step
+    .xp 10 >> Grind to level 10
+    .mob Fixture Bear

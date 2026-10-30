@@ -1,0 +1,94 @@
+#forever
+#season 0,1
+#version 1
+<< Alliance
+#group Fixture Forever Guide (A)
+#subgroup Fixture Guide 5-10
+#name 5-8 Dun Morogh
+#next 8-10 Loch Modan
+#defaultfor Dwarf/Gnome
+
+step
+    .goto Dun Morogh,40.0,50.0
+    >>Talk to |cRXP_FRIENDLY_Ada Giver::90201|r
+    .target Ada Giver::90201
+    .accept 90001 >>Accept Fixture Delivery
+step
+    #optional
+    .goto Dun Morogh,42.0,56.0,60,0
+    .xp 5+1325 >> Grind to 1325+/2800xp killing |cRXP_ENEMY_Fixture Boars|r << Priest
+    .xp 5+1595 >> Grind to 1595+/2800xp killing |cRXP_ENEMY_Fixture Boars|r << !Priest
+    .mob Fixture Boar
+--XX 270 from the priest quest
+step
+    #hardcore
+    #completewith next
+    .goto Dun Morogh,46.0,52.0
+    .subzone 131 >> Travel to the hub
+step
+    #softcore
+    #completewith next
+    .deathskip >> Die and respawn at the |cRXP_FRIENDLY_Spirit Healer|r
+    .target Spirit Healer
+step
+    .goto 1426/0,-463.417,-5584.417--c:Dun Morogh,46.000,52.000
+    >>Talk to |cRXP_FRIENDLY_Bram Ender::90202|r
+    .target Bram Ender::90202
+    .turnin 90001 >>Turn in Fixture Delivery
+    .accept 90002 >>Accept Fixture Boars
+step
+    .goto Dun Morogh,44.0,60.0
+    >>Kill |cRXP_ENEMY_Fixture Boars|r
+    .complete 90002,1 --Fixture Boar slain (8)
+    .mob Fixture Boar
+step
+    .goto Dun Morogh,46.0,52.0
+    .target Bram Ender::90202
+    .turnin 90002 >>Turn in Fixture Boars
+    .accept 90003 >>Accept Fixture Tusks
+step << Warlock
+    .goto Dun Morogh,46.5,52.5
+    >>Talk to |cRXP_FRIENDLY_Wren Trainer|r
+    .trainer >> Train your class spells
+    .target Wren Trainer
+step << Warlock
+    .goto Dun Morogh,46.6,52.4
+    .vendor 90206 >> Buy the grimoire if you can afford it
+    .money <0.0100
+step
+    .goto Dun Morogh,44.0,61.0
+    >>Kill |cRXP_ENEMY_Fixture Boars|r. Loot them for |cRXP_LOOT_[Fixture Tusk]|r
+    .collect 90301,5,90003,1 --Collect Fixture Tusk (x5)
+    .mob Fixture Boar
+step
+    .goto Dun Morogh,46.0,52.0
+    .target Bram Ender::90202
+    .turnin 90003 >>Turn in Fixture Tusks
+    .accept 90005 >>Accept Fixture Report
+step
+    .goto 1426/0,-660.417,-5190.417--c:Dun Morogh,50.000,40.000
+    .goto Dun Morogh,30.0,45.0
+    >>Talk to |cRXP_FRIENDLY_Cara Hunter::90203|r
+    .target Cara Hunter::90203
+    .accept 90004 >>Accept Fixture Wolves
+step
+    .goto Dun Morogh,28.0,40.0
+    >>Kill |cRXP_ENEMY_Fixture Wolves|r
+    .complete 90004,1 --Fixture Wolf slain (6)
+    .mob Fixture Wolf
+step
+    .goto Dun Morogh,30.0,45.0
+    .target Cara Hunter::90203
+    .turnin 90004 >>Turn in Fixture Wolves
+step << skip
+    .goto Dun Morogh,30.0,46.0
+    >>A step RestedXP never shows
+step
+    #completewith next
+    .hs >> Hearth to the hub
+step
+    .goto 1426/0,-1152.917,-5518.750--c:Dun Morogh,60.000,50.000
+    >>Travel east through the pass
+step
+    .xp 8 >> Grind to level 8
+    .mob Fixture Boar

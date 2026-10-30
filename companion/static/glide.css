@@ -1,0 +1,175 @@
+/* Glide design tokens and base styles, shared by the desktop app, the coach dashboard and the overlay.
+   World: a second HUD in the grammar of the game's own interface (tooltip panels, quest gold, one parchment
+   quest page per screen, item-quality colours), drawn from scratch with restraint. Fonts: Tenor Sans for titles,
+   Geist for the interface and every number, Source Serif 4 for quest prose. */
+@font-face { font-family: "Tenor Sans"; src: url("fonts/tenor-sans.woff2") format("woff2"); font-weight: 400; font-display: block;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Tenor Sans"; src: url("fonts/tenor-sans-ext.woff2") format("woff2"); font-weight: 400; font-display: block;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Geist"; src: url("fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: block;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Geist"; src: url("fonts/geist-ext.woff2") format("woff2"); font-weight: 100 900; font-display: block;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4.woff2") format("woff2"); font-weight: 200 900; font-display: block;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4-ext.woff2") format("woff2"); font-weight: 200 900; font-display: block;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  /* night and the tooltip panels set on it */
+  --night: #0c0d12;
+  --night-deep: #07080b;
+  --tip: #13151c;
+  --tip-2: #1a1d26;
+  --edge: #30343f;
+  --edge-soft: #22252e;
+  --edge-hi: rgba(255, 255, 255, 0.06);
+  --ink: #f1ede3;
+  --ink-2: #bab5a8;
+  --ink-3: #8b867b;
+  /* quest gold: titles, the current thing, the one primary action */
+  --gold: #f2c24f;
+  --gold-hi: #ffd877;
+  --gold-dim: #9c7d36;
+  --gold-wash: rgba(242, 194, 79, 0.1);
+  --gold-line: rgba(242, 194, 79, 0.32);
+  --on-gold: #1d1504;
+  /* the parchment quest page, and the inks safe on it */
+  --leaf: #eadfc6;
+  --leaf-2: #d8c7a2;
+  --leaf-edge: #6d5534;
+  --sepia: #2a1e12;
+  --sepia-2: #57452e;
+  --sepia-3: #6b573b;
+  --rubric: #7a2412;
+  --ahead-leaf: #2f6b2c;
+  --behind-leaf: #9b2414;
+  --warn-leaf: #7a5200;
+  /* signals */
+  --ahead: #4cd471;
+  --behind: #ff6257;
+  --warn: #ffad3b;
+  --xp: #9a5cf2;
+  --rested: #3d7fd9;
+  --hp: #2fbf4a;
+  /* item quality, for items only */
+  --q-poor: #9d9d9d;
+  --q-common: #f1ede3;
+  --q-uncommon: #1eff00;
+  --q-rare: #2a8cff;
+  --q-epic: #b04cf5;
+  --q-legendary: #ff8000;
+  --f-title: "Tenor Sans", "Segoe UI", system-ui, sans-serif;
+  --f-ui: "Geist", "Segoe UI", system-ui, sans-serif;
+  --f-read: "Source Serif 4", Georgia, serif;
+  --radius-s: 5px;
+  --radius-m: 7px;
+  --radius-l: 9px;
+  /* a tooltip: near-black, a 1px edge, a faint light along the top, a soft drop */
+  --tip-shadow: 0 0 0 1px var(--edge), inset 0 1px 0 var(--edge-hi), 0 10px 28px rgba(0, 0, 0, 0.35);
+  --float: 0 0 0 1px var(--edge), 0 18px 40px rgba(0, 0, 0, 0.55), 0 3px 8px rgba(0, 0, 0, 0.4);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+
+  /* names the shell's older styles still use */
+  --ground: var(--night);
+  --ground-deep: var(--night-deep);
+  --surface: var(--tip);
+  --raised: var(--tip-2);
+  --line: var(--edge);
+  --line-soft: var(--edge-soft);
+  --cobalt: var(--gold);
+  --cobalt-hi: var(--gold-hi);
+  --on-cobalt: var(--on-gold);
+  --best: var(--gold);
+  --quest: var(--gold);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--f-title); font-weight: 400; }
+
+.num, .figure { font-family: var(--f-ui); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+::selection { background: var(--gold); color: var(--on-gold); }
+:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; border-radius: 4px; }
+a { color: var(--gold); text-underline-offset: 3px; text-decoration-color: var(--gold-line); }
+a:hover { color: var(--gold-hi); text-decoration-color: currentColor; }
+input, textarea { caret-color: var(--gold); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 8px; border: 4px solid var(--night); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+.icon { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: -3px; }
+
+/* a tooltip panel: the one container of the world */
+.tip { background: linear-gradient(180deg, var(--tip-2), var(--tip) 90px); border-radius: var(--radius-l); box-shadow: var(--tip-shadow); }
+
+/* buttons: quiet tooltip buttons, one gold primary per area */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; padding: 0 15px; border-radius: var(--radius-s);
+  border: 1px solid var(--edge); background: var(--tip-2); color: var(--ink);
+  font: inherit; font-weight: 550; font-size: 14px; cursor: pointer; white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+  transition: background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out), color 0.15s, transform 0.1s;
+}
+.btn:hover { background: #222632; border-color: var(--gold-dim); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: default; transform: none; background: var(--tip-2); border-color: var(--edge); }
+.btn.primary { background: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, #d9a63a) var(--gold); border-color: #6b5220; color: var(--on-gold); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+.btn.primary:hover { background: linear-gradient(180deg, #ffe39a, var(--gold-hi) 55%, var(--gold)) var(--gold-hi); border-color: #7d6026; }
+.btn.primary:disabled { background: var(--gold-dim); }
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink-2); }
+.btn.ghost:hover { background: var(--tip-2); color: var(--ink); }
+.btn.danger:hover { border-color: var(--behind); color: #ffc3bd; }
+.btn.icon-only { width: 36px; padding: 0; }
+.btn .icon { width: 16px; height: 16px; }
+
+input, select, textarea {
+  font: inherit; font-size: 14px; color: var(--ink);
+  background: var(--night-deep); border: 1px solid var(--edge); border-radius: var(--radius-s);
+  padding: 7px 10px; min-height: 36px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-3); }
+input:hover, select:hover, textarea:hover { border-color: #454a57; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold-dim); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 3px var(--gold-wash); }
+select { padding-right: 28px; }
+option { background: var(--tip); color: var(--ink); }
+input[type="range"] { accent-color: var(--gold); padding: 0; min-height: 0; border: 0; background: transparent; box-shadow: none; }
+
+/* switch: a checkbox drawn as a toggle; state is the knob position and the fill, not colour alone */
+.switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track {
+  width: 40px; height: 22px; border-radius: 11px; background: var(--night-deep); border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  position: relative; transition: background-color 0.18s var(--ease-out), border-color 0.18s var(--ease-out); flex: none;
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--ink-3); transition: transform 0.2s var(--ease-out), background-color 0.18s;
+}
+.switch input:checked + .track { background: var(--gold); border-color: #6b5220; }
+.switch input:checked + .track::after { transform: translateX(18px); background: var(--on-gold); }
+.switch input:focus-visible + .track { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.switch .state { font-size: 13px; color: var(--ink-2); min-width: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

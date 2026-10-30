@@ -1,0 +1,100 @@
+// Settings > AI models & keys > Choose models: the coach's model list (Anthropic, Gemini, custom endpoints,
+// OpenRouter) from its /models route, with prices and what each would cost an hour at this player's usage. A pick
+// applies to the coach at once (its /settings route), which saves it.
+import { call } from "../bridge.js";
+import { $, esc, icon, toast } from "../dom.js";
+import { Group } from "../settings-schema.js";
+import { engineGet, enginePost, live } from "../state.js";
+import { Obj } from "../types.js";
+
+const MORDER: Record<string, number> = { anthropic: 0, gemini: 1, endpoint: 2, openrouter: 3 };
+const MGROUP: Record<string, string> = { anthropic: "Anthropic (direct)", gemini: "Google Gemini (direct)", endpoint: "Custom endpoints", openrouter: "OpenRouter" };
+const ROLES: [string, string, string, string][] = [   // path, config key, label, help
+  ["fast", "fast_model", "Callouts and spoken questions", "Fires often: a fast, cheap model keeps callouts quick."],
+  ["deep", "deep_model", "Typed questions and pace reviews", "Fewer calls: a stronger model gives better answers."]];
+const per = (v: number | null | undefined) => (v == null ? "?" : v < 0.01 && v > 0 ? v.toFixed(4) : (+v).toFixed(v < 1 ? 3 : 2));
+let MODELS: Obj | null = null;
+
+/** Dollars an hour for a model in a role, from its prices and the role's token profile (null: price unknown). */
+function mcost(path: string, id: string): number | null {
+  const m = (MODELS?.models || []).find((x: Obj) => x.id === id), p = m && m.price, pr = (MODELS?.profile || {})[path];
+  if (!p || p.in == null || !pr) return null;
+  const rd = p.cache_read != null ? p.cache_read : p.in;
+  return (pr.cache_read * rd + pr.uncached * p.in + pr.output * (p.out || 0)) / 1e6;
+}
+
+function mlabel(m: Obj): string {
+  const p = m.price;
+  return `${m.name}${m.provider !== "anthropic" ? `  [${m.id}]` : ""}, ${p ? `$${per(p.in)} in / $${per(p.out)} out per million` : "price unknown"}${m.tools === false ? ", no tools" : ""}${m.context ? `, ${Math.round(m.context / 1000)}k context` : ""}`;
+}
+
+async function loadModels(refresh = false): Promise<void> {
+  try { MODELS = await (await engineGet(`/models${refresh ? "?refresh=1" : ""}`)).json(); } catch { MODELS = null; }
+}
+
+/** One role's filter box, model list (grouped by provider, cheapest first) and its cost. */
+function roleHtml([path, key, label, help]: [string, string, string, string], filter: string): string {
+  const all: Obj[] = MODELS!.models || [], sel = MODELS!.selected || {};
+  const cur = sel[key], q = filter.toLowerCase().split(/\s+/).filter(Boolean);
+  const list = all.filter((m) => m.id === cur || q.every((w) => `${m.id} ${m.name}`.toLowerCase().includes(w)))
+    .sort((a, b) => (MORDER[a.provider] ?? 9) - (MORDER[b.provider] ?? 9) || (mcost(path, a.id) ?? 1e9) - (mcost(path, b.id) ?? 1e9));
+  const groups: Record<string, Obj[]> = { anthropic: [], gemini: [], endpoint: [], openrouter: [] };
+  list.slice(0, 500).forEach((m) => (groups[m.provider] || groups.openrouter).push(m));
+  const opts = (cur && !all.find((m) => m.id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)} (not in the list)</option>` : "") +
+    Object.entries(groups).filter(([, v]) => v.length).map(([g, v]) => `<optgroup label="${MGROUP[g]}">${v.map((m) => {
+      const c = mcost(path, m.id);
+      return `<option value="${esc(m.id)}" ${m.id === cur ? "selected" : ""}>${esc(mlabel(m))}${c != null ? `, about $${per(c)} an hour` : ""}</option>`;
+    }).join("")}</optgroup>`).join("");
+  const c = mcost(path, cur), m = all.find((x) => x.id === cur);
+  return `<div class="field"><div class="lab">${esc(label)}<small>${esc(help)}</small></div><div class="ctl mpick" style="display:grid;width:100%">
+        <input type="text" data-filter="${path}" value="${esc(filter)}" placeholder="Filter: claude, gemini, flash, ollama…" aria-label="Filter models">
+        <select data-pick="${key}" aria-label="${esc(label)}">${opts}</select>
+        <div class="mcost">${m && m.tools === false ? "<em>No tool use</em>: answers get the knowledge block but no lookups. " : ""}${c != null ? `About <em>$${per(c)} an hour</em> at ${(MODELS!.profile?.[path] || {}).measured ? "this session's" : "typical"} usage.` : "Price unknown."}</div></div></div>`;
+}
+
+/** How many models, when listed, what failed, and Refresh. */
+function listHtml(): string {
+  const st = MODELS!.status || {};
+  return `<div class="field"><div class="lab">The list<small>${esc(`${st.count || 0} models${st.updated ? `, listed ${new Date(st.updated * 1000).toLocaleString()}` : ""}.`)}${Object.keys(st.errors || {}).length ? ` ${esc(Object.entries(st.errors).map(([k, v]) => `${k}: ${v}`).join("; "))}` : ""}</small></div>
+      <div class="ctl"><button class="btn" id="mp-refresh">${icon("refresh-cw")}Refresh the list</button><span class="help">Spent this session: $${per(MODELS!.spent_usd || 0)}</span></div></div>`;
+}
+
+export async function renderModelPicker(_g: Group, host: HTMLElement): Promise<void> {
+  if (!live.engineUrl) {
+    host.innerHTML = `<div class="field"><div class="lab">Model list<small>Start the coach to load the models your keys can use, with prices. You can also type model ids below.</small></div><div class="ctl"><button class="btn" id="mp-start">${icon("play")}Start the coach</button></div></div>`;
+    $("mp-start").onclick = () => call("engine:start");
+    return;
+  }
+  if (!MODELS) await loadModels();
+  const filters: Record<string, string> = { fast: "", deep: "" };
+  const draw = () => {
+    if (!MODELS || MODELS.error) {
+      host.innerHTML = `<div class="field"><div class="lab">Model list</div><div class="ctl bad">${esc(MODELS?.error || "Couldn't load the model list from the coach.")}</div></div>`;
+      return;
+    }
+    host.innerHTML = ROLES.map((role) => roleHtml(role, filters[role[0]])).join("") + listHtml();
+    // filtering redraws the lists: keep the caret in the box being typed in
+    host.querySelectorAll<HTMLInputElement>("[data-filter]").forEach((inp) => (inp.oninput = () => {
+      filters[inp.dataset.filter!] = inp.value;
+      const pos = inp.selectionStart;
+      draw();
+      const again = host.querySelector<HTMLInputElement>(`[data-filter="${inp.dataset.filter}"]`)!;
+      again.focus();
+      again.setSelectionRange(pos, pos);
+    }));
+    host.querySelectorAll<HTMLSelectElement>("[data-pick]").forEach((s) => (s.onchange = async () => {
+      const key = s.dataset.pick!, v = s.value;
+      try {
+        const r = await (await enginePost("/settings", { [key]: v })).json();
+        if (!r.ok) throw new Error(r.error || "not applied");
+        MODELS!.selected[key] = v;
+        toast(`${key === "fast_model" ? "Callouts and voice" : "Typed questions"} now use ${v}. Saved.`);
+        draw();
+      } catch (e) {
+        toast(`Couldn't switch the model: ${(e as Error).message}`, true);
+      }
+    }));
+    $("mp-refresh").onclick = async () => { $("mp-refresh").textContent = "Refreshing…"; await loadModels(true); draw(); };
+  };
+  draw();
+}

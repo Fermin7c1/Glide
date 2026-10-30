@@ -1,0 +1,17 @@
+{
+  // Checks the engine's dashboard (companion/static/dashboard.js, plain JavaScript served as it is: no build step)
+  // against the state stream's types (src/shared/engine.ts) with // @ts-check and JSDoc. Nothing is emitted.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "files": ["../companion/static/dashboard.js"]
+}

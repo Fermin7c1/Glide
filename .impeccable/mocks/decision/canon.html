@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:#0f1012;color:#e8e8ea;font-family:Inter,sans-serif;display:grid;grid-template-columns:232px 1fr}
+nav{border-right:1px solid #222327;padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+nav b{font-size:18px;margin:0 10px 20px}nav a{padding:9px 10px;border-radius:7px;font-size:15px;color:#9a9ba1}nav a.on{background:#1a1b1f;color:#fff}
+main{padding:26px 30px;display:flex;flex-direction:column;gap:20px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.k{background:#1a1b1f;border:1px solid #26272c;border-radius:12px;padding:18px}.k span{font-size:14px;color:#9a9ba1}.k b{display:block;font-size:32px;font-weight:600;margin-top:6px}
+.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;flex:1}
+.panel{background:#1a1b1f;border:1px solid #26272c;border-radius:12px;padding:20px}
+.panel h3{font-size:15px;color:#9a9ba1;font-weight:500;margin-bottom:14px}
+.step{font-size:26px;font-weight:600;line-height:1.25}.sub{color:#9a9ba1;margin-top:8px;font-size:16px}
+.li{display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid #26272c;font-size:16px}
+.map{height:250px;border-radius:8px;background:#23252a;margin-top:6px}
+.msg{padding:12px 14px;border-radius:8px;background:#23252a;font-size:16px;margin-bottom:10px}
+.acc{color:#7c7cff}
+</style></head><body>
+<nav><b>Glide</b><a class="on">Dashboard</a><a>Route</a><a>Map</a><a>Gear</a><a>Settings</a></nav>
+<main>
+ <div class="kpis"><div class="k"><span>Level</span><b>14</b></div><div class="k"><span>XP / hour</span><b>18,400</b></div><div class="k"><span>Time to level</span><b>16m</b></div><div class="k"><span>Session</span><b>1h 42m</b></div></div>
+ <div class="grid">
+  <div class="panel"><h3>Current step</h3><div class="step">Turn in Infestation Investigation</div><div class="sub">Elatrell Featherlight · Thendal Grove · 60 yd</div>
+   <div class="li"><span>13 · Accept The Cirrusfly Queen</span><span>0:20</span></div><div class="li"><span>14 · The Anchors of Zephras</span><span>3:40</span></div><div class="map"></div></div>
+  <div class="panel"><h3>Coach</h3><div class="msg">Kill Pesky Cirrusflies 80 yards east.</div><div class="msg">You're <span class="acc">1m 40s ahead</span> of the plan.</div>
+   <h3 style="margin-top:18px">Gear</h3><div class="li"><span>Linen Cloak</span><span>+6%</span></div><h3 style="margin-top:18px">Buffs</h3><div class="li"><span>Battle Shout</span><span>1:42</span></div></div>
+ </div>
+</main></body></html>

@@ -1,0 +1,463 @@
+/* The coach dashboard: a second HUD. Unit frame, auras and pace across the top; the parchment quest page in the
+   centre with the book (tabs) and the coach's chat under it; the minimap and the route tracker on the right; the
+   XP bar along the bottom. More width docks the book's sections into always-open columns on the left (the wing).
+   The tokens and base components (tooltip panels, buttons, inputs) come from glide.css, inlined before this. The
+   sections below follow the page, top to bottom; then the page's states (waiting for the game, arrange mode) and
+   the narrow layouts, last so they win. */
+
+/* ---- the page: the HUD's grid ------------------------------------------------------------------------------- */
+body { background: radial-gradient(1200px 800px at 45% 35%, #151821 0%, var(--night) 65%) fixed, var(--night); }
+
+#hud {
+  min-height: 100vh; display: grid; gap: 18px 22px; padding: 18px 24px 0;
+  grid-template-columns: auto minmax(0, 1fr) clamp(290px, 23vw, 500px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "top top top" "warn warn warn" "wing centre side" "foot foot foot";
+}
+@media (min-width: 1200px) and (min-height: 640px) { #hud { height: 100vh; } }
+
+/* ---- shared: screen-reader text, quiet text, panel headings ---------------------------------------------------- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hint, .dim { color: var(--ink-3); font-family: var(--f-ui); font-size: 13px; font-weight: 400; }
+.empty { color: var(--ink-3); }
+/* a panel's heading in gold: the docked sections, the route tracker, the chat (which tones it down) */
+/* a panel has no header: it says what it is by its emblem, the section's glyph large and dim in the top right of
+   its ground, where a panel's content rarely reaches; its name is the accessible name only (h2.sr). A panel, and
+   each section of the book, moves by its grip, an invisible strip along its top edge (dashboard.js HANDLES). */
+:is(.dock > section, .shelf > section, .chat, .tracker) { position: relative; isolation: isolate; }
+.emblem { position: absolute; top: 14px; right: 16px; z-index: -1; width: 76px; height: 76px; color: var(--gold); opacity: 0.075;
+  pointer-events: none; transition: opacity 0.4s var(--ease-out); }
+.shelf > section > .emblem { top: 0; right: 0; }
+.grip { position: absolute; left: 0; right: 0; top: 0; height: 14px; z-index: 3; display: block; }
+
+/* ---- the top: unit frame, auras, pace ---------------------------------------------------------------------- */
+.top { grid-area: top; display: flex; flex-wrap: wrap; align-items: center; gap: 22px 30px; min-width: 0; container: top / inline-size; }
+
+/* the unit frame: the level medallion, then the name, health, power and durability */
+.unit { display: flex; align-items: center; flex: none; }
+.medal {
+  position: relative; z-index: 1; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 32%, #232736, #0b0c11 75%);
+  box-shadow: 0 0 0 2px #0a0b0f, 0 0 0 4px var(--gold-dim), 0 0 0 5px #000, 0 8px 18px rgba(0, 0, 0, 0.55);
+}
+.medal .figure { font-size: 28px; font-weight: 700; color: var(--gold); letter-spacing: -0.02em; }
+.medal .live { position: absolute; right: 1px; bottom: 3px; width: 13px; height: 13px; border-radius: 50%; background: #3a3d47; box-shadow: 0 0 0 3px var(--night); }
+.medal .live.on { background: var(--ahead); }
+.unit-body {
+  margin-left: -16px; padding: 10px 16px 10px 30px; min-width: 300px;
+  background: linear-gradient(180deg, var(--tip-2), var(--tip)); border-radius: 0 var(--radius-l) var(--radius-l) 0; box-shadow: var(--tip-shadow);
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name dura" "bars bars"; gap: 6px 14px; align-items: baseline;
+}
+.unit-name { grid-area: name; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.unit-name b { font: 400 19px/1.1 var(--f-title); color: var(--class, var(--ink)); white-space: nowrap; }
+.unit-name span { font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bars { grid-area: bars; display: grid; gap: 4px; }
+.gauge { position: relative; display: block; height: 15px; border-radius: 3px; background: #050608; box-shadow: 0 0 0 1px #000, inset 0 1px 2px rgba(0, 0, 0, 0.8); overflow: hidden; }
+.gauge > i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(#4fdc6c, var(--hp)); transition: width 0.4s var(--ease-out); }
+.gauge > b { position: absolute; inset: 0; text-align: center; font-size: 11.5px; line-height: 15px; font-weight: 650; color: #fff; text-shadow: 0 1px 1px #000, 0 0 2px #000; }
+.gauge.hp.warn > i { background: linear-gradient(#ffc061, #d98a1e); }
+.gauge.hp.bad > i { background: linear-gradient(#ff7a6e, #c9372b); }
+.gauge.pw > i { background: linear-gradient(#5c93f0, #2d5fcc); }                       /* mana */
+.gauge.pw.pw-rage > i { background: linear-gradient(#ee5146, #c4291f); }
+.gauge.pw.pw-energy > i { background: linear-gradient(#ffe46b, #d8b320); }
+.gauge.pw.pw-energy > b { color: #241a00; text-shadow: none; }
+.gauge.pw.pw-focus > i { background: linear-gradient(#ffa25c, #d06a1f); }
+.gauge.pw.pw-runic > i { background: linear-gradient(#5fd4f5, #1f93bb); }
+.dura { grid-area: dura; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
+.dura .icon { width: 14px; height: 14px; }
+.dura .bar { width: 36px; height: 4px; border-radius: 2px; background: #000; overflow: hidden; }
+.dura .bar i { display: block; height: 100%; width: 0; background: var(--ink-3); }
+.dura b { font-weight: 600; color: var(--ink-2); }
+.dura.warn, .dura.warn b { color: var(--warn); } .dura.warn .bar i { background: var(--warn); }
+.dura.bad, .dura.bad b { color: var(--behind); } .dura.bad .bar i { background: var(--behind); }
+
+/* auras: the game's own buff icons, as on the default buff frame: square, with the time under each;
+   your own casts get a gold edge */
+.auras { display: flex; flex-wrap: wrap; gap: 6px 8px; flex: 0 1 auto; min-width: 0; max-height: 76px; overflow: hidden; align-content: center; }
+.auras:empty { display: none; }
+.aura { position: relative; display: grid; justify-items: center; gap: 3px; width: 40px; font-size: 12px; line-height: 1; }
+.aura .ic { box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--edge); }
+.aura.mine .ic { box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--gold-dim); }
+.aura b { font-weight: 600; color: var(--ink-2); white-space: nowrap; min-height: 12px; }
+.aura.low b { color: var(--behind); }
+.aura.more { width: auto; align-self: start; height: 36px; place-content: center; padding: 0 6px; color: var(--ink-3); font-size: 13px; }
+.auras .note { font-size: 13px; color: var(--ink-3); align-self: center; }
+/* an icon tile; with no icon from the client (no install found, a weapon enchant) it shows the buff's initial */
+.ic { position: relative; flex: none; width: 36px; height: 36px; border-radius: 3px; overflow: hidden; display: grid; place-items: center;
+  background: linear-gradient(160deg, var(--tip-2), var(--night-deep)); }
+.ic::before { content: attr(data-l); font: 400 17px var(--f-title); color: var(--ink-3); }
+.ic img { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* pace: XP per hour with its history, then the other figures */
+.pace { display: flex; align-items: center; gap: 26px; flex: 1 0 auto; }   /* the XP/h chart takes the free width; never squeezes the buffs */
+.top > .pace:not(:first-child) { margin-left: auto; }         /* pace keeps to the right wherever it sits */
+.stat { display: grid; gap: 2px; }
+.stat .figure, .xpc-head .figure { font-size: 27px; font-weight: 650; line-height: 1; white-space: nowrap; }
+.cap { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.figure.up { color: var(--ahead); } .figure.down { color: var(--behind); }
+.wide-only { display: none; }
+@container top (min-width: 1500px) { .wide-only { display: grid; } }
+.xpchart { flex: 1; display: grid; grid-template-columns: auto minmax(150px, 1fr); gap: 0 14px; align-items: center; }
+@container top (max-width: 1240px) { .xpchart { flex: none; grid-template-columns: auto; } .xpc-plot { display: none; } .pace { gap: 20px; justify-content: space-evenly; } }
+.xpc-head { display: grid; gap: 2px; }
+.xpc-plot { position: relative; height: 42px; }
+@container top (min-width: 1500px) { .xpchart { grid-template-columns: auto minmax(220px, 1fr); } .xpc-plot { height: 48px; } }
+.spark { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.spark .line { fill: none; stroke: #b48af7; stroke-width: 2; }
+.spark .area { fill: url(#sparkfill); }
+.spark .bench { stroke: var(--ink-3); stroke-dasharray: 3 4; stroke-width: 1; }
+.spark.below .line { stroke: var(--behind); }
+.xpc-ax { position: absolute; font-size: 11px; color: var(--ink-3); line-height: 1; }
+.xpc-top { left: 0; top: -2px; } .xpc-from { left: 0; bottom: -13px; } .xpc-now { right: 0; bottom: -13px; }
+.xpc-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--ink-3); border-bottom: 1px dashed var(--edge); }
+.xpc-empty[hidden] { display: none; }
+.xpc-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--ink-3); }
+.xpc-dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #b48af7; box-shadow: 0 0 0 2px var(--night); }
+.xpc-tip { position: absolute; top: 52px; z-index: 5; padding: 7px 10px; border-radius: var(--radius-s); background: var(--tip); box-shadow: var(--float); font-size: 13px; white-space: nowrap; }
+.xpc-tip small { display: block; color: var(--ink-3); }
+.xpc-tip .up { color: var(--ahead); } .xpc-tip .down { color: var(--behind); }
+
+/* the addon is out of date */
+.banner { grid-area: warn; display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: var(--radius-m); background: rgba(255, 98, 87, 0.1); box-shadow: 0 0 0 1px rgba(255, 98, 87, 0.45); color: #ffd2cc; }
+.banner[hidden] { display: none; }
+
+/* ---- the centre: quest page, then the book and the chat ------------------------------------------------------ */
+.centre { grid-area: centre; min-width: 0; min-height: 0; display: grid; gap: 18px; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); grid-template-areas: "page page" "chat book"; }
+.page-wrap { min-width: 0; container: page / inline-size; }
+/* the middle's five slots; panels can trade places (arrange mode), so the grid places slots, not panels */
+.slot { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.slot > * { flex: 1 1 auto; min-height: 0; min-width: 0; }
+.slot[data-slot="page"] { grid-area: page; } .slot[data-slot="chat"] { grid-area: chat; } .slot[data-slot="book"] { grid-area: book; }
+.side > .slot[data-slot="route"] { flex: 1 1 0; }
+.side > .slot:has(> #mapsec, > .page-wrap) { flex: none; }
+.side > .slot[data-slot="map"]:not(:has(> #mapsec, > .page-wrap)) { flex: 1 1 0; }
+/* a panel that fills its space (chat, book, tracker) in a slot that sizes to its content gets a height of its own */
+.slot:is([data-slot="page"], [data-slot="map"]) > :is(.chat, .book, .tracker) { flex: none; height: min(46vh, 520px); }
+/* the book has nothing to show (waiting for the game, or every section docked): its slot steps aside */
+.slot:has(> .book.bare) { display: none; }
+.centre:has(> [data-slot="book"] > .book.bare) { grid-template-areas: "page page" "chat chat"; }
+.centre:has(> [data-slot="chat"] > .book.bare) { grid-template-areas: "page page" "book book"; }
+.centre:has(> [data-slot="page"] > .book.bare) { grid-template-rows: minmax(0, 1fr); grid-template-areas: "chat book"; }
+@media (max-width: 1199px) { .centre { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "page" "chat" "book"; } .chat { height: 340px; } .book { max-height: 560px; } .side { max-height: none; } }
+
+/* ---- the quest page: parchment, sepia ink, rubric headings ----------------------------------------------------- */
+.leaf {
+  position: relative; border-radius: 4px; padding: 26px clamp(22px, 3vw, 40px) 20px; color: var(--sepia);
+  background: radial-gradient(120% 95% at 50% 30%, var(--leaf) 55%, var(--leaf-2) 100%);
+  box-shadow: 0 0 0 1px var(--leaf-edge), 0 0 0 4px #15130f, 0 0 0 5px var(--gold-dim), 0 22px 50px rgba(0, 0, 0, 0.55);
+}
+/* a new step turns the page: its parts rise in, one after another */
+.leaf.turn > * { animation: leaf-turn 0.55s var(--ease-out) both; }
+.leaf.turn > *:nth-child(2) { animation-delay: 0.05s; } .leaf.turn > *:nth-child(3) { animation-delay: 0.1s; } .leaf.turn > *:nth-child(n+4) { animation-delay: 0.15s; }
+@keyframes leaf-turn { from { opacity: 0; transform: translateY(8px); filter: blur(2px); } }
+.leaf h1 { margin: 0; font: 400 clamp(28px, 2.5vw, 40px)/1.12 var(--f-title); color: #22160a; text-wrap: balance; letter-spacing: -0.005em; }
+.leaf .head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: start; }
+.leaf .glyph { width: 38px; display: grid; place-items: center; font: 400 44px/1 var(--f-title); color: var(--rubric); }
+.leaf .glyph .icon { width: 32px; height: 32px; margin-top: 4px; }
+.leaf .lede { margin: 8px 0 0; font: 400 17.5px/1.55 var(--f-read); color: var(--sepia-2); max-width: 64ch; text-wrap: pretty; }
+.leaf.idle .lede { margin-left: 0; }
+.leaf .step-no { font-size: 13px; color: var(--sepia-3); text-align: right; white-space: nowrap; padding-top: 6px; }
+.leaf .step-no b { display: block; font-size: 22px; font-weight: 650; color: var(--sepia); }
+/* the way there: the arrow, the distance, the place, the time against the route */
+.go { display: flex; align-items: center; gap: 18px 22px; flex-wrap: wrap; margin: 18px 0 2px; padding: 14px 0; border-top: 1px solid rgba(87, 69, 46, 0.25); border-bottom: 1px solid rgba(87, 69, 46, 0.25); }
+.arrow { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 0 0 1px rgba(87, 69, 46, 0.55); background: rgba(255, 255, 255, 0.25); flex: none; }
+.arrow svg { width: 28px; height: 28px; fill: var(--rubric); transition: transform 0.6s var(--ease-out); }
+.dist { font-size: clamp(54px, 5.4vw, 84px); font-weight: 750; line-height: 0.9; letter-spacing: -0.035em; color: #22160a; }
+.dist small { font-size: 0.42em; font-weight: 600; color: var(--sepia-2); margin-left: 4px; letter-spacing: 0; }
+.where b { display: block; font-size: 21px; font-weight: 550; line-height: 1.25; }
+.where span { font-size: 15px; color: var(--sepia-3); }
+.delta { margin-left: auto; text-align: right; }
+.delta b { display: block; font-size: 30px; font-weight: 700; line-height: 1; }
+.delta span { font-size: 13px; color: var(--sepia-3); }
+.delta.ahead b { color: var(--ahead-leaf); } .delta.behind b { color: var(--behind-leaf); }
+/* objectives and rewards side by side, then the foot */
+.leaf .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 32px; }
+.leaf h3 { margin: 16px 0 6px; font: 400 17px var(--f-title); color: var(--rubric); }
+.objs { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 16px; }
+.objs li { display: flex; gap: 10px; align-items: baseline; }
+.objs li::before { content: "–"; color: var(--sepia-3); }
+.objs li .tag { color: var(--sepia-3); }
+.objs li .count { margin-left: auto; font-weight: 600; }
+.objs li.done { color: var(--sepia-3); }
+.objs li.done .count { color: var(--ahead-leaf); }
+.rewards { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 16px; }
+.rewards b { font-weight: 650; }
+.rewards .you { color: var(--sepia-3); }
+.leaf .foot { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(87, 69, 46, 0.25); display: flex; flex-wrap: wrap; gap: 4px 26px; font-size: 13.5px; color: var(--sepia-3); }
+.leaf .foot b { color: var(--sepia); font-weight: 650; }
+.leaf .warn { color: var(--warn-leaf); font-weight: 600; }
+/* waiting for the game: the steps to connect it, the current one ringed in rubric */
+.checklist { list-style: none; counter-reset: c; margin: 20px 0 4px; padding: 16px 0 0; border-top: 1px solid rgba(87, 69, 46, 0.25); display: grid; gap: 12px; font: 400 16.5px/1.5 var(--f-read); color: var(--sepia); max-width: 70ch; }
+.checklist li { counter-increment: c; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; }
+.checklist li::before { content: counter(c); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--f-ui); color: var(--sepia-2); box-shadow: 0 0 0 1px rgba(87, 69, 46, 0.55); margin-top: -1px; }
+.checklist li.done { color: var(--sepia-3); }
+.checklist li.done::before { content: none; }
+.checklist .tick { width: 26px; height: 26px; padding: 5px; border-radius: 50%; color: var(--leaf); background: var(--ahead-leaf); margin-top: -1px; }
+.checklist li.now::before { box-shadow: 0 0 0 1.5px var(--rubric); color: var(--rubric); }
+.checklist li.now { color: #22160a; }
+
+/* ---- the book: tabs over one shelf; docked sections move to the wing ------------------------------------------- */
+/* the book: one page of its sections, one after another (no tabs, no headers), each named only by its emblem */
+.book { position: relative; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.shelf { flex: 1; min-height: 0; overflow: auto; padding: 12px 20px 26px; mask-image: linear-gradient(#000 calc(100% - 24px), transparent); }
+.shelf > section { display: block; }
+.shelf > section:not([hidden]) ~ section:not([hidden]) { margin-top: 34px; }   /* space between sections, none above the first */
+.shelf > section[hidden] { display: none; }
+.book.bare { display: none; }
+
+.wing { grid-area: wing; display: flex; gap: 18px; min-height: 0; }
+.wing:empty { display: none; }
+.dock { width: clamp(320px, 19vw, 380px); display: flex; flex-direction: column; gap: 18px; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+.dock > section { padding: 14px 18px 16px; }
+
+/* rows inside the book's sections */
+.row { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-top: 1px solid var(--edge-soft); font-size: 14.5px; }
+.row:first-child { border-top: 0; }
+.row .n small, .row .p small { color: var(--ink-3); font-size: 13px; }
+.row .p { text-align: right; white-space: nowrap; color: var(--ink-2); }
+.row.done .n { color: var(--ink-3); }
+.gain { color: var(--ahead); font-weight: 650; }
+/* gear */
+.reward { padding-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.reward > b { color: var(--gold); font-weight: 500; }
+.reward .best { text-decoration: underline; text-decoration-color: var(--ahead); text-underline-offset: 4px; }
+.bagnote { padding-top: 10px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--edge-soft); }
+/* the quest log */
+.qcode { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; margin-right: 6px; border-radius: 3px; font-size: 11px; font-weight: 700; color: var(--on-gold); background: var(--gold-dim); vertical-align: 1px; }
+/* why this step */
+.why .head { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 12px; padding-bottom: 12px; }
+.why .head b { display: block; font-size: 22px; font-weight: 650; }
+.why .head span { font-size: 12.5px; color: var(--ink-3); }
+.why .ln { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--edge-soft); font-size: 14.5px; }
+.why .lbl { color: var(--ink-3); }
+.why ul { margin: 0; padding-left: 16px; }
+.why li { margin: 2px 0; }
+.why .wn, .why .risk { color: var(--warn); }
+.why .plan { padding: 10px 0; border-top: 1px solid var(--edge-soft); color: var(--ink-2); font-size: 14.5px; }
+.why.stale { opacity: 0.7; }
+.reason { display: inline-block; margin: 0 6px 6px 0; padding: 3px 9px; border-radius: 999px; background: var(--tip-2); box-shadow: 0 0 0 1px var(--edge-soft); font-size: 13.5px; }
+/* community notes, each with how sure it is */
+.cn { padding: 12px 0; border-top: 1px solid var(--edge); font-size: 14.5px; }   /* a clear line between notes, none above the first */
+.cn:first-child { padding-top: 2px; border-top: 0; }
+.cn small { display: block; margin-top: 3px; color: var(--ink-3); font-size: 12.5px; }
+.pill { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 650; background: var(--tip-2); color: var(--ink-2); box-shadow: 0 0 0 1px var(--edge); }
+.pill.confirmed { color: var(--ahead); box-shadow: 0 0 0 1px rgba(76, 212, 113, 0.4); }
+.pill.disputed, .pill.outdated { color: var(--warn); box-shadow: 0 0 0 1px rgba(255, 173, 59, 0.4); }
+/* buffs, with a smaller icon tile */
+.buffnote { margin-bottom: 8px; font-size: 13px; color: var(--ink-3); }
+.row.buff .n { display: flex; align-items: center; gap: 10px; }
+.row.buff .ic { width: 24px; height: 24px; border-radius: 2px; box-shadow: 0 0 0 1px #000; }
+.row.buff .ic::before { font-size: 12px; }
+.row.buff small { white-space: nowrap; }
+/* the session */
+#stats { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+
+/* ---- the coach's chat, newest at the bottom like the game's ------------------------------------------------------ */
+.chat { display: flex; flex-direction: column; min-height: 0; padding: 4px 4px 0; }
+/* the narrator's volume (in the desktop app) */
+#feed { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 4px; mask-image: linear-gradient(transparent, #000 32px); padding-top: 18px; }
+#feed::before { content: ""; margin-top: auto; }
+.msg { padding: 7px 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.msg:last-child { color: var(--ink); }
+.msg .by { color: var(--gold); margin-right: 6px; }
+.msg .ts { color: var(--ink-3); font-size: 12px; margin-right: 8px; }
+.msg.question .by { color: #8fc0ff; }
+.msg.review .by { color: #c9a6ff; }
+.msg.error .by, .msg.urgent .by { color: var(--behind); }
+.msg.urgent { color: var(--ink); }
+.msg .facts { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.msg .factbad { color: var(--behind); }
+.msg.ungrounded .by::after { content: " (unchecked)"; color: var(--warn); }
+.ask { display: flex; gap: 8px; margin-top: 10px; flex: none; }
+.ask input { flex: 1; min-width: 0; }
+
+/* ---- the right side: zone, minimap, tracker ------------------------------------------------------------------ */
+.side { grid-area: side; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+#mapsec { position: relative; display: flex; flex-direction: column; gap: 14px; }
+/* the zone's name is engraved on the map itself, under its top rim: no header above it */
+.zone { position: absolute; z-index: 2; top: 8%; left: 18%; right: 18%; margin: 0; text-align: center; font-size: 18px;
+  color: var(--gold-hi); line-height: 1.15; pointer-events: none; text-wrap: balance;
+  text-shadow: 0 0 2px #000, 0 1px 3px #000, 0 0 10px rgba(0, 0, 0, 0.9); }
+.zone small { display: block; margin-top: 2px; font: 500 12px var(--f-ui); color: var(--ink); text-shadow: 0 0 2px #000, 0 1px 3px #000; }
+#mapbox {
+  position: relative; width: min(100%, 460px); aspect-ratio: 1; margin: 6px auto 0; border-radius: 50%; overflow: hidden; cursor: grab; background: #000;
+  box-shadow: 0 0 0 3px #000, 0 0 0 5px var(--gold-dim), 0 0 0 6px #000, 0 16px 40px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+}
+#mapbox::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.75); pointer-events: none; }
+.centre .slot #mapbox { width: min(100%, 48vh, 640px); }       /* moved into a wide middle slot: a bigger map */
+#mapview { position: absolute; left: 0; top: 0; width: 100%; height: 66.667%; transform-origin: 0 0; }
+#mapimg, #mapsvg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
+/* the minimap's marks: colours the map art doesn't use, dark outlines, sizes set in screen pixels by drawMap() */
+#mapsvg { --route: #fffaf0; --target: #ff5a36; --flight: #4fd8ff; }
+#mapsvg polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+#mapsvg .rt-case { stroke: #000; stroke-opacity: 0.7; }
+#mapsvg .rt-walk { stroke: var(--route); }
+#mapsvg .rt-flow { stroke: var(--gold); animation: rt-flow 1.1s linear infinite; }
+#mapsvg .rt-fly { stroke: var(--flight); }
+#mapsvg .rt-land { fill: var(--flight); stroke: #000; }
+#mapsvg .wp-cur { fill: var(--target); stroke: #fff; paint-order: stroke; filter: drop-shadow(0 0 1.5px #000) drop-shadow(0 0 1.5px #000); }
+#mapsvg .wp-pulse { fill: none; stroke: var(--target); transform-box: fill-box; transform-origin: center; animation: wp-pulse 1.8s var(--ease-out) 3 both; }
+#mapsvg .wp-here { fill: none; stroke: var(--target); filter: drop-shadow(0 0 1.5px #000); }
+#mapsvg .wp-next { fill: #fff; stroke: #000; }
+#mapsvg .me { fill: #fff; stroke: #000; stroke-width: 2.5; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
+@keyframes rt-flow { to { stroke-dashoffset: calc(var(--dash) * -1); } }
+@keyframes wp-pulse { from { transform: scale(1); opacity: 0.9; } to { transform: scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #mapsvg .rt-flow, #mapsvg .wp-pulse { animation: none; } #mapsvg .wp-pulse { display: none; } }
+/* the zoom buttons, shown while the pointer is over the map */
+.mapctl { position: absolute; right: 50%; bottom: 7%; transform: translateX(50%); z-index: 2; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(10, 11, 15, 0.82); box-shadow: 0 0 0 1px var(--edge); opacity: 0; transition: opacity 0.2s var(--ease-out); }
+#mapbox:hover .mapctl, .mapctl:focus-within { opacity: 1; }
+.mapctl button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--ink-2); cursor: pointer; }
+.mapctl button:hover { color: var(--ink); background: var(--tip-2); }
+.mapctl button.on { color: var(--gold); }
+.mapctl .icon { width: 15px; height: 15px; }
+/* no map image yet: a quiet compass face instead of a black hole */
+#mapbox.blank {
+  background:
+    linear-gradient(var(--gold-line), var(--gold-line)) 50% 50% / 1px 72% no-repeat,
+    linear-gradient(90deg, var(--gold-line), var(--gold-line)) 50% 50% / 72% 1px no-repeat,
+    radial-gradient(circle, transparent 0 31%, var(--gold-line) 31.2% 31.6%, transparent 31.8% 61%, var(--gold-line) 61.2% 61.6%, transparent 61.8%),
+    radial-gradient(circle at 50% 40%, var(--tip-2), var(--night-deep) 75%);
+}
+#mapbox.blank::before { content: "N"; position: absolute; left: 50%; top: 5%; transform: translateX(-50%); font: 400 15px var(--f-title); color: var(--gold-dim); }
+#mapbox.blank .mapctl { display: none; }
+.coords { display: flex; justify-content: center; gap: 22px; font-size: 13px; color: var(--ink-3); }
+.coords b { color: var(--ink-2); font-weight: 550; }
+#mapnote { text-align: center; font-size: 13px; color: var(--ink-3); }
+#mapnote:empty { display: none; }
+
+/* the route tracker: finished steps, the live one (lit in gold), the ones coming up */
+.tracker { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#steps { flex: 1; min-height: 0; overflow: auto; mask-image: linear-gradient(#000 calc(100% - 28px), transparent); padding-bottom: 20px; }
+#steps > .empty { padding: 10px 0; font-size: 14px; }
+.trk { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 0 7px; }
+.trk .g { grid-row: span 2; font: 400 19px/1.1 var(--f-title); color: var(--gold-dim); text-align: center; }
+.trk .g .icon { width: 15px; height: 15px; vertical-align: -1px; }
+.trk .t { font-size: 15px; font-weight: 550; color: #dcb85a; }
+.trk .tm { font-size: 13.5px; color: var(--ink-3); text-align: right; white-space: nowrap; }
+.trk .tm .ahead { color: var(--ahead); font-weight: 650; } .trk .tm .behind { color: var(--behind); font-weight: 650; } .trk .tm .best { color: var(--gold); font-weight: 650; }
+.trk .sub { grid-column: 2 / 4; font-size: 13.5px; color: var(--ink-2); }
+.trk .sub div::before { content: "– "; color: var(--ink-3); }
+.trk .sub .ok { color: var(--ink-3); }
+.trk.done .t, .trk.done .g { color: var(--ink-3); font-weight: 450; }
+.trk.live { margin: 2px -10px; padding: 9px 10px 8px; border-radius: var(--radius-m); background: linear-gradient(90deg, var(--gold-wash), transparent 85%); box-shadow: inset 0 0 0 1px var(--gold-line); }
+.trk.live .t, .trk.live .g { color: var(--gold); }
+
+/* ---- the bottom: the XP bar, bags and hearth -------------------------------------------------------------- */
+.xpfoot { grid-area: foot; margin: 0 -24px; padding: 10px 24px 10px; background: var(--night-deep); border-top: 1px solid var(--edge-soft); }
+.xpbar { position: relative; height: 14px; border-radius: 3px; background: #000; box-shadow: 0 0 0 1px #2a2d36, inset 0 1px 3px rgba(0, 0, 0, 0.9); overflow: hidden; }
+.xpbar > i { position: absolute; top: 0; bottom: 0; left: 0; }
+.xpbar .rest { width: 0; background: rgba(61, 127, 217, 0.42); transition: width 0.6s var(--ease-out); }
+.xpbar .fill { width: 0; background: linear-gradient(#b986ff, #7d3fd6 60%, #6a33bb); transition: width 0.6s var(--ease-out); }
+.xpbar .ticks { right: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(5% - 1px), rgba(0, 0, 0, 0.6) calc(5% - 1px) 5%); }
+.xpbar .plan { width: 2px; left: 0; background: var(--gold); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.xpbar .plan.past, .xpbar .plan.before { background: var(--ink-3); }
+.xpline { display: flex; align-items: center; gap: 22px; margin-top: 7px; font-size: 13.5px; color: var(--ink-2); }
+.xpline .rested { color: #8fb6ec; }
+.xp-read { display: inline-flex; align-items: baseline; gap: 22px; }
+.xpline > [data-move]:nth-child(2) { margin-left: auto; }     /* the first piece on the left, the rest on the right */
+.kit-item { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); }
+.kit-item .icon { width: 16px; height: 16px; color: var(--ink-3); }
+.kit-item b { font-weight: 600; }
+.kit-item.warn, .kit-item.warn .icon { color: var(--warn); }
+.kit-item.bad, .kit-item.bad .icon { color: var(--behind); }
+.kit-item.ok .icon { color: var(--ahead); }
+.arrange-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 4px; font: inherit; font-size: 12.5px; color: var(--ink-3); cursor: pointer; border-radius: var(--radius-s); }
+.arrange-btn:hover, body.arrange .arrange-btn { color: var(--gold); }
+.arrange-btn .icon { width: 14px; height: 14px; }
+
+/* ---- waiting for the game: no empty gauges, dashes or coordinates ----------------------------------------------- */
+body.waiting :is(.unit .bars, .dura, .auras, .pace .stat, .xpline, .coords, #mapnote, .zone) { display: none; }
+body.waiting #feed:empty::after { content: "The coach talks here once you're in the game. You can already ask about a quest below."; display: block; max-width: 46ch; font-size: 14px; color: var(--ink-3); }
+
+/* ---- arrange mode: every movable piece outlined; drag one within its own part of the HUD ------------------------ */
+body.arrange [data-move] { outline: 1px dashed var(--gold-line); outline-offset: 3px; cursor: grab; touch-action: none; user-select: none; }
+body.arrange [data-move]:hover { outline-color: var(--gold-dim); }
+body.arrange [data-move]:focus-visible { outline: 2px solid var(--gold); }
+/* outside arrange mode the big panels move by their headers, the pieces of the top and bottom bars by themselves
+   (dashboard.js HANDLES) */
+body:not(.arrange) :is(.grip, .leaf .glyph, .leaf h1, .leaf .step-no) { cursor: grab; user-select: none; }
+body:not(.arrange) :is(.top, .xpfoot) [data-move] { cursor: grab; user-select: none; touch-action: none; }
+body.moving, body.moving * { cursor: grabbing !important; user-select: none; }
+[data-move].dragging { opacity: 0.45; }
+.drop-target { outline: 2px solid var(--gold) !important; outline-offset: 3px; }
+body.arrange #mapbox, body.arrange #feed, body.arrange .shelf, body.arrange #steps { pointer-events: none; }
+.dropmark { position: fixed; z-index: 30; background: var(--gold); border-radius: 2px; box-shadow: 0 0 0 1px #000; pointer-events: none; }
+.drag-ghost { position: fixed; z-index: 31; pointer-events: none; padding: 8px 12px; border-radius: var(--radius-s); background: var(--tip-2); box-shadow: 0 0 0 1px var(--gold-dim), var(--float); font: 600 13px var(--f-ui); color: var(--gold); white-space: nowrap; transform: translate(12px, 12px); }
+/* in arrange mode the bar takes a row of its own above the top bar, so it never covers a piece */
+body.arrange #hud { grid-template-rows: auto auto auto minmax(0, 1fr) auto; grid-template-areas: "bar bar bar" "top top top" "warn warn warn" "wing centre side" "foot foot foot"; }
+@media (max-width: 859px) { body.arrange #hud { grid-template-rows: none; grid-template-areas: "bar" "top" "warn" "centre" "side" "foot"; } }
+.arrangebar { grid-area: bar; justify-self: center; display: flex; align-items: center; gap: 12px; max-width: 100%;
+  padding: 10px 12px 10px 18px; border-radius: var(--radius-l); background: var(--tip-2); box-shadow: 0 0 0 1px var(--gold-dim), var(--float); font-size: 13.5px; color: var(--ink-2); }
+.arrangebar[hidden] { display: none; }
+.arrangebar span { min-width: 0; }
+.arrangebar .btn { flex: none; white-space: nowrap; }
+.moved { transition: transform 0.28s var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .moved { transition: none; } }
+
+/* ---- narrow windows: one column, in priority order ---------------------------------------------------------- */
+@media (max-width: 859px) {
+  #hud { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "top" "warn" "centre" "side" "foot"; padding: 14px 14px 0; }
+  .wing { display: none; }
+  .top { flex-wrap: wrap; }
+  .pace { margin-left: 0; flex-wrap: wrap; flex: 1 1 100%; }
+  .unit-body { min-width: 0; flex: 1; }
+  .unit { flex: 1 1 100%; }
+  .xpfoot { margin: 0 -14px; padding: 10px 14px; }
+  .xpchart { grid-template-columns: auto 110px; }
+  .leaf .head { grid-template-columns: auto minmax(0, 1fr); }
+  .leaf .step-no { grid-column: 2; text-align: left; padding-top: 0; }
+  .leaf .step-no b { display: inline; margin: 0 6px; font-size: 15px; }
+  #mapbox { width: min(calc(100% - 12px), 380px); }
+}
+
+/* the quest page in a narrow slot (arrange mode can put it beside the map): smaller type, the step number inline */
+@container page (max-width: 620px) {
+  .leaf { padding: 20px 20px 16px; }
+  .leaf h1 { font-size: 25px; }
+  .leaf .head { grid-template-columns: auto minmax(0, 1fr); }
+  .leaf .step-no { grid-column: 2; text-align: left; padding-top: 0; }
+  .leaf .step-no b { display: inline; font-size: 15px; margin: 0 6px 0 4px; }
+  .leaf .lede { font-size: 15.5px; }
+  .dist { font-size: 46px; }
+  .arrow { width: 46px; height: 46px; }
+}
+
+/* ---- new community notes land: the level-up (dashboard.js levelUp) ----------------------------------------------
+   A column of gold light rises from the Community emblem, two rings burst outward and a crown of rays turns and
+   fades, as when a character levels up; the panel's edge flares gold. Then the emblem keeps a slow golden breath
+   until the notes are seen. */
+.levelup { position: fixed; z-index: 40; width: 0; height: 0; pointer-events: none; }
+.levelup i { position: absolute; left: 0; top: 0; display: block; }
+.lu-pillar { width: 110px; height: 560px; margin: -520px 0 0 -55px; border-radius: 55px 55px 40px 40px;
+  background: linear-gradient(to top, rgba(255, 216, 119, 0), rgba(255, 216, 119, 0.5) 12%, rgba(255, 236, 180, 0.65) 55%, rgba(255, 216, 119, 0));
+  filter: blur(9px); mix-blend-mode: screen; transform-origin: 50% 93%; opacity: 0;
+  animation: lu-pillar 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.lu-ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 2px solid var(--gold-hi);
+  box-shadow: 0 0 16px 2px rgba(242, 194, 79, 0.7), inset 0 0 10px rgba(255, 216, 119, 0.6); opacity: 0;
+  animation: lu-ring 1.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.lu-ring.two { animation-delay: 0.28s; }
+.lu-rays { width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%; opacity: 0; mix-blend-mode: screen;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 130, 0.55) 0deg 3deg, transparent 3deg 20deg);
+  -webkit-mask: radial-gradient(circle, transparent 14%, #000 26%, rgba(0, 0, 0, 0.6) 45%, transparent 70%);
+  mask: radial-gradient(circle, transparent 14%, #000 26%, rgba(0, 0, 0, 0.6) 45%, transparent 70%);
+  animation: lu-rays 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes lu-pillar { 0% { opacity: 0; transform: scaleY(0.15) scaleX(0.6); } 18% { opacity: 1; } 55% { opacity: 0.85; transform: scaleY(1) scaleX(1); } 100% { opacity: 0; transform: scaleY(1.08) scaleX(0.7); } }
+@keyframes lu-ring { 0% { opacity: 1; transform: scale(0.7); } 100% { opacity: 0; transform: scale(5.5); } }
+@keyframes lu-rays { 0% { opacity: 0; transform: scale(0.4) rotate(0deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.35) rotate(38deg); } }
+.lu-glow { animation: lu-glow 3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes lu-glow { 0% { box-shadow: 0 0 0 1px var(--gold-hi), 0 0 40px 6px rgba(242, 194, 79, 0.45), 0 10px 28px rgba(0, 0, 0, 0.35); }
+  100% { box-shadow: var(--tip-shadow); } }
+body.feed-fresh [data-panel="community"] > .emblem { opacity: 0.5; filter: drop-shadow(0 0 10px rgba(242, 194, 79, 0.7));
+  animation: lu-emblem 2.6s ease-in-out infinite; }
+@keyframes lu-emblem { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) {
+  body.feed-fresh [data-panel="community"] > .emblem { animation: none; }
+}
+
+/* push-to-talk as it happens (dashboard.js, the "ptt" event): the ask box glows gold and pulses while the key is held */
+body.ptt-listening #ask input, body.ptt-transcribing #ask input { border-color: var(--gold); }
+body.ptt-listening #ask input { box-shadow: 0 0 0 3px rgba(242, 194, 79, 0.25); animation: ptt-ask 1.2s ease-in-out infinite; }
+body.ptt-listening #ask input::placeholder, body.ptt-transcribing #ask input::placeholder { color: var(--gold); }
+@keyframes ptt-ask { 0%, 100% { box-shadow: 0 0 0 3px rgba(242, 194, 79, 0.25); } 50% { box-shadow: 0 0 0 5px rgba(242, 194, 79, 0.1), 0 0 18px rgba(242, 194, 79, 0.3); } }
+@media (prefers-reduced-motion: reduce) { body.ptt-listening #ask input { animation: none; } }

@@ -1,0 +1,16 @@
+#forever
+#version 1
+<< Alliance
+#group Fixture Forever Dungeon Guide (A)
+#subgroup Fixture Dungeon Guide 5-10
+#name 8-10 Loch Modan
+#defaultfor Dwarf/Gnome
+
+step << Dwarf/Gnome
+    #include Fixture Forever Guide (A)\8-10 Loch Modan@NormalRouteStart-NormalRouteEnd
+step
+    .goto Loch Modan,36.0,46.0
+    >>Group up for the dungeon
+    #dungeon RFK
+step
+    #include Fixture Forever Guide (A)\Fixture Class Quests

@@ -1,0 +1,221 @@
+{
+ "generated": "2026-10-04 21:31:00",
+ "source": "knowledge/mechanics/fit.py",
+ "params": {
+  "xp.kill.low_base": {
+   "value": "mob",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "318 clean kills: model with base=5*mob_level+45 for lower mobs 315/318 exact (99.1%) vs Classic 143/318 (45.0%); mob-base alone 287/318; live-only kills 217/219 exact; with this base the Classic ZD is the best ZD at every player level through 12 (245/248 lower-mob kills)"
+  },
+  "xp.kill.rounding": {
+   "value": "half_even",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "9 distinct x.5 cases (29 kills) all round half to even; half-up fits 4, floor fits 4; full model exact: half_even 315, half_up 308, floor 286 of 318"
+  },
+  "xp.kill.rested_mult": {
+   "value": 2.0,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "rested kills earn a bonus equal to the kill XP while the pool lasts: 15/15 exact; the README level-14 kills (96/68/250) are exactly double the mob-base XP"
+  },
+  "rested.bonus_ratio": {
+   "value": 0.5,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "15 rested kills: bonus = min(xp, pool/2) exact 15/15; pool drop = 2*bonus 13/15; recorder 'rest' column NULL on 334/334 kills (bonus text not parsed)"
+  },
+  "xp.mod.well_fed": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "62 kills under Well Fed (spell 1248422): +5% on the rounded kill XP, rounded half-even, exact 61/62 (without bonus 0/62)"
+  },
+  "rested.camp_benefits_xp_mod": {
+   "value": 0.0,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "21 kills under Camp Benefits (1229741) without rested pool or Well Fed: 21 exact with no XP modifier (0 with +5%)"
+  },
+  "xp.kill.base_mul": {
+   "value": 5,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "same-level kills = 5*level+45: 196/196 exact at player levels 1-12"
+  },
+  "xp.kill.base_add": {
+   "value": 45,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "same-level kills = 5*level+45: 196/196 exact at player levels 1-12"
+  },
+  "xp.kill.high_step": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "higher-level kills base(player)*(1+0.05*diff): 65/67 exact for diff +1:60/+2:7 (the +4 cap is untested)"
+  },
+  "xp.zd.verified_through": {
+   "value": 12,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "with base from the mob level, the Classic ZD is the unique best ZD at every player level through 12 and reproduces 245/248 clean lower-mob kills (no rested pool, no Well Fed)"
+  },
+  "xp.level.1": {
+   "value": 400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 1 = 400 (15 obs_xp rows, 625 live frames)"
+  },
+  "xp.level.2": {
+   "value": 900,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 2 = 900 (35 obs_xp rows, 1027 live frames)"
+  },
+  "xp.level.3": {
+   "value": 1400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 3 = 1400 (60 obs_xp rows, 1783 live frames)"
+  },
+  "xp.level.4": {
+   "value": 2100,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 4 = 2100 (70 obs_xp rows, 2652 live frames)"
+  },
+  "xp.level.5": {
+   "value": 2800,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 5 = 2800 (51 obs_xp rows, 2152 live frames)"
+  },
+  "xp.level.6": {
+   "value": 3600,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 6 = 3600 (62 obs_xp rows, 4210 live frames)"
+  },
+  "xp.level.7": {
+   "value": 4500,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 7 = 4500 (63 obs_xp rows, 3842 live frames)"
+  },
+  "xp.level.8": {
+   "value": 5400,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 8 = 5400 (44 obs_xp rows, 6205 live frames)"
+  },
+  "xp.level.9": {
+   "value": 6500,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 9 = 6500 (15 obs_xp rows, 2139 live frames)"
+  },
+  "xp.level.10": {
+   "value": 7600,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 10 = 7600 (0 obs_xp rows, 2731 live frames)"
+  },
+  "xp.level.11": {
+   "value": 8800,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 11 = 8800 (0 obs_xp rows, 3371 live frames)"
+  },
+  "xp.level.12": {
+   "value": 10100,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "UnitXPMax at level 12 = 10100 (0 obs_xp rows, 2427 live frames)"
+  },
+  "xp.quest.rounding": {
+   "value": "bands",
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "121 turn-ins vs ForeverGuide raw XP through 5/10/25/50 rounding: 121 exact; 70 cases where rounding changes the value all exact; over-level reduction not exercised (0 cases)"
+  },
+  "travel.run_speed": {
+   "value": 7.0,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed 7.0 in 12780 moving frames; trail fit mode 6.88 yd/s (n=1456); 1 s position deltas median 6.862 yd/s (n=11117)"
+  },
+  "travel.plane_speed_ratio": {
+   "value": 0.98,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "running at GetUnitSpeed 7.0 covers 6.862 yd/s of map distance (1 s live pairs n=11117; 3 s trail segments 6.855 yd/s n=1077): slopes and turns; map sizes from the client (Z pages)"
+  },
+  "travel.ghost_speed": {
+   "value": 8.75,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed while a ghost: 1677 frames at 8.7..8.8 yd/s (x1.25 run)"
+  },
+  "travel.taxi_speed": {
+   "value": 30.35,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "GetUnitSpeed on a flight path: 108 frames at 30.3..30.4 yd/s (instantaneous; one flight observed)"
+  },
+  "combat.ttk_scale.ROGUE": {
+   "value": 0.9,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "251 fights (glide 46, live 205), levels 1-12: median observed/model 0.90 (IQR 0.68-1.17); combat start to kill; observed TTK grows +6.0%/level faster than the model, so do not extrapolate far above 12; this player's gear/skill"
+  },
+  "combat.ttk_scale.WARRIOR": {
+   "value": 0.99,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "243 fights (glide 243), levels 1-9: median observed/model 0.99 (IQR 0.84-1.15); combat start to kill; observed TTK grows +5.3%/level faster than the model, so do not extrapolate far above 9; this player's gear/skill"
+  },
+  "rested.rate_per_8h": {
+   "value": 0.05,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "7 in-session resting intervals (IsResting, pool +2 per tick): median 0.0494 of a level per 8 h (levels [8, 12])"
+  },
+  "rested.camp_bonus": {
+   "value": 0.05,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "2 campfire sits: pool jumped by 0.050, 0.050 of a level (Welcoming Campfire / Camp Benefits)"
+  },
+  "travel.hearth_cd_s": {
+   "value": 3600.0,
+   "status": "forever-verified",
+   "updated": "2026-10-04",
+   "evidence": "hearthstone cooldown read right after 1 cast(s): [3598] s remaining -> 3600 s"
+  },
+  "death.durability.min_level": {
+   "value": 10,
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "19 deaths at levels 2-9 (11 spirit-healer resurrections) lost no durability; deaths at 10+ lost [8, 8, 8] points on the weakest item (10% rule)"
+  },
+  "economy.train.per_spell_low": {
+   "value": {
+    "1": 10,
+    "2": 10,
+    "3": 10,
+    "4": 100,
+    "5": 100,
+    "6": 100,
+    "7": 100,
+    "8": 200,
+    "9": 200,
+    "10": 300
+   },
+   "status": "forever-fitted",
+   "updated": "2026-10-04",
+   "evidence": "10 class-trainer visits at levels [2, 3, 4, 5, 6, 8, 10]: every payment is a multiple of the per-rank price (10c at 1-3, 1s at 4-7, 2s at 8-9, 3s at 10)"
+  }
+ }
+}

@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Glide</title>
+<style>/*GLIDE_CSS*//*DASHBOARD_CSS*/</style></head><body class="waiting">
+<!--ICONS-->
+<div id="hud">
+<div class="arrangebar" id="arrangebar" role="region" aria-label="Rearrange the panels" hidden>
+ <span>Drag to rearrange. The top bar, the middle and the bottom bar each keep their own pieces. Alt and the arrow keys move the focused piece.</span>
+ <button type="button" class="btn ghost" id="arrange_reset">Reset layout</button><button type="button" class="btn primary" id="arrange_done">Done</button>
+</div>
+<header class="top" data-group="top">
+ <div class="unit" id="unit" data-move="unit" data-label="Character">
+  <div class="medal" id="medal" title="Level"><span class="figure" id="lvl">–</span><i class="live" id="live" title="Live game data"></i></div>
+  <div class="unit-body">
+   <div class="unit-name"><b id="who">Waiting for the game</b><span id="guide">Start WoW with the Glide addon</span></div>
+   <div class="bars">
+    <span class="gauge hp" id="ghp" title="Health"><i id="ghpf"></i><b><span class="sr">Health </span><span id="ghpv">–</span></b></span>
+    <span class="gauge pw" id="gpw" title="Power"><i id="gpwf"></i><b><span class="sr">Power </span><span id="gpwv">–</span></b></span>
+   </div>
+   <span class="dura" id="gdu" title="Durability"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><i class="bar"><i id="gduf"></i></i><b id="gduv">–</b><span class="sr">durability</span></span>
+  </div>
+ </div>
+ <div class="auras" id="buffs" aria-label="Buffs" data-move="auras" data-label="Buffs"></div>
+ <div class="pace" data-move="pace" data-label="Pace" data-group="pace">
+  <div class="xpchart" data-move="xpchart" data-label="XP per hour chart" title="XP per hour over the last 30 minutes; the dashed line is the route's pace">
+   <div class="xpc-head"><span class="figure" id="xph">–</span><span class="cap">XP per hour<span class="dim" id="xphbench"></span></span></div>
+   <div class="xpc-plot" id="xpcplot">
+    <svg class="spark" id="spark" viewBox="0 0 300 60" preserveAspectRatio="none" aria-label="XP per hour over time">
+     <defs><linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a5cf2" stop-opacity="0.4"/><stop offset="1" stop-color="#9a5cf2" stop-opacity="0"/></linearGradient></defs>
+     <path class="area" d=""/><line class="bench" x1="0" x2="300" y1="-10" y2="-10" vector-effect="non-scaling-stroke"/><path class="line" d="" vector-effect="non-scaling-stroke"/></svg>
+    <span class="xpc-ax xpc-top" id="xpctop"></span><span class="xpc-ax xpc-from" id="xpcfrom"></span><span class="xpc-ax xpc-now">now</span>
+    <i class="xpc-cursor" id="xpccur" hidden></i><i class="xpc-dot" id="xpcdot" hidden></i>
+    <span class="xpc-tip" id="xpctip" hidden></span>
+    <span class="xpc-empty" id="xpcempty">Fills in as you earn XP</span></div></div>
+  <div class="stat" data-move="ttl" data-label="Time to level"><span class="figure" id="ttl">–</span><span class="cap" id="ttlcap">To next level</span></div>
+  <div class="stat" data-move="pacevs" data-label="Pace vs route"><span class="figure" id="pace">–</span><span class="cap">Pace vs route</span></div>
+  <div class="stat wide-only" data-move="sessxp" data-label="XP this session"><span class="figure" id="sessxp">–</span><span class="cap" id="sesscap">This session</span></div>
+  <div class="stat wide-only" data-move="pendxp" data-label="XP waiting in turn-ins"><span class="figure" id="pendxp">–</span><span class="cap">XP waiting in turn-ins</span></div>
+ </div>
+</header>
+<div id="addonwarn" class="banner" hidden></div>
+
+<aside class="wing" id="wing" aria-label="More panels"></aside>
+
+<main class="centre">
+ <div class="slot" data-slot="page"><section data-panel="steps" class="page-wrap" data-move="steps" data-label="Quest page"><h2 class="sr">Current step</h2>
+  <article id="plate" class="leaf idle"><h1>No guide step yet</h1><p class="lede">The current RestedXP step shows here once the game is connected.</p></article>
+ </section></div>
+ <div class="slot" data-slot="book"><section class="book tip" id="book" data-move="book" data-label="Book"><i class="grip" aria-hidden="true"></i>
+  <div class="shelf" id="shelf">
+   <section data-panel="why" data-title="Why" data-icon="lightbulb" aria-label="Why this step"><h2 class="sr">Why this step <span class="hint" id="whyhdr"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-lightbulb"/></svg><i class="grip" aria-hidden="true"></i><div id="why" class="why empty">–</div></section>
+   <section data-panel="quests" data-title="Quests" data-icon="scroll-text" aria-label="Quest log"><h2 class="sr">Quest log <span class="hint" id="qhdr"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-scroll-text"/></svg><i class="grip" aria-hidden="true"></i><div id="quests" class="empty">–</div></section>
+   <section data-panel="gear" data-title="Gear" data-icon="sword" aria-label="Gear"><h2 class="sr">Gear <span class="hint" id="wprof"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-sword"/></svg><i class="grip" aria-hidden="true"></i><div id="gear" class="empty">–</div></section>
+   <section data-panel="levels" data-title="Talents" data-icon="trending-up" aria-label="Talents and levels"><h2 class="sr">Talents and levels <span class="hint" id="lvhdr"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-trending-up"/></svg><i class="grip" aria-hidden="true"></i><div id="levels" class="empty">–</div></section>
+   <section data-panel="buffs" data-title="Buffs" data-icon="sparkles" aria-label="Buffs"><h2 class="sr">Buffs <span class="hint" id="buffhdr"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-sparkles"/></svg><i class="grip" aria-hidden="true"></i><div id="bufflist" class="empty">No buffs.</div></section>
+   <section data-panel="community" data-title="Community" data-icon="users" aria-label="Community"><h2 class="sr">Community <span class="hint" id="commhdr"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-users"/></svg><i class="grip" aria-hidden="true"></i><div id="comm" class="empty">No community notes yet.</div></section>
+   <section data-panel="session" data-title="Session" data-icon="clock" aria-label="Session"><h2 class="sr">Session <span class="hint">the coach and the game link</span></h2><svg class="emblem" aria-hidden="true"><use href="#i-clock"/></svg><i class="grip" aria-hidden="true"></i><div id="stats" class="empty">–</div></section>
+  </div>
+ </section></div>
+ <div class="slot" data-slot="chat"><section data-panel="coach" class="chat" data-move="coach" data-label="Coach chat" aria-label="Coach"><h2 class="sr">Coach <span class="hint" id="sw"></span></h2><svg class="emblem" aria-hidden="true"><use href="#i-audio-lines"/></svg><i class="grip" aria-hidden="true"></i>
+  <div id="feed" aria-live="polite"></div>
+  <form id="ask" class="ask"><input id="q" placeholder="Ask the coach: why this quest? should I skip it?" autocomplete="off" aria-label="Ask the coach"><button class="btn primary" type="submit">Ask</button></form>
+ </section></div>
+</main>
+
+<aside class="side">
+ <div class="slot" data-slot="map"><section data-panel="map" id="mapsec" data-move="map" data-label="Minimap"><i class="grip" aria-hidden="true"></i>
+  <div id="mapbox"><h2 class="zone"><span id="zone">–</span><small id="maphdr"></small></h2><div id="mapview"><svg id="mapsvg" viewBox="0 0 1002 668"></svg></div>
+   <div class="mapctl"><button type="button" id="mz_in" title="Zoom in" aria-label="Zoom in"><svg class="icon"><use href="#i-plus"/></svg></button><button type="button" id="mz_out" title="Zoom out" aria-label="Zoom out"><svg class="icon"><use href="#i-minus"/></svg></button><button type="button" id="mz_follow" title="Keep you in the middle when zoomed" aria-label="Follow" class="on"><svg class="icon"><use href="#i-locate-fixed"/></svg></button><button type="button" id="mz_reset" title="Whole zone" aria-label="Whole zone"><svg class="icon"><use href="#i-maximize"/></svg></button></div>
+  </div>
+  <div class="coords"><span>You <b id="pos" class="num">–</b></span><span>Waypoint <b id="dist">–</b></span></div>
+  <div id="mapnote">No map images yet. They are extracted from the game in the background.</div>
+ </section></div>
+ <div class="slot" data-slot="route"><section data-panel="route" class="tracker" data-move="route" data-label="Route tracker" aria-label="Route"><h2 class="sr">Route <small id="splitspan"></small></h2><svg class="emblem" aria-hidden="true"><use href="#i-route"/></svg><i class="grip" aria-hidden="true"></i><div id="steps"><div class="empty">Your route shows here once a RestedXP guide is running.</div></div></section></div>
+</aside>
+
+<footer class="xpfoot" data-group="foot">
+ <div class="xpbar" id="xpbarbox" data-move="xpbar" data-label="XP bar" title="XP to next level; the lighter blue is rested XP"><i class="rest" id="rest"></i><i class="fill" id="xp"></i><i class="ticks"></i><i class="plan" id="xpplan" hidden></i></div>
+ <div class="xpline" data-move="xpline" data-label="XP line" data-group="xpline">
+  <span class="xp-read" data-move="xpread" data-label="XP to level"><span id="xptxt">–</span><span id="restxt" class="rested"></span></span>
+  <span class="kit-item" id="kbags" data-move="bags" data-label="Bag slots" title="Free bag slots"><svg class="icon" aria-hidden="true"><use href="#i-backpack"/></svg><b id="sbags">–</b><span class="sr">free bag slots</span></span>
+  <span class="kit-item" id="khs" data-move="hearth" data-label="Hearthstone" title="Hearthstone"><svg class="icon" aria-hidden="true"><use href="#i-house"/></svg><b id="shs">–</b><span class="sr">hearthstone</span></span>
+  <button type="button" class="arrange-btn" id="arrange" title="Rearrange every piece, the small ones in the top and bottom bars too (the panels also move by their headers any time)"><svg class="icon" aria-hidden="true"><use href="#i-grip-vertical"/></svg>Layout</button>
+ </div>
+</footer>
+</div>
+<div class="sr" id="arrange_live" aria-live="polite"></div>
+<script>/*DASHBOARD_JS*/</script></body></html>

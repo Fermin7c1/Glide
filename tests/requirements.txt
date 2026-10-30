@@ -1,0 +1,2 @@
+# The tests' packages are in the repository's requirements-dev.txt (pinned); this file only points there.
+-r ../requirements-dev.txt

@@ -1,0 +1,14 @@
+# Weekly update PRs for the workflows' pinned actions and the app's npm and Python dependencies. A PR is only a
+# proposal: CI runs on it (read-only, no secrets), and nothing ships until it's merged and the version changes.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }

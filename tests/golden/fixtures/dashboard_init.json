@@ -1,0 +1,812 @@
+{
+ "state": {
+  "name": "Simulated",
+  "class": "WARRIOR",
+  "race": "Skyborne",
+  "faction": "Alliance",
+  "bind": "Zephras Isle",
+  "level": 4,
+  "xp": 1435,
+  "xp_max": 2100,
+  "rested": 1200,
+  "hp": 100,
+  "power": 100,
+  "power_type": "rage",
+  "combat": false,
+  "dead": 0,
+  "map": 2521,
+  "x": 43.32,
+  "y": 24.95,
+  "zone": "Zephras Isle",
+  "subzone": "",
+  "money": 0,
+  "free_bags": 14,
+  "durability": 100,
+  "hearth_cd": 0,
+  "resting": false,
+  "mounted": false,
+  "on_taxi": false,
+  "kills": 39,
+  "height": null,
+  "fly_to": null,
+  "taxi_to": null,
+  "target": null,
+  "guide": "1-14 Zephras Isle",
+  "guide_group": "RestedXP Forever Guide (A)",
+  "step": 77,
+  "steps": [
+   {
+    "index": 76,
+    "elements": [
+     {
+      "tag": "goto",
+      "map": 2521,
+      "x": 43.4,
+      "y": 24.8,
+      "where": "Thendal Grove, at Elatrell Featherlight · right here"
+     },
+     {
+      "tag": "turnin",
+      "quest": 92463,
+      "done": false,
+      "name": "The Cirrusfly Queen"
+     }
+    ],
+    "text": "Turn in The Cirrusfly Queen"
+   },
+   {
+    "index": 77,
+    "elements": [
+     {
+      "tag": "goto",
+      "map": 2521,
+      "x": 43.3,
+      "y": 24.9,
+      "where": "Thendal Grove, at Falorne Fallwind · right here"
+     },
+     {
+      "tag": "turnin",
+      "quest": 92597,
+      "done": false,
+      "name": "Reading the Ley Lines"
+     }
+    ],
+    "text": "Turn in Reading the Ley Lines"
+   },
+   {
+    "index": 81,
+    "elements": [
+     {
+      "tag": "goto",
+      "map": 2521,
+      "x": 43.7,
+      "y": 24.1,
+      "where": "Thendal Grove, at Myriaal Mistwake · 20 yd northeast (behind you)"
+     }
+    ],
+    "text": ""
+   }
+  ],
+  "quests": {
+   "92481": {
+    "done": false,
+    "obj": [
+     [
+      0,
+      1
+     ]
+    ],
+    "name": "A Student of the Arcane",
+    "level": 2
+   },
+   "92483": {
+    "done": false,
+    "obj": [
+     [
+      0,
+      1
+     ]
+    ],
+    "name": "At Home in the Shadows",
+    "level": 2
+   },
+   "92482": {
+    "done": false,
+    "obj": [
+     [
+      0,
+      1
+     ]
+    ],
+    "name": "The Way of the Hunter",
+    "level": 2
+   },
+   "92484": {
+    "done": false,
+    "obj": [
+     [
+      0,
+      1
+     ]
+    ],
+    "name": "Embracing the Elements",
+    "level": 2
+   },
+   "92485": {
+    "done": false,
+    "obj": [
+     [
+      0,
+      1
+     ]
+    ],
+    "name": "A Student of Nature",
+    "level": 2
+   },
+   "92597": {
+    "done": true,
+    "obj": [
+     [
+      1,
+      1
+     ]
+    ],
+    "name": "Reading the Ley Lines",
+    "level": 4
+   },
+   "92469": {
+    "done": true,
+    "obj": [
+     [
+      0,
+      0
+     ]
+    ],
+    "name": "Return to Rorian",
+    "level": 4
+   }
+  },
+  "coach_flags": {
+   "coach": true,
+   "route": true,
+   "combat": true,
+   "buffs": true,
+   "gear": true,
+   "pace": true,
+   "upkeep": true,
+   "voice": true
+  },
+  "skills": {
+   "weapons": null,
+   "armor": null,
+   "ranks": []
+  },
+  "talent_points": null,
+  "training": null,
+  "flight_paths": null,
+  "rxp_skipped": null,
+  "rxp_settings": null,
+  "vendor_treasure": null,
+  "consumables": null,
+  "corpse": null,
+  "res_sickness_s": null,
+  "buffs": [
+   {
+    "id": "6673",
+    "name": "Battle Shout",
+    "mine": true,
+    "castable": true,
+    "duration": 120,
+    "remaining": 47
+   },
+   {
+    "id": "1243",
+    "name": "Power Word  Fortitude",
+    "mine": false,
+    "castable": false,
+    "duration": 1800,
+    "remaining": 1727
+   }
+  ],
+  "buffs_hidden": false,
+  "buffs_stale": false,
+  "addon_version": null,
+  "addon_errors": null,
+  "xp_per_hour": 204882,
+  "ttl_seconds": 11.684774650774592,
+  "xp_session": 4135,
+  "session_minutes": 1,
+  "on_step_seconds": 0,
+  "dist_to_goto": 0.16999999999999796,
+  "arrow": {
+   "tag": "goto",
+   "map": 2521,
+   "x": 43.4,
+   "y": 24.8
+  },
+  "fresh": true,
+  "standing_in": "Thendal Grove",
+  "waypoint": {
+   "area": "Thendal Grove",
+   "landmark": "at Elatrell Featherlight",
+   "yards": 0,
+   "direction": "northeast",
+   "relative": "behind you",
+   "text": "Thendal Grove, at Elatrell Featherlight · right here"
+  },
+  "addon": {
+   "expected": "0.15.0",
+   "installed": null,
+   "running": "0.15.0",
+   "ok": true,
+   "problem": null,
+   "fix": null
+  },
+  "upgrades": [
+   {
+    "item": "Linen Cloak",
+    "key": "0.1",
+    "slot": 15,
+    "slot_name": "back",
+    "replaces": null,
+    "score": 0.4,
+    "replaces_score": 0.0,
+    "gain": 0.4,
+    "verdict": "upgrade (slot is empty)",
+    "wait_level": null,
+    "stats": {
+     "AR": 8.0,
+     "SA": 0.0
+    },
+    "ilvl": 6,
+    "req": 1
+   }
+  ],
+  "community": {
+   "notes": [
+    {
+     "fact": "n:20261018-applejack-still-repeatable-xp",
+     "kind": "tip",
+     "claim": "The new Elwynn Forest quest 'Applejack Still' (91736, an object north of Westbrook Garrison at about 24.6, 58.0) takes 4 Shiny Red Apples and gives a Thunder Applejack plus 100 XP each turn-in; a beta player reports it can be repeated without limit.",
+     "status": "reported",
+     "published": "2026-10-18",
+     "levels": [
+      1,
+      12
+     ],
+     "source": "blizzard-forums",
+     "title": "Elwynn Applejack Still: 4 Shiny Red Apples for a Thunder Applejack and 100 XP, reportedly repeatable",
+     "detail": "The Thunder Applejack is the item for 'An Apple Treat' (91738, Sergeant De Vries at Westbrook Garrison, 630 XP), so one turn-in is part of the normal Elwynn route; Polestar buys 4 apples from Homer Stonefield (NPC 894, Stonefield farm) for it. The repeat XP comes from one forum post (Oct 18) asking whether it is an exploit; no staff reply yet. ForeverGuide's client-derived quest data flags 91736 as a 'special' object quest with req level 0. Expect a hotfix if it really repeats; for the coach: do it once for An Apple Treat, and treat repeat farming as unconfirmed (apples are a vendor item, so XP per copper would be very high at levels 1-8).",
+     "zones": [
+      "Elwynn Forest"
+     ],
+     "confidence": 0.55,
+     "sources": [
+      {
+       "medium": "blizzard-forums",
+       "url": "https://us.forums.blizzard.com/en/wow/t/new-quest-applejack-still-possible-exploit/2386116",
+       "author": "JunkStar",
+       "date": "2026-10-18"
+      },
+      {
+       "medium": "addon",
+       "url": "https://github.com/fitzforge/polestar/blob/HEAD/guides/forever/alliance/human/01-elwynn-forest.guide",
+       "author": "Polestar",
+       "date": "2026-10-17"
+      },
+      {
+       "medium": "data",
+       "url": "https://github.com/prezus/ForeverGuide/blob/HEAD/Data/QuestDB.lua",
+       "author": "ForeverGuide",
+       "date": "2026-10-18"
+      }
+     ]
+    },
+    {
+     "fact": "n:20261018-spell-haste-lowers-gcd",
+     "kind": "mechanic",
+     "claim": "On the current beta build (70450), any spell haste (e.g. Troll Berserking, Skyborne Wind Blessed 3% haste) shortens the 1.5 s global cooldown, according to a forever-bugs maintainer replying to a Berserking report (#389, Oct 18).",
+     "status": "reported",
+     "published": "2026-10-18",
+     "source": "github-issues",
+     "title": "Beta: all spell haste currently lowers the global cooldown",
+     "detail": "Report #389 'Berserking lowers the GCD' is open and Pending Approval; the reply is from a repository collaborator, not a confirmed Blizzard designer. Whether this is intended is unknown; Classic Era haste never lowered the GCD. For leveling it slightly speeds instant-spam casters (Shaman shocks, Warlock DoTs, Paladin seals) under haste; don't model it until Blizzard says.",
+     "confidence": 0.6,
+     "sources": [
+      {
+       "medium": "github-issues",
+       "url": "https://github.com/ClassicWoWCommunity/forever-bugs/issues/389",
+       "author": "Exesian (collaborator)",
+       "date": "2026-10-18"
+      }
+     ]
+    },
+    {
+     "fact": "n:20261017-feral-swiftness-24867-15pct",
+     "kind": "data",
+     "claim": "In client build 70425, spell 24867 'Feral Swiftness' (learn level 8) changed its text from +30% to +15% movement speed in Cat Form; the Feral Swiftness talent (17002) still reads +30% and +4% dodge.",
+     "status": "reported",
+     "published": "2026-10-17",
+     "levels": [
+      8,
+      60
+     ],
+     "source": "datamining",
+     "title": "Datamined: level-8 'Feral Swiftness' (24867) Cat Form speed 30% -> 15%",
+     "detail": "Not in the Oct 15 notes. Unclear whether 24867 is a baseline passive or the talent's effect; check Cat Form run speed in game before changing travel estimates for Druids.",
+     "classes": [
+      "DRUID"
+     ],
+     "confidence": 0.45,
+     "sources": [
+      {
+       "medium": "datamining",
+       "url": "https://github.com/alcaras/forever-ref/blob/HEAD/builds/1.60.1.70425.json.gz",
+       "author": "forever-ref (spells 24867, 17002)",
+       "date": "2026-10-17"
+      }
+     ]
+    },
+    {
+     "fact": "n:20261017-polestar-guide-addon",
+     "kind": "addon",
+     "claim": "Polestar (fitzforge/polestar, v0.2.5 Oct 17, CurseForge 'polestar-guides', ~100 GitHub stars in 4 days) ships step-by-step 1-60 routes for every race start, chosen by simulating millions of routes per start; its model estimates 117-121 /played hours to 60 solo.",
+     "status": "reported",
+     "published": "2026-10-17",
+     "levels": [
+      1,
+      60
+     ],
+     "source": "github",
+     "title": "Polestar: free open-source Forever guide addon with simulated 1-60 routes",
+     "detail": "The hours are model estimates, not measurements: it uses the Classic kill-XP formula (45+5*level, elites x2), the client QuestXP table with difficulty tiers, run speed 7 yd/s, grinding weighted 2.5x and 7.5 min per zone change; Forever's 30-60 zones aren't in its data yet. Has a recorder module, group and profession steps and a Discord. Large data: addon/Polestar_Guides/Guides.lua (6 MB), guides/forever/, tools/planner, docs/SIMULATION.md. Useful cross-check for Glide's route ranking.",
+     "confidence": 0.7,
+     "sources": [
+      {
+       "medium": "github",
+       "url": "https://github.com/fitzforge/polestar",
+       "author": "fitzforge",
+       "date": "2026-10-17"
+      },
+      {
+       "medium": "github",
+       "url": "https://github.com/fitzforge/polestar/blob/HEAD/docs/SIMULATION.md",
+       "author": "fitzforge",
+       "date": "2026-10-17"
+      }
+     ]
+    },
+    {
+     "fact": "n:20261017-everloot-open-data",
+     "kind": "data",
+     "claim": "Everloot (CDVolvik/everloot, everloot.app) is an addon plus site that publishes anonymous in-game observations (drops, vendors, recipes, trainers, prices) as facts once at least three installs report them, under CC BY-SA 4.0, with MCP endpoints for AI assistants.",
+     "status": "reported",
+     "published": "2026-10-17",
+     "source": "github",
+     "title": "Everloot: crowdsourced Forever drop rates, spawns and trainers (published at 3+ reports)",
+     "detail": "New on Oct 17 (beta, addon 0.2.6). Could later supply measured quest-item drop rates and spawn points for Glide's kill-count estimates. Needs an adapter; check its data release format.",
+     "confidence": 0.6,
+     "sources": [
+      {
+       "medium": "github",
+       "url": "https://github.com/CDVolvik/everloot",
+       "author": "CDVolvik",
+       "date": "2026-10-17"
+      }
+     ]
+    },
+    {
+     "fact": "n:20261017-druid-cat-form-quest-hotfix",
+     "kind": "patch",
+     "claim": "Kaivax said on Oct 16 that a Beta hotfix fixed the bug that stopped druids from looting the relics needed for the Cat Form quest.",
+     "status": "official",
+     "official": true,
+     "published": "2026-10-16",
+     "levels": [
+      16,
+      20
+     ],
+     "source": "blizzard-forums",
+     "title": "Druid Cat Form quest: relic looting fixed by Beta hotfix (Oct 16)",
+     "detail": "Cat Form is a quest reward in Forever; until the fix the quest could not be finished (forever-bugs #362 'still bugged' on Oct 16 morning).",
+     "classes": [
+      "DRUID"
+     ],
+     "confidence": 0.95,
+     "sources": [
+      {
+       "medium": "blizzard-forums",
+       "url": "https://us.forums.blizzard.com/en/wow/t/druid-cat-form-quest/2384010/56",
+       "author": "Kaivax",
+       "date": "2026-10-16"
+      },
+      {
+       "medium": "news",
+       "url": "https://www.wowhead.com/news=383466/blizzard-announces-hotfix-for-druid-cat-form-quest-in-wow-forever",
+       "author": "Wowhead",
+       "date": "2026-10-16"
+      }
+     ]
+    }
+   ],
+   "total": 102,
+   "last_scan": "2026-10-18"
+  },
+  "walk": {
+   "step": 76,
+   "map": 2521,
+   "segments": [
+    {
+     "mode": "walk",
+     "points": [
+      [
+       43.32,
+       24.95
+      ],
+      [
+       43.33,
+       24.78
+      ]
+     ],
+     "yd": 20,
+     "s": 4
+    }
+   ],
+   "walk_yd": 20,
+   "straight_yd": 14,
+   "run_s": 4,
+   "swim_yd": null,
+   "through": [
+    "Thendal Village"
+   ],
+   "legs": [
+    {
+     "go": "southwest",
+     "yd": 19,
+     "to": "Thendal Village",
+     "coords": "43.3,24.8"
+    }
+   ],
+   "source": "terrain grid"
+  },
+  "facing": 2.88,
+  "map_image": true,
+  "reminders": [],
+  "tuning": {
+   "settings": {
+    "voice_lookahead_steps": {
+     "value": 10,
+     "min": 0,
+     "max": 30,
+     "default": 10
+    },
+    "lookahead_steps": {
+     "value": 40,
+     "min": 0,
+     "max": 80,
+     "default": 40
+    },
+    "conversation_turns": {
+     "value": 10,
+     "min": 0,
+     "max": 20,
+     "default": 6
+    },
+    "conversation_minutes": {
+     "value": 20,
+     "min": 0,
+     "max": 120,
+     "default": 20
+    }
+   },
+   "tokens_per_step": 56.3,
+   "measured": true,
+   "convo": {
+    "tokens": 0,
+    "measured": false,
+    "turns_now": 0
+   },
+   "paths": {
+    "voice": {
+     "model": "claude-opus-5-5",
+     "price_in": 4.0,
+     "rounds": 1.7,
+     "rate_per_h": 10.6,
+     "rate_measured": false
+    },
+    "typed": {
+     "model": "claude-opus-5-5",
+     "price_in": 4.0,
+     "rounds": 3.0,
+     "rate_per_h": 1.0,
+     "rate_measured": false,
+     "reviews_per_h": 4.0
+    }
+   },
+   "toggles": {
+    "quest_briefings": true,
+    "step_videos": true,
+    "video_tips": true,
+    "web_search": true,
+    "web_search_voice": true
+   }
+  },
+  "bag_items": [
+   {
+    "item": "Linen Cloak",
+    "key": "0.1",
+    "slot": 15,
+    "slot_name": "back",
+    "replaces": null,
+    "score": 0.4,
+    "replaces_score": 0.0,
+    "gain": 0.4,
+    "verdict": "upgrade (slot is empty)",
+    "wait_level": null,
+    "stats": {
+     "AR": 8.0,
+     "SA": 0.0
+    },
+    "ilvl": 6,
+    "req": 1
+   }
+  ],
+  "talent_plan": null,
+  "level_history": {
+   "note": "from RestedXP's levelling tracker (minutes of /played per level; best = the account's fastest character for that level)",
+   "levels": [],
+   "best_for_current_level": {
+    "minutes": 7.2,
+    "character": "Brannoc"
+   }
+  },
+  "rewards": [],
+  "weights_profile": "Warrior Speedrun 1-9",
+  "frames": 357,
+  "versions": {
+   "app": null,
+   "addon_expected": "0.15.0",
+   "addon_installed": null,
+   "addon_running": null,
+   "strip": 1,
+   "strip_seen": 1,
+   "kb_schema": 1,
+   "nav": 1
+  },
+  "decode_rate": 100,
+  "refresh": null,
+  "navbuild": null,
+  "models": {
+   "fast": "claude-opus-5-5",
+   "deep": "claude-opus-5-5",
+   "fast_name": "claude-opus-5-5",
+   "deep_name": "claude-opus-5-5",
+   "listen": "off",
+   "listen_fallback": null
+  },
+  "coach": {
+   "calls": 0,
+   "errors": 0,
+   "in_tokens": 0,
+   "out_tokens": 0,
+   "tool_calls": 0,
+   "cited": 0,
+   "unsupported": 0,
+   "uncached_in_tokens": 0,
+   "cache_read_tokens": 0,
+   "cache_write_tokens": 0,
+   "cost_usd": 0.0,
+   "mode": "offline"
+  },
+  "kb": {
+   "ok": true,
+   "built": "2026-10-18 13:18:17",
+   "guides": 172,
+   "briefs": 102247,
+   "heuristics": 321,
+   "quests": 7406,
+   "path": "C:\\Users\\Player\\Glide\\data\\kb.db"
+  },
+  "why": {
+   "n": 77,
+   "guide": "1-14 Zephras Isle",
+   "kind": "accept",
+   "xp_now": 0,
+   "unlocks_xp": 550,
+   "quests": [
+    {
+     "name": "Al'Aketh Thugs",
+     "fact": "q:92544",
+     "role": "accept",
+     "xp_at_level": 550,
+     "decay_at_level": 11,
+     "turnin_step": 86
+    }
+   ],
+   "why": [
+    "skipped:already_done"
+   ],
+   "co_located": [
+    "Al'Aketh Thugs (turnin, step 86)"
+   ],
+   "enables": [
+    {
+     "quest": "Al'Aketh Thugs",
+     "step": 86
+    }
+   ],
+   "time_s": 0.0,
+   "xp_per_min": 0.0,
+   "exp_level": 5.33,
+   "fact": "s:1-14 Zephras Isle/118",
+   "level_now": 4.598,
+   "live": [
+    "you are 0.7 levels below the plan at this step"
+   ],
+   "why_text": {
+    "skipped:already_done": "does not apply for you right now (already done)"
+   },
+   "next": {
+    "n": 78,
+    "kind": "complete",
+    "xp": 0,
+    "quests": [
+     "Al'Aketh Thugs"
+    ],
+    "fact": "s:1-14 Zephras Isle/119"
+   },
+   "plan": {
+    "exp_level": 5.33,
+    "level_now": 4.683,
+    "delta": -0.65
+   }
+  },
+  "pace": {
+   "xp_per_hour": 204882,
+   "benchmark_xph": 14000,
+   "ratio": 14.63,
+   "xp_to_level": 845,
+   "your_eta_s": 11,
+   "eta_next_level_s": 242.4,
+   "pending_turnin_xp": 215
+  },
+  "overlay_step": "L4  Turn in The Cirrusfly Queen  |  turnin The Cirrusfly Queen  |  0 yd behind you"
+ },
+ "messages": [
+  {
+   "kind": "callout",
+   "text": "Next: go Zephras Isle · Thendal Grove, at Ailee Farheart, accept Coming of Age",
+   "speak": false,
+   "model": "offline",
+   "t": 1792933226.8120923
+  },
+  {
+   "kind": "callout",
+   "text": "Health 25%. Finish or disengage now. Next: complete Harmony in Balance",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933232.9060445
+  },
+  {
+   "kind": "callout",
+   "text": "Level 2. Check new spells at your next trainer stop.",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933234.44095
+  },
+  {
+   "kind": "info",
+   "speak": false,
+   "t": 1792933234.9440334,
+   "text": "Picked up 3 quests: Coming of Age, Harmony in Balance, Infestation Investigation. Each gets its briefing when you get to it."
+  },
+  {
+   "kind": "briefing",
+   "text": "Quest: Harmony in Balance. RestedXP: Kill Juvenile Vuldren. 8 x Juvenile Vuldren: Thendal Grove, near Elatrell Featherlight · 20 yd east (to your left).",
+   "speak": true,
+   "urgent": false,
+   "model": "offline",
+   "quests": [
+    92461
+   ],
+   "t": 1792933234.9710422,
+   "spoken": "Quest: Harmony in Balance. RestedXP: Kill Juvenile Vuldren."
+  },
+  {
+   "kind": "callout",
+   "text": "Take Linen Cloak, an upgrade for your back. Next: go Zephras Isle · Thendal Grove, at Rorian the Dayseeker, turnin Harmony in Balance, turnin Falling With Style, accept Elemental Unrest",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933251.1708248
+  },
+  {
+   "kind": "callout",
+   "text": "Level 3. Check new spells at your next trainer stop.",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933251.6892831
+  },
+  {
+   "kind": "info",
+   "speak": false,
+   "t": 1792933263.2755547,
+   "text": "Picked up 11 quests: The Cirrusfly Queen, The Anchors of Zephras, Falling With Style, Elemental Unrest, A Student of the Arcane, At Home in the Shadows, The Way of the Hunter, Embracing the Elements, The Warrior's Path, A Student of Nature, Harvesting Windstones. Each gets its briefing when you get to it."
+  },
+  {
+   "kind": "briefing",
+   "text": "Quest: The Cirrusfly Queen. RestedXP: Talk to Elatrell Featherlight. Turn in The Cirrusfly Queen. Cirrusfly Queen: Windsong Standing Stones · 180 yd southeast (ahead to your left).",
+   "speak": true,
+   "urgent": false,
+   "model": "offline",
+   "quests": [
+    92463
+   ],
+   "t": 1792933266.2805226,
+   "spoken": "Quest: The Cirrusfly Queen. RestedXP: Talk to Elatrell Featherlight. Turn in The Cirrusfly Queen."
+  },
+  {
+   "kind": "callout",
+   "text": "Next: go Zephras Isle · Windsong Standing Stones, complete The Cirrusfly Queen",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933271.8544273
+  },
+  {
+   "kind": "briefing",
+   "text": "New quest: Reading the Ley Lines. Use your Read Ley Line racial ability at the ley line in Thendal Grove.",
+   "speak": true,
+   "urgent": false,
+   "model": "offline",
+   "quests": [
+    92597
+   ],
+   "t": 1792933273.3611233,
+   "spoken": "New quest: Reading the Ley Lines. Use your Read Ley Line racial ability at the ley line in Thendal Grove."
+  },
+  {
+   "kind": "briefing",
+   "text": "New quest: Agitators. Slay 6 Roiling Winds and 7 Al'Aketh Converts in Thendal Grove. 7 x Al'Aketh Convert: Thendal Grove, near Yala Windwatcher · 50 yd north (straight ahead). 6 x Roiling Winds: Thendal Grove, near Yala Windwatcher · 50 yd north (straight ahead).",
+   "speak": true,
+   "urgent": false,
+   "model": "offline",
+   "quests": [
+    92465
+   ],
+   "t": 1792933281.5808678,
+   "spoken": "New quest: Agitators. Slay 6 Roiling Winds and 7 Al'Aketh Converts in Thendal Grove."
+  },
+  {
+   "kind": "callout",
+   "text": "Equip Linen Cloak in your back. Health 30%. Finish or disengage now. Next: go Zephras Isle · Thendal Grove, complete Reading the Ley Lines",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933283.6168103
+  },
+  {
+   "kind": "callout",
+   "text": "Level 4. Check new spells at your next trainer stop. Next: complete Harvesting Windstones Pace 156517 XP per hour.",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933290.0168488
+  },
+  {
+   "kind": "callout",
+   "text": "Take Militia Warhammer, an upgrade for your main hand. Next: go Zephras Isle · Thendal Grove, at Dalia the Collector Pace 165537 XP per hour.",
+   "speak": true,
+   "model": "offline",
+   "t": 1792933294.3791273
+  },
+  {
+   "kind": "briefing",
+   "text": "New quest: Return to Rorian. Bring word of the Al'Aketh to Rorian the Dayseeker in Thendal Grove.",
+   "speak": true,
+   "urgent": false,
+   "model": "offline",
+   "quests": [
+    92469
+   ],
+   "t": 1792933296.398176,
+   "spoken": "New quest: Return to Rorian. Bring word of the Al'Aketh to Rorian the Dayseeker in Thendal Grove."
+  }
+ ]
+}

@@ -1,0 +1,869 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T20:00:00+00:00",
+  "title": "Design System: Glide to 60",
+  "extensions": {
+    "colorMeta": {
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "#0c0d12",
+        "tonalRamp": [
+          "oklch(15% 0.011 276.2)",
+          "oklch(26% 0.011 276.2)",
+          "oklch(37% 0.011 276.2)",
+          "oklch(48% 0.011 276.2)",
+          "oklch(60% 0.011 276.2)",
+          "oklch(72% 0.011 276.2)",
+          "oklch(84% 0.011 276.2)",
+          "oklch(95% 0.011 276.2)"
+        ]
+      },
+      "night-deep": {
+        "role": "neutral",
+        "displayName": "Night Deep",
+        "canonical": "#07080b",
+        "tonalRamp": [
+          "oklch(15% 0.007 269.0)",
+          "oklch(26% 0.007 269.0)",
+          "oklch(37% 0.007 269.0)",
+          "oklch(48% 0.007 269.0)",
+          "oklch(60% 0.007 269.0)",
+          "oklch(72% 0.007 269.0)",
+          "oklch(84% 0.007 269.0)",
+          "oklch(95% 0.007 269.0)"
+        ]
+      },
+      "tip": {
+        "role": "neutral",
+        "displayName": "Tooltip",
+        "canonical": "#13151c",
+        "tonalRamp": [
+          "oklch(15% 0.014 272.5)",
+          "oklch(26% 0.014 272.5)",
+          "oklch(37% 0.014 272.5)",
+          "oklch(48% 0.014 272.5)",
+          "oklch(60% 0.014 272.5)",
+          "oklch(72% 0.014 272.5)",
+          "oklch(84% 0.014 272.5)",
+          "oklch(95% 0.014 272.5)"
+        ]
+      },
+      "tip-2": {
+        "role": "neutral",
+        "displayName": "Tooltip Top",
+        "canonical": "#1a1d26",
+        "tonalRamp": [
+          "oklch(15% 0.018 270.5)",
+          "oklch(26% 0.018 270.5)",
+          "oklch(37% 0.018 270.5)",
+          "oklch(48% 0.018 270.5)",
+          "oklch(60% 0.018 270.5)",
+          "oklch(72% 0.018 270.5)",
+          "oklch(84% 0.018 270.5)",
+          "oklch(95% 0.018 270.5)"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "canonical": "#30343f",
+        "tonalRamp": [
+          "oklch(15% 0.020 269.5)",
+          "oklch(26% 0.020 269.5)",
+          "oklch(37% 0.020 269.5)",
+          "oklch(48% 0.020 269.5)",
+          "oklch(60% 0.020 269.5)",
+          "oklch(72% 0.020 269.5)",
+          "oklch(84% 0.020 269.5)",
+          "oklch(95% 0.020 269.5)"
+        ]
+      },
+      "edge-soft": {
+        "role": "neutral",
+        "displayName": "Soft Edge",
+        "canonical": "#22252e",
+        "tonalRamp": [
+          "oklch(15% 0.017 270.7)",
+          "oklch(26% 0.017 270.7)",
+          "oklch(37% 0.017 270.7)",
+          "oklch(48% 0.017 270.7)",
+          "oklch(60% 0.017 270.7)",
+          "oklch(72% 0.017 270.7)",
+          "oklch(84% 0.017 270.7)",
+          "oklch(95% 0.017 270.7)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#f1ede3",
+        "tonalRamp": [
+          "oklch(15% 0.014 88.7)",
+          "oklch(26% 0.014 88.7)",
+          "oklch(37% 0.014 88.7)",
+          "oklch(48% 0.014 88.7)",
+          "oklch(60% 0.014 88.7)",
+          "oklch(72% 0.014 88.7)",
+          "oklch(84% 0.014 88.7)",
+          "oklch(95% 0.014 88.7)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "#bab5a8",
+        "tonalRamp": [
+          "oklch(15% 0.019 89.4)",
+          "oklch(26% 0.019 89.4)",
+          "oklch(37% 0.019 89.4)",
+          "oklch(48% 0.019 89.4)",
+          "oklch(60% 0.019 89.4)",
+          "oklch(72% 0.019 89.4)",
+          "oklch(84% 0.019 89.4)",
+          "oklch(95% 0.019 89.4)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink Meta",
+        "canonical": "#8b867b",
+        "tonalRamp": [
+          "oklch(15% 0.017 86.5)",
+          "oklch(26% 0.017 86.5)",
+          "oklch(37% 0.017 86.5)",
+          "oklch(48% 0.017 86.5)",
+          "oklch(60% 0.017 86.5)",
+          "oklch(72% 0.017 86.5)",
+          "oklch(84% 0.017 86.5)",
+          "oklch(95% 0.017 86.5)"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Quest Gold",
+        "canonical": "#f2c24f",
+        "tonalRamp": [
+          "oklch(15% 0.141 85.9)",
+          "oklch(26% 0.141 85.9)",
+          "oklch(37% 0.141 85.9)",
+          "oklch(48% 0.141 85.9)",
+          "oklch(60% 0.141 85.9)",
+          "oklch(72% 0.141 85.9)",
+          "oklch(84% 0.141 85.9)",
+          "oklch(95% 0.141 85.9)"
+        ]
+      },
+      "gold-hi": {
+        "role": "primary",
+        "displayName": "Quest Gold Bright",
+        "canonical": "#ffd877",
+        "tonalRamp": [
+          "oklch(15% 0.124 87.9)",
+          "oklch(26% 0.124 87.9)",
+          "oklch(37% 0.124 87.9)",
+          "oklch(48% 0.124 87.9)",
+          "oklch(60% 0.124 87.9)",
+          "oklch(72% 0.124 87.9)",
+          "oklch(84% 0.124 87.9)",
+          "oklch(95% 0.124 87.9)"
+        ]
+      },
+      "gold-dim": {
+        "role": "primary",
+        "displayName": "Quest Gold Dim",
+        "canonical": "#9c7d36",
+        "tonalRamp": [
+          "oklch(15% 0.097 85.4)",
+          "oklch(26% 0.097 85.4)",
+          "oklch(37% 0.097 85.4)",
+          "oklch(48% 0.097 85.4)",
+          "oklch(60% 0.097 85.4)",
+          "oklch(72% 0.097 85.4)",
+          "oklch(84% 0.097 85.4)",
+          "oklch(95% 0.097 85.4)"
+        ]
+      },
+      "on-gold": {
+        "role": "primary",
+        "displayName": "Ink on Gold",
+        "canonical": "#1d1504",
+        "tonalRamp": [
+          "oklch(15% 0.033 85.5)",
+          "oklch(26% 0.033 85.5)",
+          "oklch(37% 0.033 85.5)",
+          "oklch(48% 0.033 85.5)",
+          "oklch(60% 0.033 85.5)",
+          "oklch(72% 0.033 85.5)",
+          "oklch(84% 0.033 85.5)",
+          "oklch(95% 0.033 85.5)"
+        ]
+      },
+      "leaf": {
+        "role": "secondary",
+        "displayName": "Parchment Leaf",
+        "canonical": "#eadfc6",
+        "tonalRamp": [
+          "oklch(15% 0.035 87.1)",
+          "oklch(26% 0.035 87.1)",
+          "oklch(37% 0.035 87.1)",
+          "oklch(48% 0.035 87.1)",
+          "oklch(60% 0.035 87.1)",
+          "oklch(72% 0.035 87.1)",
+          "oklch(84% 0.035 87.1)",
+          "oklch(95% 0.035 87.1)"
+        ]
+      },
+      "leaf-2": {
+        "role": "secondary",
+        "displayName": "Parchment Shade",
+        "canonical": "#d8c7a2",
+        "tonalRamp": [
+          "oklch(15% 0.053 86.2)",
+          "oklch(26% 0.053 86.2)",
+          "oklch(37% 0.053 86.2)",
+          "oklch(48% 0.053 86.2)",
+          "oklch(60% 0.053 86.2)",
+          "oklch(72% 0.053 86.2)",
+          "oklch(84% 0.053 86.2)",
+          "oklch(95% 0.053 86.2)"
+        ]
+      },
+      "leaf-edge": {
+        "role": "secondary",
+        "displayName": "Leaf Edge",
+        "canonical": "#6d5534",
+        "tonalRamp": [
+          "oklch(15% 0.058 74.4)",
+          "oklch(26% 0.058 74.4)",
+          "oklch(37% 0.058 74.4)",
+          "oklch(48% 0.058 74.4)",
+          "oklch(60% 0.058 74.4)",
+          "oklch(72% 0.058 74.4)",
+          "oklch(84% 0.058 74.4)",
+          "oklch(95% 0.058 74.4)"
+        ]
+      },
+      "sepia": {
+        "role": "secondary",
+        "displayName": "Sepia Ink",
+        "canonical": "#2a1e12",
+        "tonalRamp": [
+          "oklch(15% 0.028 65.9)",
+          "oklch(26% 0.028 65.9)",
+          "oklch(37% 0.028 65.9)",
+          "oklch(48% 0.028 65.9)",
+          "oklch(60% 0.028 65.9)",
+          "oklch(72% 0.028 65.9)",
+          "oklch(84% 0.028 65.9)",
+          "oklch(95% 0.028 65.9)"
+        ]
+      },
+      "sepia-2": {
+        "role": "secondary",
+        "displayName": "Sepia Secondary",
+        "canonical": "#57452e",
+        "tonalRamp": [
+          "oklch(15% 0.043 72.9)",
+          "oklch(26% 0.043 72.9)",
+          "oklch(37% 0.043 72.9)",
+          "oklch(48% 0.043 72.9)",
+          "oklch(60% 0.043 72.9)",
+          "oklch(72% 0.043 72.9)",
+          "oklch(84% 0.043 72.9)",
+          "oklch(95% 0.043 72.9)"
+        ]
+      },
+      "sepia-3": {
+        "role": "secondary",
+        "displayName": "Sepia Meta",
+        "canonical": "#6b573b",
+        "tonalRamp": [
+          "oklch(15% 0.049 75.4)",
+          "oklch(26% 0.049 75.4)",
+          "oklch(37% 0.049 75.4)",
+          "oklch(48% 0.049 75.4)",
+          "oklch(60% 0.049 75.4)",
+          "oklch(72% 0.049 75.4)",
+          "oklch(84% 0.049 75.4)",
+          "oklch(95% 0.049 75.4)"
+        ]
+      },
+      "rubric": {
+        "role": "secondary",
+        "displayName": "Rubric Red",
+        "canonical": "#7a2412",
+        "tonalRamp": [
+          "oklch(15% 0.123 33.5)",
+          "oklch(26% 0.123 33.5)",
+          "oklch(37% 0.123 33.5)",
+          "oklch(48% 0.123 33.5)",
+          "oklch(60% 0.123 33.5)",
+          "oklch(72% 0.123 33.5)",
+          "oklch(84% 0.123 33.5)",
+          "oklch(95% 0.123 33.5)"
+        ]
+      },
+      "ahead-leaf": {
+        "role": "secondary",
+        "displayName": "Ahead on Leaf",
+        "canonical": "#2f6b2c",
+        "tonalRamp": [
+          "oklch(15% 0.114 142.7)",
+          "oklch(26% 0.114 142.7)",
+          "oklch(37% 0.114 142.7)",
+          "oklch(48% 0.114 142.7)",
+          "oklch(60% 0.114 142.7)",
+          "oklch(72% 0.114 142.7)",
+          "oklch(84% 0.114 142.7)",
+          "oklch(95% 0.114 142.7)"
+        ]
+      },
+      "behind-leaf": {
+        "role": "secondary",
+        "displayName": "Behind on Leaf",
+        "canonical": "#9b2414",
+        "tonalRamp": [
+          "oklch(15% 0.158 31.1)",
+          "oklch(26% 0.158 31.1)",
+          "oklch(37% 0.158 31.1)",
+          "oklch(48% 0.158 31.1)",
+          "oklch(60% 0.158 31.1)",
+          "oklch(72% 0.158 31.1)",
+          "oklch(84% 0.158 31.1)",
+          "oklch(95% 0.158 31.1)"
+        ]
+      },
+      "warn-leaf": {
+        "role": "secondary",
+        "displayName": "Warning on Leaf",
+        "canonical": "#7a5200",
+        "tonalRamp": [
+          "oklch(15% 0.099 76.3)",
+          "oklch(26% 0.099 76.3)",
+          "oklch(37% 0.099 76.3)",
+          "oklch(48% 0.099 76.3)",
+          "oklch(60% 0.099 76.3)",
+          "oklch(72% 0.099 76.3)",
+          "oklch(84% 0.099 76.3)",
+          "oklch(95% 0.099 76.3)"
+        ]
+      },
+      "ahead": {
+        "role": "neutral",
+        "displayName": "Ahead",
+        "canonical": "#4cd471",
+        "tonalRamp": [
+          "oklch(15% 0.182 149.1)",
+          "oklch(26% 0.182 149.1)",
+          "oklch(37% 0.182 149.1)",
+          "oklch(48% 0.182 149.1)",
+          "oklch(60% 0.182 149.1)",
+          "oklch(72% 0.182 149.1)",
+          "oklch(84% 0.182 149.1)",
+          "oklch(95% 0.182 149.1)"
+        ]
+      },
+      "behind": {
+        "role": "neutral",
+        "displayName": "Behind",
+        "canonical": "#ff6257",
+        "tonalRamp": [
+          "oklch(15% 0.193 27.2)",
+          "oklch(26% 0.193 27.2)",
+          "oklch(37% 0.193 27.2)",
+          "oklch(48% 0.193 27.2)",
+          "oklch(60% 0.193 27.2)",
+          "oklch(72% 0.193 27.2)",
+          "oklch(84% 0.193 27.2)",
+          "oklch(95% 0.193 27.2)"
+        ]
+      },
+      "warn": {
+        "role": "neutral",
+        "displayName": "Warning",
+        "canonical": "#ffad3b",
+        "tonalRamp": [
+          "oklch(15% 0.155 70.4)",
+          "oklch(26% 0.155 70.4)",
+          "oklch(37% 0.155 70.4)",
+          "oklch(48% 0.155 70.4)",
+          "oklch(60% 0.155 70.4)",
+          "oklch(72% 0.155 70.4)",
+          "oklch(84% 0.155 70.4)",
+          "oklch(95% 0.155 70.4)"
+        ]
+      },
+      "xp": {
+        "role": "tertiary",
+        "displayName": "XP Purple",
+        "canonical": "#9a5cf2",
+        "tonalRamp": [
+          "oklch(15% 0.216 299.0)",
+          "oklch(26% 0.216 299.0)",
+          "oklch(37% 0.216 299.0)",
+          "oklch(48% 0.216 299.0)",
+          "oklch(60% 0.216 299.0)",
+          "oklch(72% 0.216 299.0)",
+          "oklch(84% 0.216 299.0)",
+          "oklch(95% 0.216 299.0)"
+        ]
+      },
+      "rested": {
+        "role": "tertiary",
+        "displayName": "Rested Blue",
+        "canonical": "#3d7fd9",
+        "tonalRamp": [
+          "oklch(15% 0.153 256.9)",
+          "oklch(26% 0.153 256.9)",
+          "oklch(37% 0.153 256.9)",
+          "oklch(48% 0.153 256.9)",
+          "oklch(60% 0.153 256.9)",
+          "oklch(72% 0.153 256.9)",
+          "oklch(84% 0.153 256.9)",
+          "oklch(95% 0.153 256.9)"
+        ]
+      },
+      "hp": {
+        "role": "tertiary",
+        "displayName": "Health Green",
+        "canonical": "#2fbf4a",
+        "tonalRamp": [
+          "oklch(15% 0.198 145.8)",
+          "oklch(26% 0.198 145.8)",
+          "oklch(37% 0.198 145.8)",
+          "oklch(48% 0.198 145.8)",
+          "oklch(60% 0.198 145.8)",
+          "oklch(72% 0.198 145.8)",
+          "oklch(84% 0.198 145.8)",
+          "oklch(95% 0.198 145.8)"
+        ]
+      },
+      "q-poor": {
+        "role": "tertiary",
+        "displayName": "Poor Quality",
+        "canonical": "#9d9d9d",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(26% 0.000 89.9)",
+          "oklch(37% 0.000 89.9)",
+          "oklch(48% 0.000 89.9)",
+          "oklch(60% 0.000 89.9)",
+          "oklch(72% 0.000 89.9)",
+          "oklch(84% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "q-common": {
+        "role": "tertiary",
+        "displayName": "Common Quality",
+        "canonical": "#f1ede3",
+        "tonalRamp": [
+          "oklch(15% 0.014 88.7)",
+          "oklch(26% 0.014 88.7)",
+          "oklch(37% 0.014 88.7)",
+          "oklch(48% 0.014 88.7)",
+          "oklch(60% 0.014 88.7)",
+          "oklch(72% 0.014 88.7)",
+          "oklch(84% 0.014 88.7)",
+          "oklch(95% 0.014 88.7)"
+        ]
+      },
+      "q-uncommon": {
+        "role": "tertiary",
+        "displayName": "Uncommon Quality",
+        "canonical": "#1eff00",
+        "tonalRamp": [
+          "oklch(15% 0.293 142.1)",
+          "oklch(26% 0.293 142.1)",
+          "oklch(37% 0.293 142.1)",
+          "oklch(48% 0.293 142.1)",
+          "oklch(60% 0.293 142.1)",
+          "oklch(72% 0.293 142.1)",
+          "oklch(84% 0.293 142.1)",
+          "oklch(95% 0.293 142.1)"
+        ]
+      },
+      "q-rare": {
+        "role": "tertiary",
+        "displayName": "Rare Quality",
+        "canonical": "#2a8cff",
+        "tonalRamp": [
+          "oklch(15% 0.192 255.6)",
+          "oklch(26% 0.192 255.6)",
+          "oklch(37% 0.192 255.6)",
+          "oklch(48% 0.192 255.6)",
+          "oklch(60% 0.192 255.6)",
+          "oklch(72% 0.192 255.6)",
+          "oklch(84% 0.192 255.6)",
+          "oklch(95% 0.192 255.6)"
+        ]
+      },
+      "q-epic": {
+        "role": "tertiary",
+        "displayName": "Epic Quality",
+        "canonical": "#b04cf5",
+        "tonalRamp": [
+          "oklch(15% 0.243 307.9)",
+          "oklch(26% 0.243 307.9)",
+          "oklch(37% 0.243 307.9)",
+          "oklch(48% 0.243 307.9)",
+          "oklch(60% 0.243 307.9)",
+          "oklch(72% 0.243 307.9)",
+          "oklch(84% 0.243 307.9)",
+          "oklch(95% 0.243 307.9)"
+        ]
+      },
+      "q-legendary": {
+        "role": "tertiary",
+        "displayName": "Legendary Quality",
+        "canonical": "#ff8000",
+        "tonalRamp": [
+          "oklch(15% 0.186 53.0)",
+          "oklch(26% 0.186 53.0)",
+          "oklch(37% 0.186 53.0)",
+          "oklch(48% 0.186 53.0)",
+          "oklch(60% 0.186 53.0)",
+          "oklch(72% 0.186 53.0)",
+          "oklch(84% 0.186 53.0)",
+          "oklch(95% 0.186 53.0)"
+        ]
+      },
+      "map-route": {
+        "role": "tertiary",
+        "displayName": "Map Route",
+        "canonical": "#fffaf0",
+        "tonalRamp": [
+          "oklch(15% 0.014 84.6)",
+          "oklch(26% 0.014 84.6)",
+          "oklch(37% 0.014 84.6)",
+          "oklch(48% 0.014 84.6)",
+          "oklch(60% 0.014 84.6)",
+          "oklch(72% 0.014 84.6)",
+          "oklch(84% 0.014 84.6)",
+          "oklch(95% 0.014 84.6)"
+        ]
+      },
+      "map-target": {
+        "role": "tertiary",
+        "displayName": "Map Target",
+        "canonical": "#ff5a36",
+        "tonalRamp": [
+          "oklch(15% 0.207 33.9)",
+          "oklch(26% 0.207 33.9)",
+          "oklch(37% 0.207 33.9)",
+          "oklch(48% 0.207 33.9)",
+          "oklch(60% 0.207 33.9)",
+          "oklch(72% 0.207 33.9)",
+          "oklch(84% 0.207 33.9)",
+          "oklch(95% 0.207 33.9)"
+        ]
+      },
+      "map-flight": {
+        "role": "tertiary",
+        "displayName": "Map Flight",
+        "canonical": "#4fd8ff",
+        "tonalRamp": [
+          "oklch(15% 0.128 220.6)",
+          "oklch(26% 0.128 220.6)",
+          "oklch(37% 0.128 220.6)",
+          "oklch(48% 0.128 220.6)",
+          "oklch(60% 0.128 220.6)",
+          "oklch(72% 0.128 220.6)",
+          "oklch(84% 0.128 220.6)",
+          "oklch(95% 0.128 220.6)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Quest Title",
+        "purpose": "The quest title on the leaf; leaf plates and empty states."
+      },
+      "headline": {
+        "displayName": "Page Title",
+        "purpose": "Shell page titles, in gold."
+      },
+      "title": {
+        "displayName": "Section Title",
+        "purpose": "Section heads, book tabs, tracker and zone names, rubric heads on the leaf."
+      },
+      "distance": {
+        "displayName": "Distance",
+        "purpose": "Yards to the waypoint; the largest figure on screen."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "XP/h, time to level, step number, session cost."
+      },
+      "body": {
+        "displayName": "Interface",
+        "purpose": "All interface text; tabular figures throughout."
+      },
+      "prose": {
+        "displayName": "Quest Prose",
+        "purpose": "The quest's why and plate paragraphs."
+      },
+      "label": {
+        "displayName": "Caption",
+        "purpose": "Captions under figures, meta lines, timestamps; sentence case."
+      },
+      "mono": {
+        "displayName": "Log Mono",
+        "purpose": "Logs and inline code only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "tip-shadow",
+        "value": "0 0 0 1px var(--edge), inset 0 1px 0 var(--edge-hi), 0 10px 28px rgba(0, 0, 0, 0.35)",
+        "purpose": "Every tooltip panel on night."
+      },
+      {
+        "name": "float",
+        "value": "0 0 0 1px var(--edge), 0 18px 40px rgba(0, 0, 0, 0.55), 0 3px 8px rgba(0, 0, 0, 0.4)",
+        "purpose": "Toasts and chart tooltips over content."
+      },
+      {
+        "name": "leaf-bezel",
+        "value": "0 0 0 1px var(--leaf-edge), 0 0 0 4px #15130f, 0 0 0 5px var(--gold-dim), 0 22px 50px rgba(0, 0, 0, 0.55)",
+        "purpose": "The parchment leaf."
+      },
+      {
+        "name": "round-bezel",
+        "value": "0 0 0 3px #000, 0 0 0 5px var(--gold-dim), 0 0 0 6px #000, 0 16px 40px rgba(0, 0, 0, 0.6)",
+        "purpose": "The minimap and the level medallion."
+      },
+      {
+        "name": "well",
+        "value": "inset 0 1px 2px rgba(0, 0, 0, 0.5)",
+        "purpose": "Inputs, gauges and the XP bar, sunk into the night."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The one easing for every transition."
+      },
+      {
+        "name": "leaf-turn",
+        "value": "0.55s ease-out from opacity 0, translateY(8px), blur(2px); 50ms stagger",
+        "purpose": "The leaf's contents rise in when the step changes."
+      },
+      {
+        "name": "arrow-turn",
+        "value": "transform 0.6s ease-out, the short way round",
+        "purpose": "The waypoint arrow rotates to the bearing."
+      },
+      {
+        "name": "bar-width",
+        "value": "width 0.4s to 0.6s ease-out",
+        "purpose": "Gauges and the XP bar ease their fills."
+      },
+      {
+        "name": "control",
+        "value": "0.15s ease-out",
+        "purpose": "Hover and focus on buttons, inputs, rail and tabs."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition and animation durations 0.01ms",
+        "purpose": "prefers-reduced-motion collapses all motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "one-column",
+        "value": "max-width: 859px"
+      },
+      {
+        "name": "page-scrolls",
+        "value": "max-width: 1199px"
+      },
+      {
+        "name": "hud-fits",
+        "value": "min-width: 1200px and min-height: 640px"
+      },
+      {
+        "name": "wing-1",
+        "value": "1840px (one wing column per 400px beyond 1440px)"
+      },
+      {
+        "name": "wing-2",
+        "value": "2240px"
+      },
+      {
+        "name": "wing-3",
+        "value": "2640px"
+      },
+      {
+        "name": "top-container",
+        "value": "@container top: 1240px, 1500px, 1800px"
+      },
+      {
+        "name": "sessionbar-container",
+        "value": "@container sessionbar: 520px to 1500px, items drop by priority"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The quiet tooltip button; most actions.",
+      "html": "<button class=\"ds-btn\">Open folder</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 15px;border-radius:5px;border:1px solid #30343f;background:#1a1d26;color:#f1ede3;font:550 14px var(--f-ui,'Geist',sans-serif);cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:background-color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1),transform .1s}.ds-btn:hover{background:#222632;border-color:#9c7d36}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one gold action per area.",
+      "html": "<button class=\"ds-btn-primary\">Install addon</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;height:36px;padding:0 15px;border-radius:5px;border:1px solid #6b5220;background:linear-gradient(180deg,#ffd877,#f2c24f 55%,#d9a63a);color:#1d1504;font:550 14px var(--f-ui,'Geist',sans-serif);cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.35);transition:transform .1s}.ds-btn-primary:hover{background:linear-gradient(180deg,#ffe39a,#ffd877 55%,#f2c24f);border-color:#7d6026}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-weight actions in rows and toolbars.",
+      "html": "<button class=\"ds-btn-ghost\">Reset</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;height:36px;padding:0 15px;border-radius:5px;border:1px solid transparent;background:transparent;color:#bab5a8;font:550 14px var(--f-ui,'Geist',sans-serif);cursor:pointer;transition:background-color .15s,color .15s}.ds-btn-ghost:hover{background:#1a1d26;color:#f1ede3}.ds-btn-ghost:focus-visible{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A sunk night-deep well with a gold focus halo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Ask the coach\">",
+      "css": ".ds-input{font:400 14px var(--f-ui,'Geist',sans-serif);color:#f1ede3;background:#07080b;border:1px solid #30343f;border-radius:5px;padding:7px 10px;min-height:36px;box-shadow:inset 0 1px 2px rgba(0,0,0,.5);caret-color:#f2c24f;transition:border-color .15s,box-shadow .15s}.ds-input::placeholder{color:#8b867b}.ds-input:hover{border-color:#454a57}.ds-input:focus{outline:none;border-color:#9c7d36;box-shadow:inset 0 1px 2px rgba(0,0,0,.5),0 0 0 3px rgba(242,194,79,.1)}"
+    },
+    {
+      "name": "Switch",
+      "kind": "input",
+      "refersTo": "switch",
+      "description": "A toggle whose state is knob position and fill, with a text state.",
+      "html": "<label class=\"ds-sw\"><input type=\"checkbox\" checked><span class=\"tr\"></span><span>On</span></label>",
+      "css": ".ds-sw{display:inline-flex;align-items:center;gap:10px;cursor:pointer;color:#bab5a8;font:400 13px var(--f-ui,'Geist',sans-serif)}.ds-sw input{position:absolute;opacity:0;width:1px;height:1px}.ds-sw .tr{position:relative;width:40px;height:22px;border-radius:11px;background:#07080b;border:1px solid #30343f;box-shadow:inset 0 1px 2px rgba(0,0,0,.6);transition:background-color .18s}.ds-sw .tr::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#8b867b;transition:transform .2s cubic-bezier(.16,1,.3,1)}.ds-sw input:checked+.tr{background:#f2c24f;border-color:#6b5220}.ds-sw input:checked+.tr::after{transform:translateX(18px);background:#1d1504}.ds-sw input:focus-visible+.tr{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Rail",
+      "kind": "nav",
+      "refersTo": "rail-item-active",
+      "description": "The shell's icon rail; the active item in gold on gold wash.",
+      "html": "<nav class=\"ds-rail\"><button class=\"ds-rail-i on\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 11l9-7 9 7M5 9.5V20h14V9.5\"/></svg>Coach</button><button class=\"ds-rail-i\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\"/></svg>Settings</button></nav>",
+      "css": ".ds-rail{width:84px;display:flex;flex-direction:column;gap:2px;padding:16px 8px;background:#07080b;border-right:1px solid #22252e}.ds-rail-i{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 2px 9px;border:0;border-radius:7px;background:transparent;color:#8b867b;font:500 12px var(--f-ui,'Geist',sans-serif);cursor:pointer;transition:background-color .15s,color .15s}.ds-rail-i:hover{color:#f1ede3;background:#13151c}.ds-rail-i.on{color:#f2c24f;background:rgba(242,194,79,.1)}.ds-rail-i:focus-visible{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Book Tabs",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Tenor Sans tabs over the book; the active tab in gold with an underline.",
+      "html": "<div class=\"ds-tabs\"><button class=\"on\">Quests</button><button>Gear</button><button>Buffs</button></div>",
+      "css": ".ds-tabs{display:flex;padding:0 10px;border-bottom:1px solid #22252e}.ds-tabs button{position:relative;padding:13px 10px 11px;border:0;background:none;color:#8b867b;font:400 15px var(--f-title,'Tenor Sans',sans-serif);cursor:pointer;transition:color .15s}.ds-tabs button:hover{color:#f1ede3}.ds-tabs button.on{color:#f2c24f}.ds-tabs button.on::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:#f2c24f}.ds-tabs button:focus-visible{outline:2px solid #ffd877;outline-offset:2px}"
+    },
+    {
+      "name": "Tooltip Panel",
+      "kind": "card",
+      "refersTo": "tooltip-panel",
+      "description": "The world's one container on night.",
+      "html": "<section class=\"ds-tip\"><h2>Gear</h2><div class=\"ds-row\"><span>Sturdy Leather Boots</span><b>+4 armor</b></div></section>",
+      "css": ".ds-tip{padding:14px 18px 16px;border-radius:9px;background:linear-gradient(180deg,#1a1d26,#13151c 90px);box-shadow:0 0 0 1px #30343f,inset 0 1px 0 rgba(255,255,255,.06),0 10px 28px rgba(0,0,0,.35);color:#f1ede3;font:400 14.5px var(--f-ui,'Geist',sans-serif)}.ds-tip h2{margin:0 0 10px;font:400 17px var(--f-title,'Tenor Sans',sans-serif);color:#f2c24f}.ds-row{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid #22252e}.ds-row span{color:#1eff00}.ds-row b{color:#4cd471;font-weight:650}"
+    },
+    {
+      "name": "Quest Leaf",
+      "kind": "custom",
+      "refersTo": "quest-leaf",
+      "description": "The one parchment page per screen, for the current step.",
+      "html": "<article class=\"ds-leaf\"><h1>The Defias Brotherhood</h1><p>Gryan wants proof the Defias are behind the trouble in Westfall.</p><div class=\"ds-go\"><b>312<small>yd</small></b><span class=\"ds-ahead\">−1:24</span></div><h3>Objectives</h3><ul><li>Red Leather Bandana <em>4/15</em></li></ul></article>",
+      "css": ".ds-leaf{padding:26px 36px 20px;border-radius:4px;color:#2a1e12;background:radial-gradient(120% 95% at 50% 30%,#eadfc6 55%,#d8c7a2 100%);box-shadow:0 0 0 1px #6d5534,0 0 0 4px #15130f,0 0 0 5px #9c7d36,0 22px 50px rgba(0,0,0,.55);font:400 16px var(--f-ui,'Geist',sans-serif);font-variant-numeric:tabular-nums}.ds-leaf h1{margin:0;font:400 34px/1.12 var(--f-title,'Tenor Sans',sans-serif);color:#22160a}.ds-leaf p{margin:8px 0 0;font:400 17.5px/1.55 var(--f-read,'Source Serif 4',serif);color:#57452e;max-width:64ch}.ds-go{display:flex;align-items:baseline;gap:22px;margin:18px 0 2px;padding:14px 0;border-top:1px solid rgba(87,69,46,.25);border-bottom:1px solid rgba(87,69,46,.25)}.ds-go b{font-size:72px;font-weight:750;line-height:.9;letter-spacing:-.035em;color:#22160a}.ds-go small{font-size:.42em;font-weight:600;color:#57452e;margin-left:4px;letter-spacing:0}.ds-ahead{margin-left:auto;font-size:30px;font-weight:700;color:#2f6b2c}.ds-leaf h3{margin:16px 0 6px;font:400 17px var(--f-title,'Tenor Sans',sans-serif);color:#7a2412}.ds-leaf ul{margin:0;padding:0;list-style:none}.ds-leaf li{display:flex;gap:10px}.ds-leaf li::before{content:'–';color:#6b573b}.ds-leaf em{margin-left:auto;font-style:normal;font-weight:600}"
+    },
+    {
+      "name": "XP Bar",
+      "kind": "custom",
+      "refersTo": "xp",
+      "description": "Segmented purple XP bar with the rested lead and the planned-position marker.",
+      "html": "<div class=\"ds-xp\"><i class=\"r\"></i><i class=\"f\"></i><i class=\"t\"></i><i class=\"p\"></i></div>",
+      "css": ".ds-xp{position:relative;height:14px;border-radius:3px;background:#000;box-shadow:0 0 0 1px #2a2d36,inset 0 1px 3px rgba(0,0,0,.9);overflow:hidden}.ds-xp i{position:absolute;top:0;bottom:0;left:0}.ds-xp .r{width:72%;background:rgba(61,127,217,.42)}.ds-xp .f{width:58%;background:linear-gradient(#b986ff,#7d3fd6 60%,#6a33bb);transition:width .6s cubic-bezier(.16,1,.3,1)}.ds-xp .t{right:0;background:repeating-linear-gradient(90deg,transparent 0 calc(5% - 1px),rgba(0,0,0,.6) calc(5% - 1px) 5%)}.ds-xp .p{left:64%;width:2px;background:#f2c24f;box-shadow:0 0 0 1px rgba(0,0,0,.6)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Second HUD",
+    "overview": "Glide is drawn in the grammar of the game's own interface, so a World of Warcraft player knows where everything is before reading a word: a unit frame, buffs and pace across the top, the quest page in the centre, the coach's chat bottom-left, a round minimap with the quest tracker on the right, a segmented XP bar along the bottom edge. Every piece is redrawn from scratch and with restraint; WoW is the inspiration, not the source of assets, except where the player has granted one: so far the game's own buff icons, read at runtime from the player's own install and never shipped.\n\nThe world has two materials. Night ground carries tooltip panels: near-black, a 1px edge, a faint light along the top, a soft drop. On it sits exactly one parchment leaf per screen, for the one current thing (the quest step on the dashboard, the status, refresh or addon plate in the shell), set in sepia ink with rubric-red headings. Quest gold marks titles, the current thing and the single primary action. Everything else is quiet ink on night.\n\nThe density is a game HUD's: many small readouts, each placed by habit rather than by card grid, with the glance data (distance, XP/h, time to level) set large in tabular Geist so it reads from arm's length. The world refuses the web dashboard of equal free-floating cards: the player can rearrange the pieces (arrange mode), but only within the HUD's own parts, so the top bar, the middle and the bottom bar always stay where a player expects them.",
+    "keyCharacteristics": [
+      "Night ground with tooltip panels as the one container.",
+      "One parchment leaf per screen for the current thing.",
+      "Quest gold for titles, the current thing and one primary action per area.",
+      "Game-native colour codes kept to their meanings: item quality on items, class colour on the character name, purple XP with rested blue.",
+      "Tenor Sans titles, Geist for interface and every number, Source Serif 4 for quest prose.",
+      "HUD regions in fixed places; more width docks the book into wing columns instead of stretching."
+    ],
+    "rules": [
+      {
+        "name": "The One Parchment Rule",
+        "body": "Each screen carries exactly one leaf, and it holds the current thing. A second leaf, or parchment as decoration, breaks the hierarchy.",
+        "section": "colors"
+      },
+      {
+        "name": "The Gold Is Earned Rule",
+        "body": "Gold marks titles, the current thing, and one primary action per area. Two gold buttons side by side means one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Item Colour Rule",
+        "body": "Item-quality colours appear only on item names. Uncommon green is never a success colour; ahead is.",
+        "section": "colors"
+      },
+      {
+        "name": "The Right Ink Rule",
+        "body": "On the leaf use the leaf-safe state inks; the night signals are for night.",
+        "section": "colors"
+      },
+      {
+        "name": "The Map Marks Rule",
+        "body": "Marks on the minimap use colours the map art doesn't (near-white, red-orange, cyan), each with a dark outline, and are sized in screen pixels whatever the zoom, so they read at a glance over any terrain. Never tone them down to blend in; a route always ends on a target.",
+        "section": "colors"
+      },
+      {
+        "name": "The Not By Colour Alone Rule",
+        "body": "Every state also reads by form or text: dashed rings for in progress, filled marks for done, a knob position, \"(unsaved)\", \"(unchecked)\", a struck-through idle model.",
+        "section": "colors"
+      },
+      {
+        "name": "The Every Number Is Geist Rule",
+        "body": "All numbers, on night or on the leaf, are Geist with tabular figures, so readouts do not jitter as they tick.",
+        "section": "typography"
+      },
+      {
+        "name": "The Titles Never Bold Rule",
+        "body": "Tenor Sans is used at 400 only; hierarchy comes from size and colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sunk Readout Rule",
+        "body": "Bars and fields are recessed into near-black wells; only panels and the leaf rise.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep exactly one parchment leaf per screen, for the current thing.",
+      "Do use gold for titles, the current thing and one primary action per area.",
+      "Do set every number in Geist with tabular figures.",
+      "Do carry state by form or text as well as colour: dashed rings for in-progress, filled marks for done, \"(unsaved)\", \"(unchecked)\", struck-through idle models.",
+      "Do use the leaf-safe inks (ahead-leaf, behind-leaf, warn-leaf) for state on parchment.",
+      "Do dock book sections into wing columns as width grows, rather than stretching panels.",
+      "Do bundle every font and asset locally."
+    ],
+    "donts": [
+      "Don't use item-quality colours for anything but item names.",
+      "Don't use class colours for anything but the character.",
+      "Don't use Blizzard art, icons, fonts or textures unless the player has granted that exception; granted so far: buff icons, read at runtime from the player's own install, never shipped with Glide.",
+      "Don't add a second parchment, or parchment as decoration.",
+      "Don't put two gold primary buttons in one area.",
+      "Don't set Tenor Sans bold, or use Cascadia Mono outside logs and code.",
+      "Don't let arrange mode move a piece out of its part, or lay the HUD out as equal free-floating cards."
+    ]
+  }
+}

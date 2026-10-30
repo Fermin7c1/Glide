@@ -1,0 +1,378 @@
+{
+ "checked": "2026-10-29 11:01:01",
+ "rebuilt": true,
+ "built": "2026-10-29 11:01:01",
+ "repos": {
+  "gh-forever-ref": {
+   "sha": "731b55295e970fce0b2d6ee48cfbcf133b9f455a",
+   "date": "2026-10-27",
+   "adapter": "alcaras_forever-ref",
+   "url": "https://github.com/alcaras/forever-ref.git"
+  },
+  "gh-foreverguide": {
+   "sha": "7092d854cc5a4a95259ec31a4ebc994ef2a38042",
+   "date": "2026-10-26",
+   "adapter": "prezus_ForeverGuide",
+   "url": "https://github.com/prezus/ForeverGuide.git"
+  },
+  "gh-lodestar": {
+   "sha": "5c5fa2346981eefe3f368f325b5ef80e2270d9de",
+   "date": "2026-10-15",
+   "adapter": "danielcosta42_lodestar",
+   "url": "https://github.com/danielcosta42/lodestar.git"
+  },
+  "gh-rxpguides": {
+   "sha": "5a16ce2e48cb63ba9ddce805a127e207a836932b",
+   "date": "2026-10-29",
+   "adapter": "RestedXP_RXPGuides",
+   "url": "https://github.com/RestedXP/RXPGuides.git"
+  },
+  "gh-foreverquestmarker": {
+   "sha": "308e95a8e7fe658bcc2e094cc98465a9e375942d",
+   "date": "2026-10-20",
+   "adapter": "Swafox_ForeverQuestMarker",
+   "url": "https://github.com/Swafox/ForeverQuestMarker.git"
+  },
+  "gh-questie": {
+   "sha": "43096b1b87009a1e1d58e728ce9a1eeb4a4cfcfc",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/Questie/Questie.git"
+  },
+  "gh-tzcnt-forever-data": {
+   "sha": "9138ed938ae63568517958012779d2c4246837da",
+   "date": "2026-09-23",
+   "adapter": null,
+   "url": "https://github.com/tzcnt/forever-data.git"
+  },
+  "gh-forever-loot": {
+   "sha": "acfb3d739b83bf7d9127b5af781476d58746e74b",
+   "date": "2026-10-04",
+   "adapter": null,
+   "url": "https://github.com/eelliott4517/forever-loot.git"
+  },
+  "gh-wowforever-helper": {
+   "sha": "f5ad215f8d36096cb1713b92f2436ab0ef83f688",
+   "date": "2026-10-20",
+   "adapter": null,
+   "url": "https://github.com/alsh0083/wowforever-helper.git"
+  },
+  "gh-shortest-path-forever": {
+   "sha": "2c5c66da497581cba718bd6be9a1afd32ec01b68",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/cjber/shortest-path-forever.git"
+  },
+  "gh-headstart": {
+   "sha": "7a2c2da3fcd61932e80f8c758f0e942b31de39a7",
+   "date": "2026-10-22",
+   "adapter": null,
+   "url": "https://github.com/vBaustad/Headstart.git"
+  },
+  "gh-wowf-qrp": {
+   "sha": "a1c9180c1717f8f4fd2f38fbee171cf3399be63c",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/tyba-dev/WoWF-QRP.git"
+  },
+  "gh-atlasmobs": {
+   "sha": "7075f259498e243461a262abd0d4ccf0af8f7558",
+   "date": "2026-10-27",
+   "adapter": null,
+   "url": "https://github.com/NZNK13/AtlasMobs.git"
+  },
+  "gh-wowforever-one": {
+   "sha": "9f1aa40595b98d08e59176ac921a13b3203e7615",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/ken-fs/wowforever.git"
+  },
+  "gh-skillup-forever": {
+   "sha": "eeb9d709dc93d71e2dce3bb7280569ef6074af9c",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/cjber/skillup-forever.git"
+  },
+  "gh-questiedb": {
+   "sha": "da1b5f2b48f7b51d8d4a7cb7940b28cc3b9cdfd6",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/Questie/QuestieDB.git"
+  },
+  "gh-factoruide": {
+   "sha": "656e751c85b6a609362b57b51bbb1ae7ce6f2ade",
+   "date": "2026-10-27",
+   "adapter": null,
+   "url": "https://github.com/brouznouf/factoruide.git"
+  },
+  "gh-polestar": {
+   "sha": "18c166b153d8ee152cd3e49d47204b0ef36e05e4",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/fitzforge/polestar.git"
+  },
+  "gh-wowf-glp": {
+   "sha": "22c6cd1f54147fb74af02991b6e59012b8ca7bc3",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/tyba-dev/WoWF-GLP.git"
+  },
+  "gh-sl0p-leveler": {
+   "sha": "055e464810393512b468d8e096919b98d0996f2f",
+   "date": "2026-10-24",
+   "adapter": null,
+   "url": "https://github.com/michael-slop/wow-leveler.git"
+  },
+  "gh-audhd": {
+   "sha": "5efe96a8c5637f4c38e1db7ef6c2ab143fb49726",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/theSarcasticPixel/AuDHD.git"
+  },
+  "gh-signpost": {
+   "sha": "4966bf35cb91b82b263c679c35175a4fe3a1d3fd",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/hsdevilliers/Signpost.git"
+  },
+  "gh-tally": {
+   "sha": "8e28d8de1a9582dde0ba037b5f4f206d85b10945",
+   "date": "2026-10-18",
+   "adapter": null,
+   "url": "https://github.com/alexatennea/Tally.git"
+  },
+  "gh-openmap-forever": {
+   "sha": "849bac460b6ebcb110ef80fc27a6b08565069c74",
+   "date": "2026-10-16",
+   "adapter": null,
+   "url": "https://github.com/fitzforge/wowforever-openmap.git"
+  },
+  "gh-forever-campfire-codex": {
+   "sha": "7786d93316e87df93d12b46e771af9d173b7bcd4",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/burakztrk/wow-forever-notes.git"
+  },
+  "gh-wow4-sims": {
+   "sha": "d3e5508625ba0254545fbbfebc4f6cf49a804ddb",
+   "date": "2026-09-28",
+   "adapter": null,
+   "url": "https://github.com/bottlefedchaney808/wow4_sims.git"
+  },
+  "gh-wowsimforever-cannonjunior": {
+   "sha": "a11f2750aa9d46a796aa6ada88d6b8da7936fe17",
+   "date": "2026-10-25",
+   "adapter": null,
+   "url": "https://github.com/CannonJunior/wowsimforever.git"
+  },
+  "gh-wowsims-forever-org": {
+   "sha": "945a7e1359c526f2e546f10cd8e6da445029c823",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/wowsims/forever.git"
+  },
+  "gh-somnia-wow-forever-news": {
+   "sha": "afc1c042e50e2e574c4b421fe77692645487b79f",
+   "date": "2026-10-24",
+   "adapter": null,
+   "url": "https://github.com/somniacreator/wow-forever-news.git"
+  },
+  "gh-norgannondb": {
+   "sha": "73f59a53f1423149d548725e1786a18168d670e9",
+   "date": "2026-10-20",
+   "adapter": null,
+   "url": "https://github.com/zmarotrix/NorgannonDB.git"
+  },
+  "gh-forevertracker": {
+   "sha": "3227594c4ee7a490554e92f8288efd349851464a",
+   "date": "2026-10-20",
+   "adapter": null,
+   "url": "https://github.com/filinodz/ForeverTracker.git"
+  },
+  "gh-libtaxitime": {
+   "sha": "a610a76710bce68a7e353132ffb6bc6912c6f20a",
+   "date": "2026-10-24",
+   "adapter": null,
+   "url": "https://github.com/Spotnick2/LibTaxiTime.git"
+  },
+  "gh-road-to-sixty": {
+   "sha": "c4e569d98a346971aef01658363115a5e2d015e0",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/Jordanburch101/road-to-sixty.git"
+  },
+  "gh-evertrail": {
+   "sha": "79e4bae8e52ca138cfc06023bfc93429543d9ba8",
+   "date": "2026-10-22",
+   "adapter": null,
+   "url": "https://github.com/piotr824/evertrail.git"
+  },
+  "gh-gearfinder-forever": {
+   "sha": "9c6164f27a3b975f5c490aa733370e2d1e912cb8",
+   "date": "2026-10-21",
+   "adapter": null,
+   "url": "https://github.com/DeanieBobeanie/GearFinder-Forever.git"
+  },
+  "gh-legacy-forever": {
+   "sha": "82e900a0efbb310c4f032c0012537421db8a7aa8",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/cjber/legacy-forever.git"
+  },
+  "gh-dungeonquestatlas": {
+   "sha": "bf2b0c1b5427af97374e6ac9d5185e6dadbcc9bc",
+   "date": "2026-10-22",
+   "adapter": null,
+   "url": "https://github.com/Pirson-s-Addons/DungeonQuestAtlas.git"
+  },
+  "gh-wow-classic-item-caches": {
+   "sha": "c969b8378b63ada9aecfd35db14b373a8aaa66ea",
+   "date": "2026-10-24",
+   "adapter": null,
+   "url": "https://github.com/Napalmsteak/WoW-Classic-Item-Caches.git"
+  },
+  "gh-wow-navigationdata": {
+   "sha": "337c35560f262ca0574cc3d5442d7f55b72ff0f9",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/Broesel33/WoW_NavigationData.git"
+  },
+  "gh-routebuilder-multiple": {
+   "sha": "b7093b57a8be5c6e59afcfd5ad0e2c8d14e56a5d",
+   "date": "2026-10-23",
+   "adapter": null,
+   "url": "https://github.com/Xurt/RouteBuilder_Multiple.git"
+  },
+  "gh-gunba-wow-forever-sim": {
+   "sha": "1cc5ae1e9abdbf941b7326d2d90421822dce31ba",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/gunba/wow-forever-sim.git"
+  },
+  "gh-swedish-team-level-guide": {
+   "sha": "fd0052531695f16c712b39855a61a1e3018a7b04",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/kdfinis/Swedish-Team-Level-Guide.git"
+  },
+  "gh-soulfound": {
+   "sha": "002b2a866fdc6156650b72f18c0662bf78e187d9",
+   "date": "2026-10-25",
+   "adapter": null,
+   "url": "https://github.com/tspeaks/SoulFound-addon.git"
+  },
+  "gh-leveling-consumables": {
+   "sha": "7072c4dd8bf4835b44749af46b1e798137410bd8",
+   "date": "2026-10-25",
+   "adapter": null,
+   "url": "https://github.com/neilsun1225/LevelingConsumables.git"
+  },
+  "gh-forever-core": {
+   "sha": "743e4f471719a75f64b11f1b69051894cfa182d6",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/cjber/forever-core.git"
+  },
+  "gh-wectoz-forever-news": {
+   "sha": "efa4c549c022cd9d290189b2128b82e1a374d4d7",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/Wectoz/wow-forever-news.git"
+  },
+  "gh-forever-guide-mate": {
+   "sha": "3ffca5e39887772157edc9722960c0e45bd2d2fc",
+   "date": "2026-10-25",
+   "adapter": null,
+   "url": "https://github.com/TylerAkins/forever-guide-mate"
+  },
+  "gh-questpact": {
+   "sha": "bd3d9fc694b689bc12cf6e9e3a6c5861d914e562",
+   "date": "2026-10-26",
+   "adapter": null,
+   "url": "https://github.com/Rainsphere/QuestPact"
+  },
+  "gh-smooth-experience-bar": {
+   "sha": "e33a252c381c292235d91e5e15c982a0aeebee46",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/Jordanburch101/smooth-experience-bar"
+  },
+  "gh-wow-forever-path-static": {
+   "sha": "e89699dc4b743bc406b391ec38f015f76e8ba03b",
+   "date": "2026-10-29",
+   "adapter": null,
+   "url": "https://github.com/BlokMeta/wow-forever-path-static"
+  },
+  "gh-questieguide": {
+   "sha": "115b91f8fac7e42da76175780ffdcb099a1d4de0",
+   "date": "2026-10-23",
+   "adapter": null,
+   "url": "https://github.com/miyankooo/QuestieGuide"
+  },
+  "gh-nag-deathradar": {
+   "sha": "13267f15595facecd784f9647647bca823e7dc89",
+   "date": "2026-10-28",
+   "adapter": null,
+   "url": "https://github.com/EbonHold-Labs/NAG-DeathRadar"
+  },
+  "gh-rxp-planner": {
+   "sha": "02d1bea418b56b73035fc7abc8e431847ca70148",
+   "date": "2026-10-26",
+   "adapter": null,
+   "url": "https://github.com/kevhardy/rxp-planner"
+  },
+  "gh-groupgains": {
+   "sha": "6286ff03930df57bb9996066f7712b8ed98147fe",
+   "date": "2026-10-27",
+   "adapter": null,
+   "url": "https://github.com/tugowar/groupgains"
+  }
+ },
+ "moved": [
+  "gh-rxpguides",
+  "gh-shortest-path-forever",
+  "gh-wowf-qrp",
+  "gh-skillup-forever",
+  "gh-questiedb",
+  "gh-polestar",
+  "gh-wowf-glp",
+  "gh-forever-campfire-codex",
+  "gh-wowsims-forever-org",
+  "gh-road-to-sixty",
+  "gh-legacy-forever",
+  "gh-wow-navigationdata",
+  "gh-swedish-team-level-guide",
+  "gh-forever-core",
+  "gh-wectoz-forever-news",
+  "gh-smooth-experience-bar",
+  "gh-wow-forever-path-static",
+  "gh-questieguide",
+  "gh-nag-deathradar",
+  "gh-rxp-planner",
+  "gh-groupgains"
+ ],
+ "moved_with_adapter": [
+  "gh-rxpguides"
+ ],
+ "failed": {
+  "gh-wow-plan": "git clone --depth 1 https://github.com/romaninsh/wow-plan.git /tmp/claude-0/-home-claude/c0bcb61d-d0e8-5818-9011-7faf38eeb620/scratchpad/repos/gh-wow-plan: Cloning into '/tmp/claude-0/-home-claude/c0bcb61d-d0e8-5818-9011-7faf38eeb620/scratchpad/repos/gh-wow-plan'...\nfatal: could not read Username for 'https://github.com': terminal prompts disabled"
+ },
+ "counts": {
+  "fg_quests": 5477,
+  "fg_npcs": 6263,
+  "fg_objects": 1021,
+  "fg_items": 3617,
+  "frq_quests": 4244,
+  "frq_npcs": 10119,
+  "frq_objects": 6645,
+  "frc": 6,
+  "whz_list": 144,
+  "whz_info": 120,
+  "whz_npcpos": 64,
+  "whd": 45,
+  "rxp_free": 22,
+  "fqm": 2,
+  "ids_all": 7411
+ },
+ "delta": {}
+}

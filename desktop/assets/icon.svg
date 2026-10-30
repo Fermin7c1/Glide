@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Glide app icon: an original drawing in the spirit of the addon's in-game Sprint icon: a winged boot shooting up
+       and to the right, drawn only as a red-orange neon outline with flame trails, on black. Not Blizzard art. -->
+  <defs>
+    <radialGradient id="bg" cx="0.6" cy="0.42" r="0.85">
+      <stop offset="0" stop-color="#210806"/>
+      <stop offset="0.55" stop-color="#0c0403"/>
+      <stop offset="1" stop-color="#020101"/>
+    </radialGradient>
+    <linearGradient id="fire" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#5c0806"/>
+      <stop offset="0.45" stop-color="#b3170f"/>
+      <stop offset="0.8" stop-color="#e4371a"/>
+      <stop offset="1" stop-color="#ff8a2a"/>
+    </linearGradient>
+    <linearGradient id="trail" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#ff6a1f"/>
+      <stop offset="0.5" stop-color="#c41d10"/>
+      <stop offset="1" stop-color="#c41d10" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="neon" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="wide"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="tight"/>
+      <feMerge><feMergeNode in="wide"/><feMergeNode in="tight"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="40" fill="url(#bg)"/>
+  <g transform="translate(14 24) scale(0.88) rotate(-32 128 128)">
+    <!-- flame trails, behind the heel -->
+    <path d="M104 148 Q58 156 8 186 Q60 174 106 164 Z" fill="none" stroke="url(#trail)" stroke-width="3.5" stroke-linejoin="round" filter="url(#neon)"/>
+    <path d="M110 166 Q70 190 34 222 Q80 200 118 178 Z" fill="none" stroke="url(#trail)" stroke-width="3.5" stroke-linejoin="round" filter="url(#neon)" opacity="0.85"/>
+    <path d="M100 130 Q54 128 14 146 Q58 142 102 142 Z" fill="none" stroke="url(#trail)" stroke-width="3.5" stroke-linejoin="round" filter="url(#neon)" opacity="0.7"/>
+    <!-- wing feathers, swept back from the ankle -->
+    <g fill="none" stroke="#ff4a24" stroke-width="5" stroke-linejoin="round" filter="url(#neon)">
+      <path d="M114 66 Q72 40 22 44 Q58 66 112 84 Z"/>
+      <path d="M112 86 Q64 76 18 88 Q60 102 110 104 Z"/>
+      <path d="M110 104 Q70 108 32 126 Q72 126 110 120 Z"/>
+    </g>
+    <!-- the boot -->
+    <path d="M112 52 L166 48 L160 116 Q176 124 204 132 Q236 142 244 156 Q248 170 232 174 L124 178 Q106 178 106 160 L108 112 Z"
+          fill="none" stroke="#ff4a24" stroke-width="6" stroke-linejoin="round" filter="url(#neon)"/>
+    <!-- cuff and sole -->
+    <path d="M112 66 L166 62" stroke="#ff8a3d" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M118 170 L232 166" stroke="#ff8a3d" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <!-- hot highlight along the instep -->
+    <path d="M166 118 Q196 130 226 142" fill="none" stroke="#ffc06a" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+  </g>
+</svg>

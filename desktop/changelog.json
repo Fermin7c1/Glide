@@ -1,0 +1,443 @@
+{
+  "_about": "What's new: shown in the app (click the version number). Newest first. Add an entry with every release.",
+  "versions": [
+    {
+      "version": "0.4.0",
+      "date": "2026-10-30",
+      "title": "Open source",
+      "items": [
+        "Glide's code is now open source under the GPL-3.0, with every bundled data source credited in THIRD_PARTY_NOTICES.md.",
+        "A new app icon of Glide's own: the neon winged boot.",
+        "Safer under the hood: the coach screen's key no longer sits in the page, links and downloads only use secure addresses, saved API keys only ever go to their own service, and the app only takes commands from its own windows.",
+        "The coach won't change what it remembers about you because of something it read on the web; tell it yourself and it remembers as before.",
+        "The quest database no longer includes data from sources whose license doesn't allow sharing it. Quests are unchanged, but some NPC and mob spawn points are gone; your own recordings fill them back in as you play.",
+        "Glide fetches the community's list of game file keys when it needs it, instead of shipping it."
+      ]
+    },
+    {
+      "version": "0.3.42",
+      "date": "2026-10-30",
+      "title": "Edge to edge",
+      "items": [
+        "The coach screen's top bar uses its whole width at every window size: the XP per hour chart stretches to fill, and on narrow windows the stats spread out or move to a second line instead of bunching up on the right."
+      ]
+    },
+    {
+      "version": "0.3.41",
+      "date": "2026-10-30",
+      "title": "New at your trainer",
+      "items": [
+        "When you level up and your trainer has new spells or ranks for you, the Glide addon shows them the way the spellbook does: the icon, the name and rank, the spell's own text, and for a new rank what it changes against the one you have (for example 15 -> 35, +133%).",
+        "Each one shows its cost once a trainer has shown it to you, with the total against your gold, so you can decide whether the trip to town is worth it. Hover a spell for the game's own tooltip.",
+        "It never opens in combat, the Glide window (/glide) can turn it off, and /glide train opens it any time.",
+        "The Glide addon updates to 0.16.0: update it on the Addon page, then fully restart WoW."
+      ]
+    },
+    {
+      "version": "0.3.40",
+      "date": "2026-10-29",
+      "title": "Clear lines",
+      "items": [
+        "Community notes are divided by a clear line again, and the first one starts right at the top of the feed."
+      ]
+    },
+    {
+      "version": "0.3.39",
+      "date": "2026-10-29",
+      "title": "Updates you can watch",
+      "items": [
+        "Updating now really shows the \"Updating Glide\" window: over Glide's own window, with its icon and a bar that fills as the install goes, until Glide opens again.",
+        "Restart to update only starts once, however fast you click: the button greys out and says Restarting.",
+        "The book starts right at its top edge, without a line above its first section."
+      ]
+    },
+    {
+      "version": "0.3.38",
+      "date": "2026-10-29",
+      "title": "One page",
+      "items": [
+        "The book has no tabs any more: its sections (community, why, talents, the session and the rest) follow one after another on one page, each marked only by its faint emblem. Scroll to read them; on wide screens they still open as columns of their own.",
+        "Drag a section by its top edge to put it where you want it."
+      ]
+    },
+    {
+      "version": "0.3.37",
+      "date": "2026-10-29",
+      "title": "Glide",
+      "items": [
+        "The app is called Glide now. Your settings, keys and install stay where they are.",
+        "Hold your push-to-talk key in game and Glide shows it's listening: a gold \"Listening\" with a pulsing dot on the overlay and in the bottom bar, and the coach's ask box glows. While it turns your words into text it says \"Transcribing\".",
+        "No headers left on the coach screen: the book's tabs run down its right edge as crests, and the zone's name is written on the minimap itself.",
+        "Updating shows its window again: it opens where Glide's window is, with Glide's icon and a bar that fills as the install goes, and Glide closes only once it's up."
+      ]
+    },
+    {
+      "version": "0.3.36",
+      "date": "2026-10-29",
+      "title": "Nothing but what matters",
+      "items": [
+        "The coach screen's panels have no headers any more. Each one's emblem sits large and faint in its top-right corner (a lightbulb for why, a sword for gear, a winding path for the route), and the panel's content starts at the top.",
+        "To move a panel, grab it by its top edge and drag.",
+        "The narrator's volume lives in the bottom bar now: point at the speaker and a volume bar rises above it. Scroll the wheel over the speaker to step it, click the speaker to mute."
+      ]
+    },
+    {
+      "version": "0.3.35",
+      "date": "2026-10-29",
+      "title": "Community notes, as they're found",
+      "items": [
+        "New community notes (patches, XP findings, route tricks, class tips) now reach you as they're published, every couple of hours, without an app update. Glide checks every 30 minutes; Settings > Coaching > Community notes can change that or turn it off.",
+        "When new notes land, the Community crest levels up: a column of gold light, a burst of rays and the game's level-up sound (from your own WoW install; the narrator's mute and volume apply). The crest keeps glowing until you open Community.",
+        "The chat tells you how many arrived and what the newest says."
+      ]
+    },
+    {
+      "version": "0.3.34",
+      "date": "2026-10-29",
+      "title": "Crests, not captions",
+      "items": [
+        "The coach screen's panels no longer print their names. Each carries a crest instead, its emblem in a round gold-ringed bezel like the portraits on the game's own frames: a scroll for the quest log, a sword for gear, sparkles for buffs, a lightbulb for why, a rising line for talents, people for community, a clock for the session, voice lines for the coach and a winding path for the route.",
+        "Beside each crest, the panel's header shows only what's live: \"7 quests, 2 ready to turn in\", \"Step 77, accept\", \"Steps 76 to 81\". Hover a header and its crest lights up; drag it to move the panel.",
+        "The book's tabs are a row of crests, the open one lit in gold. Hover one to see its name."
+      ]
+    },
+    {
+      "version": "0.3.33",
+      "date": "2026-10-29",
+      "title": "Every piece where you want it",
+      "items": [
+        "Drag any piece of the coach screen's top bar (your character, buffs, XP per hour, each stat) or its bottom (the XP bar, the XP line, bags, hearthstone) into a new place, no Layout button needed. Drop a stat on your character frame to move the whole pace block.",
+        "The bar along the bottom of the window (session time, AI cost, models, the coach's mode) rearranges the same way: drag a piece left or right.",
+        "Glide remembers both orders after a restart.",
+        "New versions are offered by the gold button in the bottom bar alone; the card in the sidebar is gone. Glide still checks for updates every 30 minutes.",
+        "The coach's state in the sidebar glows in its colour: green when running, yellow while starting or stopping, red when stopped.",
+        "The Addon page no longer offers to remove the GlideLink and GlideRecorder addons from before 0.8.0."
+      ]
+    },
+    {
+      "version": "0.3.32",
+      "date": "2026-10-29",
+      "title": "Move the screen your way",
+      "items": [
+        "Drag the coach screen's panels by their headers, any time: the quest page by its title, the chat, the minimap and the route by their headings, a book tab (or a docked column's heading) to reorder the book, the tab bar to move the whole book. Glide remembers where you put them. The Layout button at the bottom right still moves the small pieces of the top and bottom bars too.",
+        "The coach card at the bottom of the sidebar is easier to read: what the coach is doing, only the buttons that apply now, and the version number (What's new) underneath.",
+        "The update card in the sidebar fits its text again: Download, then Restart, with the full wording when you hover.",
+        "The coach's step-video tips are more complete for the Alliance WoW Forever guides, and tips from videos marked as patched are no longer spoken.",
+        "The coach reads the addon's saved data faster."
+      ]
+    },
+    {
+      "version": "0.3.31",
+      "date": "2026-10-27",
+      "title": "Steadier under the hood",
+      "items": [
+        "The coach briefs the step RestedXP actually shows you, whatever your Solo Self-Found, group quest and dungeon settings in RestedXP. Before, a character set up differently from the default could hear about the wrong step.",
+        "After a /reload, a relog, a character switch or a reconnect, the coach keeps hearing quest pickups, turn-ins, level-ups, deaths and /glide mark. Before, it could go quiet on them for the rest of the session.",
+        "The training callout works again when 15 or more spells are waiting, and gear and bag lists with stat-heavy items always reach the coach.",
+        "Web pages open in your browser can no longer send commands to the coach.",
+        "Glide no longer hangs on Starting or on quit when Python can't launch, installs the coach into a newly chosen engine folder, and never deletes folders it didn't put there.",
+        "Settings show the defaults the coach really uses (6 seconds before a briefing), the step video switch applies at once, and the strip grid setting is gone. A hand-edited value out of range acts as its nearest limit.",
+        "A damaged settings file, app settings file or saved key file is never overwritten any more: Glide keeps a .bad copy and tells you what happened.",
+        "The coach screen: split times compare against the right step, chat no longer doubles after a reconnect, the screen reconnects if its feed stalls, and \"Glide voice ready\" is spoken again.",
+        "The Status page shows one item per problem, and says when the addon and the app speak different strip versions instead of \"no game data\". Errors inside the addon show up there too.",
+        "Knowledge rebuilds are quicker (the map step went from about 44 seconds to under 2). Glide rebuilds its knowledge once after this update.",
+        "The coach's quest details come from Glide's knowledge base, with quest giver and turn-in places for thousands more quests.",
+        "The Logs page keeps a log file per day for a week; Log files opens the folder.",
+        "The Glide addon updates to 0.15.3: /glide help lists every command. Update it when Glide asks, then fully restart WoW (a /reload doesn't load new addon files)."
+      ]
+    },
+    {
+      "version": "0.3.30",
+      "date": "2026-10-24",
+      "title": "A second HUD",
+      "items": [
+        "The coach screen is redrawn in the language of the game's own interface: your character frame, buffs and pace across the top, the current step as a parchment quest page in the middle, the coach's chat bottom left, a round minimap and the route tracker on the right, and the XP bar along the bottom. The rest of the app follows the same look.",
+        "More screen shows more: on wide screens the quest log, gear, buffs, why this step and talents open as columns of their own instead of tabs.",
+        "Buffs show the game's own icons, read from your WoW install, with the time left under each.",
+        "The minimap route and waypoints stand out: a white route with gold dashes flowing toward a red-orange target. The map is bigger on wide screens.",
+        "Rearrange the screen: the Layout button at the bottom right lets you drag pieces around within the top bar, the middle and the bottom bar (Alt and the arrow keys work too). Glide remembers your layout.",
+        "Before the game connects, the quest page says how to connect it.",
+        "The status bar also shows what listens to push-to-talk and which voice speaks.",
+        "Closing the window now quits Glide on new installs; Settings > General can keep it running in the tray instead. Installs that already keep it in the tray stay as they are.",
+        "The coach reads the addon's strip at any cell size (/glide cell).",
+        "Buff icons and map data keep working when a WoW patch changes the game's data tables.",
+        "The Glide addon updates to 0.15.0, with a Glide window holding every switch: type /glide or left-click the minimap button (right-click turns the coach on or off). Update it when Glide asks, then /reload in game."
+      ]
+    },
+    {
+      "version": "0.3.29",
+      "date": "2026-10-22",
+      "title": "Works with HDR",
+      "items": [
+        "The coach reads the game with HDR on: WoW's own HDR (/console HDROutput 1) and Windows Auto HDR. HDR brightened the addon's data strip until its colours ran together; the strip now sends only fully-off and fully-on colours, and the coach takes its reading from reference cells in every frame, so it keeps up as HDR adjusts the picture.",
+        "The strip in the top-left corner is twice as tall as before; it carries the same data.",
+        "The coach no longer mistakes another window for WoW, such as a File Explorer window open on the World of Warcraft folder.",
+        "The Glide addon updates to 0.14.1: update it when Glide asks, then /reload in game. Until you do, the coach reads the old strip as before."
+      ]
+    },
+    {
+      "version": "0.3.28",
+      "date": "2026-10-20",
+      "title": "Routes that know the world",
+      "items": [
+        "The route on the map follows a 3D walking map Glide builds from your game's files: terrain slopes (nothing steeper than 50 degrees is climbed, small ledges are hopped), buildings, caves, tunnels, bridges, trees, rocks and water.",
+        "It's built once, in the background at the lowest priority, about an hour per continent, yours first. Settings > General > Walking map shows its progress and can rebuild it; when a newer Glide can make a better one, Settings and the Status page say so, and rebuilding is up to you.",
+        "The route goes to RestedXP's arrow and updates as you move. It knows which level you're on in cities like Stormwind and Ironforge.",
+        "Fly steps show the walk to the flight master, then the flight along the path the gryphon really flies. In the air, the rest of the flight to where you land.",
+        "When a flight you know beats running somewhere by a wide margin, the coach mentions it.",
+        "Auto repair: the Glide addon repairs everything at any merchant who repairs, if you can pay the whole bill. Turn it off in the minimap button's menu or with /glide repair off.",
+        "The Glide addon updates to 0.14.0: update it when Glide asks, then /reload in game."
+      ]
+    },
+    {
+      "version": "0.3.27",
+      "date": "2026-10-20",
+      "title": "No more false \"moving away\"",
+      "items": [
+        "On steps with several waypoints, the coach follows the one RestedXP's arrow points at, not the first one you already reached.",
+        "\"Moving away\" is judged from where you've been over the last 30 seconds or more, and only while you're still getting further away, so detours and a waypoint that just moved on don't set it off.",
+        "The callout says where the waypoint is, e.g. 410 yards behind you.",
+        "The Glide addon updates to 0.13.1: update it when Glide asks, then /reload in game."
+      ]
+    },
+    {
+      "version": "0.3.26",
+      "date": "2026-10-19",
+      "title": "Getting API keys made easy",
+      "items": [
+        "Settings > AI models & keys explains which keys you need, including a completely free setup.",
+        "Every key has step-by-step instructions, a button that opens the page where you create it, and what a key looks like.",
+        "Each key shows whether it's free, has a free tier or free credit, or is paid, and the cheapest way to use it."
+      ]
+    },
+    {
+      "version": "0.3.25",
+      "date": "2026-10-19",
+      "title": "Quieter pickups, more from RestedXP",
+      "items": [
+        "Quests picked up back to back aren't read out one after another. Each one is explained when you get to it: when you target a mob for it, reach its guide step, or get near its objectives.",
+        "The next talent from RestedXP's build for your class, checked against Forever's talents, in callouts and the new Talents and levels panel.",
+        "Your time for each level, from RestedXP's tracker, next to the fastest time any of your characters managed.",
+        "Glide follows your RestedXP settings (self-found, group quests) and the steps you skip, so its route matches what RestedXP shows.",
+        "Near a vendor with limited-stock gear or potions, the coach tells you when it sells an upgrade for you.",
+        "The Glide addon updates to 0.13.0: update it when Glide asks, then /reload in game."
+      ]
+    },
+    {
+      "version": "0.3.24",
+      "date": "2026-10-19",
+      "title": "See where the guide expects you",
+      "items": [
+        "A white tick on the XP bar shows where the guide's plan has you at your current step.",
+        "If the plan expects another level, an arrow at the end of the bar points the way.",
+        "Hover the XP bar to see exactly how far ahead or behind you are."
+      ]
+    },
+    {
+      "version": "0.3.23",
+      "date": "2026-10-19",
+      "title": "A sharper, quicker coach",
+      "items": [
+        "The coach now always sees your gear, quest rewards and addon status. Before, they were often cut off.",
+        "Spoken answers and callouts start talking as soon as the first sentence is ready, and quest briefings say the objective right away.",
+        "Callouts cost less: the part of each request that rarely changes is cached and reused.",
+        "The coach talks to you as \"you\" and gets straight to the advice, instead of describing your situation (seen with Claude Haiku 5.5).",
+        "Quest text no longer shows WoW codes like $N or $B.",
+        "Web search on Claude Sonnet 5.5 and Opus 5.5 filters results before the coach reads them."
+      ]
+    },
+    {
+      "version": "0.3.22",
+      "date": "2026-10-18",
+      "title": "A lighter download",
+      "items": [
+        "The installer is 123 MB instead of 180 MB, and Glide takes 405 MB on disk instead of 654 MB.",
+        "Offline push-to-talk installs itself the first time you use it (about 120 MB, once); push-to-talk uses Windows speech until then.",
+        "If you already use offline push-to-talk, this update reinstalls it once."
+      ]
+    },
+    {
+      "version": "0.3.21",
+      "date": "2026-10-18",
+      "title": "What's new",
+      "items": [
+        "Click the version number at the bottom of the sidebar to see what changed in recent versions.",
+        "After an update it opens once by itself, with the versions you haven't seen marked New."
+      ]
+    },
+    {
+      "version": "0.3.20",
+      "date": "2026-10-18",
+      "title": "See which voice the narrator uses",
+      "items": [
+        "Settings > Voice shows the voice of the last line spoken, and the Logs page notes it each session.",
+        "If you hear a different voice while this shows your choice, it's WoW's Text to Speech or Windows Narrator, not Glide."
+      ]
+    },
+    {
+      "version": "0.3.19",
+      "date": "2026-10-18",
+      "title": "Bag cleanup follows RestedXP's junk marks",
+      "items": [
+        "When your bags are full, the Glide addon deletes the cheapest item RestedXP marks as junk on your next click or key press. No prompt.",
+        "Only RestedXP junk is touched: items you marked as junk, and greys you haven't marked useful.",
+        "Glide stands aside when RestedXP's own auto discard is on. Toggle it from the minimap button."
+      ]
+    },
+    {
+      "version": "0.3.18",
+      "date": "2026-10-18",
+      "title": "Search all settings",
+      "items": [
+        "A search box in Settings (Ctrl+F) shows only the settings that match, in their own panels, with matches highlighted.",
+        "Esc clears it."
+      ]
+    },
+    {
+      "version": "0.3.17",
+      "date": "2026-10-18",
+      "title": "Bag cleanup in the addon",
+      "items": [
+        "The Glide addon can delete your cheapest junk when the bags are full: /glide trash, a key binding, and a minimap toggle."
+      ]
+    },
+    {
+      "version": "0.3.16",
+      "date": "2026-10-18",
+      "title": "Your chosen voice from the first line",
+      "items": [
+        "The narrator waits for the Windows voices to load, so a session's first lines use your voice too."
+      ]
+    },
+    {
+      "version": "0.3.15",
+      "date": "2026-10-18",
+      "title": "Volume in the Coach panel's title",
+      "items": [
+        "The narrator volume slider and mute button sit in the Coach panel's title row.",
+        "Changing the volume no longer says \"Volume\"."
+      ]
+    },
+    {
+      "version": "0.3.14",
+      "date": "2026-10-18",
+      "title": "In-game overlay off by default",
+      "items": [
+        "The floating overlay is opt-in: Settings > Overlay, or Show overlay in the tray menu."
+      ]
+    },
+    {
+      "version": "0.3.13",
+      "date": "2026-10-18",
+      "title": "You choose when to download updates",
+      "items": [
+        "Glide checks for a new version every 30 minutes and shows a Download button in the footer.",
+        "Once downloaded, Restart to update installs it."
+      ]
+    },
+    {
+      "version": "0.3.12",
+      "date": "2026-10-18",
+      "title": "An XP/hour chart you can read",
+      "items": [
+        "Hover the chart to see the XP/hour at any moment, the time, and how it compared with the route.",
+        "Its history survives coach restarts.",
+        "The Coach panel has a narrator volume slider."
+      ]
+    },
+    {
+      "version": "0.3.11",
+      "date": "2026-10-18",
+      "title": "Haiku 5.5 callouts fixed",
+      "items": [
+        "Callouts with Claude Haiku 5.5 no longer come back empty (\"The model returned no answer text\")."
+      ]
+    },
+    {
+      "version": "0.3.10",
+      "date": "2026-10-18",
+      "title": "Status stops saying \"out of date\"",
+      "items": [
+        "New play logs no longer mark the knowledge base out of date; they're merged at the next start."
+      ]
+    },
+    {
+      "version": "0.3.9",
+      "date": "2026-10-18",
+      "title": "Top bar by importance",
+      "items": [
+        "XP/hour leads the top bar with a 30-minute chart and the route's pace as a dashed line.",
+        "Drag the bar's tiles into any order; they wrap on narrow windows."
+      ]
+    },
+    {
+      "version": "0.3.8",
+      "date": "2026-10-18",
+      "title": "Dungeon setting fixed",
+      "items": [
+        "\"Dungeon runs in the plan\" no longer breaks the Why this step panel."
+      ]
+    },
+    {
+      "version": "0.3.7",
+      "date": "2026-10-18",
+      "title": "A tidier update window",
+      "items": [
+        "Updates install with a small Updating Glide window instead of the setup wizard."
+      ]
+    },
+    {
+      "version": "0.3.6",
+      "date": "2026-10-18",
+      "title": "Updates when you choose",
+      "items": [
+        "Nothing installs on its own: the footer's Restart to update button installs a downloaded version."
+      ]
+    },
+    {
+      "version": "0.3.5",
+      "date": "2026-10-18",
+      "title": "Vitals in the top bar, mute the narrator",
+      "items": [
+        "Health, power, durability, free bag slots and the hearthstone show as icons in the top bar.",
+        "Zone, position and the distance to the next waypoint sit under the map.",
+        "Mute the narrator from the footer, the tray, or Ctrl+Alt+M (works in game)."
+      ]
+    },
+    {
+      "version": "0.3.3",
+      "date": "2026-10-18",
+      "title": "No rebuild after every update",
+      "items": [
+        "Installing an update no longer forces a full knowledge base rebuild."
+      ]
+    },
+    {
+      "version": "0.3.2",
+      "date": "2026-10-18",
+      "title": "Capture check, steadier rebuilds",
+      "items": [
+        "Settings > Game capture > Check now shows what the coach sees in the WoW window.",
+        "A second re-read in one session no longer fails with \"in use\"."
+      ]
+    },
+    {
+      "version": "0.3.1",
+      "date": "2026-10-18",
+      "title": "Smaller installer, pick your speech model",
+      "items": [
+        "The installer is 181 MB instead of 590 MB: the speech model downloads on first use.",
+        "Settings > Voice lists the Whisper models to download or delete.",
+        "The footer's CPU and memory figures work during long jobs."
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-18",
+      "title": "The Race Broadcast redesign",
+      "items": [
+        "A new look built for glancing at mid-run, with a Status page, coach Memory, and the session's cost in the footer."
+      ]
+    }
+  ]
+}

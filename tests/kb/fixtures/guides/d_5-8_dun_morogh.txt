@@ -1,0 +1,11 @@
+#forever
+#version 1
+<< Alliance
+#group Fixture Forever Dungeon Guide (A)
+#subgroup Fixture Dungeon Guide 5-10
+#name 5-8 Dun Morogh
+#next 8-10 Loch Modan
+#defaultfor Dwarf/Gnome
+
+step
+    #include Fixture Forever Guide (A)\5-8 Dun Morogh

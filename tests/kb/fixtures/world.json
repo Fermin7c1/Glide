@@ -1,0 +1,62 @@
+{
+  "_about": "Synthetic quest world for the knowledge tests (tests/kb/fixture.py turns it into a mini glide.db). Real map ids and bounds so zone names resolve; every quest, NPC, creature and item here is made up (ids 90001+).",
+  "maps": [
+    {"ui_map": 1415, "name": "Eastern Kingdoms", "parent": 947, "area_id": 0},
+    {"ui_map": 1426, "name": "Dun Morogh", "parent": 1415, "area_id": 1},
+    {"ui_map": 1432, "name": "Loch Modan", "parent": 1415, "area_id": 38}
+  ],
+  "bounds": {
+    "1426": {"continent": 0, "wx0": -3877.083, "wy0": 1802.083, "wx1": -7160.417, "wy1": -3122.917},
+    "1432": {"continent": 0, "wx0": -4487.5, "wy0": -1993.75, "wx1": -6327.083, "wy1": -4752.083}
+  },
+  "zones": [
+    {"area_id": 1, "name": "Dun Morogh", "ui_map": 1426, "parent": 0},
+    {"area_id": 38, "name": "Loch Modan", "ui_map": 1432, "parent": 0},
+    {"area_id": 131, "name": "Fixture Hub", "ui_map": 1426, "parent": 1},
+    {"area_id": 9001, "name": "Boar Field", "ui_map": 1426, "parent": 1}
+  ],
+  "map_areas": [
+    {"ui_map": 1426, "area_id": 131, "name": "Fixture Hub", "x1": 44.0, "y1": 50.0, "x2": 48.0, "y2": 54.0},
+    {"ui_map": 1426, "area_id": 9001, "name": "Boar Field", "x1": 40.0, "y1": 56.0, "x2": 48.0, "y2": 64.0}
+  ],
+  "npcs": [
+    {"id": 90201, "name": "Ada Giver", "level": 10, "ui_map": 1426, "x": 40.0, "y": 50.0},
+    {"id": 90202, "name": "Bram Ender", "level": 12, "ui_map": 1426, "x": 46.0, "y": 52.0},
+    {"id": 90203, "name": "Cara Hunter", "level": 12, "ui_map": 1426, "x": 30.0, "y": 45.0},
+    {"id": 90204, "name": "Dorn Scout", "level": 20, "ui_map": 1432, "x": 35.0, "y": 45.0},
+    {"id": 90205, "name": "Elin Keeper", "level": 20, "ui_map": 1432, "x": 33.0, "y": 50.0},
+    {"id": 90206, "name": "Wren Vendor", "level": 10, "ui_map": 1426, "x": 46.6, "y": 52.4, "subname": "Demon Trainer"},
+    {"id": 90207, "name": "Wren Trainer", "level": 10, "ui_map": 1426, "x": 46.5, "y": 52.5, "subname": "Warlock Trainer"}
+  ],
+  "creatures": [
+    {"id": 90101, "name": "Fixture Boar", "min_level": 5, "max_level": 6, "ui_map": 1426, "x": 44.0, "y": 60.0},
+    {"id": 90102, "name": "Fixture Wolf", "min_level": 7, "max_level": 8, "ui_map": 1426, "x": 28.0, "y": 40.0},
+    {"id": 90103, "name": "Fixture Bear", "min_level": 9, "max_level": 10, "ui_map": 1432, "x": 40.0, "y": 30.0}
+  ],
+  "quests": [
+    {"id": 90001, "name": "Fixture Delivery", "level": 2, "min_level": 1, "xp": 450, "ui_map": 1426, "start": 90201, "end": 90202, "next_id": 90002,
+     "objective_text": "Bring the parcel to Bram Ender at the hub."},
+    {"id": 90002, "name": "Fixture Boars", "level": 6, "min_level": 4, "xp": 700, "ui_map": 1426, "start": 90202, "end": 90202, "next_id": 90003,
+     "pre": [90001], "objectives": [{"type": "monster", "target_id": 90101, "amount": 8}],
+     "objective_text": "Kill 8 Fixture Boars."},
+    {"id": 90003, "name": "Fixture Tusks", "level": 7, "min_level": 5, "xp": 850, "ui_map": 1426, "start": 90202, "end": 90202,
+     "pre": [90002], "objectives": [{"type": "item", "target_id": 90301, "amount": 5}],
+     "objective_text": "Bring 5 Fixture Tusks to Bram Ender."},
+    {"id": 90004, "name": "Fixture Wolves", "level": 8, "min_level": 6, "xp": 1000, "ui_map": 1426, "start": 90203, "end": 90203,
+     "objectives": [{"type": "monster", "target_id": 90102, "amount": 6}],
+     "objective_text": "Kill 6 Fixture Wolves."},
+    {"id": 90005, "name": "Fixture Report", "level": 8, "min_level": 6, "xp": 900, "ui_map": 1426, "start": 90202, "end": 90204,
+     "pre": [90003], "objective_text": "Take the report to Dorn Scout in Loch Modan."},
+    {"id": 90006, "name": "Fixture Side Task", "level": 7, "min_level": 5, "xp": 450, "ui_map": 1426, "start": 90202, "end": 90202,
+     "objectives": [{"type": "monster", "target_id": 90101, "amount": 4}],
+     "objective_text": "Kill 4 Fixture Boars (a quest no guide routes)."},
+    {"id": 90007, "name": "Fixture Bears", "level": 9, "min_level": 7, "xp": 1400, "ui_map": 1432, "start": 90204, "end": 90204, "next_id": 90008,
+     "pre": [90005], "objectives": [{"type": "monster", "target_id": 90103, "amount": 6}],
+     "objective_text": "Kill 6 Fixture Bears."},
+    {"id": 90008, "name": "Fixture Errand", "level": 10, "min_level": 8, "xp": 1200, "ui_map": 1432, "start": 90204, "end": 90205,
+     "pre": [90007], "objective_text": "Carry the errand to Elin Keeper."}
+  ],
+  "items": [
+    {"id": 90301, "name": "Fixture Tusk", "drop_from": 90101}
+  ]
+}

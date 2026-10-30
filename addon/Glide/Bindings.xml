@@ -1,0 +1,9 @@
+<Bindings>
+	<!-- Key Bindings > AddOns > Glide. Loaded by the client from the addon folder (not listed in the TOC). -->
+	<Binding name="GLIDE_MARK" header="GLIDE" category="ADDONS">
+		Glide_Mark()
+	</Binding>
+	<Binding name="GLIDE_TRASH" category="ADDONS">
+		Glide_Trash()
+	</Binding>
+</Bindings>

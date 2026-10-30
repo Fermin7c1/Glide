@@ -1,0 +1,2837 @@
+{
+ "_about": "What each YouTube clip RestedXP links from a step shows, in our own words (tools/step_videos.py; companion/briefing.py says the instruction when the player reaches the step). Low-confidence notes are kept for reference but never said.",
+ "clips": {
+  "-Bi95bCN8dM@0": {
+   "url": "https://www.youtube.com/watch?v=-Bi95bCN8dM",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (H)||6-12 Tirisfal Glades",
+     "idx": 211
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||6-12 Tirisfal Glades",
+     "idx": 210
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE",
+     "idx": 12
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 28
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 127
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 163
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 202
+    }
+   ],
+   "instruction": "Walk onto the lowest staircase by the Magic Quarter reagent vendor and edge onto its highest raised part until your character looks like it is floating, then log out and back in to appear outside in the Ruins of Lordaeron.",
+   "detail": "In Undercity's Magic Quarter, use the lowest flight of stairs near the reagent vendor, not the higher staircase behind it. Walk up onto the top of its raised side edge, next to the stone post, and inch along until your character hangs slightly in the air with no ground right under its feet. Log out from the game menu without moving, then log back in. When the server can't find valid ground under a character it puts it at a safe spot, and here that spot is the courtyard of the Ruins of Lordaeron above the city. That skips the whole walk through Undercity and the elevator ride. If you log in at the same spot, you were standing on solid ground; reposition and try again. The video title marks this trick as patched, so if it fails just walk out of Undercity normally.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "invalid position reset on login"
+   ]
+  },
+  "-mcsjDkeSUw@0": {
+   "url": "https://www.youtube.com/watch?v=-mcsjDkeSUw",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-51 Searing Gorge",
+     "idx": 21
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||56-57 Burning Steppes",
+     "idx": 21
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||56-57 Burning Steppes",
+     "idx": 29
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||51-52 Searing Gorge/Burning Steppes",
+     "idx": 34
+    }
+   ],
+   "instruction": "Instead of walking out, logout skip: stand on the wooden machinery or the raised platform in the pit, log out and log back in. You should appear at Thorium Point.",
+   "detail": "Inside the Slag Pit cave in Searing Gorge you can log out from almost anywhere awkward, such as the raised platform at the back or on top of the wooden siege machinery. Here the player hops onto the wooden catapult cart near the Dark Iron Taskmasters and Slave Workers, logs out through the game menu, waits out the 20-second timer, and logs back in. The server considers that spot invalid, so it moves you to a safe point, which is Thorium Point in Searing Gorge. That saves the long walk back up through the dwarves. Make sure you are out of combat first, or the logout timer will not finish. Note that the video is marked patched. If you log back in still in the cave, walk out the normal way.",
+   "confidence": "low",
+   "skills": [
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "03nTrdcQiKY@0": {
+   "url": "https://youtu.be/03nTrdcQiKY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale",
+     "idx": 60
+    }
+   ],
+   "instruction": "At Fire Scar Shrine, kill the Felslayers on your way in one by one to clear your exit. Pull Ilkrud Magthrull, interrupt his 5 second summon if you can, and kill him. Then run back out until his Voidwalker and Succubus reset, and return to loot the Tome.",
+   "detail": "Fire Scar Shrine is in Ashenvale, under a giant tree. On the way down, pull the Felslayer demons one by one and kill them, so your path in and out is clear. Ilkrud Magthrull, a level 24 warlock, stands deeper in with a Succubus minion. Pull him and focus him. He starts Ilkrud's Guardians, a 5 second cast that brings two Voidwalkers, so interrupt or stun it if your class can. In the reference he goes down in about 15 seconds, but a Voidwalker and the Succubus are still alive and on the player. Instead of fighting them, the player turns and runs back up and out through the tree roots, the path cleared earlier. Once far enough, the adds lose interest and go home. The player then walks back, finds Ilkrud's corpse and loots Ilkrud Magthrull's Tome. If your exit path still has demons on it, you'll pull more while fleeing, which is why the clearing matters. You can also come back at level 23 or later.",
+   "confidence": "medium",
+   "skills": [],
+   "mechanics": [
+    "clear an exit path",
+    "interrupt a summon cast",
+    "leash reset by running out",
+    "loot after reset"
+   ]
+  },
+  "0WICrQXuxIs@0": {
+   "url": "https://youtu.be/0WICrQXuxIs",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE",
+     "idx": 20
+    }
+   ],
+   "instruction": "In the field below the Greymane Wall, Fireball one refugee in each campfire group so they all chase you, gather them in one clump, Frost Nova, step back and Blizzard, then finish them with Flamestrike as they flee.",
+   "detail": "The Sickly and Haggard Refugees stand in loose groups round small campfires in the rainy field in front of the Greymane Wall, with Valdred Moray among them. Keep Mana Shield up, then tag one refugee in each nearby group with Fireball or another ranged spell and keep moving so they all fall in behind you in one tight clump; aim for about 8 to 12. Turn, Frost Nova when they reach you, walk out a few yards and channel Blizzard over the frozen pack; re-Nova and drop another Blizzard when they break free. When they are low they try to run away in fear, so finish with Flamestrike on the clump (its burn keeps ticking on the runners) or Arcane Explosion if they are on top of you. Loot, drink, and repeat on the next campfires; Valdred can simply be pulled in with a pack. Watch your mana: the clip hits Mana Low more than once, so drink between pulls or use a Minor Mana Potion, and do not tag extra groups if your shield is about to break.",
+   "confidence": "high",
+   "skills": [
+    "Fireball",
+    "Mana Shield",
+    "Frost Nova",
+    "Blizzard",
+    "Flamestrike",
+    "Arcane Explosion",
+    "Cone of Cold",
+    "Minor Mana Potion"
+   ],
+   "mechanics": [
+    "AoE pull grouping",
+    "kite and Blizzard",
+    "Frost Nova root",
+    "fleeing mobs caught by AoE"
+   ]
+  },
+  "0_g2SY2JKt8@0": {
+   "url": "https://www.youtube.com/watch?v=0_g2SY2JKt8",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||51-52 Searing Gorge/Burning Steppes",
+     "idx": 66
+    }
+   ],
+   "instruction": "Wait for Margol to walk out of his cave, or kill him, then run past into the cave and stand on top of the big green mushrooms at the very back. Log out there and log back in; you should come back at Flame Crest in Burning Steppes. If you're still in the cave, walk through Blackrock Mountain instead.",
+   "detail": "A logout skip from south-east Searing Gorge into Burning Steppes. 1. Go to Margol the Rager's cave in south-east Searing Gorge. Wait until he patrols out of the entrance, or kill him (he is immune to Nature). 2. Run through the mouth of the cave, into the dark blue chamber with the glowing green mushrooms. 3. Go straight to the back wall and jump up onto the large green mushroom caps there. Stand still on top of them. 4. Open the game menu (Esc), choose Logout, and let the 20-second timer finish. Don't move, or the logout cancels. 5. Log back in. The server can't keep you in that spot, so it puts you at Flame Crest in Burning Steppes, the Horde camp by the road. This saves the long run around through Blackrock Mountain. The video is labelled patched for Season of Mastery. If you log back in still on the mushrooms, the skip doesn't work on your realm: take the mountain path or the Blackrock Mountain route from the next step.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "position reset on login",
+    "patrolling elite"
+   ]
+  },
+  "1WRRmKYBr9s@0": {
+   "url": "https://youtu.be/1WRRmKYBr9s",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||20-21 Darkshore/Ashenvale",
+     "idx": 48
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||16-19 Darkshore",
+     "idx": 89
+    }
+   ],
+   "instruction": "When the Threshwackonator turns hostile, stay at range. Keep a damage-over-time spell on it and pelt it from about 30 yards while you back down the beach. If it reaches you, run off and let the ticks finish it. Then turn in to Gelkak on the rock mound.",
+   "detail": "This is a ranged kite on the dark Darkshore beach near Gelkak Gyromast. Once the robot turns hostile, open from range at once and keep backing away. Keep the big beach boulders and the tree line between you and it so it has to walk around them. Keep your DoT up; in the clip, small 8 to 9 damage ticks run the whole fight. Fill with instant or ranged hits for about 20 to 37 each. Never stand and trade blows: it closes to melee only once, around the halfway point, and the player just runs off again. The last few percent tick away while you are running, so the kill can land off-screen. Watch for Gelkak's First Mate 1/1. Gelkak Gyromast stands on top of the small dark rock mound on the beach. Turn in Gyromast's Revenge for the Elixir of Water Breathing, then hearth to Auberdine. Druids per the guide: Entangling Roots when it turns, then Moonfire and kite. Watch for the Raging Reef Crawlers on the sand; don't pull them along.",
+   "confidence": "medium",
+   "skills": [
+    "Entangling Roots (per step text)",
+    "damage-over-time spell (Moonfire-like ticks)",
+    "ranged attacks",
+    "Hearthstone"
+   ],
+   "mechanics": [
+    "kiting",
+    "ranged kill",
+    "DoT finish while running",
+    "using boulders to lengthen its path"
+   ]
+  },
+  "1nBptJKSJto@0": {
+   "url": "https://youtu.be/1nBptJKSJto",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 198
+    }
+   ],
+   "instruction": "From the Tower of Althalaxx go north past the Ruins of Mathystra, then climb the steep slopes east on your mount, dismounting only to hop the faces it can't take. Dismount before every big drop and cast Slow Fall so you float down into Shatterspear Vale.",
+   "detail": "Start at the Tower of Althalaxx in north Darkshore and head north into the Ruins of Mathystra, then turn up into the mountains to the east. Most of the climb is done on the mechanostrider: ride up the grassy slopes, angling across each one, since a mount handles slopes better than you do on foot. Where the mount slides back, dismount and walk or jump up the face, then remount on the next flat. Near the top you go along a long dark grassy ridge on foot, pass under an overhang of tree roots, then remount on the bare rock domes. The final descent is a cliff down through pine trees: dismount first (Slow Fall gives a 'You are mounted' error otherwise), cast Slow Fall, which uses one Light Feather, and float down. You land beside the huts of Shatterspear Vale with level 58 Shatterspear Trolls; the player conjures a Mana Citrine, remounts and rides through the village to the stone platform and bridge at its far end. Expect failed jumps: the player missed one spot twice and took heavy fall damage when he went off a ledge still mounted. With no Light Feathers, use the Winterspring route.",
+   "confidence": "medium",
+   "skills": [
+    "mounted slope climbing",
+    "jumping up steep terrain",
+    "Slow Fall (Light Feather)",
+    "Conjure Mana gem"
+   ],
+   "mechanics": [
+    "mounts can climb steeper slopes than a character on foot",
+    "Slow Fall to avoid fall damage",
+    "dismount before casting (cannot cast while mounted)",
+    "route over terrain mobs don't use, avoiding the normal road"
+   ]
+  },
+  "21CuGto26Mk@0": {
+   "url": "https://www.youtube.com/watch?v=21CuGto26Mk",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||39-40 Badlands",
+     "idx": 18
+    }
+   ],
+   "instruction": "Go to the cave in southeast Wetlands, climb onto the big mushroom at the very back, and log out. Log back in at Thelsamar in Loch Modan and stand still at first, then slip southwest across the road away from the guards.",
+   "detail": "Enter the cave in the southeast corner of Wetlands, near the Loch Modan border (the Dark Iron cave with mushrooms). Run through to the back chamber and jump up onto the top of one of the large glowing mushrooms. Log out while standing on it. You are stuck inside cave geometry the server treats as invalid, so on login it moves you to a safe point, here the graveyard just outside Thelsamar in Loch Modan. That saves the long walk around through Dun Algaz. On login do not move forward. The Thelsamar Mountaineers are hostile to Horde and level 30-40, and getting hit by them flags you for PvP. Walk southwest to the far side of the road, away from the guards, before you continue. Note that this skip has been marked as patched on some realms. If you log in still in the cave, just walk out normally.",
+   "confidence": "low",
+   "skills": [
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "2y8T4MU4jm4@0": {
+   "url": "https://www.youtube.com/watch?v=2y8T4MU4jm4&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 107
+    }
+   ],
+   "instruction": "Run to the back of Faldir's Cove's cave, jump on top of the big glowing mushroom, then log out and log back in to be moved out onto the Arathi Highlands mainland.",
+   "detail": "After taking Myzrael's Allies at the Keystone, walk deeper into the cave in Faldir's Cove until you reach the dark blue cavern with large green mushrooms. Jump up onto the top of the tallest mushroom at the back, stand still on it, and log out through the game menu, waiting out the 20 second timer out of combat. When you log back in, the game treats your saved spot as invalid and places you at a safe point on the Arathi Highlands mainland, so you skip the long swim and run out of the cove. If you are in combat the logout will not finish. This skip has been reported as patched, so if you log back in on the mushroom, just leave the cove on foot.",
+   "confidence": "low",
+   "skills": [
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "4yPKmQNIDqY@0": {
+   "url": "https://youtu.be/4yPKmQNIDqY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 142
+    }
+   ],
+   "instruction": "Mount up and ride in along the west side of Hearthglen, hugging the outer wall, to the big round tower. Run straight up the inside stairs, ignoring the mobs, until the quest completes at the top, then jump off with a slow fall effect and leave.",
+   "detail": "Ride north from Northridge Lumber Camp through the trees into Hearthglen, staying near the outer stone wall on the west side to dodge most Scarlet patrols and High Protector Lorik. At the large round tower, dismount at the arched doorway. Scarlet Sentinels and Paladins will chase you; don't stop to fight. Run up the wooden ramps and stairs inside, round and round, to the open top, where 'Overlook Hearthglen from a high vantage point' completes. Then jump off the edge. The player has a slow fall effect up (he looks like a skeleton, which points to Noggenfogger Elixir), drifts down for about 15 seconds, takes no fall damage and leaves the mobs that were chasing him on the tower. He then runs off through the trees by the wall. Without slow fall (Noggenfogger, Slow Fall, Levitate, a parachute cloak or a hunter's Feign Death trick), the jump will kill you or leave you badly hurt. If you aren't sure you can outrun the elites, clear your way up instead.",
+   "confidence": "medium",
+   "skills": [
+    "Noggenfogger Elixir",
+    "mount",
+    "Feign Death"
+   ],
+   "mechanics": [
+    "run-through ignoring aggro",
+    "slow fall jump to avoid fall damage and drop pursuers"
+   ]
+  },
+  "5M9vn4XLBoQ@0": {
+   "url": "https://youtu.be/5M9vn4XLBoQ",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE",
+     "idx": 55
+    }
+   ],
+   "instruction": "In the Hillsbrad Fields, tag every peasant and farmer between the rows with Fireball or Frostbolt as you run, gather them behind you, then Frost Nova and Blizzard the pack. Finish them with Flamestrike and Arcane Explosion.",
+   "detail": "Go into the crop fields west of Southshore by the barn and the wooden frame structure. Run along the rows and hit each Hillsbrad Peasant and Farmer with a quick ranged spell such as Fireball, Frostbolt or Fire Blast as you pass, so they all chase you. Keep moving until you have the whole group behind you, then turn, Frost Nova them in place and step back to range. Channel Blizzard on the pack; with Improved Blizzard they stay slowed as you back off. When they break out, Frost Nova again or Blink away and do another Blizzard. Once they are low, finish with Flamestrike plus Arcane Explosion, or let them flee at low health and burn them down. Then loot everything and run to the next set of rows, as the field respawns quickly. The farmers hit harder, so don't drag in more than you can nova. Use Mana Shield or Ice Barrier if you get hit, and keep clear of the Southshore guards along the road.",
+   "confidence": "medium",
+   "skills": [
+    "Fireball",
+    "Frostbolt",
+    "Fire Blast",
+    "Frost Nova",
+    "Blizzard",
+    "Flamestrike",
+    "Arcane Explosion",
+    "Blink",
+    "Mana Shield"
+   ],
+   "mechanics": [
+    "AoE pull grouping",
+    "kiting",
+    "Frost Nova root",
+    "slow from Improved Blizzard"
+   ]
+  },
+  "5n9od9fcoz0@315": {
+   "url": "https://youtu.be/5n9od9fcoz0?t=315",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 144
+    }
+   ],
+   "instruction": "Mount up in the ogre yard, hop onto the top of the wide iron railings by the south wall and ride along them. The mobs below can't follow you up there; at the end, drop through the gap in the outer wall to get out of Stromgarde.",
+   "detail": "Use this right after you loot the Azure Agate from the Boulderfist Shamans. 1) Mount up in the courtyard. 2) Ride south toward the tall tan outer wall, where long, waist-high, dark iron railings with rivets on top sit in front of a wooden plank fence. 3) Jump onto the railing near where it meets the wall; the top is flat and wide enough to ride on. 4) Follow the railing along the wall and around its corner, past the bare dead tree. Ogres and Witherbark Berserkers in the yard below may aggro, but they can't reach you up there, and you drop combat on your own. 5) At the far end the outer wall has a broken gap. Ride through it and drop down onto the grass outside. 6) Head southeast to Faldir's Cove along the path between the mountains and Stromgarde's southeastern wall. This saves fighting your way back out through the elite ogres and trolls. Don't stop to fight on the way. If you fall off into the yard, get back on the railing or leave the normal way.",
+   "confidence": "medium",
+   "skills": [
+    "mount"
+   ],
+   "mechanics": [
+    "walking on railing tops",
+    "out of reach / dropping combat",
+    "wall gap exit"
+   ]
+  },
+  "5sIew15IcG0@0": {
+   "url": "https://www.youtube.com/watch?v=5sIew15IcG0",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||19-20 Redridge",
+     "idx": 141
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||19-20 Redridge",
+     "idx": 143
+    }
+   ],
+   "instruction": "Stealth, Pick Pocket the Malformed Defias Drone circling the tower for the key, then climb to the second-highest floor, jump chair, lamp, bookshelf, unstealth and spam your interact key to open the chest.",
+   "detail": "Before starting, enable the Interact Key option in Controls and bind Interact With Target, and turn on enemy nameplates (V) so you can see the guards inside. Outside Klaven's Tower in Westfall, stay stealthed and Pick Pocket the Malformed Defias Drone as it patrols around the base; if it resists, Sprint away at once rather than Gouge, since it can two-shot you. With the key, enter by the front stairs and climb the spiral walkways. Equip a dagger if you have one and Ambush patrollers and sentries to kill them outright; if one aggros, run straight back out the door, remembering mobs above can still hit you. On the second-highest floor stay about 15-20 yards behind the sentries, stand at the waypoint, and jump from the wooden chair onto the hanging lamp and then onto the bookshelf. On top, unstealth, clear your target and spam the interact key to pick the chest and loot Klaven Mortwake's Journal. Do not move until it is looted. Looting puts a debuff on you that stops Stealth, so walk out carefully and kill or outrun any sentry that comes; the bookshelf top is an evade spot, so they will not reach you there.",
+   "confidence": "high",
+   "skills": [
+    "Stealth",
+    "Pick Pocket",
+    "Sprint",
+    "Ambush",
+    "Interact With Target keybind",
+    "Pick Lock"
+   ],
+   "mechanics": [
+    "pickpocket from stealth",
+    "jump-up spot",
+    "evade spot on furniture",
+    "nameplate range check",
+    "vertical aggro range"
+   ]
+  },
+  "694e1n_aiKY@0": {
+   "url": "https://youtu.be/694e1n_aiKY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL",
+     "idx": 229
+    }
+   ],
+   "instruction": "Don't open the Vault safe. Look at the safe wall for the small crack with a gear showing through, near the bottom, and click the gear to loot the Heart of the Mountain. If it's gone, wait about 15 seconds for it to come back.",
+   "detail": "In the Black Vault in Blackrock Depths, the Heart of the Mountain sits inside the big safe that normally needs Warder Stilgiss and the relic key. You can loot it without opening the safe. Stand in front of the safe wall and look closely at it, low down, for a narrow crack where a small gear or cog shows through. Mouse over the gear and right-click it to loot the Heart of the Mountain. In a group, each player loots it in turn. After someone loots it, it disappears and takes about 10 to 15 seconds to respawn, so just wait in front of the crack and click again when it shows. It's easy to miss if you don't move your camera close to the wall.",
+   "confidence": "medium",
+   "skills": [],
+   "mechanics": [
+    "lootable object reachable through a wall gap",
+    "object respawn timer"
+   ]
+  },
+  "6JE967OG3CU@1845": {
+   "url": "https://youtu.be/6JE967OG3CU?t=1845",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||19-20 Redridge",
+     "idx": 48
+    }
+   ],
+   "instruction": "Pull Bellygrub on the lakeshore east of Lakeshire with your DoTs, send your pet in, and back off west toward town. Keep him feared or on the pet and never melee him. Drag him into Lakeshire to Guard Adams, but keep damaging him yourself so you still get the kill.",
+   "detail": "Bellygrub is a level 24 boar in the woods on Lake Everstill's north shore, just east of Lakeshire. He charges and has an instant area hit, so don't stand next to him. Open with Immolate and Corruption, put the pet on him, then walk west along the shore past the fenced crop plots into Lakeshire. If you run too far ahead, he loses you and stays on the pet. Once you damage him again, he comes back for you. In town he reached melee and hit for about 105 a swing. Fear kept getting pushed back or broken, so drink a healing potion and use a healthstone early. Re-Fear him, re-DoT him and let the pet take him. Guard Adams patrols on the shore path below the houses. Lead Bellygrub past him; the guards may or may not join. Keep your own damage going all the time: you must do at least half of his damage to get credit. Loot Bellygrub's Tusk, then turn in An Unwelcome Guest to Martie Jainrose at the house with the garden in Lakeshire. If it goes badly, skip it and come back later.",
+   "confidence": "medium",
+   "skills": [
+    "Immolate",
+    "Corruption",
+    "Fear",
+    "Voidwalker pet tanking",
+    "Minor Healing Potion",
+    "Minor Healthstone"
+   ],
+   "mechanics": [
+    "kiting to town guards",
+    "leash/aggro reset to pet",
+    "fear kiting",
+    "50% damage tag rule"
+   ]
+  },
+  "6VIULBxMyfU@0": {
+   "url": "https://www.youtube.com/watch?v=6VIULBxMyfU",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL",
+     "idx": 91
+    }
+   ],
+   "instruction": "Skip the road: ride south over the mountains toward Tirion's hut. On the high peak, drink Noggenfogger Elixirs until you get slow fall, then mount and float down the far side.",
+   "detail": "From Augustus's area in north-west Eastern Plaguelands, head up the mountain slopes, zig-zagging along the ridges and gullies to a high rounded peak. At the top, drink Noggenfogger Elixirs until you get the effect that makes you feel light (slow fall). If you get water breathing or the skeleton effect instead, drink another. With slow fall active, mount up and ride off the peak, and you float down without dying from the fall. Keep riding south-west through the gullies and down the slopes until the zone text shows Eastern Plaguelands and the Thondroril River, then carry on to Tirion Fordring's hut. Without slow fall, the drop off the peak kills you. If you run out of elixirs, take the normal road.",
+   "confidence": "medium",
+   "skills": [
+    "Noggenfogger Elixir",
+    "mount"
+   ],
+   "mechanics": [
+    "mountain/terrain shortcut",
+    "slow fall to survive a lethal drop",
+    "rerolling a random-effect consumable"
+   ]
+  },
+  "70PX093soq4@3193": {
+   "url": "https://youtu.be/70PX093soq4?si=-cIoU8WWdbC0IdHZ&t=3193",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 103
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 105
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 154
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 156
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 103
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 105
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 154
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 156
+    }
+   ],
+   "instruction": "Pull Vagash with Frostbolt from range, then kite him downhill south past Amberstill Ranch and Rudra to the Mountaineer guards on the road in the Tundrid Hills. Keep him slowed, keep casting, and let the guards finish him once you've done over half his health.",
+   "detail": "Vagash is a level 11 elite yeti in the hills above Amberstill Ranch. Open with Frostbolt so he comes to you slowed, then turn and run downhill toward the ranch. Turn and cast Frostbolt or Fireball whenever you have a gap, and Frost Nova if he closes in. Use Fire Blast while moving. Kite him past the ranch buildings (you can grab Rudra's quest as you run by) and keep heading south along the snowy road into the Tundrid Hills, where Ironforge Mountaineers stand on the road. Once he reaches them, the guards attack him and do the rest. You still get the kill and the Fang only if you have done more than half his damage, so keep casting while the guards fight. In the clip he dies at the guards with the player at low mana and health still fine. Loot the Fang, then run back to Rudra at the ranch to turn in. If you stop to fight him in melee range he hits far too hard for a level 9-10 mage. If the guards do most of the damage, you get no loot.",
+   "confidence": "medium",
+   "skills": [
+    "Frostbolt",
+    "Fireball",
+    "Fire Blast",
+    "Frost Nova"
+   ],
+   "mechanics": [
+    "kiting an elite to guards",
+    "guard assist",
+    "51% damage rule for kill credit",
+    "slow-and-cast kiting"
+   ]
+  },
+  "7vmnvdjbUnM@0": {
+   "url": "https://www.youtube.com/watch?v=7vmnvdjbUnM",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (H)||1-6 Durotar",
+     "idx": 88
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||1-6 Durotar",
+     "idx": 87
+    }
+   ],
+   "instruction": "Inside the Burning Blade Coven, jump onto the big rock, edge out until your character looks like it is floating off the side, then log out and back in.",
+   "detail": "In the Burning Blade Coven cave in the Valley of Trials, go to the large rock slab in the chamber among the Felstalkers and Vile Familiars (the player stands at about 44.7, 52.4). Jump up onto it, then shuffle slowly to its edge until your feet visibly hang in the air past the lip. Open the menu and log out right there, wait out the timer without moving, and log straight back in. The server can't place you inside the rock geometry, so it moves you to a safe point outside, which in the video is Razor Hill in Durotar, saving the long walk back through the cave and valley. If you are not far enough over the edge you simply load back in the cave. The video is labelled as patched, so if it fails, follow the guide's next step and use a death skip to the spirit healer instead.",
+   "confidence": "low",
+   "skills": [
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "8Exjtb2ohPQ@0": {
+   "url": "https://youtu.be/8Exjtb2ohPQ",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 104
+    }
+   ],
+   "instruction": "Fight Fozruk as a long kite: pet on him, shoot from range, drop Frost Trap in his path and keep backing off. If it goes wrong, Feign Death, revive your pet, wait out cooldowns and re-pull. Guards only help Alliance, so on Horde stay well away from Refuge Pointe.",
+   "detail": "Fozruk is a level 41-42 elite giant who walks the roads of Arathi. The hunter here (level 39, cat pet) opens from max range with the pet on him and keeps moving: Frost Trap is dropped where Fozruk will walk, then he is shot while slowed, and the player backpedals along the cobbled road and open hills instead of standing still. 1. First attempt: kited west along the road through Boulder'gor; mounted patrol riders (friendly to the player) join in for a while. The player's health drops low near the standing stones, the fight is dropped (Feign Death) and Fozruk walks off along his patrol at full health. 2. Reset: follow him out of combat at a distance, revive the pet (long cast), feed it, and wait for trap and Feign Death cooldowns before going again. 3. Second attempt, from the lake by the road: the pet tanks while you shoot, trap him when he turns on you, and kite east over the hills and through the Boulder'gor rocks toward Refuge Pointe. He is at about 20% by then. 4. Alliance finish: lead him down the slope and into Refuge Pointe; the Refuge Pointe Defenders swarm him and he dies in the camp. Loot the Rod of Order from the corpse. The fight takes over two minutes of kiting.",
+   "confidence": "low",
+   "skills": [
+    "Frost Trap",
+    "Feign Death",
+    "Revive Pet",
+    "Feed Pet",
+    "Auto Shot",
+    "Multi-Shot",
+    "hunter pet"
+   ],
+   "mechanics": [
+    "kiting",
+    "pet tanking",
+    "feign death reset",
+    "guard assist",
+    "patrolling elite"
+   ]
+  },
+  "8PkbHJr4oH0@0": {
+   "url": "https://youtu.be/8PkbHJr4oH0",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 115
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 116
+    }
+   ],
+   "instruction": "From the ridge above Angerfang Encampment, use Eyes of the Beast to send your pet in to pull Chieftain Nek'rosh, then run far south through the Green Belt so his adds give up, and kill him alone with your pet tanking while you shoot.",
+   "detail": "Stand on the ridge overlooking Angerfang Encampment, well outside the camp's aggro range. Cast Eyes of the Beast and steer your cat down into the camp to Chieftain Nek'rosh, who stands among Dragonmaw Centurions, Shadowwarders, Bonewarders and a skeleton. Once he is pulled, let the channel end. The pet comes back toward you while the camp chases it. Then run with your pet away from the camp, out along the road into the Green Belt, and keep going. The normal adds leash and walk back to the camp, but Nek'rosh keeps chasing much further. Once only he remains, fight him in the open with your pet tanking. Shoot him and slow him with Concussive Shot when he turns on you, kiting him between the trees. He is immune to fire, so skip Immolation Trap, but frost and arcane damage work. If you fight at the camp, the whole group joins and you will die.",
+   "confidence": "medium",
+   "skills": [
+    "Eyes of the Beast",
+    "Auto Shot",
+    "Arcane Shot",
+    "Concussive Shot",
+    "Mend Pet"
+   ],
+   "mechanics": [
+    "pet pull via Eyes of the Beast",
+    "leash range separation of adds",
+    "kiting",
+    "pet tanking"
+   ]
+  },
+  "8Xz6KpNv3rY@0": {
+   "url": "https://www.youtube.com/watch?v=8Xz6KpNv3rY",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 198
+    }
+   ],
+   "instruction": "From Frostfire Hot Springs in west Winterspring, climb the snowy mountains west, keeping to the northern edge of Felwood. Cross the southwest rim of Moonglade, then go west over the ridges into Darkshore and Slow Fall down into the troll village.",
+   "detail": "Start at Frostfire Hot Springs in western Winterspring. Head west up the snowy slopes behind the hot springs, staying on the ridges. The zone text changes to Felwood as you cross its northern mountain edge. Keep climbing west along the snowy tops by walking the steep slopes and jumping up ledges. Where a slope is too steep, back off and take a different angle rather than forcing it. The route crosses the outer mountain rim of Moonglade. The player checks the map there and is at the very southwest corner of Moonglade, so do not drop into the Moonglade valley. Keep going west over the grassy ridges until the zone becomes Darkshore. Come down through the trees to the hidden troll village with its yellow thatched huts, wooden bridges and dancing trolls. Cast Slow Fall for the final drop so the fall does not kill or hurt you. The mount speeds up the flatter stretches. This route needs no Light Feathers until the end and avoids the Darkshore climb.",
+   "confidence": "medium",
+   "skills": [
+    "Slow Fall",
+    "Blink",
+    "mount"
+   ],
+   "mechanics": [
+    "wall walking and mountain climbing",
+    "off-map travel over zone borders",
+    "Slow Fall to avoid fall damage"
+   ]
+  },
+  "8s1SRza7qFg@0": {
+   "url": "https://www.youtube.com/watch?v=8s1SRza7qFg&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale",
+     "idx": 256
+    }
+   ],
+   "instruction": "From Piznik, walk a few steps back to the mine cart lying on its side and jump up onto it. Stand on top, log out and log back in; if the skip still works you load in outside on Webwinder Path, otherwise walk out of the mine to Talondeep Path.",
+   "detail": "Inside Windshear Mine, after handling Gerenzo's Orders at Piznik, turn around and walk back toward the tipped-over wooden mine cart near where the Windshear Overlord lies. Jump until you are standing on top of the cart (on its upturned wheel and side, not on the cave floor beside it). Stay out of combat, open the game menu and pick Logout, and do not move during the 20 second countdown or it cancels. Log straight back in: the server cannot place you on top of that object, so it relocates you to a safe spot outside, which here is open ground on Webwinder Path in Stonetalon Mountains, saving the walk back out of the cave. The video is marked PATCHED, so this may no longer happen; if you log back in still on the cart inside the mine, simply walk out of Windshear Mine and continue to the Talondeep Path entrance as normal. Being on the floor instead of the cart, or in combat, also means no relocation.",
+   "confidence": "low",
+   "skills": [
+    "jumping onto an object",
+    "logout from game menu"
+   ],
+   "mechanics": [
+    "logout skip (invalid login position relocates you outside)",
+    "20 second logout timer, cancels on movement",
+    "PATCHED: may no longer work"
+   ]
+  },
+  "9afQTimaiZQ@0": {
+   "url": "https://www.youtube.com/watch?v=9afQTimaiZQ",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||10-12 Loch Modan Mage AoE",
+     "idx": 59
+    }
+   ],
+   "instruction": "From Misty Pine Refuge, climb the steep snow north by jumping constantly. Follow the high ridges north to the edge of Dun Morogh, slide down the rocky slopes into the Wetlands, then go west over the hills to Menethil Bay. Mark the crocolisks and swim across away from them.",
+   "detail": "A deathless walk over the mountains from north-east Dun Morogh to Menethil Harbor. 1. Optional: in Key Bindings, give Jump a second key (E in the clip) so it's easy to spam while you steer with the mouse. 2. From Misty Pine Refuge, go up the snowy gully and keep jumping up the steep faces. If one slides you back, try a shallower line beside it. 3. Follow the ridges and saddles north for about two minutes, to the north edge of Dun Morogh (map 60.6, 13.0). Young Black Bears and rabbits up there are harmless. 4. Go down the brown rocky slopes on the far side in short drops. Falls only cost 5-35 HP. 5. You reach a cobbled road by a pond and a small farm ('Discovered: Wetlands'). Follow the road west past the fields, then leave it over the grassy hills until 'Menethil Bay' appears. 6. Young Wetlands Crocolisks (level 22) sit underwater in the bay. From the shore, target one and put a raid marker on it, then watch where it is. 7. Swim across, mostly underwater, keeping away from the marked crocs, to the reeds below Menethil Harbor. Climb out by the blacksmith.",
+   "confidence": "high",
+   "skills": [
+    "Key Bindings: Jump on a second key",
+    "Raid Target Icons"
+   ],
+   "mechanics": [
+    "slope climbing by jump spam",
+    "mountain skip",
+    "fall damage control",
+    "swimming past aggressive mobs",
+    "raid target marker"
+   ]
+  },
+  "9zss2r74wmA@0": {
+   "url": "https://youtu.be/9zss2r74wmA",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||30-36 Arathi/Alterac AoE",
+     "idx": 33
+    }
+   ],
+   "instruction": "At each Syndicate camp, Frost Nova and pull the whole camp, then run uphill out of melee and Blizzard them as they come at you. Re-Nova when they reach you, step back and keep Blizzarding until they flee or die.",
+   "detail": "These are Syndicate camps on the grassy hills from Sofera's Naze in Alterac up to Corrahn's Dagger. Run into or aggro the whole tent camp (footpads, thieves, wizards), get them all in one tight group, cast Frost Nova, then run a few yards away, ideally uphill so they have to climb toward you. Channel Blizzard on the frozen pack; with Improved Blizzard they stay slowed. When they break free and close in, Frost Nova again, use Cone of Cold if needed, step back out of range and Blizzard again. Arcane Explosion finishes low ones. Many Syndicate mobs flee at low health; let Blizzard catch them, otherwise they bring more mobs. Drink and use Mana Agate or Mana Potion between pulls. On the way to the second camp, avoid animals and pick fights where the pack can't split around trees. If anything resists Nova, kite rather than standing still, as these mobs hit hard together. Loot for the Missive.",
+   "confidence": "medium",
+   "skills": [
+    "Frost Nova",
+    "Blizzard",
+    "Cone of Cold",
+    "Arcane Explosion",
+    "Mana Agate",
+    "Mana Potion",
+    "Ice Barrier"
+   ],
+   "mechanics": [
+    "AoE pull grouping",
+    "Frost Nova root and kite",
+    "kiting uphill",
+    "fleeing mob control"
+   ]
+  },
+  "BiuWeMSHEhA@0": {
+   "url": "https://www.youtube.com/watch?v=BiuWeMSHEhA",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 128
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 130
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 131
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 46
+    }
+   ],
+   "instruction": "Once Cyclonian is summoned, hit him once with Throw or Shoot and lead him into the river, swimming downstream ahead of him. Keep hitting him from range at least every ten seconds so he doesn't evade, and in the narrow stretch swim from bank to bank. Never let him catch you.",
+   "detail": "Soloing Cyclonian (level 40 elite) for the Whirlwind Heart, at Chillwind Point in Alterac Mountains. 1. Equip a thrown weapon or a bow/gun with ammo. Accept The Summoning and follow Bath'rah to the river bank where he summons Cyclonian. 2. Pull with Throw or Shoot, then get straight into the river just below the shrine and swim downstream (south). Cyclonian follows you through the water a few yards behind. 3. Turn and fire a ranged hit at least once every ~10 s. Each hit resets his leash. If too long passes without damage he Evades, runs back and heals. 4. When the river narrows, swim back and forth between the banks and fire whenever he isn't on top of you. Keep the gap open: at level 39-40 his melee hits very hard. 5. If you get greedy and stop short of the bank, he can Evade and heal about half his health. That's fine; just tag him again and keep going. 6. When he dies in the water, loot the Whirlwind Heart (1/1) from his corpse and return to Bath'rah to turn in The Summoning; the Whirlwind Axe comes from the follow-up.",
+   "confidence": "high",
+   "skills": [
+    "Throw",
+    "Shoot",
+    "thrown weapon / bow / gun"
+   ],
+   "mechanics": [
+    "kiting",
+    "leash reset by damage",
+    "evade / reset",
+    "swimming kite",
+    "ranged tagging"
+   ]
+  },
+  "E8b90bzJMSI@0": {
+   "url": "https://www.youtube.com/watch?v=E8b90bzJMSI",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||10-12 Loch Modan Mage AoE",
+     "idx": 49
+    }
+   ],
+   "instruction": "This skip is marked patched and may not work. Try it: climb the curved stairs behind the paladin trainers about halfway, edge onto the open outer rim until you look like you're floating, then log out and back in. If you load on the stairs, walk out of Ironforge.",
+   "detail": "Logout skip out of Ironforge, marked PATCHED in the video title, so it may no longer work. In the Hall of Mysteries go to the back of the room behind the paladin trainers, where stairs curve up around a large blue and gold pillar. Climb about halfway, then sidestep to the open outer edge of the steps, next to the brazier side, until your feet look like they are hanging in the air rather than resting on a step. Stand still, open the game menu and log out, then log straight back in. When it works the server cannot place you at that spot and moves you to the zone's fallback point, so you load in outside in Dun Morogh at the Gates of Ironforge, by the big gate cannon, saving the walk through the Commons and out the tunnel. If you load back onto the stairs, you weren't far enough over the edge, or the skip is patched on your realm: just walk out the front gate (Hall of Mysteries to the Commons, then out the main entrance).",
+   "confidence": "low",
+   "skills": [
+    "logout skip",
+    "positioning on geometry edge"
+   ],
+   "mechanics": [
+    "logout skip (invalid position reset to zone fallback point)"
+   ]
+  },
+  "EVy-6OjB5bs@27300": {
+   "url": "https://www.youtube.com/watch?v=EVy-6OjB5bs&t=27300s",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||28-30 Thousand Needles",
+     "idx": 109
+    }
+   ],
+   "instruction": "Grenka is inside Roguefeather Den, the harpy cave on the cliff in the Screeching Canyon. Clear in with one or two harpies at a time, chase down the ones that flee, and eat to full before you pull Grenka.",
+   "detail": "Roguefeather Den is a cave dug into the canyon wall of the Screeching Canyon in western Thousand Needles. The rogue in the clip drops down the cliff to the den mouth, kills the Screeching Roguefeather at the entrance, then fights through the cave against Screeching Harpies, Roguefeathers and Windcallers (level 28-30), usually two at a time. Harpies try to run away at low health: stay on them and finish them, or they come back with friends (one runs out into the canyon and he chases it outside). Open the Solid Chest in the first chamber for extra loot. After a hard double pull he sits down to eat back to full before the next pull, and he keeps a Lesser Healing Potion ready. Fight with Sinister Strike and Eviscerate, and save Evasion for when two are on you. Grenka Bloodscreech waits deeper in the den with harpies around her. Clear her guards, rest to full, then pull her with your cooldowns up. If two-harpy pulls already take you low, group up or skip the quest as the guide says.",
+   "confidence": "low",
+   "skills": [
+    "Sinister Strike",
+    "Eviscerate",
+    "Evasion",
+    "Lesser Healing Potion",
+    "Food"
+   ],
+   "mechanics": [
+    "small pulls",
+    "fleeing mobs",
+    "rest between pulls",
+    "chest looting"
+   ]
+  },
+  "G2IscpFZVeQ@4034": {
+   "url": "https://youtu.be/G2IscpFZVeQ?t=4034",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 154
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-11 ADV Dun Morogh Human Mage AoE",
+     "idx": 20
+    }
+   ],
+   "instruction": "Behind Dank, run straight up the snowy slope next to the icy rocks instead of taking the quarry path. Go over the ridge, drop through the pine trees toward Helm's Bed Lake, and rejoin the road there.",
+   "detail": "Dank Drizzlecut, the mining trainer, stands at the wooden scaffolding above Gol'Bolar Quarry. Instead of walking back out along the quarry road, turn to the snow-covered hillside right behind the scaffolding, beside the large icy boulders, and run up it. The slope is walkable if you keep to the smoother snow ridges; on the steeper parts you'll slide back, so angle across them. At the top, continue east over the crest and down through the pine forest. You come out in the open snowfield just west of Helm's Bed Lake, near the road. This cuts out the long winding quarry path. In the reference the gnome mage reaches the lake area about 25 seconds after starting the climb. They then tag Rockjaw Ambushers and wildlife on the way with Fireball and Frost Armor up and drag them onto the patrolling Ironforge Mountaineers on the road, before heading on to North Gate Pass. That's the next guide step, and you must deal over half the damage yourself to get credit.",
+   "confidence": "medium",
+   "skills": [
+    "Fireball",
+    "Frostbolt"
+   ],
+   "mechanics": [
+    "terrain climb shortcut",
+    "guard assist kiting"
+   ]
+  },
+  "GRrXOV-UvD4@0": {
+   "url": "https://www.youtube.com/watch?v=GRrXOV-UvD4",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||11-12 Elwynn (Dwarf/Gnome)",
+     "idx": 49
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest",
+     "idx": 177
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||11-12 Elwynn (Dwarf/Gnome)",
+     "idx": 49
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||6-11 Elwynn Forest",
+     "idx": 177
+    }
+   ],
+   "instruction": "Stand outside the Brackwell Pumpkin Patch by the southwest corner of the wooden fence, pull Princess with a ranged attack, and keep throwing at her while she and her boars are stuck on the inside of the fence.",
+   "detail": "Princess and her two Porcine Entourage boars wander inside the fenced pumpkin field at Brackwell Pumpkin Patch in Elwynn. Go round to the grass outside the field near its southwest corner and pull Princess across the fence with your thrown weapon or other ranged attack. The pigs cannot path through the fence, so they get hung up on the inside of the west rail and run up and down it instead of reaching you. Stay a few yards out from the corner and keep throwing; step a little along the rail if they start to come round, and back off if you get a target-too-close error. In the clip a level 1 character kills Princess in about two and a half minutes this way, taking no damage. If you fight in the open she charges with Rushing Charge and the boars join in, so only stand toe-to-toe if you have the rage, Evasion or a Lesser Healing Potion ready.",
+   "confidence": "high",
+   "skills": [
+    "Throw",
+    "Shoot"
+   ],
+   "mechanics": [
+    "fence pathing abuse",
+    "ranged attack over an obstacle",
+    "mobs stuck on terrain"
+   ]
+  },
+  "GUb1Ny4NwQw@0": {
+   "url": "https://youtu.be/GUb1Ny4NwQw",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 105
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 106
+    }
+   ],
+   "instruction": "Reach the Andorhal town hall from behind, then walk along the stone ledge on its left side around to the front door so no undead aggro. Inside, only open a Musty Tome whose pages are fully dark or have a brown stain; half-white ones are traps.",
+   "detail": "Approach the Ruins of Andorhal town hall from the back, not through the square. Step up onto the raised stone foundation that runs around the building and keep left, hugging the wall all the way around the corner (past the hanging cage) to the front doors. The ledge keeps you outside the aggro range of the skeletons in the square. Inside the hall, look at the Musty Tomes on the floor and on the benches before clicking. A book with pages split half white and half black is a trap: opening it gives a Ruined Tome, spawns a Decrepit Guardian (about level 56, sometimes two) and puts a Musty Tome Trap debuff on you that slows movement and attacks; the Guardian also stacks Debilitating Touch, cutting Strength and Stamina. The real book has fully dark pages or a brown stain through the middle; in the video it lay on the low ledge under a window along the side wall. If no tome is real, open a trap to make the game respawn them and fight the Guardian, then check again.",
+   "confidence": "high",
+   "skills": [
+    "aggro avoidance by pathing",
+    "object identification"
+   ],
+   "mechanics": [
+    "staying outside aggro radius via ledge path",
+    "trap object spawns elite-ish add",
+    "respawn forcing by opening traps"
+   ]
+  },
+  "H-IwZ6P-ldY@0": {
+   "url": "https://www.youtube.com/watch?v=H-IwZ6P-ldY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||11-12 Elwynn (Dwarf/Gnome)",
+     "idx": 58
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||11-12 Elwynn (Dwarf/Gnome)",
+     "idx": 58
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale",
+     "idx": 69
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||21-22 Ashenvale SoD",
+     "idx": 60
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||21-22 Ashenvale SoD",
+     "idx": 61
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||36-38 Stranglethorn Vale II",
+     "idx": 112
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 104
+    }
+   ],
+   "instruction": "To split pull, hit the whole group at the same moment with an AoE spell or a bomb, then back away while damaging only your target. The others leash home on their own and you fight it alone. Don't open with a single-target attack, that pulls everyone together.",
+   "detail": "Split pulling separates one mob, like a quest target or elite, from its escorts. Hit every mob in the group at the same instant with an AoE, such as Explosive Rockets, a bomb or grenade, Blizzard, Flamestrike, Rain of Fire, Holy Nova, Chain Lightning, Multi-Shot or Volley. Each mob then gets its own leash timer. Run back and keep damaging only your target: that resets its leash, while the others' leashes run out, so after roughly 10 seconds they give up and walk home. You now fight the target alone. If you open with a wand or a single-target spell instead, the nearby mobs come via a call for help and share one leash. You can tell because they stand still for a second or two before running in. Then hitting any one keeps them all chasing you, so the split fails; run off and reset all of them, then try again. Without an AoE, run into the group to pull with proximity aggro, as rogues (stealth then cancel), warriors and druids (Charge) can. That gives each mob its own leash too.",
+   "confidence": "high",
+   "skills": [
+    "Explosive Rockets",
+    "Blizzard",
+    "Flamestrike",
+    "Rain of Fire",
+    "Holy Nova",
+    "Chain Lightning",
+    "Multi-Shot",
+    "Volley",
+    "Hurricane",
+    "Charge",
+    "Feral Charge",
+    "Suffering",
+    "grenades"
+   ],
+   "mechanics": [
+    "split pull",
+    "per-mob leash timer",
+    "call for help",
+    "proximity aggro"
+   ]
+  },
+  "Is-h2TJpL3M@0": {
+   "url": "https://www.youtube.com/watch?v=Is-h2TJpL3M",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-12 ADV Darkshore 1 Mage AoE",
+     "idx": 65
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-12 LAUNCH ADV Darkshore 1 Mage AoE",
+     "idx": 72
+    }
+   ],
+   "instruction": "Talk to Innkeeper Shaussiy and choose to make this inn your home, but leave the confirm popup open without clicking it. Then cast your Hearthstone and let RestedXP accept the popup at the end of the cast, so you land in Ironforge with your hearth now set to Auberdine.",
+   "detail": "A hearthstone batch lets you teleport to your old home and set your new home in the same moment. Stand next to Innkeeper Shaussiy in Auberdine, open her gossip, and pick the option to make this inn your home. A popup asks if you want to make Auberdine your new home: do not click Accept. With the popup still open, use your Hearthstone (still bound to Ironforge) and stand still for the 10 second cast. Just before the cast finishes, the RestedXP addon clicks Accept for you, so the server binds you to Auberdine and the cast still completes, sending you to Ironforge. Afterwards the chat says Auberdine is now your home. Set it up first: in /rxp, Advanced Settings, tune Batching window size (the default of 5 ms worked in the demo), and test it on an alt. It needs a stable connection with no packet loss and an uncapped or high frame rate. If it fails you either just set Auberdine without teleporting or teleport without rebinding, and your hearth goes on its one-hour cooldown either way.",
+   "confidence": "high",
+   "skills": [
+    "Hearthstone"
+   ],
+   "mechanics": [
+    "hearthstone batching",
+    "server batch timing",
+    "innkeeper bind during cast"
+   ]
+  },
+  "JvmBrGodRzY@0": {
+   "url": "https://youtu.be/JvmBrGodRzY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||24-27 Duskwood/Redridge",
+     "idx": 285
+    }
+   ],
+   "instruction": "Clear the gnolls at the foot of Tharil'zun's ridge in Galardell Valley, stand at the base of the big tree and send your pet up to pull him. When he comes down, back off north-east through Stonewatch toward Alther's Mill, shooting while the pet holds him.",
+   "detail": "Hunter method. 1) Kill the Shadowhide gnolls under the ridge so nothing joins. 2) Stand at the trunk of the huge tree below Tharil'zun and send the pet up the slope to attack him. You never step into the camp, so only he answers the pull, and he follows the pet down. 3) Once he is in range, start Auto Shot and keep a sting on him while backing away. 4) Lead the fight north-east along the valley floor: through Stonewatch, past the fenced fields at Stonewatch Tower, into the open ground at Alther's Mill. The pet keeps him busy. You keep moving and fire between steps so he never stays on you, and you stay away from other mobs. 5) He dies in the field by Alther's Mill after about a minute and a half; loot Tharil'zun's Head. If you walk up into the camp yourself, you pull the orcs and gnolls with him. Standing in melee with this elite in your mid-20s will likely kill you. The guide says to skip the quest if it goes badly.",
+   "confidence": "medium",
+   "skills": [
+    "pet pull",
+    "Auto Shot while kiting",
+    "stings",
+    "pet tanking"
+   ],
+   "mechanics": [
+    "pet pulls the elite alone from below the camp",
+    "kiting an elite across open ground",
+    "pet holds threat while the hunter shoots"
+   ]
+  },
+  "KTrj8CLBG2o@0": {
+   "url": "https://youtu.be/KTrj8CLBG2o",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE",
+     "idx": 87
+    }
+   ],
+   "instruction": "Clear the Hillsbrad Sentries and the Foreman outside the mine with Frost Nova and Blizzard first. Then step just inside the entrance to drink, and AoE the miners in small kited groups, using rank 1 Arcane Explosion so they don't break leash.",
+   "detail": "At the Azurelode Mine entrance, pull the sentries and the foreman on the road outside together. Frost Nova them, run up the grassy slope, and Blizzard them on the dirt path until they die. Loot, then walk into the mine and stand against the wooden wall just inside the entrance to drink back to full while mobs stay out of sight. Pull the Hillsbrad Miners in the tunnels, gather them, Frost Nova, then back off and channel Blizzard while they are rooted. Use Cone of Cold and Arcane Explosion to finish them. Leash mechanic: mobs reset if you drag them more than about 30 yards from where you pulled them and nothing has hit them for about 11 seconds. Tap the pack with rank 1 Arcane Explosion to refresh their aggro so they don't reset with full health mid-kite. Conjure a Mana Agate during the downtime. Miner Hackett walks around the mine, so kill him when you see him.",
+   "confidence": "medium",
+   "skills": [
+    "Blizzard",
+    "Frost Nova",
+    "Cone of Cold",
+    "Arcane Explosion (Rank 1)",
+    "Mana Shield",
+    "Conjure Mana Agate",
+    "Conjure Water"
+   ],
+   "mechanics": [
+    "AoE kiting",
+    "leash refresh by hitting mobs",
+    "drinking out of line of sight"
+   ]
+  },
+  "LBJ2KcQ9izE@0": {
+   "url": "https://youtu.be/LBJ2KcQ9izE",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 143
+    }
+   ],
+   "instruction": "Send your voidwalker into the Hearthglen town hall first, follow it in, grab Davil's Libram from the table in the main room and run straight back out, then Hearthstone once you are clear.",
+   "detail": "This is the Hearthglen town hall with the red roof and the steps up to its door. The warlock waits outside while the voidwalker runs in ahead and takes the attention of the Scarlet Paladins (level 55 elites) inside. With the guards busy on the pet, the warlock walks in behind it and uses Howl of Terror (Fear also works) to scatter the elites so nothing pins him down. He crosses to the large room with tables and bookshelves and clicks the book lying on a table, Davil's Libram. As soon as it loots, he turns around, leaves through the same door and runs out of town, leaving the voidwalker behind to keep the paladins busy. Once he is out of combat behind the town wall, he casts Hearthstone. If you go in without a pet or crowd control, several elites will hit you at once and you will die. Watch out for High Protector Lorik, who patrols the town. Skip this step if you are not confident.",
+   "confidence": "medium",
+   "skills": [
+    "Summon Voidwalker",
+    "Howl of Terror",
+    "Fear",
+    "Hearthstone"
+   ],
+   "mechanics": [
+    "pet tank to hold aggro",
+    "AoE fear to scatter elites",
+    "grab and run",
+    "hearthstone out"
+   ]
+  },
+  "MG-n3xRq-oo@0": {
+   "url": "https://youtu.be/MG-n3xRq-oo",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 115
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 116
+    }
+   ],
+   "instruction": "Pull Nek'rosh alone, drop straight down the rocky cliffs off Angerfang so his camp stays behind, then kite him across the open valley toward The Green Belt with DoTs, Fear and Drain Life. Skip fire spells.",
+   "detail": "Solo method for the level 32 elite. Tag Chieftain Nek'rosh, put your damage-over-time spells on him, then run off the edge of Angerfang Encampment and hop down the boulder ledges into the Wetlands valley below. Dropping off the cliff separates him from the camp, so only he follows. Keep running across the open ground and along the stream toward The Green Belt, letting Corruption and your curse tick while he chases. When he closes in, Fear him; while he runs, stand and channel Drain Life to top yourself up, then refresh DoTs as they fall off and keep moving. Fear can be resisted (it happens twice in the clip): just keep running and recast. He is immune to fire, so Immolate, Searing Pain or a fire wand show Immune; use shadow damage only. A snare such as Curse of Exhaustion makes the kite easier. When he is nearly dead, finish with Drain Soul for a Soul Shard, loot Nek'rosh's Head. If you fight at the camp instead, the Dragonmaw adds join and the fight is lost.",
+   "confidence": "medium",
+   "skills": [
+    "kiting",
+    "Fear",
+    "Drain Life",
+    "Drain Soul",
+    "DoT management"
+   ],
+   "mechanics": [
+    "single pull separated from the camp by dropping down a cliff",
+    "fear-kite with DoTs",
+    "fire immunity"
+   ]
+  },
+  "MpvcEPTV30I@0": {
+   "url": "https://www.youtube.com/watch?v=MpvcEPTV30I&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 96
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 100
+    }
+   ],
+   "instruction": "Stay stealthed and sneak along the inner wall on the east side of Stromgarde Keep to Marez Cowl. Open on her in the narrow lane between the wall and the houses, then Gouge, step back to bandage or pool energy, and loop around the tree and building to kite her until she dies.",
+   "detail": "Enter Stromgarde Keep in Stealth and go to the east side, where Marez Cowl (a level 40 elite) stands outside near a grassy lane between the outer stone wall and a row of wooden houses, by a big tree and a bloody table. Avoid the Syndicate Prowlers on the way. Open from stealth and fight her in that lane. When your health or energy gets low, Gouge her, back off, and use the free seconds to pool energy or start a bandage. She is incapacitated while gouged, so a short bandage channel gets through. Re-engage when Gouge breaks and keep looping between the tree, the table and the house corner so she has to chase you. Crippling Poison slows her so you can make distance more safely. Expect lots of Dodge and Parry from her, so be patient. When she is low she tries to run away; finish her before she reaches other Syndicate mobs. Loot the Befouled Bloodstone Orb. The prowlers nearby won't join from her aggro, but don't body-pull them while you kite.",
+   "confidence": "medium",
+   "skills": [
+    "Stealth",
+    "Gouge",
+    "Sinister Strike",
+    "Eviscerate",
+    "Crippling Poison",
+    "First Aid bandage",
+    "Evasion"
+   ],
+   "mechanics": [
+    "Gouge to reset the fight tempo",
+    "bandage during incapacitate",
+    "kiting an elite around terrain",
+    "stealth approach"
+   ]
+  },
+  "PAeOcxOgSNg@0": {
+   "url": "https://youtu.be/PAeOcxOgSNg",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||23-24 Wetlands Hunter",
+     "idx": 36
+    }
+   ],
+   "instruction": "Pull Sarltooth to the L-shaped broken stone wall in the excavation site, jump up and stand on top of the wall, and shoot him while he runs around below unable to reach you.",
+   "detail": "Sarltooth is a level 29 raptor that hits very hard and can Thrash, so you cannot tank him at 23 or 24. Use the same pathing spot as the raptor quest before: a ruined stone wall shaped like an L in the Whelgar's Excavation Site area. Pull him with a shot, run to the wall and hop up onto its top edge, then stand near the inner corner. From there he cannot path up to you; he keeps running along and around the wall below, often ending up stuck at one end, while you keep firing and refreshing your sting. If he does get a swing in, step along the top to the other arm of the L so he has to path all the way around again. Expect many resists and a long fight because of the level gap, so be patient and keep mana up. If you stand on the ground next to the wall instead of on top, he will reach you and Thrash will kill you quickly. Loot his Talon when he dies.",
+   "confidence": "medium",
+   "skills": [
+    "Auto Shot",
+    "Serpent Sting",
+    "Arcane Shot"
+   ],
+   "mechanics": [
+    "pathing spot",
+    "standing on unreachable terrain",
+    "ranged damage from safe spot"
+   ]
+  },
+  "PWMJhodh6Bw@0": {
+   "url": "https://www.youtube.com/watch?v=PWMJhodh6Bw",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||12-18 Darkshore Mage AoE",
+     "idx": 145
+    }
+   ],
+   "instruction": "At the gryphon master by the Great Forge in Ironforge, climb onto a gryphon statue head, log out and log back in. If it works you load into the Tinker Town tunnel; run down it into the Deeprun Tram. It is marked patched, so if you reappear in place, just walk there.",
+   "detail": "The clip starts at the Great Forge next to the lava pour, where the Ironforge gryphon master stands, on a raised perch. The guide says this is the head of one of the gryphon statues. The player opens the menu and logs out at about second 6. On login they appear inside the Tinker Town tunnel that leads to the Deeprun Tram, with the tram portal straight ahead. They run through the portal, the tram loading screen plays, and Deeprun Tram is discovered. On login the game moved the character off a spot it did not count as valid floor to a nearby safe point, which happens to be the tram tunnel. That skips the walk across the city before you ride the tram to Stormwind. The title marks this as PATCHED: on current servers you will most likely reappear where you logged out. Then walk from the Great Forge into Tinker Town and down the tunnel to the Deeprun Tram.",
+   "confidence": "low",
+   "skills": [
+    "logout skip"
+   ],
+   "mechanics": [
+    "logout skip: invalid position moved to a safe point on login"
+   ]
+  },
+  "QcEUvwu49KI@336": {
+   "url": "https://youtu.be/QcEUvwu49KI?t=336",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-12 ADV Darkshore 1 Mage AoE",
+     "idx": 4
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-12 LAUNCH ADV Darkshore 1 Mage AoE",
+     "idx": 4
+    }
+   ],
+   "instruction": "Walk over the grassy hill into Menethil Bay, then stop on the crest and watch the crocolisks in the water. Once they patrol away, run down and swim straight across toward Menethil's stone keep, then climb out on the grass below the town walls.",
+   "detail": "Once you're down from the Dun Morogh cliffs, go up the grassy rise toward the gap between the two rounded hills, following the arrow. Menethil Bay is discovered at the top. Stop on the hill above the water. Target or mark the Wetlands Crocolisks and Young Wetlands Crocolisks below and watch where they swim. Go only when the lane in front of you is clear. They patrol, so waiting a few seconds opens a gap. Run down to the shore and swim in a straight line toward the town and the grey stone keep, keeping the docked ship on your left. Don't follow the western shore, where the Bluegill murlocs are. Entering Menethil Harbor completes the step. Leave the water on the grassy bank under the town wall and walk up into town for the flight master. At this level, after the fall damage, one crocolisk catching you in the water can kill you because you can't outrun it. If you have no gap, wait on the hill rather than swimming past one.",
+   "confidence": "high",
+   "skills": [
+    "pathing",
+    "patrol timing",
+    "target tracking"
+   ],
+   "mechanics": [
+    "patrol timing to avoid aggro",
+    "crossing water out of mob aggro range",
+    "zone discovery triggers the next step"
+   ]
+  },
+  "RM1fMMfj-kA@0": {
+   "url": "https://youtu.be/RM1fMMfj-kA",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||44-48 Feralas",
+     "idx": 39
+    }
+   ],
+   "instruction": "Run along the outside wall of Dire Maul in Feralas, by the ruined pillars, until the zone text shows Dire Maul and your General chat channel switches to Dire Maul, then head back out.",
+   "detail": "This is only an exploration prerequisite for a later quest. From the ruins with the tall pillars west of the Dire Maul complex, run up the grassy slopes toward the big stone outer wall of Dire Maul. Keep hugging the wall. You do not need to go inside or fight the ogres (Gordok mobs patrol up here, so avoid pulling them). As soon as the screen shows the Dire Maul discovered message and your chat log says your General and LocalDefense channels changed to Dire Maul, the requirement is done. Turn around and run back down to continue questing in Feralas. If the chat channel never changes, you have not crossed the subzone border yet, so get closer to the wall.",
+   "confidence": "high",
+   "skills": [],
+   "mechanics": [
+    "zone discovery trigger"
+   ]
+  },
+  "RSedlGeYX_k@0": {
+   "url": "https://www.youtube.com/watch?v=RSedlGeYX_k&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 87
+    }
+   ],
+   "instruction": "In Drywhisker Gorge, jump onto a mining node or off the ledge at the back of the cave, and start a logout so you are mid-jump when it begins. Log back in to reappear at Hammerfall.",
+   "detail": "After finishing in the Drywhisker kobold cave in Arathi Highlands, find a mineral node such as a Lesser Bloodstone Deposit on the cave floor and stand on top of it, or go to the raised ledge at the back of the cave. Open the game menu, jump, and click Logout so you are in the air or perched on the node when the 20 second timer starts, then let it finish and log back in. Being in an unsupported position when the logout completes makes the server relocate you to a safe graveyard-style point, which here is Hammerfall, the Horde town in Arathi, saving the walk out. If you log back in still inside the cave, the jump timing was off; try again from the node or the ledge. The video title marks this as patched, so it may not work any more.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "SWBtPqm5M0Q@0": {
+   "url": "https://www.youtube.com/watch?v=SWBtPqm5M0Q",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 27
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Elwynn Forest Human Mage AoE",
+     "idx": 78
+    }
+   ],
+   "instruction": "Logout skip: inside the cave, stand on top of something that is not part of the cave floor, like a crate, a rock edge or a mushroom, so you hover slightly above the ground, then log out and log straight back in.",
+   "detail": "A logout skip teleports you out of an underground area to the nearest graveyard or entrance. It needs three things: you are inside an underground structure (cave, mine, Ironforge and similar), there is terrain above you, and you are standing roughly one character height above the structure's floor. Get that height by standing on a separate object rather than the cave floor itself: a crate, the very edge of a rock, a mushroom, a banner, a minecart or floating log. Your character often looks like it is floating. Open the menu, press Logout (or type /camp), wait out the 20 second timer without moving, then log back in. You load in outside, usually near the cave mouth or graveyard. If you log in at the same spot, you were not high enough or were on the floor mesh; move to the edge of the object and try again. Cancelling by moving or getting in combat resets the timer. The video calls the trick patched on some realms, so if it fails simply run out normally.",
+   "confidence": "low",
+   "skills": [
+    "/camp",
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "underground position reset on login"
+   ]
+  },
+  "SWBtPqm5M0Q@114": {
+   "url": "https://www.youtube.com/watch?v=SWBtPqm5M0Q&t=114s",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 168
+    }
+   ],
+   "instruction": "Inside the Faldir's Cove sea cave, step up onto the rock by the glowing mushrooms, then log out and back in. You should load in outside on the Arathi grass by the big standing stones.",
+   "detail": "This is a logout skip at the end of the Professor Phizzlethorpe escort. The escort finishes deep in the sea cave at Faldir's Cove on the southwest coast of Arathi Highlands, and walking back out costs time. Stand on the raised rock in the cave (near the blue crystal and the green glowing mushrooms) rather than on the cave floor, open the game menu and choose Logout, and stand still for the 20-second countdown. On log-in the server does not accept that spot as a valid position and moves you to a safe point outside: the clip loads in on open Arathi Highlands grass right under a ring of huge stone arches, already out of the cove. From there the guide has you die and respawn at the Spirit Healer next to Refuge Pointe. If you load back in still inside the cave, you were not on the right spot; move onto the rock and try once more. The video is marked PATCHED, so on current realms this may simply put you back where you were; in that case run out of the cave the way you came in and head to Refuge Pointe.",
+   "confidence": "low",
+   "skills": [
+    "logout",
+    "positioning"
+   ],
+   "mechanics": [
+    "logout skip (server relocates character from an invalid log-in position)"
+   ]
+  },
+  "SWBtPqm5M0Q@128": {
+   "url": "https://youtu.be/SWBtPqm5M0Q?t=128",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||55-56 Felwood/Winterspring",
+     "idx": 155
+    }
+   ],
+   "instruction": "In Shadow Hold, step onto a raised spot like a rock edge so you are slightly off the floor, then log out and back in. You load in outside in Irontree Woods, saving the walk out.",
+   "detail": "After killing Shadow Lord Fel'dan, Moora and Salia deep in Shadow Hold (the furbolg cave in northern Felwood), you can skip walking back out. Stand on an object or rock edge that is not part of the cave floor, so you appear to hover slightly. Open the menu, click Logout and stay still for the full 20 seconds; there is no need to clear the room first, but you must be out of combat. Log back in and you appear outside in Irontree Woods in Felwood next to the hold's entrance. It works because logging in at an invalid underground spot puts you outside. If you are still inside, you were on the floor mesh; move and retry, or just walk out.",
+   "confidence": "low",
+   "skills": [
+    "Logout",
+    "/camp"
+   ],
+   "mechanics": [
+    "logout skip"
+   ]
+  },
+  "SWBtPqm5M0Q@61": {
+   "url": "https://youtu.be/SWBtPqm5M0Q?t=61",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 29
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||39-40 Alterac/Arathi",
+     "idx": 115
+    }
+   ],
+   "instruction": "Once Kor'gresh is dead and looted, climb onto the wooden banner pole beside his body so you stand on it, not the cave floor. Log out from the game menu, hold still for the 20 seconds, then log back in. You should come back outside under the big stone arch, much closer to Refuge Pointe.",
+   "detail": "In Boulderfist Hall, Kor'gresh Coldrage dies next to wooden banner poles that lean up from the floor. 1) Loot Trelane's Wand. 2) Walk or jump up the slanted banner pole until you are standing on the pole itself, a little above the ground. A blink or a jump helps you get on. 3) Press Escape and pick Logout. Don't move during the 20-second countdown. 4) Log straight back in. The game treats you as standing in a spot that isn't valid and puts you outside: you load in on the grass under the giant stone arch in Arathi Highlands. A Faldir's Cove relog later in the same video lands on that same spot. From there, ride to Refuge Pointe and turn in Wand over Fist. This skips walking back out through Boulderfist Hall's ogres. In this client you fall to the ground as soon as you start a logout, so start it while you are already standing on the banner, not mid-jump. If you load back into the cave, the spot didn't count. Just walk out normally.",
+   "confidence": "low",
+   "skills": [
+    "Logout (game menu or /camp)",
+    "Blink (optional, to get onto the banner)"
+   ],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relog",
+    "standing on doodads"
+   ]
+  },
+  "SafLjdv2l24@0": {
+   "url": "https://youtu.be/SafLjdv2l24",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 17
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 18
+    }
+   ],
+   "instruction": "Pull King Mukla to the giant tree on Jaguero Isle, keep your pet on him and run laps around the trunk, shooting from the far side. Kill any Skymane Gorilla that joins first. Once he dies, Feign Death or run off to shed the adds.",
+   "detail": "King Mukla is an elite gorilla under the huge tree on Jaguero Isle, with low, sprawling branches and raised roots. 1) Send your pet on him and open from range. 2) Keep the trunk between you and him: move around the tree, stop to shoot once you are on the opposite side from him, then move on as he comes round. Your pet does the tanking while you circle. 3) Skymane Gorillas and Jaguero Stalkers wander nearby and get pulled in. Switch to the add, kill it while still circling, then go back to Mukla. 4) If he catches you, he hits for about 100 to 300, so break off across the open sand and over the big roots, then come back to the trunk. 5) When he dies, loot the Shackle Key. If adds are still on you, Feign Death to drop them. 6) Turn in Message in a Bottle to Princess Poobah. The whole kill takes about three minutes; don't fight him in the open.",
+   "confidence": "medium",
+   "skills": [
+    "hunter pet tanking",
+    "Auto Shot / Aimed Shot",
+    "Feign Death",
+    "traps (possibly)"
+   ],
+   "mechanics": [
+    "kiting around an obstacle",
+    "pet tank",
+    "add control",
+    "Feign Death aggro drop"
+   ]
+  },
+  "SxMc2GoP33c@2450": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=2450",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||26-31 Duskwood Part 2 Mage AoE",
+     "idx": 84
+    }
+   ],
+   "instruction": "Clear the worgen camps in order. Shield up, run through a camp to gather it, Frost Nova on flat ground and kite them through Blizzard. Tag the tent camp with rank 1 Fireball from range, save Ice Block for the hard third camp, use your mana gem early, and don't kite so far they evade.",
+   "detail": "Each camp: Mana Shield, run through to tag every worgen, Frost Nova, step out and channel Blizzard while they walk through it, Cone of Cold the stragglers, Nova again. Brightwood Grove Dark Runners: gather by the fallen log, fight on flat grass; a slope near the big tree made Nova miss. Vile Fang camp: Infected Wound stacks +15 physical damage taken for 5 min. At 3+ stacks wait it out or Ice Block, but keep Ice Block for pull 3, 3-4 minutes later. The mage went OOM without using the mana gem and nearly died, so use it early. Pull 2 (tent camp): rank 1 Fireball from range so you don't body-pull nearby camps. Don't kite too far or the pack leashes and evades. Chests spawn at the camp, a tree and a wagon here, good for potions. Low mana? Rank 1 Blizzard keeps the slow up cheaply while you regen. Pull 3: go behind camp 2 through the Rotting Orchard to the next tent camp. Hardest pull: Ice Block if you can, but don't sit in it long. Tainted Ones stack a debuff worth about 170 damage per stack, so reset if health gets low, and kite into open ground. Rotting Orchard Dark Runners: kite NE, not west (trees, terrain), and avoid adds.",
+   "confidence": "high",
+   "skills": [
+    "Mana Shield",
+    "Frost Nova",
+    "Blizzard",
+    "Blizzard (rank 1)",
+    "Cone of Cold",
+    "Fireball (rank 1)",
+    "Ice Block",
+    "Mana Agate",
+    "Lesser Mana Potion"
+   ],
+   "mechanics": [
+    "AoE pack pull",
+    "Blizzard kiting",
+    "leash/evade reset",
+    "aggro range",
+    "stacking debuff (Infected Wound)",
+    "terrain making Frost Nova miss",
+    "mana regen while mobs are slowed"
+   ]
+  },
+  "SxMc2GoP33c@3375": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=3375",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||31-33 Hillsbrad Mage AoE",
+     "idx": 60
+    }
+   ],
+   "instruction": "These Snapjaw turtles resist frost, so kill them with Arcane Explosion. Frostbolt two or three out of the river onto the grass bank, then spam Arcane Explosion while you jump backwards with a strafe so fewer bites land. Keep Mana Shield up and stop at three.",
+   "detail": "Where: Misty Shore, the grassy bank of the river running north from Lordamere Lake in Alterac toward Western Plaguelands. Snapjaws (level 30-31) drop Turtle Meat for Soothing Turtle Bisque; finish the 10 later if you're short. Pull: Frostbolt a turtle swimming near the bank, then a second and a third, so 2-3 come ashore together onto the grass. Fight on land, not in the water. Kill: Frost Nova as they arrive, then spam Arcane Explosion (about 100 per hit). Frost spells show lots of Resists here, so Arcane does the killing. Between casts, jump backwards with a strafe key held so the turtles keep chasing and swing less often. That's how you avoid most melee damage. Keep Mana Shield up the whole fight: even so, health hit Health Low on one 3-turtle pull. Arcane Explosion drains mana fast, so drink before each group.",
+   "confidence": "high",
+   "skills": [
+    "Arcane Explosion",
+    "Frostbolt",
+    "Frost Nova",
+    "Mana Shield"
+   ],
+   "mechanics": [
+    "frost resistance",
+    "backward strafe jump",
+    "kiting to reduce melee hits",
+    "pulling from water to shore"
+   ]
+  },
+  "SxMc2GoP33c@3477": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=3477",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 3
+    }
+   ],
+   "instruction": "At Go'Shek Farm, run the crop rows with your shield up so every peon and grunt follows, adding the south patrols. Frost Nova, step out and chain Blizzards, Cone of Cold to finish. Pull the courier pack into the empty grassland, and keep pulls fast so respawns don't land on you.",
+   "detail": "Go'Shek Farm, Arathi: Hammerfall Peons (33-34), Grunts (35), and the Forsaken Courier with Bodyguards (35). Rotation: Blizzard over and over, Frost Nova when they reach you, back to Blizzard; Cone of Cold finishes the low ones. Field pulls: shield up, run through a field to tag every orc, then add the south-side patrols and the one walking between barn and house. Use your mana gem on one of the two field pulls; the second field is better. These orcs don't flee at low health. The courier pack respawns in the house 5 minutes after it dies, so it's 5 more mobs each time. Drag it into the large empty grassland next to the farm: no other mobs there, so a bad pull can reset safely. The courier drops the Sealed Folder for Hints of a New Plague. Barn pulls: go into the stables and barns to tag the orcs inside, Blink out to dodge hits, and Nova at the door. Orcs on the farm's outer ring can join any pull. Four chests spawn here: in the cabin, right of the stables, in front of the NW-most mill and beside the house. Open them for potions to last 33-43. Work fast or respawns land on you.",
+   "confidence": "high",
+   "skills": [
+    "Blizzard",
+    "Frost Nova",
+    "Cone of Cold",
+    "Mana Shield",
+    "Blink",
+    "mana gem",
+    "Lesser Mana Potion"
+   ],
+   "mechanics": [
+    "AoE pack pull",
+    "Blizzard kiting",
+    "patrol pickup",
+    "respawn timer",
+    "safe reset area",
+    "pulling mobs out of buildings"
+   ]
+  },
+  "SxMc2GoP33c@376": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=376",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||21-22 Duskwood Mage AoE",
+     "idx": 13
+    }
+   ],
+   "instruction": "Along Duskwood's west shore and north edge, Fireball one or two spiders or wolves and walk near the rest so they join. Frost Nova, step back and Flamestrike the frozen pack, then finish with Arcane Explosion. If a pull goes wrong, run into the river so they evade.",
+   "detail": "Area: the west coast of Duskwood (The Hushed Bank) and the north edge (The Darkened Bank). Kill Pygmy and Venom Web Spiders for Eight-Legged Menaces, and Starving and Rabid Dire Wolves for Wolves at Our Heels. Pull: open on one or two mobs with max-rank Fireball, then Fire Blast another or walk close so the rest come too. With 3-5 on you, Frost Nova, step a few yards back, drop Flamestrike on the frozen group and finish with Arcane Explosion as they close in. Keep Mana Shield up while you cast. If mobs are hitting you, Nova before Flamestrike, since hits can interrupt the cast. Rabid Dire Wolves apply Rabies. One stack is fine but it halves the health food gives you. With two stacks, the only fix is to die or wait out the 10 minutes. Venom Web Spiders cast Web (Pygmy ones don't); as a gnome, Escape Artist breaks it. If the pull goes bad (resists, mana gone), run into the river along the west shore: the mobs evade and reset rather than follow. Mana runs low on most packs, so drink up between pulls.",
+   "confidence": "high",
+   "skills": [
+    "Fireball",
+    "Fire Blast",
+    "Frost Nova",
+    "Flamestrike",
+    "Arcane Explosion",
+    "Mana Shield",
+    "Escape Artist (gnome racial)"
+   ],
+   "mechanics": [
+    "body pull",
+    "AoE pack pull",
+    "Rabies debuff",
+    "Web root",
+    "evade by entering water",
+    "cast interrupt from melee"
+   ]
+  },
+  "SxMc2GoP33c@3824": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=3824",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 42
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 14
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 242
+    }
+   ],
+   "instruction": "These murloc camps are the hardest AoE here. Run one fixed loop to stack them: too close to a hut and they evade, too wide and they spread. Frost Nova, back into open sand and chain Blizzards. Solo the two patrols first, and never kite into the water after your second Blizzard.",
+   "detail": "Witch Hill (Mirefin Puddlejumpers/Murlocs, 36): Mana Shield up, gather the camp on the same path each time. Near a hut they evade, too far and they don't stack. Ice Block in the right spot while they bunch, then Nova, step out and channel Blizzard. Don't Blink into the wagon there: it stops you and costs health. Dreadmurk Shore (Muckdwellers/Coastrunners, 36-37): two patrols, one circling the main pull and one along the coast. Frostbolt them down solo first. If you can't see one, mark it and step into range to make it render, even by running into the camp from the SE side, so it patrols again and you catch it alone. Coastrunners are faster; Muckdwellers cast a damage-over-time spell that breaks the stack (stay over 15 yards if you can). This is the hardest spot. When murlocs flee at low health, Arcane Explosion beats another Blizzard. Cone of Cold finishes stragglers. Pull everything left in one go (no Ice Block needed). Mudrock turtles (37-38, Mudrock Soup and Bugs): pull them only when you're ahead of the murloc respawns, at 38+.",
+   "confidence": "high",
+   "skills": [
+    "Blizzard",
+    "Frost Nova",
+    "Ice Block",
+    "Cone of Cold",
+    "Arcane Explosion",
+    "Frostbolt",
+    "Mana Shield",
+    "Blink",
+    "healing potion"
+   ],
+   "mechanics": [
+    "AoE pack pull",
+    "evade near huts",
+    "mob stacking",
+    "patrol handling",
+    "render/mark distant mobs",
+    "fleeing at low health",
+    "DoT breaks stack",
+    "kiting into water splits pack"
+   ]
+  },
+  "SxMc2GoP33c@4113": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=4113",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 80
+    },
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 97
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 61
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 78
+    }
+   ],
+   "instruction": "At Lost Rigger Cove, gather the pirates with Ice Barrier up and drop both Blizzards on the docks. Then Cone of Cold, wait about 3 seconds, Frost Nova, cast Flamestrike on the frozen pack and spam Cone of Cold to shatter them. Stand inside a Freebooter's range so it walks to you.",
+   "detail": "Lost Rigger Cove, the pirate town on Tanaris's east coast (Southsea Shakedown, Pirate Hats Ahoy!). Keep Ice Barrier up and refresh it the moment it breaks; don't let the first two packs land hits as you gather. Kite onto the beach and put both Blizzards on the wooden planks where the pack walks. Shallow water is fine. Shatter combo: after the 2nd Blizzard, Cone of Cold, wait 2.5-3 s, Frost Nova. When Cone of Cold is 3 s from ready, cast Flamestrike on the frozen pack and spam Cone of Cold: crits of 300-480 clear it. If one mob resists Nova, refresh Ice Barrier and ignore it. Ship deck: run the deck, jump off and Ice Block at the bottom if Ice Barrier dropped. Under the scaffolds, jump to pull the dock workers above. Big beach pull: stand still in the pack with Ice Barrier so they stack tight; Andre is slower than the rest. Freebooters are ranged: stand inside their dead zone so they walk in, then kite them into others. In the house, Cone of Cold and kite out the door before shattering. The second ship's chest opens with the Captain's Key and gives a random level 36-40 green.",
+   "confidence": "high",
+   "skills": [
+    "Ice Barrier",
+    "Blizzard",
+    "Cone of Cold",
+    "Frost Nova",
+    "Flamestrike",
+    "Arcane Explosion",
+    "Ice Block",
+    "Mana Shield",
+    "Scorch",
+    "Superior Healing Potion"
+   ],
+   "mechanics": [
+    "shatter combo",
+    "AoE pack pull",
+    "Blizzard kiting",
+    "ranged mob dead zone",
+    "jump pull onto upper level",
+    "pulling mobs out of buildings",
+    "stacking by standing still",
+    "Captain's Key chest"
+   ]
+  },
+  "SxMc2GoP33c@4759": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=4759",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 161
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 143
+    }
+   ],
+   "instruction": "Pull the undead across the fields around Dalson's Tears into one tight pack and drag it away from the barn. Frost Nova, step out to max range and channel Blizzard, keeping 20 yards from any Skeletal Terror. Stay clear of the Scarlet mobs by the barn and the spider near the houses.",
+   "detail": "Run along the crop rows around the Dalson farm with Ice Barrier and Mana Shield up, collecting Rotting Cadavers, Blighted Zombies and Skeletal Terrors. Then Frost Nova, back away and channel Blizzard from its full range, recasting until they die and finishing with Cone of Cold or Arcane Explosion. Hazards: Cadavers spawn worms on death. Zombies cast a disease DoT that interrupts Blizzard, so stand out of its range. Rooted Terrors start casting Fear, a 20 yard, 1.5 second cast you can see on nameplates or hear. Keep 20+ yards away, or Blink out when the cast starts and save Blink for those pulls. Leave Blizzard about a second early and recast to stay ahead of the pack. If a Frostbite proc roots them during Blizzard, cast max-rank Cone of Cold and recast Blizzard. Leave the Scarlet mobs in front of the barn, the spider near the houses (it roots you) and the Blood of Heroes object alone. If a pull goes badly, kite in a loop to refresh the leash and kill the main pack first. Drink the potions you saved from Tanaris and ZF.",
+   "confidence": "medium",
+   "skills": [
+    "Blizzard",
+    "Frost Nova",
+    "Cone of Cold",
+    "Blink",
+    "Ice Barrier",
+    "Mana Shield",
+    "Arcane Explosion",
+    "Mana Potion"
+   ],
+   "mechanics": [
+    "AoE pull stacking",
+    "Frost Nova and Blizzard kiting",
+    "outranging a fear cast",
+    "Blizzard pushback avoidance",
+    "leash refresh by kiting"
+   ]
+  },
+  "SxMc2GoP33c@555": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=555",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||22-26 Wetlands Mage AoE",
+     "idx": 16
+    }
+   ],
+   "instruction": "At each Mosshide camp, Fireball the Mistweaver down first. Then run through the gnolls, backpedal so they bunch up, Frost Nova, step out and Blizzard. Recast Blizzard with about 3 seconds left on Nova, and pull each camp from its south side.",
+   "detail": "Loop the Mosshide camps in the order on the map, and use the Frost Nova, Blizzard, Blizzard, Frost Nova cycle. Fast Fenrunners wander between camps; the camps hold Mongrels and Gnolls, and one camp always has a Mistweaver caster. Fireball the Mistweaver on its own before pulling. Keep Mana Shield up, run through the pack, then backpedal so the mobs stack behind you and can't daze you. Frost Nova (jumping as you cast gives a little extra reach), walk a few yards clear and channel Blizzard. Start the next Blizzard with about 3 seconds left on the Nova: mobs that break free early on a damage tick land in it still grouped. If one dodges or resists the Nova, Cold Snap and Nova again, or Polymorph it and catch it in a later Blizzard. Blink away right after a mana tick. Finish small pulls with Arcane Explosion. Pulling from the north side drags in extra mobs. If you're slow getting back, the Mistweaver respawns, so skip it until the next lap. The Bluegill murlocs resist frost, so only pull them big when Cold Snap is ready. Once daze no longer matters, cancel Mana Shield to save mana.",
+   "confidence": "high",
+   "skills": [
+    "Frost Nova + Blizzard AoE cycle",
+    "backpedal stacking",
+    "Polymorph on Nova resist",
+    "Cold Snap double Nova",
+    "Blink spacing",
+    "Mana Shield vs daze",
+    "Arcane Explosion cleanup"
+   ],
+   "mechanics": [
+    "root break on damage (heartbeat resist)",
+    "Blizzard slow keeps escapees grouped",
+    "jump-cast for extra Nova reach",
+    "absorb shield prevents daze",
+    "caster priority kill",
+    "respawn timer on camp caster",
+    "frost-resistant murlocs"
+   ]
+  },
+  "SxMc2GoP33c@56": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=56",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||18-21 Redridge Mage AoE",
+     "idx": 1
+    }
+   ],
+   "instruction": "AoE Redridge quest mobs in packs of three or more: open with Flamestrike at max range, put a second one at your feet as they arrive, Frost Nova once they're stacked, then Blizzard. Face them while you Arcane Explosion, and keep potions ready for Goretusks.",
+   "detail": "Mage AoE loop for the Redridge camps (gnolls west and south of Lakeshire, Goretusks and tarantulas in the hills, murlocs on the lake shore, Blackrock orcs in Render's Valley). Pull 3+ mobs. Fireball pulls best until about level 22 (fast and long range), Fire Blast pulls cheaply, and rank 1 spells tag extra mobs. Rank 1 Frostbolt sometimes helps them arrive stacked. Pull range is a bit under nameplate range (20 yards). Cast Flamestrike at max range, then a second one at your feet as the pack arrives. Wait until they are stacked before Frost Nova and use Arcane Explosion while you wait. Novaing early leaves mobs outside the Blizzard. If the first Flamestrike tick breaks the nova, spam Arcane Explosion. Jump-strafe between Arcane Explosions to kite and keep mobs in the burning ground. Always face the mobs: hits from behind can't be dodged and daze you. Finish runners with Fireball or Fire Blast. Don't pull a second group before the first one arrives. Goretusks charge (4s), crit up to about 160, and need potions. Blackrock Outrunners and gnoll casters heal, so focus them.",
+   "confidence": "high",
+   "skills": [
+    "Flamestrike",
+    "Frost Nova",
+    "Blizzard",
+    "Arcane Explosion",
+    "Fireball",
+    "Fire Blast",
+    "Frostbolt"
+   ],
+   "mechanics": [
+    "AoE pull grouping",
+    "Flamestrike pre-cast at pull range",
+    "facing to avoid daze and allow dodges",
+    "jump-strafe kiting",
+    "nameplate range as pull gauge",
+    "staggered pulls"
+   ]
+  },
+  "SxMc2GoP33c@899": {
+   "url": "https://youtu.be/SxMc2GoP33c?t=899",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||22-26 Wetlands Mage AoE",
+     "idx": 41
+    }
+   ],
+   "instruction": "At the first wrecked ship in the Lost Fleet, pull the deck undead, then jump off the far side into the water and swim a short way out. Many get stuck at the deck edge, so channel Blizzard on them from the water; Frost Nova and Arcane Explosion any that swim down to you.",
+   "detail": "Mage AoE trick at the Lost Fleet wrecks off the Wetlands coast. Cursed Sailors and Marines (levels 26-27) are often above you, and fighting in water is normally bad because you can't kite well while swimming. Swim up to the first ship, aggro a group on deck, run across it and drop off the side into the sea, then swim out a little and face the hull. The deck mobs often bug out: they bunch at the railing or prow and never path down to you, so you can channel Blizzard on that clump again and again while taking no hits. Watch your mana; the player drank a potion during cleanup. Any mob that does reach the water gets Frost Nova and Arcane Explosion. On the earlier pass, the mobs followed into the water instead. The player backed away through open water and recast Blizzard on the slowed pack each time it caught up, until all 13 sailors were dead. Risks: resists from higher-level mobs, running out of mana, and the breath bar if you dive. Snellig, the next step, is in the bottom of that same first ship.",
+   "confidence": "medium",
+   "skills": [
+    "Blizzard kiting",
+    "Frost Nova + Arcane Explosion cleanup",
+    "swim kiting",
+    "mana management"
+   ],
+   "mechanics": [
+    "mob pathing failure from ship deck to water (stuck at deck edge)",
+    "AoE on stationary clumped mobs",
+    "kiting through water with Blizzard slow",
+    "potion for mana"
+   ]
+  },
+  "T1G6WWs_LLg@0": {
+   "url": "https://www.youtube.com/watch?v=T1G6WWs_LLg",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 69
+    },
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 121
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 50
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 103
+    }
+   ],
+   "instruction": "Make two mana gems, shield up and ride in hugging the right wall; hop onto the walls to evade the trash, open the three grave sets with resets in between, then run the walls to the kill spot and Blizzard the zombies while jumping between the two walls.",
+   "detail": "Conjure both mana gems, cast Ice Barrier and mount. Ride hugging the right cliff between the first packs, turning to face melee mobs as they reach you so you are not dazed off the mount. At the corridor end keep left, go around the pack and jump onto the left wall over the pillar (use the crates or Slow Fall if dismounted); on the wall the mobs can't reach you and evade, dropping combat. Refresh shields, drop down, remount and ride to the graveyard. Aggro the boss, open the first graves and evade on the ledge, out of line of sight of casters; drink up. Open the second set, Frost Nova and Cone of Cold to gain time, and reset behind the vase. Optionally pull scarabs with rank 1 Blizzard from the evade spot. Open the last graves, Nova, climb the statue onto the wall and get to the second wall (capping FPS at 50 makes the jump easier), cross quickly and drop to the kill spot between two walls. Rank 1 Blizzard to slow and stack, max rank once tight, jumping between walls to funnel them; use gems early and Evocation when dry. Near the end use an invite-and-leave-party macro to start the 60 s teleport to Gadgetzan and loot before it fires; tempers and shells don't count after it starts.",
+   "confidence": "medium",
+   "skills": [
+    "Conjure Mana Jade",
+    "Conjure Mana Citrine",
+    "Ice Barrier",
+    "Mana Shield",
+    "Frost Nova",
+    "Cone of Cold",
+    "Blink",
+    "Slow Fall",
+    "Blizzard",
+    "Frostbolt",
+    "Evocation",
+    "Mage Armor",
+    "Torch of Holy Flame",
+    "mount"
+   ],
+   "mechanics": [
+    "mob evade on unreachable terrain",
+    "line-of-sight evade",
+    "daze avoidance by facing",
+    "Blizzard kiting/AoE stacking",
+    "micro-evade between walls",
+    "FPS cap for jump",
+    "group-leave instance teleport (ghetto hearth)"
+   ]
+  },
+  "TFK1Ml8Ce-U@0": {
+   "url": "https://youtu.be/TFK1Ml8Ce-U",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-51 Searing Gorge",
+     "idx": 43
+    }
+   ],
+   "instruction": "Turn on Enable Interact Key in Options, then Controls, and bind Interact with Target. At the locked gate of the Searing Gorge to Loch Modan tunnel, hug the left corner and spam that key to trigger the lever; no key needed.",
+   "detail": "The tunnel from Searing Gorge to Loch Modan (Stonewrought Pass) has a gate that normally needs the Searing Gorge key. Before you go, press Escape, open Options, then Controls, tick Enable Interact Key, and bind Interact with Target to a key. Walk up to the gate and press yourself into the left-hand corner beside it. From there, spam the interact key: the game picks up the gate lever as the nearest interactable object even though you cannot click it with the mouse, and the gate opens. Walk through the tunnel and you come out in Loch Modan near Mountaineer Pebblebitty. If nothing happens, shift slightly along the corner and keep spamming.",
+   "confidence": "high",
+   "skills": [
+    "Interact with Target"
+   ],
+   "mechanics": [
+    "interact key on unreachable object"
+   ]
+  },
+  "TTZZT3jpv1s@0": {
+   "url": "https://www.youtube.com/watch?v=TTZZT3jpv1s",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||1-6 Shadowglen",
+     "idx": 57
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||1-6 Shadowglen",
+     "idx": 57
+    }
+   ],
+   "instruction": "In Shadowthread Cave, go behind the Webwood eggs to the ledge and walk slowly to its edge until you look like you're floating. Log out and back in to appear at Aldrassil.",
+   "detail": "After you respawn at the Spirit Healer, run behind the spider egg clusters in Shadowthread Cave to the ledge at the back. Inch forward along the edge until your character seems to hover over the drop. Then log out, standing still through the logout timer, and log back in. The game can't leave you on that spot, so it moves you to a safe point, which here is Aldrassil, right next to the quest turn-ins. If you fall off, just run out of the cave normally.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip"
+   ]
+  },
+  "TxhLRt-IetU@0": {
+   "url": "https://youtu.be/TxhLRt-IetU",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||23-24 Wetlands Hunter",
+     "idx": 34
+    }
+   ],
+   "instruction": "Find the broken L-shaped stone wall among the Mottled raptors and stand in its inner corner. Pull one raptor at a time and keep shooting: it gets stuck pathing along the wall and can't reach you, so it dies without hitting you.",
+   "detail": "The Mottled Razormaws and Scytheclaws for Ormer's Revenge are well above your level. In the raptor area of Wetlands there is a low ruined stone wall bent into an L shape. Stand tight in the inner corner of the L, the lit spot in the reference. Pull a single raptor with a ranged shot. Instead of running straight at you, the raptor walks onto and along the wall segments and loops around the outside, looking for a path it can't find. Meanwhile you keep up ranged damage (the reference hunter just keeps firing, with a few resists) until it dies, then pull the next one. Each kill takes about 20 to 30 seconds, and the player's health barely moves across 10 kills. Don't step out of the corner or move around the wall, or the raptor gets a direct path and its heavy bites land. Pull only one raptor at a time: a second one may path in from a different side.",
+   "confidence": "medium",
+   "skills": [
+    "Auto Shot"
+   ],
+   "mechanics": [
+    "mob pathing abuse",
+    "stuck pathing on terrain",
+    "safe ranged spot"
+   ]
+  },
+  "U7YfoaO-X8E@0": {
+   "url": "https://www.youtube.com/watch?v=U7YfoaO-X8E&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (H)||12-16 The Barrens",
+     "idx": 217
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (H)||21-22 Wailing Caverns",
+     "idx": 109
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||12-17 The Barrens",
+     "idx": 205
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale",
+     "idx": 322
+    }
+   ],
+   "instruction": "Go deep into Boulder Lode Mine to the tented area with the braziers, jump up onto the slanted wooden support beam, then log out and back in to appear in Orgrimmar. If it fails, run back to Orgrimmar.",
+   "detail": "Run through Boulder Lode Mine past the Venture Co. workers to the back chamber with the red canvas tents and the fire braziers. Next to a Crude Brazier there is a diagonal wooden support beam. Jump onto it and work your way up so your character is standing inside the beam and rock geometry, then use the game menu to log out (wait the 20 second timer out of combat) and log straight back in. Because the server sees your saved position as stuck inside the scenery, it moves you to a safe spot on login, which here is inside Orgrimmar near the Hall of Legends. That saves the whole run back to the city. You must be out of combat for the logout to complete, so kill or drop any Enforcer first. Note that this skip has been reported as patched, so if you log in at the same place in the mine just run back to Orgrimmar.",
+   "confidence": "low",
+   "skills": [
+    "Logout"
+   ],
+   "mechanics": [
+    "logout skip",
+    "stuck-in-geometry relocation on login"
+   ]
+  },
+  "UPiNtMem9tM@0": {
+   "url": "https://www.youtube.com/watch?v=UPiNtMem9tM",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||48-49 The Hinterlands",
+     "idx": 85
+    }
+   ],
+   "instruction": "Instead of fighting up the ramps, jump straight up the rock ledges to the upper level; if a jump fails, step back first to get a running start.",
+   "detail": "The clip shows the general technique for this kind of skip, using a cave in Arathi as the example. Pick the stepped rock formation that leads up to the higher level, face it, and jump onto each ledge in turn. When a ledge is too high to make from where you stand, back up a little first so you have room to jump forward with momentum. Keep jumping until you reach the top, which skips the mobs on the normal path. In the Hinterlands this means climbing to the upper level of Jintha'Alor without fighting through the guards on the ramps.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "jump-up spot",
+    "terrain skip"
+   ]
+  },
+  "WClMOzjgOgc@0": {
+   "url": "https://youtu.be/WClMOzjgOgc",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||43-44 Tanaris/Dustwallow",
+     "idx": 70
+    }
+   ],
+   "instruction": "Jump on top of the big mushroom in Bloodfen Burrow and log out there; you load in at the Razorfen Downs entrance. Zone into the instance, paste the guide's macro in chat, then wait a minute to get ported to Theramore.",
+   "detail": "Go into the Bloodfen Burrow cave in Dustwallow Marsh and jump up onto the top of one of the large green mushrooms. Open the game menu and log out from that spot, then wait for the 20-second timer. Your position up there counts as stuck inside the map geometry, so when you log back in the game moves you to a safe spot, which here is the Razorfen Downs entrance in the Barrens. Walk into the Razorfen Downs instance portal. Inside, paste the macro from the guide into chat. It invites a nonexistent player and then leaves the party, which flags you as not being in the instance's group. The game then shows a one-minute warning and teleports you out to your bind point, which is Theramore Isle. This works like a free Hearthstone that keeps your real Hearthstone on cooldown for later. If the logout does not move you, you were not on the right part of the mushroom; climb back up and try again. If neither works, just run back to Theramore.",
+   "confidence": "low",
+   "skills": [
+    "Logout",
+    "Chat macro"
+   ],
+   "mechanics": [
+    "logout skip",
+    "instance-group boot teleport (ghetto hearth)"
+   ]
+  },
+  "XTpyJFLge3o@0": {
+   "url": "https://youtu.be/XTpyJFLge3o",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 143
+    }
+   ],
+   "instruction": "Kill the two Scarlet Paladins outside the libram house first. Then use your pet as bait: lay a Frost Trap, send the pet in to pull the room, Dash it back out past the trap, and walk in to loot the libram from the back-room table while the mobs chase the pet. Walk out, then Feign Death or run.",
+   "detail": "The libram is on a table in the back room of a timber house in Hearthglen, reached by stone steps to the front door. Several Scarlet mobs stand inside. 1. Pull the two Scarlet Paladins standing by the steps down to the road and kill them. They hit weakly and only cast Holy Light, so they are slow but safe, and with them gone you get more time later. 2. Method 1: put the pet on Stay by the house. From outside, cast Eagle Eye into the room to target one of the mobs. Lay a Frost Trap in front of the pet, then send the pet in. Once it has aggro, use Dash and set it to Passive so it runs back out through the trap with the mobs behind it. If the mobs by the entrance don't follow, attack them with the pet yourself. 3. Walk up the steps, through the front room and into the back room, and loot the libram (about 5 seconds). Walk back out and away, then run or Feign Death to reset. The pet will probably die, so revive and heal it afterwards. 4. Method 2: stand against the side wall of the house and use Eyes of the Beast to steer the pet in, pull the room and run it out. You get less time this way, so run the pet farther before going in.",
+   "confidence": "high",
+   "skills": [
+    "Eagle Eye",
+    "Eyes of the Beast",
+    "Frost Trap",
+    "Dash (pet)",
+    "pet Stay/Passive",
+    "Feign Death",
+    "Revive Pet",
+    "Mend Pet"
+   ],
+   "mechanics": [
+    "pet pull",
+    "aggro bait",
+    "trap kite",
+    "feign death reset",
+    "loot while mobs are pulled away"
+   ]
+  },
+  "YACKgdPlSGY@0": {
+   "url": "https://youtu.be/YACKgdPlSGY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||24-27 Duskwood/Redridge",
+     "idx": 285
+    }
+   ],
+   "instruction": "Stay down in the valley below Tharil'zun's ridge and send your pet up to pull him alone, away from his guards. When he comes down, use your Voidwalker's Sacrifice to shield yourself, then DoT, Fear and kite him around the valley until he dies.",
+   "detail": "Tharil'zun is a level 24 elite Blackrock orc on the high ground at the east end of Render's Valley in Redridge, with other orcs around him. Don't climb up to him: you would pull the whole camp. Stand down in the valley at the foot of the slope, near the big tree trunks, and send your Voidwalker up to attack him. Wait below while the pet tanks. He leaves his group and comes down the slope alone. That is the split pull. When the pet is low, use its Sacrifice: the Voidwalker dies and you get a gold damage-absorb shield just as he reaches you. Summon a new demon (an Imp works) and fight him on open ground. Keep Corruption, Curse of Agony and Immolate on him, cast Fear whenever it's ready, and backpedal or run so he spends his time chasing you while your DoTs tick. Recast DoTs after each Fear and finish with Shadow Bolts. If he gets you to low health, Fear and run toward Burning Steppes rather than standing still. If you go up the hill yourself, you pull the adds and the fight can't be won solo.",
+   "confidence": "medium",
+   "skills": [
+    "Sacrifice",
+    "Corruption",
+    "Curse of Agony",
+    "Immolate",
+    "Fear",
+    "Shadow Bolt",
+    "Summon Imp"
+   ],
+   "mechanics": [
+    "pet split pull from below",
+    "Voidwalker Sacrifice shield",
+    "fear kiting",
+    "DoT kiting"
+   ]
+  },
+  "YZn1Uy47cb8@0": {
+   "url": "https://youtu.be/YZn1Uy47cb8",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 161
+    }
+   ],
+   "instruction": "At the broken gap in Thandol Span, stand at the edge and line yourself up with the stone support under the bridge. Drop onto the invisible chain, then onto the broken wooden beam, then down to Foggy MacKreel's ledge.",
+   "detail": "Foggy MacKreel stands on a small stone ledge in the bridge supports below the broken middle of Thandol Span, between Wetlands and Arathi. You can get there without Slow Fall. Walk to the edge of the broken road deck where the bridge is snapped. Below you is a stone pier with a slanted wooden beam leaning against it. Turn so you face the stone support and the beam, then step off. You land on an invisible chain collision just below the edge and stand on it for a moment. From there, hop down onto the broken beam, walk or slide along it toward the stone pier, and drop the last short bit onto Foggy's ledge. Each drop is short, so you take little or no fall damage. If you aim wrong, you miss the chain and fall all the way into the gorge, which can kill you. Line up before each jump and move slowly. Accept MacKreel's Moonshine; it's a 15-minute timed delivery, so leave right away.",
+   "confidence": "medium",
+   "skills": [],
+   "mechanics": [
+    "invisible collision platform",
+    "staged drops to avoid fall damage",
+    "precise jump lineup"
+   ]
+  },
+  "YxkJh6ocQsg@0": {
+   "url": "https://youtu.be/YxkJh6ocQsg",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands",
+     "idx": 82
+    }
+   ],
+   "instruction": "From the marked spot in Plaguewood, ride up the gap in the red mountains on the west side. On the high crest, drink Noggenfogger until you get slow fall, then jump across to the big face beyond. Ride up and over the top heading southwest, and drop down to Thondroril River by Tirion.",
+   "detail": "1) Start at the marked spot at the foot of the red western mountains in Plaguewood. Ride up the narrow, steep crease in the slope; zig-zag if your mount starts to slide. 2) At the top you reach a rounded crest with a drop and gap in front of you and a larger red mountain face beyond. 3) Drink Noggenfogger Elixir. It's random, with a 10 s cooldown: skeleton or shrink are useless, so keep drinking until you get slow fall. It can take many tries. A Light Feather with a slow-fall or levitate spell works too. 4) With slow fall up, jump forward off the crest, straight ahead across the gap onto the big face. 5) Zig-zag up the face, cross the rounded summits, ride down the narrow valley and straight across the dark plateau, going roughly from map 16,42 to 12,46. 6) Ride against the steep west wall and let yourself drop. You take a few hundred damage per drop (about 670, 225 and 700 in the clip), so be at good health. You land at Thondroril River near Tirion Fordring. If the jump fails, ride around the normal way.",
+   "confidence": "medium",
+   "skills": [
+    "Noggenfogger Elixir (slow fall result)",
+    "Light Feather + Slow Fall/Levitate (alternative per step)",
+    "mount"
+   ],
+   "mechanics": [
+    "mountain climbing / steep-slope zig-zag",
+    "slow-fall gap jump",
+    "fall damage",
+    "random consumable effect"
+   ]
+  },
+  "Z4gDpWTXaFY@0": {
+   "url": "https://youtu.be/Z4gDpWTXaFY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||48-49 Tanaris/Hinterlands",
+     "idx": 43
+    }
+   ],
+   "instruction": "At full health, run up the main stairs of the Altar of Zul past the casters to the top until the exploration completes. Then run straight off the far side, drop down onto the stone ledge below, and wait there until you leave combat.",
+   "detail": "Start at full health and shield yourself. Run up the long central staircase of the Altar of Zul in the Hinterlands; Vilebranch Soothsayers and Axe Throwers will chase you. At the top, the Keepers (Gloga and Murta'gya, both elite) aggro as soon as you reach the platform. Keep running across the top until the quest says the altar search is complete, then don't stop to fight: run off the edge on the side of the top platform and drop onto the lower stone ledge or terrace of the pyramid. The elites can't path down after you, so they evade and reset. Stand still on that ledge, out of their reach and line of sight, and wait until Leaving Combat shows, then walk down. If you jump too far you can take big fall damage, and if you stop at the top the elites will kill you.",
+   "confidence": "medium",
+   "skills": [
+    "Power Word: Shield",
+    "Renew"
+   ],
+   "mechanics": [
+    "exploration objective",
+    "jump off to evade elites",
+    "pathing break / evade reset",
+    "waiting out combat"
+   ]
+  },
+  "ZJX6sCkm5JY@0": {
+   "url": "https://www.youtube.com/watch?v=ZJX6sCkm5JY",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 103
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 105
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 154
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 156
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest",
+     "idx": 363
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest",
+     "idx": 366
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 103
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 105
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 154
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 156
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||6-11 Elwynn Forest",
+     "idx": 363
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||6-11 Elwynn Forest",
+     "idx": 366
+    }
+   ],
+   "instruction": "Pull Vagash and lead him down to Amberstill Ranch. Ranged classes can stand just outside the big ram pen fence, where he gets stuck inside and can't reach you, and chip him below half. Then kite him south down the road to the guard to finish him.",
+   "detail": "Vagash is a level 11 elite yeti in the cave in the hills north of Amberstill Ranch. Two ways are shown. 1) Ranged (throwing knives here): tag him at the cave and run straight downhill through the pines to the ranch houses, throwing when in range. Run past the hut and around to the outside of the large fenced ram pen. Stand under the pine at the pen's corner outside the fence: he ends up inside the pen and keeps wandering there, unable to path to you, while you throw at full health. Keep going until he is under half health (you need 51%+ of the damage for credit). 2) Melee (a dwarf paladin): fight him while walking backwards downhill from the cave, past both ranch houses. Whenever he lags behind on the slope or a building corner, stop and cast Holy Light, then keep moving. Either way, finish by leading him south along the road below the ranch to the guard who stands there. The guard joins in and he drops fast. He hits for about 35-45 and can briefly freeze you in place, so arrive with health to spare. Loot the Fang of Vagash.",
+   "confidence": "medium",
+   "skills": [
+    "Throwing weapon / ranged attack",
+    "Holy Light (paladin variant)"
+   ],
+   "mechanics": [
+    "fence pathing exploit (mob stuck behind fence)",
+    "kiting",
+    "guard assist",
+    "51% damage rule for credit",
+    "heal while mob lags behind"
+   ]
+  },
+  "ZaSOwy1h-ZI@0": {
+   "url": "https://youtu.be/ZaSOwy1h-ZI",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 11
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||50-51 Stranglethorn/Blasted Lands",
+     "idx": 2
+    }
+   ],
+   "instruction": "At Janeiro's Point, get on the grassy mound under the giant goblin statue and run in circles around the statue's leg. Keep shooting and let your pet pick up threat, so Mok'rash keeps chasing you round the leg and rarely gets a swing in. Loot the Monogrammed Sash when he dies.",
+   "detail": "Mok'rash is a level 50 elite troll who patrols Janeiro's Point, the islet with the giant goblin statue north of Booty Bay. In the reference a hunter with a pet pulls him, climbs the grassy mound at the base of the statue and runs in tight circles around the thick leg, turning the camera as they go. The leg sits between you and the troll, so he keeps pathing around it and only catches up now and then. Keep instant and ranged damage going while you move, and use your pet to take some of the hits. When he does reach you (around the middle of the fight), keep running and he falls behind again. The kill takes about a minute and a half, with your health dropping only in short bursts. Then loot the Monogrammed Sash from his corpse and use it to start the quest. If you stop circling, his heavy two-handed hits will kill you quickly. Fear or a slow, if your class has one, makes this safer. He has a long respawn, so skip him if he is not there.",
+   "confidence": "medium",
+   "skills": [
+    "Auto Shot",
+    "Monogrammed Sash"
+   ],
+   "mechanics": [
+    "kiting around an obstacle",
+    "pathing around terrain",
+    "pet tanking"
+   ]
+  },
+  "Zg4FNWw-P5k@3120": {
+   "url": "https://youtu.be/Zg4FNWw-P5k?t=3120",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 114
+    }
+   ],
+   "instruction": "Come down the snowy slope to Old Icebeard's cave in Chill Breeze Valley. If he is inside, pull him and climb the icy boulders beside the entrance, lead him up above the cave, then drop back down and run to the back to open MacGrann's Meat Locker.",
+   "detail": "Old Icebeard is a level 11 elite yeti in the cave in Chill Breeze Valley, far too strong for a low-level mage. Come down the snowy slope through the pines to the cave mouth. If he is standing inside, let him aggro, then turn and climb the large ice boulders at the side of the entrance, up onto the rocks above the opening, staying just ahead of him. Once he has followed you up and is close, jump back down to the entrance and run straight to the back of the cave. He has to path back down the boulders, which gives you the few seconds you need for the 5 second open on MacGrann's Meat Locker. Loot MacGrann's Dried Meats and leave. If he catches you, jump-turn so his swings land from the front and you avoid the daze, and use the fallen tree trunk outside as an evade spot: standing on it makes him unable to reach you, so he resets. If you start the cast with him beside you, he interrupts it and can kill you.",
+   "confidence": "medium",
+   "skills": [
+    "kiting",
+    "line-of-path abuse",
+    "jump-turn"
+   ],
+   "mechanics": [
+    "pathing delay on terrain (mob must walk back down rocks)",
+    "evade reset on unreachable spot (tree trunk)",
+    "avoiding daze by facing attacker"
+   ]
+  },
+  "Zg4FNWw-P5k@3619": {
+   "url": "https://youtu.be/Zg4FNWw-P5k?t=3619",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 124
+    }
+   ],
+   "instruction": "Inside Frostmane Hold, walk slowly down onto the narrow nook below until the explore credit pops. Don't jump or run off it. Watch for the Hideskinner below, then hearth.",
+   "detail": "After killing the Frostmane Headhunters in the cave, walk (don't run or jump) carefully down onto the small nook below until 'Fully explore Frostmane Hold' completes. If you fall off, you land in the lower cave among more trolls. A Frostmane Hideskinner below can attack you on the nook if he is close to it, so check where he is first. Once you have credit, cast Hearthstone right away to leave the cave.",
+   "confidence": "low",
+   "skills": [
+    "Hearthstone"
+   ],
+   "mechanics": [
+    "exploration credit trigger",
+    "careful edge walking to avoid falling"
+   ]
+  },
+  "Zg4FNWw-P5k@3815": {
+   "url": "https://youtu.be/Zg4FNWw-P5k?t=3815",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 136
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE",
+     "idx": 138
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||10-11 ADV Dun Morogh Human Mage AoE",
+     "idx": 2
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest",
+     "idx": 363
+    },
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest",
+     "idx": 366
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||6-11 Elwynn Forest",
+     "idx": 363
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||6-11 Elwynn Forest",
+     "idx": 366
+    }
+   ],
+   "instruction": "From the dirt path, climb the steep snowy slope above Amberstill Ranch to find Vagash and open with Fireball. Kite him down past Rudra and grab Protecting the Herd on the run, then south to the level 30 Mountaineer on the road. Keep casting so you do over half the damage.",
+   "detail": "Leave the dirt path and climb the steep wooded slope above Amberstill Ranch. Vagash, a level 11 elite yeti, roams up there and his spawn point varies, so look around. Open with Fireball. When he closes in, Frost Nova and step away, then use Frostbolt and Fireball to slow and hurt him while you head downhill through the ranch. The clip drinks a potion when health dips. Run past Rudra Amberstill and accept Protecting the Herd without stopping, because the Fang of Vagash only drops if you already have the quest. Keep kiting south through the trees to the road; The Tundrid Hills discovery triggers on the way. Where the road meets a low wooden fence stands a level 30 Dun Morogh Mountaineer. Frost Nova Vagash next to him so the guard engages, and keep firing so your share stays over half. Loot the Fang, then go straight back north over the hill to Rudra and turn in. Melee range at level 9-10 is fatal. If the guard does most of the damage, you get no xp and no Fang.",
+   "confidence": "high",
+   "skills": [
+    "Fireball pull",
+    "Frost Nova",
+    "Frostbolt kiting",
+    "accept a quest while kiting",
+    "healing potion"
+   ],
+   "mechanics": [
+    "kite an elite to a high-level guard",
+    "over 50% damage needed for xp and loot",
+    "quest item drops only while the quest is in your log",
+    "exploration xp on the way"
+   ]
+  },
+  "_GFA9BBvQek@11349": {
+   "url": "https://www.youtube.com/watch?v=_GFA9BBvQek&t=11349s",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||55-56 Felwood/Winterspring",
+     "idx": 133
+    }
+   ],
+   "instruction": "Work around the outer edge of Frostwhisper Gorge looting the blue Frostmaul Shards; send your pet ahead to pull the giants off a crystal, loot it while they chase the pet, and Feign Death if one turns on you.",
+   "detail": "Head down into Frostwhisper Gorge in southern Winterspring and stay on the outer perimeter of the canyon rather than the middle where the Frostmaul Giants and Preservers stand. The quest objects are blue ice crystals on the ground near the walls; opening one takes a few seconds and the giants are elite, so you cannot tank them. Before looting a crystal that has a giant nearby, send your pet at the giant so it chases the pet away, then click the crystal. As soon as the shard is looted, run on to the next one. If a giant comes for you instead, Feign Death to drop it (then call or revive your pet and remount). Keep working around the rim, using the snowy slopes on the edges, until you have 10 shards. Don't stand in the open centre of the gorge and don't try to fight the giants; they hit very hard. If it goes badly, skip the quest as the guide allows.",
+   "confidence": "low",
+   "skills": [
+    "Feign Death"
+   ],
+   "mechanics": [
+    "pet baiting / threat on pet",
+    "Feign Death threat drop",
+    "object looting under aggro"
+   ]
+  },
+  "awe7f-iI-ic@0": {
+   "url": "https://youtu.be/awe7f-iI-ic",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad",
+     "idx": 151
+    }
+   ],
+   "instruction": "At full health, go down the spiral stairs under the Thandol Span. Crowd-control both elite Dark Iron Saboteurs, click Ebenezer Rustlocke's corpse right away, then run straight back up and out onto the bridge.",
+   "detail": "Get to full health first. Enter the bunker under the Thandol Span bridge and take the spiral staircase down to the storeroom full of crates. Two elite Dark Iron Saboteurs wait there. Do not fight them: lock them down with any crowd control you have. The hunter in the clip uses Wing Clip with no pet. Fear, Polymorph, Frost Nova, Gouge, Sap, Blind or a pet holding aggro all work. While they are controlled, click Ebenezer Rustlocke's corpse on the floor. That completes the step, and you take the follow-up. Then run back up the stairs and out onto the bridge deck. The elites follow, but they reach their leash and reset once you are out on the span. Be careful as you leave, because they can still hit you through the floor if you stand right above them. Keep a healing potion ready.",
+   "confidence": "high",
+   "skills": [
+    "Wing Clip",
+    "Fear",
+    "Polymorph",
+    "Frost Nova",
+    "Gouge",
+    "Sap",
+    "Blind",
+    "Healing Potion"
+   ],
+   "mechanics": [
+    "crowd control and grab",
+    "leash reset on exit",
+    "hit-through-floor danger"
+   ]
+  },
+  "ayEKuXSUU2A@0": {
+   "url": "https://youtu.be/ayEKuXSUU2A",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||54-55 Un'Goro Crater",
+     "idx": 94
+    }
+   ],
+   "instruction": "From the broken pillars west of Dire Maul, walk up the wooded slope until you touch the huge outer wall, and stop as soon as Discovered Dire Maul appears and your chat channels switch to Dire Maul.",
+   "detail": "You do not need to enter the ruins. Start at the toppled stone pillars on the Feralas side west of Dire Maul, then walk up the grassy, tree-covered hillside toward the tall carved outer wall. Gordok Ogre-Mages stand on the rises nearby, so pick a line between them and do not pull. Within about 20 seconds of reaching the base of the wall the screen shows Discovered: Dire Maul and the chat log reports your General and LocalDefense channels changing to Dire Maul; that is all that is needed. Then walk straight back down to the pillars (the text flips to Feralas again) and carry on. Exploring the zone is a hidden prerequisite: without it, the later Reliquary of Purity quest will never show up for you.",
+   "confidence": "high",
+   "skills": [],
+   "mechanics": [
+    "zone discovery prerequisite",
+    "exploration trigger"
+   ]
+  },
+  "bFS4TUbJse8@0": {
+   "url": "https://www.youtube.com/watch?v=bFS4TUbJse8&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||59-59 Winterspring/Silithus part 1",
+     "idx": 162
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||58-59 Winterspring/Silithus I",
+     "idx": 154
+    }
+   ],
+   "instruction": "In Hermit Ortell's cave, jump onto one of the standing torches, then log out and back in to appear at Cenarion Hold.",
+   "detail": "After the turn-ins with Hermit Ortell in his cave, walk to one of the tall standing torches near him and jump up so you stand on top of it. Log out, wait out the timer without moving, then log back in. The game treats that spot as invalid, so it moves you to Cenarion Hold and saves you the run across Silithus. If you fall off or it doesn't work, run there normally.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip"
+   ]
+  },
+  "cT3Hfq1vZRc@0": {
+   "url": "https://youtu.be/cT3Hfq1vZRc",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 11
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||50-51 Stranglethorn/Blasted Lands",
+     "idx": 2
+    }
+   ],
+   "instruction": "Fight Mok'rash on the hill by the giant goblin statue and kite him in circles around its legs. Keep your DoTs up, Fear him every time it's ready, and use Death Coil or your pet to buy time; never let him stand on you.",
+   "detail": "Mok'rash is a level 50 elite ogre on the grassy hilltop at the foot of the huge goblin statue near Booty Bay. The statue's thick legs give you a pillar to circle. Open with your DoTs (Corruption, Curse of Agony, Immolate) and have your pet attack. Whenever he heads for you, cast Fear. He isn't immune, and each Fear sends him running while your DoTs tick, so recast it as soon as it breaks. Keep circling the statue legs so he has to path around them. Use Death Coil for an emergency horror and heal, then Shadow Bolt when he's feared. Near the end, channel Drain Life to top yourself up while he finishes. If you stand still in melee range he hits for a lot. If Fear is resisted, keep running around the legs until it's ready again. Loot the Monogrammed Sash and use it to start the quest.",
+   "confidence": "medium",
+   "skills": [
+    "Fear",
+    "Corruption",
+    "Curse of Agony",
+    "Immolate",
+    "Shadow Bolt",
+    "Death Coil",
+    "Drain Life"
+   ],
+   "mechanics": [
+    "fear kiting",
+    "pillar circling around statue legs",
+    "DoT kiting",
+    "pet off-tank"
+   ]
+  },
+  "cWFuykJwL4w@0": {
+   "url": "https://www.youtube.com/watch?v=cWFuykJwL4w",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||22-24 Hillsbrad",
+     "idx": 150
+    }
+   ],
+   "instruction": "Stay stealthed and go up the wooden stairs and along the upper balcony to Rethilgore's room. Sneak past him to Deathstalker Adamant's cell, talk to him, Vanish when the mobs turn on you, then follow him back to the courtyard door.",
+   "detail": "Enter Shadowfang Keep in Stealth. Go through the first archway and slip past the Bleak Worgs and Shadowfang Whitescalps, then climb the wooden staircase on your right. Follow the upper wooden walkway around and come down into the hall where Rethilgore stands guard by the prison cells. Ease past him to the cell on the far side and talk to Deathstalker Adamant to free him. Talking breaks Stealth, so Rethilgore and the nearby worgs come for you. Cast Vanish right away to drop combat. Adamant then walks back up the stairs to the courtyard door and picks its lock. Stay stealthed behind him and let him clear the way. When the door opens, enter the courtyard and talk to Deathstalker Vincent to turn in the quest. Mobs will attack you there, but that doesn't matter: let them kill you, release, and you respawn at the Sepulcher graveyard in Silverpine, which is a free trip out. Without Vanish trained you cannot survive Rethilgore's aggro.",
+   "confidence": "high",
+   "skills": [
+    "Stealth",
+    "Vanish",
+    "Sprint"
+   ],
+   "mechanics": [
+    "stealth pathing",
+    "vanish to drop aggro",
+    "escort NPC opens door",
+    "death skip to graveyard"
+   ]
+  },
+  "cp2YI86AO4Y@0": {
+   "url": "https://www.youtube.com/watch?v=cp2YI86AO4Y&ab",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale",
+     "idx": 238
+    }
+   ],
+   "instruction": "Inside the Malaka'jin cave, hop up onto the top of one of the wooden cages, then log out from the game menu and log back in. You reappear outside Thunder Bluff.",
+   "detail": "Walk into the small cave at Malaka'jin in Stonetalon where the caged prisoners and the cauldron are. Jump onto the roof of one of the wooden cages so you are standing on top of it, not on the cave floor. Open the game menu and pick Logout, let the 20 second timer run out, then log the character back in. Because the server sees you standing on an object it treats as an invalid position, it moves you to a safe spot on login, which here is the grassy area beside the lift at the foot of Thunder Bluff in Mulgore. That saves the long run or flight. If you log out while standing on the floor you will just log back in inside the cave. The video title marks this skip as patched, so it may no longer work on current servers; if you reload in the cave, travel normally.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "invalid-position relocation on login"
+   ]
+  },
+  "crQAvyRIceU@0": {
+   "url": "https://www.youtube.com/watch?v=crQAvyRIceU",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||16-19 Darkshore",
+     "idx": 35
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||16-19 Darkshore",
+     "idx": 36
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale",
+     "idx": 5
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale",
+     "idx": 6
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||20-21 Darkshore/Ashenvale",
+     "idx": 27
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||20-21 Darkshore/Ashenvale",
+     "idx": 28
+    }
+   ],
+   "instruction": "Let Remtravel walk into each golem and then pull it off him, grab every trogg wave before it reaches him, and use the long stone wall in the middle of the dig to kite golems. Before the last wave, pre-place a trap and send your pet at the caster trogg.",
+   "detail": "Remtravel never stops walking unless something hits him, so the safe method is to let him run into each Cracked Golem, then take it off him. Pulling golems ahead of him is faster but he will walk past you into the next pack, so only do that if you can kill quickly. He spawns three trogg waves: one melee trogg when he climbs the first wooden scaffold, two melee troggs when he leaves the tent, and a dangerous final wave with a caster trogg (Geomancer) that throws heavy fireballs. Stand close so the first two waves aggro onto you. In the middle section, jump on and off the long carved stone wall: the golems have to path around it, so you can fight several without taking hits. The escort area respawns golems as soon as they are all dead, so do not pull fresh spawns before they stop him. Before the last wave, place Immolation Trap where it spawns, send the pet with Growl onto the caster, let the melee trogg hit Remtravel to stop him, then take the melee and kill the caster first. Wing Clip helps kite. The turn-in is in Auberdine.",
+   "confidence": "high",
+   "skills": [
+    "Immolation Trap",
+    "Growl",
+    "Wing Clip",
+    "Serpent Sting",
+    "Arcane Shot",
+    "Auto Shot"
+   ],
+   "mechanics": [
+    "escort NPC stops only when attacked",
+    "pathing spot",
+    "dynamic respawn",
+    "pet tanking caster",
+    "threat pickup from escort"
+   ]
+  },
+  "dss87zJPA4k@0": {
+   "url": "https://youtu.be/dss87zJPA4k",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 21
+    }
+   ],
+   "instruction": "Turn in the fangs, then fight each gorilla wave at the cave mouth one at a time: Freezing Trap one, kill the other with your pet. When Mokk arrives with the last wave, run out and downhill into Mistvale Valley shooting him, loot his heart, then Feign Death to shed the rest.",
+   "detail": "The hunter hands the 10 Gorilla Fangs to Witch Doctor Unbagwa inside the Spirit Den and walks out to the path at the cave mouth. Enraged Silverback Gorillas (level 42-43) then come down the path in waves of two or three. 1. Each wave: Freezing Trap one gorilla on the path so only one is loose, send the pet on the other and shoot it. Backing a few steps into the cave mouth is fine; Multi-Shot when two are stacked. The gorillas enrage at low health, so finish them fast. 2. Between waves, pre-lay a fresh Freezing Trap on the path where they come down and wait out cooldowns. 3. A named gorilla, Konda, joins a later wave. Heal the pet with Mend Pet while it tanks; Scare Beast takes one gorilla out of the fight for about 10 seconds when two are on you. 4. Last wave: Mokk the Savage and more gorillas come in through the back of the den. Do not fight them inside. Leave the cave and run down the slope into Mistvale Valley, shooting Mokk as you go so he follows and the adds trail behind. 5. Kill and loot Mokk for the Heart of Mokk, then Feign Death to drop whatever is still chasing you. The whole event takes about four minutes.",
+   "confidence": "high",
+   "skills": [
+    "Freezing Trap",
+    "Scare Beast",
+    "Mend Pet",
+    "Multi-Shot",
+    "Feign Death",
+    "hunter pet"
+   ],
+   "mechanics": [
+    "crowd control",
+    "pre-placed trap",
+    "kiting",
+    "enrage",
+    "feign death reset",
+    "wave event"
+   ]
+  },
+  "eaqyd9KEIQ4@0": {
+   "url": "https://youtu.be/eaqyd9KEIQ4",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||58-59 Winterspring/Silithus I",
+     "idx": 99
+    }
+   ],
+   "instruction": "Clear the round chamber, then stand still at the tall crystal and use the Gorishi Queen Lure. Guards come in waves: pet tanks one, Fear a second, Drain Life the one you're on, and Howl of Terror when three are on you. The Queen comes last; kill her, loot the brain, and finish the stragglers.",
+   "detail": "Gorishi Hive Queen event in the Slithering Scar (Un'Goro), as a level 58 warlock. 1. Kill everything in the round chamber first. Stand next to the tall crystal with your Voidwalker out, and have a Major Healthstone. 2. Use the Gorishi Queen Lure. It's a cast ('Applying the Lure'), so moving interrupts it. 3. Level 54 Gorishi Hive Guards burst out of the walls in waves of about three, for about 3 minutes. Send the Voidwalker onto one and Fear another. Put DoTs up and Drain Life the one you're tanking, so you heal while you damage it. 4. When several reach you at once, use Howl of Terror, re-Fear as fears break, and step back so they come to you one at a time. 5. Use the healthstone when you get low; make a new one between waves if there's a lull. 6. After the guard waves, the Gorishi Hive Queen comes out with a guard. Pet on her, Howl, then Drain Life her down. Loot the Gorishi Queen Brain. 7. Guards and a flying Gorishi Stinger keep coming after the Queen dies. Finish them, re-summoning a pet if yours dies (here the Voidwalker died and he called a Succubus).",
+   "confidence": "high",
+   "skills": [
+    "Gorishi Queen Lure",
+    "Voidwalker",
+    "Fear",
+    "Howl of Terror",
+    "Drain Life",
+    "Corruption / DoTs",
+    "Major Healthstone",
+    "Create Healthstone",
+    "Summon Succubus"
+   ],
+   "mechanics": [
+    "timed wave event",
+    "pet tanking",
+    "crowd control rotation (Fear)",
+    "AoE fear",
+    "life drain sustain",
+    "cast interrupted by movement",
+    "adds after boss"
+   ]
+  },
+  "ehXV0stmDrM@202": {
+   "url": "https://youtu.be/ehXV0stmDrM?t=202",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||26-28 Ashenvale",
+     "idx": 101
+    }
+   ],
+   "instruction": "Surface for a full breath bar before you loot the Fathom Stone, then fight Baron Aquanis by kicking every Frostbolt and popping Evasion right after a kick. If it goes wrong, Vanish and try again once he resets; never let your breath run out.",
+   "detail": "What this clip shows is the approach, not the boss: you dive into the flooded Blackfathom Deeps entrance in Ashenvale, then stealth through the outer caves past elite Fallenroot Satyrs and Blackfathom Tide Priestesses on the way to the portal. When the player does fight a Tide Priestess one on one, you can see the method you will use on the Baron: open from stealth, stay in melee, and Kick each Frostbolt cast the moment it starts (Frostbolt does most of the damage and slows you), keeping her from getting casts off. Sapphires of Aku'Mai can be picked off the cave walls as you go. For the Baron step itself: Baron Aquanis appears in the water when you loot the Fathom Stone, so first get your breath bar back to full, because drowning is the one failure you cannot undo. Kick every Frostbolt, use Evasion after a kick to soak his melee, and if your health drops too far, Vanish and come back about 5 minutes later when he has reset. Horde quest (Amongst the Ruins); this plan is for rogues.",
+   "confidence": "medium",
+   "skills": [
+    "Stealth",
+    "Kick",
+    "Evasion",
+    "Vanish",
+    "Sinister Strike/Eviscerate"
+   ],
+   "mechanics": [
+    "interrupting caster damage (Kick on Frostbolt)",
+    "breath timer underwater",
+    "Vanish to drop combat and retry after the boss resets",
+    "stealth past elite trash"
+   ]
+  },
+  "gV8-wgQEomc@0": {
+   "url": "https://youtu.be/gV8-wgQEomc",
+   "steps": [
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||12-14 ADV Loch Modan Mage AoE",
+     "idx": 67
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||16-18 ADV Westfall Mage AoE",
+     "idx": 6
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||16-18 ADV Westfall Mage AoE",
+     "idx": 78
+    },
+    {
+     "guide": "RestedXP ADV AoE Alliance Mage||20-22 ADV Redridge 1 Mage AoE",
+     "idx": 8
+    }
+   ],
+   "instruction": "Jump onto the lamp post by the wall in the Trade District, hop over the edge to fall under Stormwind, then run toward the Mage Tower and walk forward off the lighter dirt patch at Derek's feet into the blue void.",
+   "detail": "In the Trade District, jump up onto the street lamp next to the stone wall and from its top jump onto the wall edge and over it. You fall through the city into the bare terrain underneath Stormwind. Down there, run straight across the brown ground toward the Mage Tower (follow your guide arrow; it counts down as you approach). Near the end there is a lighter-coloured square of dirt (the shadow of the giant dinosaur model, Derek). With shadows on Fair or Low, stand in the middle of that lighter patch just before the blue water void and walk straight forward. You drop into the void and land inside the Wizard's Sanctum, right next to the mage trainer, saving the run through the Mage Quarter. Higher shadow settings hide the light patch. There is a small chance of dying from the fall, so skip it if you are worried; walking normally also works.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "falling under the map",
+    "under-city shortcut",
+    "void fall into building"
+   ]
+  },
+  "h2s4ZjFBLtg@0": {
+   "url": "https://www.youtube.com/watch?v=h2s4ZjFBLtg&ab_channel=RestedXP",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale",
+     "idx": 258
+    }
+   ],
+   "instruction": "A little way into Talondeep Path, jump on top of the glowing blue-white boulder on the right side of the tunnel, then log out and back in. You should load in at Astranaar in Ashenvale. This trick has reportedly been patched, so if it fails just walk on through.",
+   "detail": "Enter Talondeep Path from the Stonetalon side and follow the tunnel past the first lanterns. Where it gets dark there is a pale, glowing blue-white rock against the right wall. Jump onto it and stand on its top, then type /logout and wait out the 20 second timer without moving. When you log back in, the game finds your saved spot is not a valid place to stand and moves you to a safe point. In the reference that point is the stone benches in Astranaar, Ashenvale, which skips the rest of the tunnel and the run across Ashenvale. The video is labelled as patched, so you may simply reappear on the rock; if so, continue through the tunnel normally. Astranaar is an Alliance town with guards, so a Horde player who lands there should leave right away, for example by running out the east side, and be careful.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "invalid position relocation"
+   ]
+  },
+  "irmy9vPM9Lg@0": {
+   "url": "https://youtu.be/irmy9vPM9Lg",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||22-24 Wetlands",
+     "idx": 30
+    }
+   ],
+   "instruction": "Use the small L-shaped ruined wall among the raptors. Stand tight in its inside corner and pull one raptor at a time from range. Its pathing breaks on the wall, so it paces at the far end instead of reaching you, and you can kill it with spells and wand while taking little damage.",
+   "detail": "The Mottled Razormaws and Scytheclaws here are a few levels above you, so a straight fight is risky. In the raptor area there is a low, broken stone wall shaped like an L. 1. Step into the inside corner of the L and stay right against the stones. Don't move out of it during the fight. 2. Pull a single raptor from as far away as you can (the priest opens with Mind Blast). 3. The raptor runs at you but its path gets stuck on the wall. It ends up pacing on or around the far end of the long leg, still in spell range, and rarely lands a hit. 4. Keep damaging it: Shadow Word: Pain, Mind Blast on cooldown, Mind Flay and wand. Keep Power Word: Shield up in case it does get through. Higher-level mobs resist often, so expect a few misses. 5. Kill it, step out to loot, return to the corner and pull the next. The priest gets the Stone of Relu after a handful of kills and then keeps using the spot for Scytheclaws. Any ranged class can use the spot. If you stand outside the corner the raptor reaches you normally.",
+   "confidence": "medium",
+   "skills": [
+    "Mind Blast",
+    "Shadow Word: Pain",
+    "Mind Flay",
+    "Power Word: Shield",
+    "wand"
+   ],
+   "mechanics": [
+    "pathing exploit",
+    "terrain abuse",
+    "ranged pull",
+    "safe spot"
+   ]
+  },
+  "jj85AXyF1XE@0": {
+   "url": "https://www.youtube.com/watch?v=jj85AXyF1XE",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL",
+     "idx": 143
+    }
+   ],
+   "instruction": "In the Royal Quarter, stand at the top of the lowest staircase until your character looks like it's floating. Log out and back in to appear outside at the Ruins of Lordaeron.",
+   "detail": "In Undercity's Royal Quarter near Varimathras, step onto the top edge of the lowest staircase and shuffle until your character visibly hovers over the gap. Log out through the game menu, wait out the timer, then log back in. You reappear above ground in the Ruins of Lordaeron and skip the walk out of the city. If it doesn't work, run out of Undercity normally.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip"
+   ]
+  },
+  "kbUSo62CfAM@0": {
+   "url": "https://www.youtube.com/watch?v=kbUSo62CfAM",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||22-24 Wetlands",
+     "idx": 62
+    }
+   ],
+   "instruction": "Inside the Gol'Bolar Quarry mine, climb onto the green mining machine near the entrance, then log out and log back in. You should reappear in the Tinker Town tunnel in Ironforge.",
+   "detail": "Go into the Gol'Bolar Quarry mine in Dun Morogh. Rockjaw troggs are inside, so clear or avoid the ones near the entrance. Just inside is a green mining machine with a wooden cart next to it. Jump up onto it so you are standing on the machine itself, not on the cave floor. Open the game menu and choose Logout. You have to be out of combat for the 20-second timer, so make sure no trogg is attacking you. Log straight back in. If the game decides you are stuck inside geometry, it moves you to a safe spot, and here that is the tram tunnel in Tinker Town, Ironforge. That saves you the run to the city for the flight path. If you log in still inside the cave, you weren't standing on the machine; get back on and try again. Note: the video's own title marks this skip as patched, so it may no longer work on your realm. If it fails once, just run to Ironforge.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "logout skip",
+    "stuck-in-geometry relocation on login"
+   ]
+  },
+  "lfQM3Q-Ag5A@0": {
+   "url": "https://youtu.be/lfQM3Q-Ag5A",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||16-19 Darkshore",
+     "idx": 37
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale",
+     "idx": 10
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||20-21 Darkshore/Ashenvale",
+     "idx": 30
+    }
+   ],
+   "instruction": "On the Twilight Shore, pull the murlocs on the near side of the big beached skeleton one at a time with your pet tanking, then slip up to the bones, click them to start the quest, and walk off south before the rest notice you.",
+   "detail": "The Beached Sea Creature is a huge skeleton lying over dark rock outcrops on the grey Darkshore beach, ringed by Greymist Tidehunters and Oracles. Approach across the open sand and pull the closest murloc alone with a shot, send your pet in to hold it and kill it before taking the next; Oracles cast Lightning Bolt and heal, so burst them, and stop fleeing murlocs because they bring friends back. You do not need to clear the whole outcrop: once the murlocs on your side are dead, walk up to the skeleton while the remaining ones on the far side are still idle, click it to accept Beached Sea Creature, and walk straight back out. In the video the player then heads further along the beach to the Beached Sea Turtle shell and does the same. Walking straight into the middle without thinning the near side pulls three or four murlocs at once, which is how this quest kills people.",
+   "confidence": "medium",
+   "skills": [
+    "Auto Shot",
+    "Arcane Shot",
+    "Serpent Sting",
+    "pet (Owl)"
+   ],
+   "mechanics": [
+    "single pulls",
+    "pet tanking",
+    "kill healers first",
+    "stop fleeing mobs"
+   ]
+  },
+  "lfgvyhmf3q4@7": {
+   "url": "https://youtu.be/lfgvyhmf3q4?t=7",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 166
+    }
+   ],
+   "instruction": "Optional: only run Zul'Gurub single-pull AoE farming from 58 to 60 if you already know the full mage route. Otherwise skip it and keep AoE grinding in the open world.",
+   "detail": "This links a full guide to the mage Zul'Gurub one-pull: no epic mount and no Limited Invulnerability Potion, only two or three Light Feathers. The linked part is the introduction plus a preview of the end of the pull. The mage drags about eleven packs of beasts (Zulian Crocolisks, tigers and cubs) along the route. Then they stack the mobs on the long rope bridge, stand in one spot and channel rank after rank of Blizzard while Frost Nova and slows keep the mobs bunched. Watch the whole video before you try it: positioning, resets and the bridge jump are covered in later chapters. One mistake kills you, so the guide marks it as extremely hard. It is only faster than open-world AoE if you can already do it reliably. Repair, have full mana consumables, and carry Light Feathers for Slow Fall.",
+   "confidence": "low",
+   "skills": [
+    "Blizzard",
+    "Frost Nova",
+    "Cone of Cold",
+    "Blink",
+    "Slow Fall",
+    "Light Feather",
+    "Ice Block"
+   ],
+   "mechanics": [
+    "mass AoE pull",
+    "mob stacking on a choke point",
+    "kiting a large pull"
+   ]
+  },
+  "m_7xE_T2Zes@0": {
+   "url": "https://youtu.be/m_7xE_T2Zes",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 52
+    }
+   ],
+   "instruction": "Bind a key to Interact with Target first. At the locked gate into Searing Gorge, hug the left side of the gate and spam that interact key until the lever opens it; you don't need the key.",
+   "detail": "Before you reach the tunnel, open Options, Controls, tick Enable Interact Key and bind Interact with Target to a key. Run south from Loch Modan to the stone gatehouse that leads into the Searing Gorge tunnel. Walk right up to the gate and press into the corner on its left side, then hammer the interact key. The interact key lets you use the gate lever object from where you stand even though you normally need the Searing Gorge gate key to open it, so the portcullis lifts and you walk through into Stonewrought Pass and on to Searing Gorge. If nothing happens, shuffle a little along the left corner and keep pressing; clicking with the mouse does not work, it has to be the interact key.",
+   "confidence": "medium",
+   "skills": [
+    "Interact with Target (keybind)"
+   ],
+   "mechanics": [
+    "interact key reaches object without key",
+    "keyless gate opening"
+   ]
+  },
+  "o55Y3LjgKoE@0": {
+   "url": "https://www.youtube.com/watch?v=o55Y3LjgKoE",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh",
+     "idx": 120
+    },
+    {
+     "guide": "RestedXP Forever Guide (A)||5-11 Dun Morogh",
+     "idx": 120
+    }
+   ],
+   "instruction": "Aggro Old Icebeard at his cave mouth, then jump up the ice boulders above the entrance and wait for him to come out under you. Drop down past him, run to the back of the cave, open MacGrann's Meat Locker, then run out and kite him until he gives up.",
+   "detail": "Old Icebeard is a level 11 elite yeti who stands inside his cave in Chill Breeze Valley, right on top of MacGrann's Meat Locker at the back. Run toward the cave entrance just far enough for him to aggro, then turn and climb the big blue ice boulders beside and above the cave mouth. Jump from rock to rock until you are on top. He can't follow you up there, so he walks out of the cave and stands below you trying to reach you. Once he's outside, drop down on the far side, run into the now-empty cave and open the locker at the back. Opening takes a short cast, so do it before he catches up. Then run back out. He meets you around the entrance, so jump-turn, strafe and keep moving to avoid his hits, and drink a healing potion if needed. Keep running across the valley until he leashes and you drop combat. If you stand still in melee range he hits hard enough to kill a low-level character.",
+   "confidence": "high",
+   "skills": [
+    "Healing Potion"
+   ],
+   "mechanics": [
+    "terrain mobs can't reach (pathing pull-out)",
+    "lure mob away from objective",
+    "looting under a cast while kiting",
+    "jump-turning",
+    "mob leash reset"
+   ]
+  },
+  "oNFXup-DCM0@0": {
+   "url": "https://www.youtube.com/watch?v=oNFXup-DCM0",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||39-40 Badlands",
+     "idx": 20
+    }
+   ],
+   "instruction": "At the big dwarf statues in the Valley of Kings, leave the road and ride up the mountain behind them, then follow the ridges south over the peaks and drop down into the Badlands straight toward Kargath.",
+   "detail": "Instead of following the long road through the Valley of Kings pass and around the Badlands canyon, climb the mountains. Start on the cobbled road by the wooden fence in the Valley of Kings, turn up the steep slope beside the giant toppled dwarf statue, and keep climbing on your mount. Take the walkable grassy ledges between the pine trees and boulders, zig-zagging uphill wherever the slope is shallow enough not to slide you back. Keep heading south until the ground turns red as you cross into the Badlands. Go along the red plateau (the zone name briefly flips to Searing Gorge on the top), then drop down the western Badlands ridges and slopes to reach Kargath. If a slope is too steep you will slide back, so look for a gentler line instead of forcing it. This also avoids the dwarf guards on the road, which matters for Horde because getting hit by them flags you for PvP.",
+   "confidence": "medium",
+   "skills": [
+    "Mount"
+   ],
+   "mechanics": [
+    "mountain climbing shortcut",
+    "terrain walkable-slope route",
+    "avoiding guard road"
+   ]
+  },
+  "oVoxsr4zcg4@0": {
+   "url": "https://www.youtube.com/watch?v=oVoxsr4zcg4",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||22-24 Wetlands",
+     "idx": 111
+    }
+   ],
+   "instruction": "From the Menethil flight master run to the end of the dock, jump in and swim straight across the bay to the grassy shore ahead, staying away from the murloc tree on the left. Log out right at the waterline, then use the web Stuck Character service to get moved to Ironforge.",
+   "detail": "Start at the Menethil Harbor flight path and run out to the end of the dock by the moored boat. Jump into the water and swim across Baradin Bay toward the lone tree on the hillside ahead. Do not drift toward the tree on the left, because high-level murlocs camp around it. When you reach the grassy bank (the minimap changes from Baradin Bay to Wetlands), stop and log out from the game menu. Then open the Blizzard Stuck Character self-service page in a browser (or in-game Support on another character), press Continue, pick the character you just logged out, and click Move Character. Wait until it says the move is complete, then log back in. The service sends you to a safe graveyard, which from this spot is outside the Gates of Ironforge in Dun Morogh. This saves the long swim or run south. The character has to be offline the whole time, and the service has a cooldown of several hours, so if it is on cooldown just swim along the coast toward Westfall as the guide says.",
+   "confidence": "high",
+   "skills": [],
+   "mechanics": [
+    "Stuck Character service teleport",
+    "logout skip",
+    "swim route avoiding murlocs"
+   ]
+  },
+  "pfUnj69wAqY@0": {
+   "url": "https://youtu.be/pfUnj69wAqY",
+   "steps": [
+    {
+     "guide": "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE",
+     "idx": 35
+    }
+   ],
+   "instruction": "Fireball five or six Farmers and Farmhands so they bunch on you, then Frost Nova. Walk out so a wooden field fence is between you and them, and Blizzard them while they shuffle along the fence. Nova or Arcane Explosion any that reach you, and kill the ones that flee.",
+   "detail": "Mage AoE pulls in the Hillsbrad Fields crop rows for Battle of Hillsbrad (Farmers, Farmhands, Farmer Ray, Farmer Getz). 1. Start on full mana. Run through the rows and hit each Farmer/Farmhand with Fireball, or Fire Blast while moving, until 5-6 chase you. 2. Let them stack on you, then Frost Nova. 3. Walk 15-20 yards out onto the dirt path or grass beside the field, so the low wooden fence is between you and the frozen pack, and channel Blizzard on them. Once the root ends they can't come straight at you; they shuffle along their side of the fence, still inside the Blizzard. One pack sat there for about 25 s of ticks while he only re-aimed it. 4. If the pack comes round to you, Frost Nova again, then Arcane Explosion on top of them, or step back and Blizzard again. 5. At low HP they flee in fear (the chat says so). Kill runners with Arcane Explosion, Fire Blast or Fireball before they bring friends. 6. Don't kite past the field edge: mobs dragged too far Evade and reset. Drink to full between pulls; he uses Melon Juice and a Minor Mana Potion.",
+   "confidence": "high",
+   "skills": [
+    "Frost Nova",
+    "Blizzard",
+    "Arcane Explosion",
+    "Fire Blast",
+    "Fireball",
+    "Melon Juice",
+    "Minor Mana Potion"
+   ],
+   "mechanics": [
+    "AoE pull",
+    "terrain/fence obstruction (mobs path along fence)",
+    "root and kite",
+    "mobs flee at low health",
+    "leash / evade reset"
+   ]
+  },
+  "rFO4prcG2p0@0": {
+   "url": "https://youtu.be/rFO4prcG2p0",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 120
+    },
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 121
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 102
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 103
+    }
+   ],
+   "instruction": "After resetting the first two grave waves, sheep the corridor troll, tag the scarabs at the back of their room, run back and Ice Block halfway down the corridor. When they bunch up on you, cancel it, Frost Nova, then open the last graves and take the wall route to the kill spot.",
+   "detail": "Check the troll patrolling the corridor between the graveyard and the scarab room first. Skip the scarabs if it is a Shadowhunter; any other troll there (Soul Eater, Witch Doctor, Blood Drinker) is fine. 1. Aggro Witch Doctor Zum'rah, open the first set of Shallow Graves, and reset at the usual evade spot. Open the second set and reset again. 2. Walk back up the corridor and Polymorph the troll. In the scarab room, Frostbolt or tag the scarabs at the very back (at low level, wait for the boss there to be on the far side). Scarabs pull each other as they run, so they gather the rest on the way. 3. Run back into the corridor and refresh Ice Barrier. About halfway down, Ice Block as the first scarabs reach you. Wait while 'Immune' text appears on every side of you (needs floating combat text on). Then cancel the block, backpedal and Frost Nova. Use Cold Snap for a second Nova if one is resisted. 4. Shield up, open the last graves, hop into the evade nook in the wall by the brazier, Nova the first pack as it passes and climb back up. 5. Run along the top of the long wall, drop down at the end, Blink across the gap, then climb the platform and statue head to the kill spot.",
+   "confidence": "medium",
+   "skills": [
+    "Polymorph",
+    "Ice Block",
+    "Frost Nova",
+    "Cold Snap",
+    "Ice Barrier",
+    "Blink",
+    "Frostbolt",
+    "Mage Armor",
+    "Conjure Mana Gem"
+   ],
+   "mechanics": [
+    "mob reset / evade spot",
+    "chain pull (proximity aggro)",
+    "Ice Block gather",
+    "line of sight",
+    "wall walking",
+    "graveyard zombie pull"
+   ]
+  },
+  "rg_UPmatbSw@0": {
+   "url": "https://youtu.be/rg_UPmatbSw",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||59-60 Winterspring/Silithus part 2",
+     "idx": 79
+    }
+   ],
+   "instruction": "In the Black Vault, walk right up to the big wall safe with the orange dial and look at the floor along its base for a small golden sparkle in the crack under the door. Click it to loot the Heart of the Mountain. If you can't see it, wait about 15 seconds for it to come back.",
+   "detail": "After the Ring of Law, go to the Black Vault. The Heart of the Mountain sits behind the large iron safe door with the round orange dial. You don't need to open the safe: the item can be clicked through a narrow crack where the door meets the floor. Stand at the foot of the door, tilt the camera down, and move the mouse along the bottom edge until the cursor changes over a tiny gold glint, then click to loot. Each player loots it separately. After someone takes it, it respawns in roughly 10 to 15 seconds, and while it's gone there's nothing to click. In the reference several group members stand by the door and the quest updates as soon as one clicks the sparkle near the bottom right of the door, about 25 seconds after the previous loot. Big player models and nameplates can hide the glint, so step aside or zoom in.",
+   "confidence": "medium",
+   "skills": [],
+   "mechanics": [
+    "loot an object through a gap",
+    "quest object respawn",
+    "per-player quest loot"
+   ]
+  },
+  "svdic7rZYv4@7175": {
+   "url": "https://www.youtube.com/live/svdic7rZYv4?si=ZSkwOWQdlWGDx_yK&t=7175",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL",
+     "idx": 95
+    }
+   ],
+   "instruction": "Click the Loose Dirt Mound among the Sorrow Hill crypts, then run straight off through the hills keeping Mercutio tagged with ranged hits so only he follows. Once the Crypt Robbers drop off and go home, finish him and loot the hammer.",
+   "detail": "Shown by a hunter. Coming out of Zaeldarr's crypt, he walks to the Loose Dirt Mound beside a gravestone west of the crypts at Sorrow Hill and clicks it. Mercutio Filthgorger and three Crypt Robbers appear a few seconds later. Instead of fighting at the mound, he drops a trap where they spawn and runs away at once with Aspect of the Cheetah on. He keeps auto-shooting Mercutio as he goes so Mercutio keeps chasing, while the robbers fall behind and give up. He leads Mercutio west through the hills and trees, checking the map now and then so he does not run into more mobs, and kills him about a minute later well away from the mound. Why it works: the robbers lose you and go back, but Mercutio stays on you because you keep hitting him. Do not hit a robber or let one catch up: they call nearby allies for help and come back. If you can't kill Mercutio, keep moving until you can. Other classes: split with your own AoE (Blizzard, Rain of Fire, Volley) or Sprint/Dash out of stealth. Skip it if unsure: it is one of the hardest quests in the game.",
+   "confidence": "medium",
+   "skills": [
+    "kiting",
+    "Aspect of the Cheetah",
+    "split pull",
+    "leash management"
+   ],
+   "mechanics": [
+    "leash/evade reset of the adds while the target stays engaged",
+    "keeping threat on one mob at range while outrunning the rest",
+    "call-for-help re-aggro risk"
+   ]
+  },
+  "tFVsNuMvI5c@0": {
+   "url": "https://www.youtube.com/watch?v=tFVsNuMvI5c",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||51-52 Searing Gorge/Burning Steppes",
+     "idx": 67
+    }
+   ],
+   "instruction": "From the Sea of Cinders in southeast Searing Gorge, head into the narrow valley in the eastern hills and keep following the slopes up and over until you drop down into Burning Steppes.",
+   "detail": "Start in the southeast of Searing Gorge, in The Sea of Cinders around 60, 74 on the map. Head into the gully between the dark rocky hills, walking past or around the Magma Elementals and Searing Lava Spiders that sit there (they are low threat at this level, just avoid stopping). Keep climbing the brown slope that passes by Tanner Camp, hugging the walkable side of the hill rather than the steep face, then follow the ridge line through the gap at the top. On the far side you walk down a dark valley, past a big grey standing rock, and the zone text changes to Burning Steppes. From there continue down toward Flame Crest and the flight master. Walk at a slight angle when the slope gets steep; running straight up a too-steep face just slides you back. This is the alternative to going through Blackrock Mountain.",
+   "confidence": "low",
+   "skills": [],
+   "mechanics": [
+    "wall-walking / steep slope climb",
+    "zone boundary mountain pass"
+   ]
+  },
+  "u6mK4UjYWiA@0": {
+   "url": "https://www.youtube.com/watch?v=u6mK4UjYWiA",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 20
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||44-45 Southern Stranglethorn",
+     "idx": 59
+    }
+   ],
+   "instruction": "Pull Gorlash at the Crystal Shore with Frostbolt, then kite him north along the beach through the Wild Shore to the Booty Bay tunnel, slowing and nuking as you go, and let the Bruisers net and finish him.",
+   "detail": "Gorlash, an elite level 47 murloc-like giant, wades in the shallows of the Crystal Shore south of Booty Bay. Open with Frostbolt from max range, then move every time he closes: run north along the sand and grassy shoreline through the Wild Shore and up into The Cape of Stranglethorn, turning to throw another Frostbolt whenever the slow is on him and he is out of melee. Use Frost Nova and Blink when he catches you, and drink or use a Mana Jade mid-kite instead of stopping in melee. Bloodsail pirates sit on the slopes along the way, so keep to the coast path and do not drag them in. Lead him into the shark-mouth tunnel entrance of Booty Bay: the Booty Bay Bruisers attack him, net him in place and hit hard while you keep casting from just behind them. Keep doing damage until he dies so you still have most of the damage and the tag, then loot Smotts' Chest from his corpse. Fighting him standing still in the open gets you killed in a few hits.",
+   "confidence": "high",
+   "skills": [
+    "Frostbolt",
+    "Frost Nova",
+    "Blink",
+    "Fireball",
+    "Mana Jade"
+   ],
+   "mechanics": [
+    "kiting with slows",
+    "guard assist kill",
+    "keep the tag and damage share"
+   ]
+  },
+  "wKwR0gfplI0@0": {
+   "url": "https://youtu.be/wKwR0gfplI0",
+   "steps": [
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 69
+    },
+    {
+     "guide": "RestedXP Alliance Mage||33-60 Mage AoE",
+     "idx": 121
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 50
+    },
+    {
+     "guide": "RestedXP Horde Mage AoE||36-60 Mage AoE",
+     "idx": 103
+    }
+   ],
+   "instruction": "Conjure two mana gems, shield up, and run in hugging the right cliff, blinking between the troll packs. Then climb the wall, use the evade spots to drop combat, open the graves, and AoE the zombie pull from the walls behind the boss with rank 1 Blizzards.",
+   "detail": "Entrance: conjure both mana gems, Mana Shield, then run in hugging the right cliff, blinking between the three troll packs. Polymorph a troll ahead, run through and Frost Nova anything that catches you. Re-shield, jump up the right wall and walk its top over the torch (a 50 FPS cap makes the jumps easier). Drop into the narrow evade spot between two boxes: mobs can't path to you, so they reset while you drink or Evocate. Next room: Polymorph one mob, run to the door, Nova that pack, then pull the rest with Fire Blast or Torch of the Holy Flame. Ice Block by the right-hand vase, Blink out of it and hide between vase and wall to evade; if a witch doctor or the patrol follows, log out and back in. Graveyard: open the graves in three sets, Nova or Cone of Cold the zombies, and evade on ledges, behind a vase or up the fountain between sets. Then go up the statue onto the walls behind the boss without pulling him. Put on Mage Armor and your spirit gear, gather the zombies with rank 1 Blizzard and hop between the two walls to stack them. Kill them with rank 1 Blizzards (max rank only on Clearcasting), Evocate on the wall, and hearth out as the pull ends.",
+   "confidence": "medium",
+   "skills": [
+    "Conjure Mana Gem",
+    "Mana Shield",
+    "Blink",
+    "Polymorph",
+    "Frost Nova",
+    "Counterspell",
+    "Fire Blast",
+    "Ice Block",
+    "Evocation",
+    "Cone of Cold",
+    "Mage Armor",
+    "Blizzard (Rank 1)",
+    "Blizzard",
+    "Torch of the Holy Flame"
+   ],
+   "mechanics": [
+    "evade spots where mobs can't path",
+    "mob leash and evade reset",
+    "logout to drop combat",
+    "wall-walking",
+    "jump-up spots",
+    "FPS cap to make jumps easier",
+    "AoE kiting on terrain mobs can't follow",
+    "Ice Block then Blink reset",
+    "Clearcasting mana saving",
+    "party-invite ghetto hearth"
+   ]
+  },
+  "xw2mGnQaCQM@0": {
+   "url": "https://www.youtube.com/watch?v=xw2mGnQaCQM",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale",
+     "idx": 11
+    },
+    {
+     "guide": "RestedXP Forever Guide (H)||50-51 Stranglethorn/Blasted Lands",
+     "idx": 2
+    }
+   ],
+   "instruction": "Pull Mok'rash at Janeiro's Point, the islet with the giant goblin statue across the water from Booty Bay. Kite him around the statue's base with fears, then Levitate across the water to the Booty Bay docks so the Bruisers finish him.",
+   "detail": "Mok'rash is a level 50 elite on Janeiro's Point, the small jungle islet with the giant Goblin statue across the bay from Booty Bay. Fight him on the grassy mound at the statue's base: keep running circles around the stone base so he has to follow the curve, and cast ranged spells (Mind Flay channels and Mind Blast in the clip) whenever you have a gap. Use your fear (Psychic Scream) on cooldown to buy free casting time; he is not immune to fear or slows. Never stand still in melee, he hits very hard. Once he is down to roughly 60%, leave the island toward Booty Bay: walk on the water with Levitate (or swim) so he follows you slowly through the bay while you keep shooting. Head for the docks under the town. The Booty Bay Bruisers there are high-level guards who attack him, and they soak his damage and finish the kill. Loot the Monogrammed Sash from his corpse and use it to start the quest. If he gets you in melee on the island or you run out of mana before reaching the docks, you will likely die.",
+   "confidence": "high",
+   "skills": [
+    "Mind Flay",
+    "Mind Blast",
+    "Psychic Scream",
+    "Levitate",
+    "Power Word: Shield",
+    "Fear",
+    "Entangling Roots",
+    "Moonfire",
+    "Starfire",
+    "Aspect of the Cheetah"
+   ],
+   "mechanics": [
+    "kiting around terrain",
+    "fear kiting",
+    "walking on water",
+    "friendly guard assist"
+   ]
+  },
+  "yM9OfJoj5Z8@0": {
+   "url": "https://youtu.be/yM9OfJoj5Z8",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (H)||38-39 Alterac/Arathi",
+     "idx": 103
+    }
+   ],
+   "instruction": "Find Fozruk with Eagle Eye, then hit him and every kobold with him using one AoE such as dynamite. Kite them all down the road, keep shooting only Fozruk so the kobolds leash and evade, then kite him alone.",
+   "detail": "Use Eagle Eye to find Fozruk. He wanders the open hills of Arathi Highlands with Sleeby and a few kobolds. Get in range and hit the whole group at once with one AoE so everything is tagged together. A thrown explosive works: the Goblin Fishing Pole dynamite, a Flash Bundle or any engineering dynamite. It does not matter if some targets resist. Then run down the nearby road where no other mobs are, with Aspect of the Cheetah on. Keep shooting only Fozruk to refresh his leash. The kobolds you stop attacking reach their leash range, evade and go home, which leaves Fozruk chasing you alone. Shoot him down from long range and use Concussive Shot to keep him slow. Do not let him close the gap: his knockdown reaches quite far and he hits very hard. If he catches you, use Feign Death, Wing Clip or Intimidation, but Feign Death can be resisted and Wing Clip may miss with low weapon skill. Warlocks can simply keep him feared while their DoTs tick. The clip shows this done at level 29.",
+   "confidence": "high",
+   "skills": [
+    "Eagle Eye",
+    "Goblin Fishing Pole dynamite",
+    "Flash Bundle",
+    "Rough Dynamite",
+    "Aspect of the Cheetah",
+    "Concussive Shot",
+    "Auto Shot",
+    "Feign Death",
+    "Wing Clip",
+    "Intimidation",
+    "Fear"
+   ],
+   "mechanics": [
+    "split pull",
+    "leash refresh on one target",
+    "evade reset of untouched adds",
+    "kiting along a road",
+    "AoE tag of the whole group"
+   ]
+  },
+  "zIOV0XrxB80@0": {
+   "url": "https://youtu.be/zIOV0XrxB80",
+   "steps": [
+    {
+     "guide": "RestedXP Forever Guide (A)||22-24 Wetlands",
+     "idx": 32
+    }
+   ],
+   "instruction": "Pull Sarltooth down to the low L-shaped stone ruin walls by the excavation, then keep circling those walls. He gets stuck pathing around the corners while you DoT and wand him from the other side.",
+   "detail": "Find Sarltooth, a level 29 raptor, on the hill above the Dig One excavation in Wetlands. Pull him from range with Shadow Word: Pain and wand shots, then run to the low, broken L-shaped stone walls in the grassy area below. This is the same pathing spot used for the previous Ormer's Revenge kills. Keep the wall between you and him and keep moving around its corners. His pathing makes him run the long way around the stones, so he rarely reaches you to melee or Thrash. Each time you have a gap, reapply Shadow Word: Pain, shoot your wand and reshield with Power Word: Shield. Heal with Renew or Flash Heal when needed. Many spells get resisted because of the level gap, so just keep the DoT up and keep circling. The kill takes about two minutes. If you stop or cut a corner badly, he catches you, and his Thrash hits three times at once, which is deadly at this level.",
+   "confidence": "high",
+   "skills": [
+    "Shadow Word: Pain",
+    "Shoot (wand)",
+    "Power Word: Shield",
+    "Renew",
+    "Flash Heal",
+    "Mind Blast"
+   ],
+   "mechanics": [
+    "pathing exploit around terrain",
+    "kiting around obstacles",
+    "DoT kiting"
+   ]
+  }
+ }
+}

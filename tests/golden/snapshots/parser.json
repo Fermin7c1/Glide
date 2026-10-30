@@ -1,0 +1,1900 @@
+{
+ "?||?||rxp-free:forever/RestedXP-Skyborne.lua": {
+  "actions": 0,
+  "parsed": "06f1fa56f28c40c6",
+  "steps": 0
+ },
+ "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE": {
+  "actions": 1174,
+  "parsed": "29c65af116d7b0ff",
+  "steps": 191
+ },
+ "RestedXP ADV AoE Alliance Mage||1-10 ADV Elwynn Forest Human Mage AoE": {
+  "actions": 882,
+  "parsed": "bce02c282f661be5",
+  "steps": 154
+ },
+ "RestedXP ADV AoE Alliance Mage||10-11 ADV Dun Morogh Human Mage AoE": {
+  "actions": 201,
+  "parsed": "a908596f42b896aa",
+  "steps": 41
+ },
+ "RestedXP ADV AoE Alliance Mage||10-12 ADV Darkshore 1 Mage AoE": {
+  "actions": 420,
+  "parsed": "4581b5fa9b4904b9",
+  "steps": 70
+ },
+ "RestedXP ADV AoE Alliance Mage||10-12 LAUNCH ADV Darkshore 1 Mage AoE": {
+  "actions": 423,
+  "parsed": "8e3107ab01447b50",
+  "steps": 77
+ },
+ "RestedXP ADV AoE Alliance Mage||12-14 ADV Loch Modan Mage AoE": {
+  "actions": 630,
+  "parsed": "08c3940f1cbdb872",
+  "steps": 87
+ },
+ "RestedXP ADV AoE Alliance Mage||14-16 ADV Darkshore 2 Mage AoE": {
+  "actions": 484,
+  "parsed": "0ebe0f2ae00755ec",
+  "steps": 96
+ },
+ "RestedXP ADV AoE Alliance Mage||16-18 ADV Westfall Mage AoE": {
+  "actions": 563,
+  "parsed": "bbd0ff19bba3ad6d",
+  "steps": 93
+ },
+ "RestedXP ADV AoE Alliance Mage||18-20 ADV Darkshore 3 Mage AoE": {
+  "actions": 593,
+  "parsed": "9afd8378cadf008a",
+  "steps": 107
+ },
+ "RestedXP ADV AoE Alliance Mage||20-22 ADV Redridge 1 Mage AoE": {
+  "actions": 797,
+  "parsed": "da839253ad07128e",
+  "steps": 136
+ },
+ "RestedXP Alliance Mage||21-22 Duskwood Mage AoE": {
+  "actions": 279,
+  "parsed": "f830c2a8babf093a",
+  "steps": 66
+ },
+ "RestedXP Alliance Mage||22-26 Wetlands Mage AoE": {
+  "actions": 308,
+  "parsed": "8d0a56552c990a5f",
+  "steps": 76
+ },
+ "RestedXP Alliance Mage||26-31 Duskwood Part 2 Mage AoE": {
+  "actions": 475,
+  "parsed": "a1530b65d1ef8f9c",
+  "steps": 100
+ },
+ "RestedXP Alliance Mage||31-33 Hillsbrad Mage AoE": {
+  "actions": 338,
+  "parsed": "c529c7a483ba890e",
+  "steps": 81
+ },
+ "RestedXP Alliance Mage||33-60 Mage AoE": {
+  "actions": 730,
+  "parsed": "a5f6b39ed2e1576d",
+  "steps": 201
+ },
+ "RestedXP Forever Dungeon Guide (A)||1-14 Zephras Isle": {
+  "actions": 0,
+  "parsed": "3eda53e67215021e",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||1-5 Coldridge Valley": {
+  "actions": 0,
+  "parsed": "5d537c8b2c384a78",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||1-6 Northshire": {
+  "actions": 0,
+  "parsed": "0dd02ef4b5e9006a",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||1-6 Shadowglen": {
+  "actions": 0,
+  "parsed": "9c2dedf1bf45350d",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||1-9 Zephras Isle": {
+  "actions": 1,
+  "parsed": "752be1ad6d62f49c",
+  "steps": 2
+ },
+ "RestedXP Forever Dungeon Guide (A)||11-12 Elwynn (Dwarf/Gnome)": {
+  "actions": 0,
+  "parsed": "3651790eb9b2358f",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||11-13 Loch Modan": {
+  "actions": 0,
+  "parsed": "4df402691baa9a44",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||11-13 Loch Modan (Hunter)": {
+  "actions": 0,
+  "parsed": "1979541396fea643",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||11-16 Darkshore/Loch Modan": {
+  "actions": 133,
+  "parsed": "5ad4dd27df728bf9",
+  "steps": 33
+ },
+ "RestedXP Forever Dungeon Guide (A)||12-14 Loch Modan (Dwarf/Gnome)": {
+  "actions": 0,
+  "parsed": "1e4bf5f0212157e4",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||13-15 Westfall": {
+  "actions": 567,
+  "parsed": "c560a1a7d0a8551c",
+  "steps": 95
+ },
+ "RestedXP Forever Dungeon Guide (A)||15-16 Hall of Thanes": {
+  "actions": 164,
+  "parsed": "c6877dabe44ba57e",
+  "steps": 40
+ },
+ "RestedXP Forever Dungeon Guide (A)||15-17 Darkshore": {
+  "actions": 730,
+  "parsed": "0bad30f556cb5150",
+  "steps": 134
+ },
+ "RestedXP Forever Dungeon Guide (A)||16-18 Ruins of Lordaeron": {
+  "actions": 173,
+  "parsed": "c563c70fc7d5f1bb",
+  "steps": 40
+ },
+ "RestedXP Forever Dungeon Guide (A)||17-18 Hall of Thanes": {
+  "actions": 166,
+  "parsed": "d2aaf310b9ce081c",
+  "steps": 41
+ },
+ "RestedXP Forever Dungeon Guide (A)||18-19 Ruins of Lordaeron": {
+  "actions": 189,
+  "parsed": "c5cfb459a7b3278b",
+  "steps": 43
+ },
+ "RestedXP Forever Dungeon Guide (A)||18-20 Deadmines": {
+  "actions": 266,
+  "parsed": "1d2f6c8b35864590",
+  "steps": 55
+ },
+ "RestedXP Forever Dungeon Guide (A)||19-20 Deadmines": {
+  "actions": 447,
+  "parsed": "b7c7e2032ad541c9",
+  "steps": 101
+ },
+ "RestedXP Forever Dungeon Guide (A)||20-21 Darkshore/Ashenvale": {
+  "actions": 599,
+  "parsed": "ec655d87b612875c",
+  "steps": 110
+ },
+ "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh": {
+  "actions": 0,
+  "parsed": "8232f675e414ef5d",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest": {
+  "actions": 0,
+  "parsed": "ac518afce9783b6f",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||6-11 Teldrassil": {
+  "actions": 0,
+  "parsed": "3f4647564c344027",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||9-13 Zephras Isle": {
+  "actions": 1,
+  "parsed": "ce3bf5ee3ed12868",
+  "steps": 2
+ },
+ "RestedXP Forever Dungeon Guide (A)||Random Stuff": {
+  "actions": 0,
+  "parsed": "c295bd96665af3d5",
+  "steps": 0
+ },
+ "RestedXP Forever Dungeon Guide (A)||Skyborne Druid Class Quests": {
+  "actions": 0,
+  "parsed": "0689bb61d80cd326",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (A)||Skyborne Hunter Class Quests": {
+  "actions": 0,
+  "parsed": "a04e8ee029e544a1",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||1-6 Durotar": {
+  "actions": 1,
+  "parsed": "7e84d55d59e553ce",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||1-6 Mulgore": {
+  "actions": 1,
+  "parsed": "dbb55a02ed88e6d8",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||1-6 Tirisfal Glades": {
+  "actions": 1,
+  "parsed": "f7fd20069a422734",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||10-12 Durotar": {
+  "actions": 1,
+  "parsed": "c6d5269730e9425d",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||10-12 Tirisfal (Orc/Troll)": {
+  "actions": 1,
+  "parsed": "89e661959cdd2ba6",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||12-14 Silverpine Forest": {
+  "actions": 2,
+  "parsed": "e95440d300a61695",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||12-16 The Barrens": {
+  "actions": 1247,
+  "parsed": "bb0f4982f596ef52",
+  "steps": 217
+ },
+ "RestedXP Forever Dungeon Guide (H)||16-17 Ragefire Chasm": {
+  "actions": 333,
+  "parsed": "d877dab779b11b36",
+  "steps": 69
+ },
+ "RestedXP Forever Dungeon Guide (H)||17-18 Ruins of Lordaeron": {
+  "actions": 268,
+  "parsed": "16bf343f2e5555a9",
+  "steps": 48
+ },
+ "RestedXP Forever Dungeon Guide (H)||18-21 The Barrens": {
+  "actions": 1385,
+  "parsed": "7665049b2248103a",
+  "steps": 244
+ },
+ "RestedXP Forever Dungeon Guide (H)||21-22 Wailing Caverns": {
+  "actions": 661,
+  "parsed": "8e4b4bea5b45a70b",
+  "steps": 130
+ },
+ "RestedXP Forever Dungeon Guide (H)||6-10 Durotar": {
+  "actions": 1,
+  "parsed": "533dfea716ccbd04",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||6-12 Mulgore": {
+  "actions": 1,
+  "parsed": "149053971c42aa35",
+  "steps": 1
+ },
+ "RestedXP Forever Dungeon Guide (H)||6-12 Tirisfal Glades": {
+  "actions": 1,
+  "parsed": "d611636c70f86070",
+  "steps": 1
+ },
+ "RestedXP Forever Guide (A)||1-10 Dun Morogh Mage AoE": {
+  "actions": 486,
+  "parsed": "cdb543bf7e87985d",
+  "steps": 110
+ },
+ "RestedXP Forever Guide (A)||1-10 Elwynn Forest Mage AoE": {
+  "actions": 572,
+  "parsed": "16d2f0f059805cf2",
+  "steps": 148
+ },
+ "RestedXP Forever Guide (A)||1-14 Zephras Isle": {
+  "actions": 4296,
+  "parsed": "b9935490e33f2367",
+  "steps": 701
+ },
+ "RestedXP Forever Guide (A)||1-5 Coldridge Valley": {
+  "actions": 428,
+  "parsed": "1c1fb1d29dc15cff",
+  "steps": 82
+ },
+ "RestedXP Forever Guide (A)||1-6 Northshire": {
+  "actions": 543,
+  "parsed": "f6fe4c56bd530578",
+  "steps": 91
+ },
+ "RestedXP Forever Guide (A)||1-6 Shadowglen": {
+  "actions": 316,
+  "parsed": "1f0be332b6bbd253",
+  "steps": 71
+ },
+ "RestedXP Forever Guide (A)||1-9 Zephras Isle": {
+  "actions": 2237,
+  "parsed": "83e00c3d096d42b3",
+  "steps": 344
+ },
+ "RestedXP Forever Guide (A)||10-12 Loch Modan Mage AoE": {
+  "actions": 296,
+  "parsed": "ca3de85727a1dea9",
+  "steps": 70
+ },
+ "RestedXP Forever Guide (A)||11-12 Elwynn (Dwarf/Gnome)": {
+  "actions": 490,
+  "parsed": "2a292d990552608e",
+  "steps": 96
+ },
+ "RestedXP Forever Guide (A)||11-13 Loch Modan": {
+  "actions": 603,
+  "parsed": "ce3bc7b8ee1d4c33",
+  "steps": 95
+ },
+ "RestedXP Forever Guide (A)||11-13 Loch Modan (Hunter)": {
+  "actions": 449,
+  "parsed": "19d449b0abfa518e",
+  "steps": 74
+ },
+ "RestedXP Forever Guide (A)||12-14 Loch Modan (Dwarf/Gnome)": {
+  "actions": 700,
+  "parsed": "faaf67469fa06306",
+  "steps": 115
+ },
+ "RestedXP Forever Guide (A)||12-18 Darkshore Mage AoE": {
+  "actions": 561,
+  "parsed": "641979bf7dffb2dc",
+  "steps": 153
+ },
+ "RestedXP Forever Guide (A)||13-15 Westfall": {
+  "actions": 611,
+  "parsed": "295abc85fbcc894a",
+  "steps": 103
+ },
+ "RestedXP Forever Guide (A)||14-16 Darkshore": {
+  "actions": 1965,
+  "parsed": "bd4b5755775a6bf5",
+  "steps": 336
+ },
+ "RestedXP Forever Guide (A)||16-19 Darkshore": {
+  "actions": 775,
+  "parsed": "05b210068016d066",
+  "steps": 145
+ },
+ "RestedXP Forever Guide (A)||18-21 Redridge Mage AoE": {
+  "actions": 275,
+  "parsed": "1988beaf89a018f5",
+  "steps": 61
+ },
+ "RestedXP Forever Guide (A)||19-20 Redridge": {
+  "actions": 887,
+  "parsed": "676dde25e2162e9d",
+  "steps": 176
+ },
+ "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale": {
+  "actions": 450,
+  "parsed": "19d350733644cb6d",
+  "steps": 96
+ },
+ "RestedXP Forever Guide (A)||20-21 Darkshore/Ashenvale": {
+  "actions": 351,
+  "parsed": "7f0122a1584f46c2",
+  "steps": 70
+ },
+ "RestedXP Forever Guide (A)||21-22 Ashenvale SoD": {
+  "actions": 621,
+  "parsed": "df72ae2188c206a5",
+  "steps": 108
+ },
+ "RestedXP Forever Guide (A)||21-23 Ashenvale/Stonetalon": {
+  "actions": 494,
+  "parsed": "d4cc87346b103f24",
+  "steps": 97
+ },
+ "RestedXP Forever Guide (A)||21-23 Stonetalon/Ashenvale": {
+  "actions": 976,
+  "parsed": "4030a13383c357ad",
+  "steps": 186
+ },
+ "RestedXP Forever Guide (A)||22-24 Wetlands": {
+  "actions": 842,
+  "parsed": "8365349852004448",
+  "steps": 128
+ },
+ "RestedXP Forever Guide (A)||23-24 Wetlands": {
+  "actions": 381,
+  "parsed": "8a75ef8ad3f66387",
+  "steps": 64
+ },
+ "RestedXP Forever Guide (A)||23-24 Wetlands Hunter": {
+  "actions": 374,
+  "parsed": "aa10710f8caa26ce",
+  "steps": 74
+ },
+ "RestedXP Forever Guide (A)||24-27 Duskwood/Redridge": {
+  "actions": 1601,
+  "parsed": "aa00925ecb40ac2c",
+  "steps": 302
+ },
+ "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad": {
+  "actions": 1191,
+  "parsed": "2f9cd06ac4316c2e",
+  "steps": 212
+ },
+ "RestedXP Forever Guide (A)||29-30 Ashenvale": {
+  "actions": 471,
+  "parsed": "423e48b069188637",
+  "steps": 91
+ },
+ "RestedXP Forever Guide (A)||29-32 Duskwood": {
+  "actions": 1374,
+  "parsed": "7e20a58a513dec7e",
+  "steps": 253
+ },
+ "RestedXP Forever Guide (A)||32-33 Hillsbrad/Arathi": {
+  "actions": 437,
+  "parsed": "f6902cc9390d7ff8",
+  "steps": 73
+ },
+ "RestedXP Forever Guide (A)||33-34 Thousand Needles": {
+  "actions": 485,
+  "parsed": "a395c8125be9b441",
+  "steps": 98
+ },
+ "RestedXP Forever Guide (A)||34-35 Stranglethorn Vale I": {
+  "actions": 552,
+  "parsed": "6cd61f402f54a423",
+  "steps": 114
+ },
+ "RestedXP Forever Guide (A)||35-36 Desolace": {
+  "actions": 607,
+  "parsed": "6badbedded4cd7af",
+  "steps": 117
+ },
+ "RestedXP Forever Guide (A)||35-37 Desolace": {
+  "actions": 599,
+  "parsed": "7a9f25376ebdd9ee",
+  "steps": 105
+ },
+ "RestedXP Forever Guide (A)||36-38 Stranglethorn Vale II": {
+  "actions": 692,
+  "parsed": "44edca3b2b2856e4",
+  "steps": 124
+ },
+ "RestedXP Forever Guide (A)||38-39 Swamp of Sorrows": {
+  "actions": 547,
+  "parsed": "77cb27cf389d3cca",
+  "steps": 94
+ },
+ "RestedXP Forever Guide (A)||39-40 Alterac/Arathi": {
+  "actions": 1235,
+  "parsed": "ea74e265aae96274",
+  "steps": 226
+ },
+ "RestedXP Forever Guide (A)||40-40 Dustwallow Marsh": {
+  "actions": 434,
+  "parsed": "3b324ad63132ab7e",
+  "steps": 85
+ },
+ "RestedXP Forever Guide (A)||40-40 Dustwallow Marsh2": {
+  "actions": 384,
+  "parsed": "938f3290e4294900",
+  "steps": 68
+ },
+ "RestedXP Forever Guide (A)||40-41 Desolace": {
+  "actions": 296,
+  "parsed": "bc3f65e36cde2968",
+  "steps": 57
+ },
+ "RestedXP Forever Guide (A)||41-41 Badlands": {
+  "actions": 596,
+  "parsed": "54892d732062edef",
+  "steps": 99
+ },
+ "RestedXP Forever Guide (A)||41-43 STV/Swamp of Sorrows": {
+  "actions": 846,
+  "parsed": "090f24ff3b2b8ce1",
+  "steps": 143
+ },
+ "RestedXP Forever Guide (A)||43-44 Tanaris": {
+  "actions": 425,
+  "parsed": "dff4b28fe9917781",
+  "steps": 86
+ },
+ "RestedXP Forever Guide (A)||43-44 Tanaris/Dustwallow": {
+  "actions": 381,
+  "parsed": "af380e6d1794ff03",
+  "steps": 74
+ },
+ "RestedXP Forever Guide (A)||44-48 Feralas": {
+  "actions": 842,
+  "parsed": "7fa99b821774660f",
+  "steps": 153
+ },
+ "RestedXP Forever Guide (A)||48-49 Tanaris/Hinterlands": {
+  "actions": 301,
+  "parsed": "7f0b573569841999",
+  "steps": 56
+ },
+ "RestedXP Forever Guide (A)||49-50 Tanaris/Un'Goro": {
+  "actions": 813,
+  "parsed": "7d3d710dcd069043",
+  "steps": 121
+ },
+ "RestedXP Forever Guide (A)||5-11 Dun Morogh": {
+  "actions": 1581,
+  "parsed": "f8a89143e82e16d1",
+  "steps": 275
+ },
+ "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale": {
+  "actions": 287,
+  "parsed": "01e1d6521ab27b89",
+  "steps": 54
+ },
+ "RestedXP Forever Guide (A)||50-51 Searing Gorge": {
+  "actions": 433,
+  "parsed": "a1ca49bd614d0704",
+  "steps": 68
+ },
+ "RestedXP Forever Guide (A)||51-51 Blasted Lands": {
+  "actions": 240,
+  "parsed": "4b77cdc4a519bb39",
+  "steps": 25
+ },
+ "RestedXP Forever Guide (A)||51-52 WPL": {
+  "actions": 373,
+  "parsed": "3244b1d5aee9bcfa",
+  "steps": 75
+ },
+ "RestedXP Forever Guide (A)||52-52 Felwood": {
+  "actions": 693,
+  "parsed": "00380bd162c18ee4",
+  "steps": 116
+ },
+ "RestedXP Forever Guide (A)||52-53 Feralas": {
+  "actions": 513,
+  "parsed": "81120dfbb5cf7d08",
+  "steps": 79
+ },
+ "RestedXP Forever Guide (A)||53-53 Azshara": {
+  "actions": 366,
+  "parsed": "5063376707bdb8bd",
+  "steps": 61
+ },
+ "RestedXP Forever Guide (A)||53-54 UnGoro Crater": {
+  "actions": 656,
+  "parsed": "e87a3d66f4eb338c",
+  "steps": 120
+ },
+ "RestedXP Forever Guide (A)||54-55 Felwood/Winterspring": {
+  "actions": 711,
+  "parsed": "c647547416760cd3",
+  "steps": 118
+ },
+ "RestedXP Forever Guide (A)||55-56 Winterspring": {
+  "actions": 262,
+  "parsed": "8481a8febbe9ad07",
+  "steps": 57
+ },
+ "RestedXP Forever Guide (A)||56-57 Burning Steppes": {
+  "actions": 876,
+  "parsed": "8fb66cd931e8f40d",
+  "steps": 139
+ },
+ "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands": {
+  "actions": 954,
+  "parsed": "8b2d6b8c24cce422",
+  "steps": 178
+ },
+ "RestedXP Forever Guide (A)||59-59 Winterspring/Silithus part 1": {
+  "actions": 980,
+  "parsed": "fc7e66da57a33010",
+  "steps": 174
+ },
+ "RestedXP Forever Guide (A)||59-60 Winterspring/Silithus part 2": {
+  "actions": 698,
+  "parsed": "a812fcfeb75f945a",
+  "steps": 135
+ },
+ "RestedXP Forever Guide (A)||6-11 Elwynn Forest": {
+  "actions": 2332,
+  "parsed": "8b71beb085944e5b",
+  "steps": 400
+ },
+ "RestedXP Forever Guide (A)||6-11 Teldrassil": {
+  "actions": 1485,
+  "parsed": "7fc1d0f6dc86d849",
+  "steps": 289
+ },
+ "RestedXP Forever Guide (A)||9-13 Zephras Isle": {
+  "actions": 2453,
+  "parsed": "f860f4f1d7509148",
+  "steps": 397
+ },
+ "RestedXP Forever Guide (A)||Random Stuff": {
+  "actions": 40,
+  "parsed": "9c8b0eb1f7943930",
+  "steps": 11
+ },
+ "RestedXP Forever Guide (H)||1-6 Durotar": {
+  "actions": 862,
+  "parsed": "c399884144f0c1f6",
+  "steps": 124
+ },
+ "RestedXP Forever Guide (H)||1-6 Mulgore": {
+  "actions": 357,
+  "parsed": "c4dcefc571d50366",
+  "steps": 65
+ },
+ "RestedXP Forever Guide (H)||1-6 Tirisfal Glades": {
+  "actions": 544,
+  "parsed": "618c69d63a256672",
+  "steps": 81
+ },
+ "RestedXP Forever Guide (H)||10-12 Durotar": {
+  "actions": 468,
+  "parsed": "deceba0a0d969b52",
+  "steps": 90
+ },
+ "RestedXP Forever Guide (H)||10-12 Tirisfal (Orc/Troll)": {
+  "actions": 361,
+  "parsed": "1c9ee056798c5369",
+  "steps": 65
+ },
+ "RestedXP Forever Guide (H)||12-14 Silverpine Forest": {
+  "actions": 757,
+  "parsed": "0b2fc0eebcbcfd81",
+  "steps": 140
+ },
+ "RestedXP Forever Guide (H)||12-17 The Barrens": {
+  "actions": 1934,
+  "parsed": "df636e373ff1668e",
+  "steps": 329
+ },
+ "RestedXP Forever Guide (H)||12-17 The Barrens AoE": {
+  "actions": 510,
+  "parsed": "6ab40c361a65aff4",
+  "steps": 124
+ },
+ "RestedXP Forever Guide (H)||17-21 Stonetalon/Barrens AoE": {
+  "actions": 320,
+  "parsed": "ef708a310b0a0241",
+  "steps": 68
+ },
+ "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale": {
+  "actions": 2018,
+  "parsed": "db4c664a461c5184",
+  "steps": 348
+ },
+ "RestedXP Forever Guide (H)||22-24 Hillsbrad": {
+  "actions": 1157,
+  "parsed": "5452bde86bfea8e3",
+  "steps": 192
+ },
+ "RestedXP Forever Guide (H)||23-24 Hillsbrad Class Quests": {
+  "actions": 657,
+  "parsed": "4e60927b8d59b3eb",
+  "steps": 123
+ },
+ "RestedXP Forever Guide (H)||24-26 Southern Barrens": {
+  "actions": 983,
+  "parsed": "d1652ac98177142b",
+  "steps": 123
+ },
+ "RestedXP Forever Guide (H)||24-26 Southern Barrens/Stonetalon": {
+  "actions": 1389,
+  "parsed": "2cc3121c37b4c3e3",
+  "steps": 208
+ },
+ "RestedXP Forever Guide (H)||26-28 Ashenvale": {
+  "actions": 866,
+  "parsed": "99069dcdeba66da1",
+  "steps": 130
+ },
+ "RestedXP Forever Guide (H)||26-28 SoD Ashenvale": {
+  "actions": 478,
+  "parsed": "70537a328a2353b7",
+  "steps": 61
+ },
+ "RestedXP Forever Guide (H)||28-30 Thousand Needles": {
+  "actions": 1774,
+  "parsed": "e8af9b1d0e6f78a3",
+  "steps": 315
+ },
+ "RestedXP Forever Guide (H)||30-33 Hillsbrad/Arathi": {
+  "actions": 1126,
+  "parsed": "2514b8d5651a23d9",
+  "steps": 195
+ },
+ "RestedXP Forever Guide (H)||33-34 Shimmering Flats": {
+  "actions": 297,
+  "parsed": "0109ce42d4e12e85",
+  "steps": 38
+ },
+ "RestedXP Forever Guide (H)||34-35 Desolace": {
+  "actions": 787,
+  "parsed": "f2a63c8547b7d969",
+  "steps": 128
+ },
+ "RestedXP Forever Guide (H)||35-37 Northern Stranglethorn": {
+  "actions": 1074,
+  "parsed": "88e83138b0b59955",
+  "steps": 167
+ },
+ "RestedXP Forever Guide (H)||37-38 Dustwallow Marsh": {
+  "actions": 729,
+  "parsed": "0ab8622315484281",
+  "steps": 124
+ },
+ "RestedXP Forever Guide (H)||38-39 Alterac/Arathi": {
+  "actions": 914,
+  "parsed": "ffe55c0dc76086af",
+  "steps": 166
+ },
+ "RestedXP Forever Guide (H)||39-40 Badlands": {
+  "actions": 422,
+  "parsed": "abdb5e3fa11a25fd",
+  "steps": 72
+ },
+ "RestedXP Forever Guide (H)||40-41 Stranglethorn Vale": {
+  "actions": 347,
+  "parsed": "f9b5001d63cfdd14",
+  "steps": 63
+ },
+ "RestedXP Forever Guide (H)||41-400_41-41 Swamp of Sorrows": {
+  "actions": 492,
+  "parsed": "9467c28214c0afb0",
+  "steps": 96
+ },
+ "RestedXP Forever Guide (H)||41-41 Desolace II": {
+  "actions": 187,
+  "parsed": "552d5c51e1aa00ac",
+  "steps": 33
+ },
+ "RestedXP Forever Guide (H)||41-43 Tanaris/Dustwallow": {
+  "actions": 798,
+  "parsed": "6d5571c4da55075d",
+  "steps": 129
+ },
+ "RestedXP Forever Guide (H)||43-44 Feralas": {
+  "actions": 754,
+  "parsed": "b986006ccccce39b",
+  "steps": 120
+ },
+ "RestedXP Forever Guide (H)||44-45 Southern Stranglethorn": {
+  "actions": 473,
+  "parsed": "4f8e9c65598f892b",
+  "steps": 92
+ },
+ "RestedXP Forever Guide (H)||45-46 Swamp of Sorrows": {
+  "actions": 265,
+  "parsed": "723c809afc2ef4c2",
+  "steps": 45
+ },
+ "RestedXP Forever Guide (H)||46-48 Tanaris": {
+  "actions": 1118,
+  "parsed": "67689f1895739580",
+  "steps": 203
+ },
+ "RestedXP Forever Guide (H)||48-49 The Hinterlands": {
+  "actions": 1182,
+  "parsed": "48c20c5840282a6c",
+  "steps": 205
+ },
+ "RestedXP Forever Guide (H)||49-50 Feralas": {
+  "actions": 493,
+  "parsed": "6f5539c7024742d9",
+  "steps": 76
+ },
+ "RestedXP Forever Guide (H)||50-51 Stranglethorn/Blasted Lands": {
+  "actions": 440,
+  "parsed": "6325d76e1627ee9f",
+  "steps": 60
+ },
+ "RestedXP Forever Guide (H)||51-52 Searing Gorge/Burning Steppes": {
+  "actions": 639,
+  "parsed": "a0a98b406d60f3f3",
+  "steps": 91
+ },
+ "RestedXP Forever Guide (H)||52-53 Azshara": {
+  "actions": 612,
+  "parsed": "e34c09ed581d22fa",
+  "steps": 97
+ },
+ "RestedXP Forever Guide (H)||53-54 Felwood": {
+  "actions": 496,
+  "parsed": "20a52cc503dac372",
+  "steps": 79
+ },
+ "RestedXP Forever Guide (H)||54-55 Un'Goro Crater": {
+  "actions": 774,
+  "parsed": "3c158df573018f7a",
+  "steps": 131
+ },
+ "RestedXP Forever Guide (H)||55-56 Felwood/Winterspring": {
+  "actions": 1241,
+  "parsed": "58f2e33ea3372060",
+  "steps": 208
+ },
+ "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL": {
+  "actions": 1446,
+  "parsed": "d7b3105b8cf4d87d",
+  "steps": 268
+ },
+ "RestedXP Forever Guide (H)||58-59 Winterspring/Silithus I": {
+  "actions": 1092,
+  "parsed": "ca4916a75215dc6b",
+  "steps": 169
+ },
+ "RestedXP Forever Guide (H)||59-60 Winterspring/Silithus II": {
+  "actions": 125,
+  "parsed": "9f399af9632abe27",
+  "steps": 25
+ },
+ "RestedXP Forever Guide (H)||6-10 Durotar": {
+  "actions": 1505,
+  "parsed": "5c330d97359fc3b4",
+  "steps": 257
+ },
+ "RestedXP Forever Guide (H)||6-12 Mulgore": {
+  "actions": 1560,
+  "parsed": "96a487796f800f37",
+  "steps": 281
+ },
+ "RestedXP Forever Guide (H)||6-12 Tirisfal Glades": {
+  "actions": 1945,
+  "parsed": "11e07edc0cc4ab53",
+  "steps": 348
+ },
+ "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE": {
+  "actions": 325,
+  "parsed": "b09ddedfcacabbf1",
+  "steps": 105
+ },
+ "RestedXP Horde Mage AoE||30-36 Arathi/Alterac AoE": {
+  "actions": 224,
+  "parsed": "1941f5ad879dcd34",
+  "steps": 61
+ },
+ "RestedXP Horde Mage AoE||36-60 Mage AoE": {
+  "actions": 957,
+  "parsed": "e3f35046f177cb6c",
+  "steps": 266
+ },
+ "_includes": {
+  "guides": "921b2c4f3f4bed62",
+  "report": "d44e6941ff44c3d4"
+ },
+ "_index_maps": {
+  "?||?||rxp-free:forever/RestedXP-Skyborne.lua": {
+   "HUNTER/Orc": "44136fa355b3678a",
+   "MAGE/Gnome": "44136fa355b3678a",
+   "PRIEST/Undead": "44136fa355b3678a",
+   "WARRIOR/Human": "44136fa355b3678a"
+  },
+  "RestedXP ADV AoE Alliance Mage||1-10 ADV Dun Morogh Gnome Mage AoE": {
+   "HUNTER/Orc": "8ba2d6044d037fc5",
+   "MAGE/Gnome": "5c76a5e1c22a848e",
+   "PRIEST/Undead": "8ba2d6044d037fc5",
+   "WARRIOR/Human": "8ba2d6044d037fc5"
+  },
+  "RestedXP ADV AoE Alliance Mage||1-10 ADV Elwynn Forest Human Mage AoE": {
+   "HUNTER/Orc": "5b2716c017c54509",
+   "MAGE/Gnome": "4945071e956cc384",
+   "PRIEST/Undead": "5b2716c017c54509",
+   "WARRIOR/Human": "b0cfd99fb12ad188"
+  },
+  "RestedXP ADV AoE Alliance Mage||10-11 ADV Dun Morogh Human Mage AoE": {
+   "HUNTER/Orc": "57de6ca0a5c0c5fd",
+   "MAGE/Gnome": "57de6ca0a5c0c5fd",
+   "PRIEST/Undead": "57de6ca0a5c0c5fd",
+   "WARRIOR/Human": "57de6ca0a5c0c5fd"
+  },
+  "RestedXP ADV AoE Alliance Mage||10-12 ADV Darkshore 1 Mage AoE": {
+   "HUNTER/Orc": "c20b011436c5c5c8",
+   "MAGE/Gnome": "21da41d5682a04b0",
+   "PRIEST/Undead": "c20b011436c5c5c8",
+   "WARRIOR/Human": "c20b011436c5c5c8"
+  },
+  "RestedXP ADV AoE Alliance Mage||10-12 LAUNCH ADV Darkshore 1 Mage AoE": {
+   "HUNTER/Orc": "3caebe4eafd2e758",
+   "MAGE/Gnome": "b0987b02ee050f2e",
+   "PRIEST/Undead": "3caebe4eafd2e758",
+   "WARRIOR/Human": "3caebe4eafd2e758"
+  },
+  "RestedXP ADV AoE Alliance Mage||12-14 ADV Loch Modan Mage AoE": {
+   "HUNTER/Orc": "f6783f281a08096d",
+   "MAGE/Gnome": "bdff8394655b89e4",
+   "PRIEST/Undead": "f6783f281a08096d",
+   "WARRIOR/Human": "ab5f9ea0b0b807c5"
+  },
+  "RestedXP ADV AoE Alliance Mage||14-16 ADV Darkshore 2 Mage AoE": {
+   "HUNTER/Orc": "7443530ba82db902",
+   "MAGE/Gnome": "ebda5bbabd99bc93",
+   "PRIEST/Undead": "7443530ba82db902",
+   "WARRIOR/Human": "7443530ba82db902"
+  },
+  "RestedXP ADV AoE Alliance Mage||16-18 ADV Westfall Mage AoE": {
+   "HUNTER/Orc": "78033fb63e0c0e82",
+   "MAGE/Gnome": "32b14cb8c43997a3",
+   "PRIEST/Undead": "78033fb63e0c0e82",
+   "WARRIOR/Human": "2e74deb06f63d93a"
+  },
+  "RestedXP ADV AoE Alliance Mage||18-20 ADV Darkshore 3 Mage AoE": {
+   "HUNTER/Orc": "b03754f6bc3d74af",
+   "MAGE/Gnome": "b03754f6bc3d74af",
+   "PRIEST/Undead": "b03754f6bc3d74af",
+   "WARRIOR/Human": "b03754f6bc3d74af"
+  },
+  "RestedXP ADV AoE Alliance Mage||20-22 ADV Redridge 1 Mage AoE": {
+   "HUNTER/Orc": "108d93ba5e5ec0c3",
+   "MAGE/Gnome": "108d93ba5e5ec0c3",
+   "PRIEST/Undead": "108d93ba5e5ec0c3",
+   "WARRIOR/Human": "108d93ba5e5ec0c3"
+  },
+  "RestedXP Alliance Mage||21-22 Duskwood Mage AoE": {
+   "HUNTER/Orc": "6d88270ec13b4e56",
+   "MAGE/Gnome": "6d88270ec13b4e56",
+   "PRIEST/Undead": "6d88270ec13b4e56",
+   "WARRIOR/Human": "6d88270ec13b4e56"
+  },
+  "RestedXP Alliance Mage||22-26 Wetlands Mage AoE": {
+   "HUNTER/Orc": "7f3603d3916e21ed",
+   "MAGE/Gnome": "7f3603d3916e21ed",
+   "PRIEST/Undead": "7f3603d3916e21ed",
+   "WARRIOR/Human": "7f3603d3916e21ed"
+  },
+  "RestedXP Alliance Mage||26-31 Duskwood Part 2 Mage AoE": {
+   "HUNTER/Orc": "8c04bee738a4feba",
+   "MAGE/Gnome": "8c04bee738a4feba",
+   "PRIEST/Undead": "8c04bee738a4feba",
+   "WARRIOR/Human": "8c04bee738a4feba"
+  },
+  "RestedXP Alliance Mage||31-33 Hillsbrad Mage AoE": {
+   "HUNTER/Orc": "a7bf728e9d00c5c4",
+   "MAGE/Gnome": "a7bf728e9d00c5c4",
+   "PRIEST/Undead": "a7bf728e9d00c5c4",
+   "WARRIOR/Human": "a7bf728e9d00c5c4"
+  },
+  "RestedXP Alliance Mage||33-60 Mage AoE": {
+   "HUNTER/Orc": "34a2ac260a6a9b9f",
+   "MAGE/Gnome": "0e2101f78556d5a8",
+   "PRIEST/Undead": "34a2ac260a6a9b9f",
+   "WARRIOR/Human": "ca5b29d51065afa2"
+  },
+  "RestedXP Forever Dungeon Guide (A)||1-14 Zephras Isle": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||1-5 Coldridge Valley": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||1-6 Northshire": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||1-6 Shadowglen": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||1-9 Zephras Isle": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "de85502b739572f8",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "de85502b739572f8"
+  },
+  "RestedXP Forever Dungeon Guide (A)||11-12 Elwynn (Dwarf/Gnome)": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||11-13 Loch Modan": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||11-13 Loch Modan (Hunter)": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||11-16 Darkshore/Loch Modan": {
+   "HUNTER/Orc": "d1c493465b661d8c",
+   "MAGE/Gnome": "d1c493465b661d8c",
+   "PRIEST/Undead": "d1c493465b661d8c",
+   "WARRIOR/Human": "d1c493465b661d8c"
+  },
+  "RestedXP Forever Dungeon Guide (A)||12-14 Loch Modan (Dwarf/Gnome)": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||13-15 Westfall": {
+   "HUNTER/Orc": "1a42ecda3ebcb642",
+   "MAGE/Gnome": "231e03cac7b9479b",
+   "PRIEST/Undead": "44e36d94de1c6ff1",
+   "WARRIOR/Human": "81727ba98dd600da"
+  },
+  "RestedXP Forever Dungeon Guide (A)||15-16 Hall of Thanes": {
+   "HUNTER/Orc": "c16e95f646daabe3",
+   "MAGE/Gnome": "8d81c269411fc7a1",
+   "PRIEST/Undead": "8d81c269411fc7a1",
+   "WARRIOR/Human": "c16e95f646daabe3"
+  },
+  "RestedXP Forever Dungeon Guide (A)||15-17 Darkshore": {
+   "HUNTER/Orc": "090fecb36e2ff734",
+   "MAGE/Gnome": "cfa33476eee21430",
+   "PRIEST/Undead": "f288d3c9379817bb",
+   "WARRIOR/Human": "73e6ee44458c5a66"
+  },
+  "RestedXP Forever Dungeon Guide (A)||16-18 Ruins of Lordaeron": {
+   "HUNTER/Orc": "e55d9274b29f6b7f",
+   "MAGE/Gnome": "d24f706113477f5e",
+   "PRIEST/Undead": "962a3bee175b118e",
+   "WARRIOR/Human": "344536aa76838773"
+  },
+  "RestedXP Forever Dungeon Guide (A)||17-18 Hall of Thanes": {
+   "HUNTER/Orc": "0fef10451ca0c1e0",
+   "MAGE/Gnome": "67b0c41fcca0ad90",
+   "PRIEST/Undead": "67b0c41fcca0ad90",
+   "WARRIOR/Human": "0fef10451ca0c1e0"
+  },
+  "RestedXP Forever Dungeon Guide (A)||18-19 Ruins of Lordaeron": {
+   "HUNTER/Orc": "c163baa051ecc245",
+   "MAGE/Gnome": "92fcf6f4dd1f20c8",
+   "PRIEST/Undead": "7c373c9da4f23958",
+   "WARRIOR/Human": "df9ae1d1ef7e1ce1"
+  },
+  "RestedXP Forever Dungeon Guide (A)||18-20 Deadmines": {
+   "HUNTER/Orc": "9a4b08b5c9347355",
+   "MAGE/Gnome": "9a4b08b5c9347355",
+   "PRIEST/Undead": "9a4b08b5c9347355",
+   "WARRIOR/Human": "9a4b08b5c9347355"
+  },
+  "RestedXP Forever Dungeon Guide (A)||19-20 Deadmines": {
+   "HUNTER/Orc": "c208c7818292ba2a",
+   "MAGE/Gnome": "d17c3a02c9133843",
+   "PRIEST/Undead": "a7d2cfb99f3381da",
+   "WARRIOR/Human": "ed5a2347ea24b76e"
+  },
+  "RestedXP Forever Dungeon Guide (A)||20-21 Darkshore/Ashenvale": {
+   "HUNTER/Orc": "2f116f4ab3ab5b0d",
+   "MAGE/Gnome": "2f116f4ab3ab5b0d",
+   "PRIEST/Undead": "2f116f4ab3ab5b0d",
+   "WARRIOR/Human": "79bc1f7e6c179c27"
+  },
+  "RestedXP Forever Dungeon Guide (A)||5-11 Dun Morogh": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||6-11 Elwynn Forest": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||6-11 Teldrassil": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||9-13 Zephras Isle": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "de85502b739572f8",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "de85502b739572f8"
+  },
+  "RestedXP Forever Dungeon Guide (A)||Random Stuff": {
+   "HUNTER/Orc": "44136fa355b3678a",
+   "MAGE/Gnome": "44136fa355b3678a",
+   "PRIEST/Undead": "44136fa355b3678a",
+   "WARRIOR/Human": "44136fa355b3678a"
+  },
+  "RestedXP Forever Dungeon Guide (A)||Skyborne Druid Class Quests": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (A)||Skyborne Hunter Class Quests": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||1-6 Durotar": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||1-6 Mulgore": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||1-6 Tirisfal Glades": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||10-12 Durotar": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||10-12 Tirisfal (Orc/Troll)": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||12-14 Silverpine Forest": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||12-16 The Barrens": {
+   "HUNTER/Orc": "f44b4a8385c53a7b",
+   "MAGE/Gnome": "95f529516e40f48d",
+   "PRIEST/Undead": "b4c3c1565888c9a9",
+   "WARRIOR/Human": "1e52f9ffd9652afe"
+  },
+  "RestedXP Forever Dungeon Guide (H)||16-17 Ragefire Chasm": {
+   "HUNTER/Orc": "e70100a2b3618d02",
+   "MAGE/Gnome": "a114ee71b3d662f5",
+   "PRIEST/Undead": "e87071e1c2e83f9c",
+   "WARRIOR/Human": "9eec96f9c0c9d7a9"
+  },
+  "RestedXP Forever Dungeon Guide (H)||17-18 Ruins of Lordaeron": {
+   "HUNTER/Orc": "d303d180dc826744",
+   "MAGE/Gnome": "89007abfb1407a70",
+   "PRIEST/Undead": "89007abfb1407a70",
+   "WARRIOR/Human": "89007abfb1407a70"
+  },
+  "RestedXP Forever Dungeon Guide (H)||18-21 The Barrens": {
+   "HUNTER/Orc": "2e9510c6653f9756",
+   "MAGE/Gnome": "7824106269f63eed",
+   "PRIEST/Undead": "6ad15ff2eeb217ef",
+   "WARRIOR/Human": "b697b58a1882897f"
+  },
+  "RestedXP Forever Dungeon Guide (H)||21-22 Wailing Caverns": {
+   "HUNTER/Orc": "b44fc2e72d61347b",
+   "MAGE/Gnome": "38074a9f7ea15ecf",
+   "PRIEST/Undead": "efac5367783e3188",
+   "WARRIOR/Human": "9c27c93d523ee038"
+  },
+  "RestedXP Forever Dungeon Guide (H)||6-10 Durotar": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||6-12 Mulgore": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Dungeon Guide (H)||6-12 Tirisfal Glades": {
+   "HUNTER/Orc": "0deca53b34ab818d",
+   "MAGE/Gnome": "0deca53b34ab818d",
+   "PRIEST/Undead": "0deca53b34ab818d",
+   "WARRIOR/Human": "0deca53b34ab818d"
+  },
+  "RestedXP Forever Guide (A)||1-10 Dun Morogh Mage AoE": {
+   "HUNTER/Orc": "366884ce86548a20",
+   "MAGE/Gnome": "366884ce86548a20",
+   "PRIEST/Undead": "366884ce86548a20",
+   "WARRIOR/Human": "366884ce86548a20"
+  },
+  "RestedXP Forever Guide (A)||1-10 Elwynn Forest Mage AoE": {
+   "HUNTER/Orc": "191052986f7638b0",
+   "MAGE/Gnome": "191052986f7638b0",
+   "PRIEST/Undead": "191052986f7638b0",
+   "WARRIOR/Human": "191052986f7638b0"
+  },
+  "RestedXP Forever Guide (A)||1-14 Zephras Isle": {
+   "HUNTER/Orc": "dfc66a359ed67029",
+   "MAGE/Gnome": "d40fe65d7f3b2c5e",
+   "PRIEST/Undead": "832a49aeb5c790bf",
+   "WARRIOR/Human": "9d0e6aeb4060feef"
+  },
+  "RestedXP Forever Guide (A)||1-5 Coldridge Valley": {
+   "HUNTER/Orc": "6970138ec9e668c0",
+   "MAGE/Gnome": "4290d132c6ac7491",
+   "PRIEST/Undead": "823f9ed825bd552f",
+   "WARRIOR/Human": "6265c4b316bbd8c7"
+  },
+  "RestedXP Forever Guide (A)||1-6 Northshire": {
+   "HUNTER/Orc": "a9a5c33d24000880",
+   "MAGE/Gnome": "a43056ca634a35dc",
+   "PRIEST/Undead": "5dc214ba57c8ada4",
+   "WARRIOR/Human": "4022548884a3ebf3"
+  },
+  "RestedXP Forever Guide (A)||1-6 Shadowglen": {
+   "HUNTER/Orc": "82f88f5c72c80cde",
+   "MAGE/Gnome": "210ba8a5ff87554f",
+   "PRIEST/Undead": "2472a08a12507151",
+   "WARRIOR/Human": "338a6e8db818d74a"
+  },
+  "RestedXP Forever Guide (A)||1-9 Zephras Isle": {
+   "HUNTER/Orc": "a88e3ddf8862a7bc",
+   "MAGE/Gnome": "9b2be5543b6c5568",
+   "PRIEST/Undead": "bb033e2f2bde2ce5",
+   "WARRIOR/Human": "bf1415f85e473b3e"
+  },
+  "RestedXP Forever Guide (A)||10-12 Loch Modan Mage AoE": {
+   "HUNTER/Orc": "ffdb135f31518355",
+   "MAGE/Gnome": "16730d4e6cd65d65",
+   "PRIEST/Undead": "ffdb135f31518355",
+   "WARRIOR/Human": "27d026b63643fa6e"
+  },
+  "RestedXP Forever Guide (A)||11-12 Elwynn (Dwarf/Gnome)": {
+   "HUNTER/Orc": "e5e29769e62c4175",
+   "MAGE/Gnome": "590e984c313c97fd",
+   "PRIEST/Undead": "0ed1a5129dbd12ac",
+   "WARRIOR/Human": "6ceaf60c3dac9f6a"
+  },
+  "RestedXP Forever Guide (A)||11-13 Loch Modan": {
+   "HUNTER/Orc": "30a72c0a9588bd9d",
+   "MAGE/Gnome": "d39ecbfc7f7d9fb4",
+   "PRIEST/Undead": "fbaadc2ebb0505ad",
+   "WARRIOR/Human": "9bfc690b47ef3f69"
+  },
+  "RestedXP Forever Guide (A)||11-13 Loch Modan (Hunter)": {
+   "HUNTER/Orc": "c57fdab4a18a7c61",
+   "MAGE/Gnome": "74857262bcf86b23",
+   "PRIEST/Undead": "74857262bcf86b23",
+   "WARRIOR/Human": "37781bb0050d0b27"
+  },
+  "RestedXP Forever Guide (A)||12-14 Loch Modan (Dwarf/Gnome)": {
+   "HUNTER/Orc": "81b83a7a410f7682",
+   "MAGE/Gnome": "7ce5c8a301136fa5",
+   "PRIEST/Undead": "230b425df15e4d2c",
+   "WARRIOR/Human": "ff13dfff8488e82c"
+  },
+  "RestedXP Forever Guide (A)||12-18 Darkshore Mage AoE": {
+   "HUNTER/Orc": "e41e47ca2dd69dea",
+   "MAGE/Gnome": "332d2021b161c623",
+   "PRIEST/Undead": "e41e47ca2dd69dea",
+   "WARRIOR/Human": "63eaff9d8f8f7483"
+  },
+  "RestedXP Forever Guide (A)||13-15 Westfall": {
+   "HUNTER/Orc": "51c8fe500c6a4604",
+   "MAGE/Gnome": "a18a9a303b471f3c",
+   "PRIEST/Undead": "74e21f7beae2750f",
+   "WARRIOR/Human": "63ede69e39a60b32"
+  },
+  "RestedXP Forever Guide (A)||14-16 Darkshore": {
+   "HUNTER/Orc": "5c9039638c71d716",
+   "MAGE/Gnome": "924070f48a95e821",
+   "PRIEST/Undead": "924070f48a95e821",
+   "WARRIOR/Human": "09296e87694d972d"
+  },
+  "RestedXP Forever Guide (A)||16-19 Darkshore": {
+   "HUNTER/Orc": "a2f90d4ebc3ab001",
+   "MAGE/Gnome": "ab7fb181c1e994a4",
+   "PRIEST/Undead": "ab7fb181c1e994a4",
+   "WARRIOR/Human": "8ed406017ed15cab"
+  },
+  "RestedXP Forever Guide (A)||18-21 Redridge Mage AoE": {
+   "HUNTER/Orc": "d4e20d0ad976cc04",
+   "MAGE/Gnome": "d4e20d0ad976cc04",
+   "PRIEST/Undead": "d4e20d0ad976cc04",
+   "WARRIOR/Human": "d4e20d0ad976cc04"
+  },
+  "RestedXP Forever Guide (A)||19-20 Redridge": {
+   "HUNTER/Orc": "4e7eebbcebd0a7aa",
+   "MAGE/Gnome": "14ad7b621af7cc51",
+   "PRIEST/Undead": "4c80e90aef7f8688",
+   "WARRIOR/Human": "2a73a6fafbe13e47"
+  },
+  "RestedXP Forever Guide (A)||19-21 Darkshore/Ashenvale": {
+   "HUNTER/Orc": "3161b7f47da27e36",
+   "MAGE/Gnome": "62e25897d6ce47ca",
+   "PRIEST/Undead": "62e25897d6ce47ca",
+   "WARRIOR/Human": "62e25897d6ce47ca"
+  },
+  "RestedXP Forever Guide (A)||20-21 Darkshore/Ashenvale": {
+   "HUNTER/Orc": "7053ee0ada7377ad",
+   "MAGE/Gnome": "7053ee0ada7377ad",
+   "PRIEST/Undead": "7053ee0ada7377ad",
+   "WARRIOR/Human": "7053ee0ada7377ad"
+  },
+  "RestedXP Forever Guide (A)||21-22 Ashenvale SoD": {
+   "HUNTER/Orc": "ea2ff67ddf7f7185",
+   "MAGE/Gnome": "b265917406bbcb6f",
+   "PRIEST/Undead": "b5453c6853027000",
+   "WARRIOR/Human": "35bea8a57824f8f5"
+  },
+  "RestedXP Forever Guide (A)||21-23 Ashenvale/Stonetalon": {
+   "HUNTER/Orc": "575e96631c71b06e",
+   "MAGE/Gnome": "1f8e2d7282aa95d3",
+   "PRIEST/Undead": "1f8e2d7282aa95d3",
+   "WARRIOR/Human": "1f8e2d7282aa95d3"
+  },
+  "RestedXP Forever Guide (A)||21-23 Stonetalon/Ashenvale": {
+   "HUNTER/Orc": "9fb3d651b8f5fd12",
+   "MAGE/Gnome": "70a22ade2316323f",
+   "PRIEST/Undead": "40424c5c0bedc88f",
+   "WARRIOR/Human": "db9b39e221b955e5"
+  },
+  "RestedXP Forever Guide (A)||22-24 Wetlands": {
+   "HUNTER/Orc": "a0c3d6b2aa9d9512",
+   "MAGE/Gnome": "33f7acc330cef48f",
+   "PRIEST/Undead": "0289a9e091272456",
+   "WARRIOR/Human": "4279aca6ee2a6a78"
+  },
+  "RestedXP Forever Guide (A)||23-24 Wetlands": {
+   "HUNTER/Orc": "605fd198f5556a8e",
+   "MAGE/Gnome": "2a35e0acbf5ce66c",
+   "PRIEST/Undead": "605fd198f5556a8e",
+   "WARRIOR/Human": "a69c720f992e1f0b"
+  },
+  "RestedXP Forever Guide (A)||23-24 Wetlands Hunter": {
+   "HUNTER/Orc": "ed01653d0c78946c",
+   "MAGE/Gnome": "43d6f9b952534892",
+   "PRIEST/Undead": "43d6f9b952534892",
+   "WARRIOR/Human": "a49e34e13ae29d41"
+  },
+  "RestedXP Forever Guide (A)||24-27 Duskwood/Redridge": {
+   "HUNTER/Orc": "94a2090610f02915",
+   "MAGE/Gnome": "45f771106e866d7b",
+   "PRIEST/Undead": "0082bc54c5647fd4",
+   "WARRIOR/Human": "22e40cbe7cb506c7"
+  },
+  "RestedXP Forever Guide (A)||27-29 Wetlands/Hillsbrad": {
+   "HUNTER/Orc": "09095fe459830c74",
+   "MAGE/Gnome": "56222e08b1442df7",
+   "PRIEST/Undead": "7a1e1b75ef853c4a",
+   "WARRIOR/Human": "7fc4a362beec231e"
+  },
+  "RestedXP Forever Guide (A)||29-30 Ashenvale": {
+   "HUNTER/Orc": "af3f04a6290accaa",
+   "MAGE/Gnome": "ba5e98ed8f46ebbe",
+   "PRIEST/Undead": "a894deb635deab09",
+   "WARRIOR/Human": "b3368e6744845631"
+  },
+  "RestedXP Forever Guide (A)||29-32 Duskwood": {
+   "HUNTER/Orc": "435ddbefbcd1cd5f",
+   "MAGE/Gnome": "72f5c993cebc2583",
+   "PRIEST/Undead": "fb369948e2480b3a",
+   "WARRIOR/Human": "55b693ffb7632653"
+  },
+  "RestedXP Forever Guide (A)||32-33 Hillsbrad/Arathi": {
+   "HUNTER/Orc": "426704b8144ada8e",
+   "MAGE/Gnome": "68c71ad53363cc8c",
+   "PRIEST/Undead": "68c71ad53363cc8c",
+   "WARRIOR/Human": "68c71ad53363cc8c"
+  },
+  "RestedXP Forever Guide (A)||33-34 Thousand Needles": {
+   "HUNTER/Orc": "a71aec830bebd148",
+   "MAGE/Gnome": "af55b4a9f1991a3a",
+   "PRIEST/Undead": "af55b4a9f1991a3a",
+   "WARRIOR/Human": "6d6d94281825111c"
+  },
+  "RestedXP Forever Guide (A)||34-35 Stranglethorn Vale I": {
+   "HUNTER/Orc": "8ac0c18bd079e8e9",
+   "MAGE/Gnome": "c00a62b9dbdc6731",
+   "PRIEST/Undead": "76f455d5b20b568c",
+   "WARRIOR/Human": "ba275c0f75507636"
+  },
+  "RestedXP Forever Guide (A)||35-36 Desolace": {
+   "HUNTER/Orc": "c83d316164d4dc2a",
+   "MAGE/Gnome": "4701135cec024b86",
+   "PRIEST/Undead": "4701135cec024b86",
+   "WARRIOR/Human": "4701135cec024b86"
+  },
+  "RestedXP Forever Guide (A)||35-37 Desolace": {
+   "HUNTER/Orc": "ac8874f85c01c71f",
+   "MAGE/Gnome": "6b13d89163a15152",
+   "PRIEST/Undead": "ac8874f85c01c71f",
+   "WARRIOR/Human": "900a6e9cfc30ce23"
+  },
+  "RestedXP Forever Guide (A)||36-38 Stranglethorn Vale II": {
+   "HUNTER/Orc": "d1a5ffcdbd658cab",
+   "MAGE/Gnome": "c3dc22c246c8e889",
+   "PRIEST/Undead": "04913d8195f87bd9",
+   "WARRIOR/Human": "d452df800e12f029"
+  },
+  "RestedXP Forever Guide (A)||38-39 Swamp of Sorrows": {
+   "HUNTER/Orc": "75a24cf3774a2bd8",
+   "MAGE/Gnome": "5903d58ca11db945",
+   "PRIEST/Undead": "b5de98b28b342f13",
+   "WARRIOR/Human": "f8716a7ec3beb216"
+  },
+  "RestedXP Forever Guide (A)||39-40 Alterac/Arathi": {
+   "HUNTER/Orc": "d66468216488f07d",
+   "MAGE/Gnome": "11d6adf5fa23bcad",
+   "PRIEST/Undead": "11d6adf5fa23bcad",
+   "WARRIOR/Human": "93f6831108b55784"
+  },
+  "RestedXP Forever Guide (A)||40-40 Dustwallow Marsh": {
+   "HUNTER/Orc": "863f68867e57d685",
+   "MAGE/Gnome": "c8f8397264c52088",
+   "PRIEST/Undead": "c8f8397264c52088",
+   "WARRIOR/Human": "c8f8397264c52088"
+  },
+  "RestedXP Forever Guide (A)||40-40 Dustwallow Marsh2": {
+   "HUNTER/Orc": "397b5d2e9daacd60",
+   "MAGE/Gnome": "405391458c141eaf",
+   "PRIEST/Undead": "405391458c141eaf",
+   "WARRIOR/Human": "397b5d2e9daacd60"
+  },
+  "RestedXP Forever Guide (A)||40-41 Desolace": {
+   "HUNTER/Orc": "bd8661316fce67e4",
+   "MAGE/Gnome": "063dba02ddb462d8",
+   "PRIEST/Undead": "bd8661316fce67e4",
+   "WARRIOR/Human": "bd8661316fce67e4"
+  },
+  "RestedXP Forever Guide (A)||41-41 Badlands": {
+   "HUNTER/Orc": "693f7bf816d18d28",
+   "MAGE/Gnome": "c773387313f39f01",
+   "PRIEST/Undead": "b7b6127e854cc730",
+   "WARRIOR/Human": "8dc246eb99e097a9"
+  },
+  "RestedXP Forever Guide (A)||41-43 STV/Swamp of Sorrows": {
+   "HUNTER/Orc": "e53a72cd89e47192",
+   "MAGE/Gnome": "936903ac06767fc7",
+   "PRIEST/Undead": "936903ac06767fc7",
+   "WARRIOR/Human": "938ea20fe33e76a8"
+  },
+  "RestedXP Forever Guide (A)||43-44 Tanaris": {
+   "HUNTER/Orc": "de7e3d2badac2f85",
+   "MAGE/Gnome": "05949f8b170352a7",
+   "PRIEST/Undead": "625c59c2b42e54f6",
+   "WARRIOR/Human": "2bb0dcd7f1fc0228"
+  },
+  "RestedXP Forever Guide (A)||43-44 Tanaris/Dustwallow": {
+   "HUNTER/Orc": "6952d10a51d1c902",
+   "MAGE/Gnome": "6952d10a51d1c902",
+   "PRIEST/Undead": "6952d10a51d1c902",
+   "WARRIOR/Human": "1636d030cfba257b"
+  },
+  "RestedXP Forever Guide (A)||44-48 Feralas": {
+   "HUNTER/Orc": "7e1f6c7ee4d2b3ac",
+   "MAGE/Gnome": "f164284764e57f14",
+   "PRIEST/Undead": "07749b5b6fe47006",
+   "WARRIOR/Human": "6dd7f49eb0342bb8"
+  },
+  "RestedXP Forever Guide (A)||48-49 Tanaris/Hinterlands": {
+   "HUNTER/Orc": "0ec33915c5ca52f6",
+   "MAGE/Gnome": "0ec33915c5ca52f6",
+   "PRIEST/Undead": "0ec33915c5ca52f6",
+   "WARRIOR/Human": "0ec33915c5ca52f6"
+  },
+  "RestedXP Forever Guide (A)||49-50 Tanaris/Un'Goro": {
+   "HUNTER/Orc": "e512bbeaf4fe683c",
+   "MAGE/Gnome": "38113ac9dec6afc1",
+   "PRIEST/Undead": "b6627c2ce6886a68",
+   "WARRIOR/Human": "f7818144dfa9f575"
+  },
+  "RestedXP Forever Guide (A)||5-11 Dun Morogh": {
+   "HUNTER/Orc": "7d11ab32dfe1b70a",
+   "MAGE/Gnome": "1883c2dda8883b76",
+   "PRIEST/Undead": "9e19815b1be1506f",
+   "WARRIOR/Human": "8b31453afced944e"
+  },
+  "RestedXP Forever Guide (A)||50-50 Stranglethorn Vale": {
+   "HUNTER/Orc": "ec01107d5c3ad8f9",
+   "MAGE/Gnome": "225ddd477c8aadc7",
+   "PRIEST/Undead": "3eee6785bfe63f20",
+   "WARRIOR/Human": "6490a34773b35c3f"
+  },
+  "RestedXP Forever Guide (A)||50-51 Searing Gorge": {
+   "HUNTER/Orc": "142a29c2a3685345",
+   "MAGE/Gnome": "1a4c265544023afa",
+   "PRIEST/Undead": "142a29c2a3685345",
+   "WARRIOR/Human": "142a29c2a3685345"
+  },
+  "RestedXP Forever Guide (A)||51-51 Blasted Lands": {
+   "HUNTER/Orc": "63f15d2561c355ed",
+   "MAGE/Gnome": "64d8564c59d23c1e",
+   "PRIEST/Undead": "10f7be1bca8415b7",
+   "WARRIOR/Human": "9823766c95dd2e38"
+  },
+  "RestedXP Forever Guide (A)||51-52 WPL": {
+   "HUNTER/Orc": "331d58e8d919153f",
+   "MAGE/Gnome": "48c67cbf1ef454ce",
+   "PRIEST/Undead": "325eb4ebb86833c9",
+   "WARRIOR/Human": "1e6fc3bfbe9e83f8"
+  },
+  "RestedXP Forever Guide (A)||52-52 Felwood": {
+   "HUNTER/Orc": "e5f9bc7b8fe8e82f",
+   "MAGE/Gnome": "cc4877c3fcc1db3e",
+   "PRIEST/Undead": "78c408edb3c5f71d",
+   "WARRIOR/Human": "5392f0f29292969f"
+  },
+  "RestedXP Forever Guide (A)||52-53 Feralas": {
+   "HUNTER/Orc": "ad820ad04083defc",
+   "MAGE/Gnome": "3f8a1a92c153e43b",
+   "PRIEST/Undead": "56b505b818f986b3",
+   "WARRIOR/Human": "54f079c23e3db223"
+  },
+  "RestedXP Forever Guide (A)||53-53 Azshara": {
+   "HUNTER/Orc": "83c8bd5e43a58b89",
+   "MAGE/Gnome": "0ac73de758bc360a",
+   "PRIEST/Undead": "8dda346f49ce9cb2",
+   "WARRIOR/Human": "efc72f7dfbf592f6"
+  },
+  "RestedXP Forever Guide (A)||53-54 UnGoro Crater": {
+   "HUNTER/Orc": "f5a7c732a0ea32b3",
+   "MAGE/Gnome": "514529079febb4f6",
+   "PRIEST/Undead": "e932af9c0b96a012",
+   "WARRIOR/Human": "9899f974a0a91a79"
+  },
+  "RestedXP Forever Guide (A)||54-55 Felwood/Winterspring": {
+   "HUNTER/Orc": "c02a72d6a4e09cde",
+   "MAGE/Gnome": "4364259c44221608",
+   "PRIEST/Undead": "4364259c44221608",
+   "WARRIOR/Human": "5e048bdaf55b3a0b"
+  },
+  "RestedXP Forever Guide (A)||55-56 Winterspring": {
+   "HUNTER/Orc": "9309fcce6ff1c6f7",
+   "MAGE/Gnome": "84c54c0dd80ecc70",
+   "PRIEST/Undead": "f80bae9e8354a8b8",
+   "WARRIOR/Human": "f80bae9e8354a8b8"
+  },
+  "RestedXP Forever Guide (A)||56-57 Burning Steppes": {
+   "HUNTER/Orc": "809e19f1babb9d7a",
+   "MAGE/Gnome": "5e68a45a4ebbfeff",
+   "PRIEST/Undead": "e7adee39f59fd86a",
+   "WARRIOR/Human": "0df659e8c3f7ade4"
+  },
+  "RestedXP Forever Guide (A)||57-59 Western/Eastern Plaguelands": {
+   "HUNTER/Orc": "3211556ceaba9f80",
+   "MAGE/Gnome": "1145b3fdbdbfabf1",
+   "PRIEST/Undead": "3211556ceaba9f80",
+   "WARRIOR/Human": "3211556ceaba9f80"
+  },
+  "RestedXP Forever Guide (A)||59-59 Winterspring/Silithus part 1": {
+   "HUNTER/Orc": "5cdd683d9364ac94",
+   "MAGE/Gnome": "756cfca1b0b89e6e",
+   "PRIEST/Undead": "9cb63993d0424148",
+   "WARRIOR/Human": "1558602f94343811"
+  },
+  "RestedXP Forever Guide (A)||59-60 Winterspring/Silithus part 2": {
+   "HUNTER/Orc": "17605667949a15c9",
+   "MAGE/Gnome": "48e1172e1ad320fb",
+   "PRIEST/Undead": "17605667949a15c9",
+   "WARRIOR/Human": "17605667949a15c9"
+  },
+  "RestedXP Forever Guide (A)||6-11 Elwynn Forest": {
+   "HUNTER/Orc": "7051f3fc5846ebb5",
+   "MAGE/Gnome": "5eb1db0f6c4004c2",
+   "PRIEST/Undead": "3129e09fa68b877b",
+   "WARRIOR/Human": "39b03f3737699605"
+  },
+  "RestedXP Forever Guide (A)||6-11 Teldrassil": {
+   "HUNTER/Orc": "22f61d4b98dceb00",
+   "MAGE/Gnome": "909eec1daf1f9e68",
+   "PRIEST/Undead": "9d86626291b16492",
+   "WARRIOR/Human": "86e6865c8c3e6a49"
+  },
+  "RestedXP Forever Guide (A)||9-13 Zephras Isle": {
+   "HUNTER/Orc": "3df67501d71de011",
+   "MAGE/Gnome": "4c2b4069d2552fdc",
+   "PRIEST/Undead": "cb55ebc9fb79a7ae",
+   "WARRIOR/Human": "0c05e8b303783066"
+  },
+  "RestedXP Forever Guide (A)||Random Stuff": {
+   "HUNTER/Orc": "009d40c0b3669836",
+   "MAGE/Gnome": "009d40c0b3669836",
+   "PRIEST/Undead": "009d40c0b3669836",
+   "WARRIOR/Human": "009d40c0b3669836"
+  },
+  "RestedXP Forever Guide (H)||1-6 Durotar": {
+   "HUNTER/Orc": "f5b29c4fd64be14a",
+   "MAGE/Gnome": "301ce5c57611315a",
+   "PRIEST/Undead": "5b0d41d0ddec8413",
+   "WARRIOR/Human": "a4772cbc44d8c3a9"
+  },
+  "RestedXP Forever Guide (H)||1-6 Mulgore": {
+   "HUNTER/Orc": "7b89e3367f99e306",
+   "MAGE/Gnome": "b3f3e7407dabf3cb",
+   "PRIEST/Undead": "b3f3e7407dabf3cb",
+   "WARRIOR/Human": "118c2e4483e52a18"
+  },
+  "RestedXP Forever Guide (H)||1-6 Tirisfal Glades": {
+   "HUNTER/Orc": "3c975bdc8e1c3788",
+   "MAGE/Gnome": "a14c184f07e19e03",
+   "PRIEST/Undead": "5be6ee49b4109417",
+   "WARRIOR/Human": "67cd7f75704e8c57"
+  },
+  "RestedXP Forever Guide (H)||10-12 Durotar": {
+   "HUNTER/Orc": "430e9d4558c93492",
+   "MAGE/Gnome": "b6762259b6278533",
+   "PRIEST/Undead": "b6762259b6278533",
+   "WARRIOR/Human": "b6762259b6278533"
+  },
+  "RestedXP Forever Guide (H)||10-12 Tirisfal (Orc/Troll)": {
+   "HUNTER/Orc": "c4977ca90265406b",
+   "MAGE/Gnome": "48b00fb6008ba2a9",
+   "PRIEST/Undead": "bf2a5aa03ca1b421",
+   "WARRIOR/Human": "9c7b4b5db63ef9fa"
+  },
+  "RestedXP Forever Guide (H)||12-14 Silverpine Forest": {
+   "HUNTER/Orc": "952b8456ea351e32",
+   "MAGE/Gnome": "cf7bb190111aff16",
+   "PRIEST/Undead": "497aa22372de8579",
+   "WARRIOR/Human": "dec8a52de30b3831"
+  },
+  "RestedXP Forever Guide (H)||12-17 The Barrens": {
+   "HUNTER/Orc": "6b95c2c434be418e",
+   "MAGE/Gnome": "e3d05f4717218e1e",
+   "PRIEST/Undead": "688740c3f8d60ed9",
+   "WARRIOR/Human": "b38d3197ff33a346"
+  },
+  "RestedXP Forever Guide (H)||12-17 The Barrens AoE": {
+   "HUNTER/Orc": "ae85dec0886e9414",
+   "MAGE/Gnome": "7c2f3b19f0b256e0",
+   "PRIEST/Undead": "3b7c6f90dc6ed67b",
+   "WARRIOR/Human": "ae85dec0886e9414"
+  },
+  "RestedXP Forever Guide (H)||17-21 Stonetalon/Barrens AoE": {
+   "HUNTER/Orc": "335e61e622404f54",
+   "MAGE/Gnome": "335e61e622404f54",
+   "PRIEST/Undead": "335e61e622404f54",
+   "WARRIOR/Human": "335e61e622404f54"
+  },
+  "RestedXP Forever Guide (H)||17-22 Stonetalon/Barrens/Ashenvale": {
+   "HUNTER/Orc": "9ec61633b437c4fb",
+   "MAGE/Gnome": "2b371ec71a63dc97",
+   "PRIEST/Undead": "245c9b9c19650490",
+   "WARRIOR/Human": "771c2c7e921d9bfb"
+  },
+  "RestedXP Forever Guide (H)||22-24 Hillsbrad": {
+   "HUNTER/Orc": "d4c51edfec76714c",
+   "MAGE/Gnome": "a2794d3a6c62fcfe",
+   "PRIEST/Undead": "ba083b39ed9928e3",
+   "WARRIOR/Human": "6091b95f1bbb0015"
+  },
+  "RestedXP Forever Guide (H)||23-24 Hillsbrad Class Quests": {
+   "HUNTER/Orc": "9b197a296b9819e4",
+   "MAGE/Gnome": "9b197a296b9819e4",
+   "PRIEST/Undead": "af37a77fd0fa481d",
+   "WARRIOR/Human": "9b197a296b9819e4"
+  },
+  "RestedXP Forever Guide (H)||24-26 Southern Barrens": {
+   "HUNTER/Orc": "c1abaa8744ee2408",
+   "MAGE/Gnome": "adfaca07b68b9fc8",
+   "PRIEST/Undead": "50d8991c2712c944",
+   "WARRIOR/Human": "ee6e06ca19e7292c"
+  },
+  "RestedXP Forever Guide (H)||24-26 Southern Barrens/Stonetalon": {
+   "HUNTER/Orc": "eca7b863dfe1aed9",
+   "MAGE/Gnome": "b85362b5517b6cd9",
+   "PRIEST/Undead": "d7a0d33884f537c4",
+   "WARRIOR/Human": "9a9209cbd68bc2f7"
+  },
+  "RestedXP Forever Guide (H)||26-28 Ashenvale": {
+   "HUNTER/Orc": "7811b6adbc8649fe",
+   "MAGE/Gnome": "39c73282ba905187",
+   "PRIEST/Undead": "39c73282ba905187",
+   "WARRIOR/Human": "39c73282ba905187"
+  },
+  "RestedXP Forever Guide (H)||26-28 SoD Ashenvale": {
+   "HUNTER/Orc": "242737e47cebb23c",
+   "MAGE/Gnome": "7b91d83205730db7",
+   "PRIEST/Undead": "caaa0882f833a534",
+   "WARRIOR/Human": "caaa0882f833a534"
+  },
+  "RestedXP Forever Guide (H)||28-30 Thousand Needles": {
+   "HUNTER/Orc": "b303862159e5a370",
+   "MAGE/Gnome": "0770a300a1b15ba4",
+   "PRIEST/Undead": "c88362c7cad87fb9",
+   "WARRIOR/Human": "3b7b4bbba1c1cc12"
+  },
+  "RestedXP Forever Guide (H)||30-33 Hillsbrad/Arathi": {
+   "HUNTER/Orc": "97755fb7b8ec403b",
+   "MAGE/Gnome": "e217288bcc4d4fdb",
+   "PRIEST/Undead": "c35af84961e26983",
+   "WARRIOR/Human": "10ed5c534d0d19e8"
+  },
+  "RestedXP Forever Guide (H)||33-34 Shimmering Flats": {
+   "HUNTER/Orc": "6973c218ce31543c",
+   "MAGE/Gnome": "e9426fa180c6c42b",
+   "PRIEST/Undead": "a4dacc3d51e7f122",
+   "WARRIOR/Human": "1bc42dc295d4a4dc"
+  },
+  "RestedXP Forever Guide (H)||34-35 Desolace": {
+   "HUNTER/Orc": "8030715150b3bcee",
+   "MAGE/Gnome": "aaee70beb3c31821",
+   "PRIEST/Undead": "aa9da453ed9470cc",
+   "WARRIOR/Human": "c42ecb19c024de12"
+  },
+  "RestedXP Forever Guide (H)||35-37 Northern Stranglethorn": {
+   "HUNTER/Orc": "ecfa8f1f9031a06c",
+   "MAGE/Gnome": "d8e92e8133853c75",
+   "PRIEST/Undead": "1a276ada39048942",
+   "WARRIOR/Human": "c0411659eea9fa03"
+  },
+  "RestedXP Forever Guide (H)||37-38 Dustwallow Marsh": {
+   "HUNTER/Orc": "3eef48ebab052324",
+   "MAGE/Gnome": "aed03139b382c8d2",
+   "PRIEST/Undead": "75bae6267a71c4c4",
+   "WARRIOR/Human": "a6ea5784e08c7dec"
+  },
+  "RestedXP Forever Guide (H)||38-39 Alterac/Arathi": {
+   "HUNTER/Orc": "8b02cad1a8440e21",
+   "MAGE/Gnome": "4ea84f3b5978a35a",
+   "PRIEST/Undead": "d74ee08ddcd081e7",
+   "WARRIOR/Human": "2d66b4ae90ea9e6d"
+  },
+  "RestedXP Forever Guide (H)||39-40 Badlands": {
+   "HUNTER/Orc": "824e27c7803bee07",
+   "MAGE/Gnome": "2c07cd4bac64afcd",
+   "PRIEST/Undead": "824e27c7803bee07",
+   "WARRIOR/Human": "824e27c7803bee07"
+  },
+  "RestedXP Forever Guide (H)||40-41 Stranglethorn Vale": {
+   "HUNTER/Orc": "6445cbce2f71b8ba",
+   "MAGE/Gnome": "eb7c015c862bdaa9",
+   "PRIEST/Undead": "3573c2f91f6f1a28",
+   "WARRIOR/Human": "61b7b388b204c046"
+  },
+  "RestedXP Forever Guide (H)||41-400_41-41 Swamp of Sorrows": {
+   "HUNTER/Orc": "e9e4eceeca20131b",
+   "MAGE/Gnome": "8f7bf0e1b58ecdba",
+   "PRIEST/Undead": "8691854f68879852",
+   "WARRIOR/Human": "c6f73c026792ca8f"
+  },
+  "RestedXP Forever Guide (H)||41-41 Desolace II": {
+   "HUNTER/Orc": "68cf536804ee0e9f",
+   "MAGE/Gnome": "68cf536804ee0e9f",
+   "PRIEST/Undead": "68cf536804ee0e9f",
+   "WARRIOR/Human": "68cf536804ee0e9f"
+  },
+  "RestedXP Forever Guide (H)||41-43 Tanaris/Dustwallow": {
+   "HUNTER/Orc": "98975f9737ce4132",
+   "MAGE/Gnome": "3193eb632b523ebe",
+   "PRIEST/Undead": "a187b88a17ff544d",
+   "WARRIOR/Human": "704a8aa0eda695ec"
+  },
+  "RestedXP Forever Guide (H)||43-44 Feralas": {
+   "HUNTER/Orc": "fc6ab328a8a85a81",
+   "MAGE/Gnome": "5f11c4f29f50e097",
+   "PRIEST/Undead": "068045d26a3b04cd",
+   "WARRIOR/Human": "4d8d6e848f90b9bd"
+  },
+  "RestedXP Forever Guide (H)||44-45 Southern Stranglethorn": {
+   "HUNTER/Orc": "eafea1b431b52ab0",
+   "MAGE/Gnome": "eafea1b431b52ab0",
+   "PRIEST/Undead": "eafea1b431b52ab0",
+   "WARRIOR/Human": "eafea1b431b52ab0"
+  },
+  "RestedXP Forever Guide (H)||45-46 Swamp of Sorrows": {
+   "HUNTER/Orc": "66964d10d0c07bc8",
+   "MAGE/Gnome": "30fe2ab96990063e",
+   "PRIEST/Undead": "30fe2ab96990063e",
+   "WARRIOR/Human": "beb362088f2d13eb"
+  },
+  "RestedXP Forever Guide (H)||46-48 Tanaris": {
+   "HUNTER/Orc": "d2a0c4f1a1060272",
+   "MAGE/Gnome": "8610ce347175b5de",
+   "PRIEST/Undead": "4b9979f87d25c75e",
+   "WARRIOR/Human": "306b2ff87b1b3c0b"
+  },
+  "RestedXP Forever Guide (H)||48-49 The Hinterlands": {
+   "HUNTER/Orc": "09a6b79f4d3b9261",
+   "MAGE/Gnome": "dbebac3f6d2eb6f1",
+   "PRIEST/Undead": "97eda87769abe88f",
+   "WARRIOR/Human": "b488ebbe426ff711"
+  },
+  "RestedXP Forever Guide (H)||49-50 Feralas": {
+   "HUNTER/Orc": "8ebfde26f63e4f26",
+   "MAGE/Gnome": "8ebfde26f63e4f26",
+   "PRIEST/Undead": "8ebfde26f63e4f26",
+   "WARRIOR/Human": "8ebfde26f63e4f26"
+  },
+  "RestedXP Forever Guide (H)||50-51 Stranglethorn/Blasted Lands": {
+   "HUNTER/Orc": "1545585511382545",
+   "MAGE/Gnome": "e16530e4557a8562",
+   "PRIEST/Undead": "e16530e4557a8562",
+   "WARRIOR/Human": "d29690c40d66f3af"
+  },
+  "RestedXP Forever Guide (H)||51-52 Searing Gorge/Burning Steppes": {
+   "HUNTER/Orc": "a818dd487468e5f2",
+   "MAGE/Gnome": "d8c8acd29691f04f",
+   "PRIEST/Undead": "a818dd487468e5f2",
+   "WARRIOR/Human": "a818dd487468e5f2"
+  },
+  "RestedXP Forever Guide (H)||52-53 Azshara": {
+   "HUNTER/Orc": "7e8147b27fc9abab",
+   "MAGE/Gnome": "7260cb8010a95f56",
+   "PRIEST/Undead": "77b7e72601e41db9",
+   "WARRIOR/Human": "b09a8a01ec9c67e4"
+  },
+  "RestedXP Forever Guide (H)||53-54 Felwood": {
+   "HUNTER/Orc": "6f7433702be2efbe",
+   "MAGE/Gnome": "5a69e4d4c86b51ed",
+   "PRIEST/Undead": "c71fd4f28a460cda",
+   "WARRIOR/Human": "b910a6da2e97f144"
+  },
+  "RestedXP Forever Guide (H)||54-55 Un'Goro Crater": {
+   "HUNTER/Orc": "1266f222cc21b340",
+   "MAGE/Gnome": "510f8aa8b3b5b32f",
+   "PRIEST/Undead": "3846e8daf3e00837",
+   "WARRIOR/Human": "68c4020ac8939574"
+  },
+  "RestedXP Forever Guide (H)||55-56 Felwood/Winterspring": {
+   "HUNTER/Orc": "9f53561f4e58ae56",
+   "MAGE/Gnome": "90981cb1149bc03e",
+   "PRIEST/Undead": "23c22166c3e83b73",
+   "WARRIOR/Human": "ff7784eb34a5da2b"
+  },
+  "RestedXP Forever Guide (H)||56-58 Western PL/Eastern PL": {
+   "HUNTER/Orc": "d6130ac66c2a3506",
+   "MAGE/Gnome": "b646cc14711f7f68",
+   "PRIEST/Undead": "c59c81b52cd839b9",
+   "WARRIOR/Human": "9efeeb2ad2d2c657"
+  },
+  "RestedXP Forever Guide (H)||58-59 Winterspring/Silithus I": {
+   "HUNTER/Orc": "e555fa9098c7eb29",
+   "MAGE/Gnome": "b3e7b0937e8522d6",
+   "PRIEST/Undead": "768f64032e135d1f",
+   "WARRIOR/Human": "922fe3d4fee4fcfe"
+  },
+  "RestedXP Forever Guide (H)||59-60 Winterspring/Silithus II": {
+   "HUNTER/Orc": "fa3d69654c7f3889",
+   "MAGE/Gnome": "ae6d7d0035689b97",
+   "PRIEST/Undead": "fa3d69654c7f3889",
+   "WARRIOR/Human": "fa3d69654c7f3889"
+  },
+  "RestedXP Forever Guide (H)||6-10 Durotar": {
+   "HUNTER/Orc": "350f7901873ddb27",
+   "MAGE/Gnome": "44541ad369e7e801",
+   "PRIEST/Undead": "1375f343341b764b",
+   "WARRIOR/Human": "3474488f46ce2d1b"
+  },
+  "RestedXP Forever Guide (H)||6-12 Mulgore": {
+   "HUNTER/Orc": "a3b548fdb18dfe69",
+   "MAGE/Gnome": "4880b4d7e9022e7c",
+   "PRIEST/Undead": "4880b4d7e9022e7c",
+   "WARRIOR/Human": "6d4b24e8a82b0196"
+  },
+  "RestedXP Forever Guide (H)||6-12 Tirisfal Glades": {
+   "HUNTER/Orc": "fa1c2da7f9e810dd",
+   "MAGE/Gnome": "a4dfcbe6f749255c",
+   "PRIEST/Undead": "88261d7fd94c1bba",
+   "WARRIOR/Human": "9df81672c42a8dbd"
+  },
+  "RestedXP Horde Mage AoE||21-30 Silverpine/Hillsbrad AoE": {
+   "HUNTER/Orc": "694f3ad9df5d3bc6",
+   "MAGE/Gnome": "34c9262fde672803",
+   "PRIEST/Undead": "694f3ad9df5d3bc6",
+   "WARRIOR/Human": "694f3ad9df5d3bc6"
+  },
+  "RestedXP Horde Mage AoE||30-36 Arathi/Alterac AoE": {
+   "HUNTER/Orc": "d4e20d0ad976cc04",
+   "MAGE/Gnome": "d4e20d0ad976cc04",
+   "PRIEST/Undead": "d4e20d0ad976cc04",
+   "WARRIOR/Human": "d4e20d0ad976cc04"
+  },
+  "RestedXP Horde Mage AoE||36-60 Mage AoE": {
+   "HUNTER/Orc": "8e2563a49a18755e",
+   "MAGE/Gnome": "8e2563a49a18755e",
+   "PRIEST/Undead": "751a604ec2672f7e",
+   "WARRIOR/Human": "8e2563a49a18755e"
+  }
+ }
+}

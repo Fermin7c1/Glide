@@ -1,0 +1,22 @@
+# Lint settings only (the project is not a Python package). tests/test_lint.py runs `ruff check .` with them.
+[tool.ruff]
+target-version = "py312"
+extend-exclude = ["addon", "desktop", "data", "reference"]
+
+[tool.ruff.lint]
+# Real-signal rules only: pyflakes (unused and undefined names), syntax errors, bugbear, pylint errors, and the
+# if/else with two equal branches. The house style is printf formatting (no UP031) and the code is not formatted
+# by a tool, so no style rules; `# noqa: BLE001 / E402 / E702 / E731` comments in the code mark deliberate choices
+# and stay as documentation.
+select = ["F", "E9", "B", "PLE", "RUF034"]
+ignore = ["B905"]     # zip() without strict=: the zips pair equal-length lists by construction
+
+[tool.ruff.lint.per-file-ignores]
+# Left for the tests' own cleanup (another change rewrites these files): unused imports and one loop variable.
+"tests/test_addon.py" = ["F401"]
+"tests/test_briefing.py" = ["F401"]
+"tests/test_extras.py" = ["F401"]
+"tests/test_llm_efficiency.py" = ["F401"]
+"tests/kb/test_analyzer.py" = ["F401"]
+"tests/kb/test_community.py" = ["F401"]
+"tests/test_dashboard_http.py" = ["B007"]

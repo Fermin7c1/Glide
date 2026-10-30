@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:*">
+<title>Glide overlay</title>
+<link rel="stylesheet" href="glide.css">
+<style>
+  html,body{margin:0;background:transparent;overflow:hidden;user-select:none}
+  #box{margin:0;padding:7px 12px;border-radius:10px;color:#f1ede3;background:rgba(12,13,18,var(--op,.86));border:1px solid rgba(48,52,63,.9);
+       font-size:var(--fs,13px);line-height:1.35;box-sizing:border-box;width:100vw}
+  #step{font-family:var(--f-title);font-weight:400;font-size:1.08em;color:#f2c24f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #msg{margin-top:3px}
+  #msg.urgent{color:#ffb3ab}
+  #msg:empty,#box.collapsed #msg{display:none}
+  #state{font-size:12px;color:#8b867b}
+  #state:empty{display:none}
+  body.held #box,body.unlocked #box{border-color:#f2c24f;cursor:move}
+  #ctl{display:none;gap:6px;align-items:center;margin-top:6px;font-size:12px;color:#f2c24f;cursor:default}
+  body.unlocked #ctl{display:flex}
+  #ctl button{background:#1a1d26;color:#f1ede3;border:1px solid #30343f;border-radius:5px;font:inherit;padding:1px 8px;cursor:pointer}
+  #ctl button:hover{border-color:#f2c24f}
+  #msg.old{opacity:.55}
+  /* push-to-talk as it happens: a gold "Listening" with a pulsing dot while the key is held */
+  #ptt{display:none;align-items:center;gap:7px;margin-top:5px;font-weight:650;color:#f2c24f}
+  #ptt i{width:8px;height:8px;border-radius:50%;background:#ff6257;animation:pulse 1s ease-in-out infinite}
+  body.ptt-listening #ptt,body.ptt-transcribing #ptt{display:flex}
+  body.ptt-listening #box{border-color:#f2c24f;box-shadow:0 0 14px rgba(242,194,79,.45)}
+  body.ptt-transcribing #ptt i{background:#f2c24f;animation-duration:.6s}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.75)}}
+</style>
+</head>
+<body>
+<div id="box">
+  <div id="step">Glide</div>
+  <div id="state"></div>
+  <div id="ptt" role="status" aria-live="polite"><i aria-hidden="true"></i><span id="pttl">Listening</span></div>
+  <div id="msg"></div>
+  <div id="ctl"><span>Drag to move (or hold Alt any time)</span><button id="narrow">− width</button><button id="wide">+ width</button>
+    <button id="collapse">collapse</button><button id="lock">lock (Ctrl+Alt+O)</button></div>
+</div>
+<script type="module" src="overlay.js"></script>
+</body>
+</html>

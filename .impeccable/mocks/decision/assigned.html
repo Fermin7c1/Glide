@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:#101a33;color:#f4f6fb;font-family:Archivo,sans-serif;display:grid;grid-template-columns:76px 1fr}
+.rail{background:#2f5bff;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:22px}
+.rail .logo{width:40px;height:40px;border-radius:10px;background:#fff;color:#2f5bff;font-weight:800;display:grid;place-items:center;font-size:20px}
+.rail .it{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#dfe6ff;font-size:13px;font-weight:600}
+.rail .it.on{background:#101a33;color:#fff}
+.main{display:grid;grid-template-rows:118px 1fr}
+.strip{display:grid;grid-template-columns:auto 1fr repeat(3,auto);gap:40px;align-items:center;padding:0 36px;border-bottom:2px solid #22305a;background:#0c1428}
+.big{font-stretch:75%;font-weight:700;font-size:58px;line-height:1;font-variant-numeric:tabular-nums}
+.lab{font-size:15px;color:#9aa6c7;margin-top:6px}
+.bar{height:22px;border-radius:4px;background:#1c2a52;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 38% 0 0;background:#9b7bff}.bar b{position:absolute;top:0;bottom:0;left:62%;width:14%;background:#3d86d6}
+.stat .big{font-size:46px}.spark{display:block;margin-top:6px}
+.work{display:grid;grid-template-columns:1fr 420px;gap:28px;padding:28px 36px}
+.plate{background:#f4f6fb;color:#101a33;border-radius:14px;padding:26px 30px}
+.plate .k{font-size:16px;color:#4a5680;font-weight:600}
+.plate h1{font-stretch:80%;font-size:54px;line-height:1.02;font-weight:800;margin:8px 0 14px}
+.plate .where{display:flex;gap:28px;align-items:baseline}
+.plate .dist{font-stretch:75%;font-size:64px;font-weight:800;color:#2f5bff;font-variant-numeric:tabular-nums}
+.plate .to{font-size:24px;font-weight:600}
+.splits{margin-top:22px}
+.sh{display:flex;justify-content:space-between;font-size:16px;color:#9aa6c7;padding:0 4px 10px}
+.row{display:grid;grid-template-columns:56px 1fr 120px 110px;align-items:center;height:58px;border-top:1px solid #22305a;padding:0 4px;font-size:22px}
+.row .n{color:#9aa6c7;font-variant-numeric:tabular-nums}
+.row .t{font-variant-numeric:tabular-nums;text-align:right;color:#c9d1ea}
+.row .d{font-stretch:80%;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.g{color:#33d17a}.r{color:#ff5a5f}.gold{color:#ffc53d}
+.row.done{text-decoration:line-through;text-decoration-color:#4a5680;color:#7c88ad}
+.side{display:flex;flex-direction:column;gap:18px}
+.card{background:#16234a;border-radius:12px;padding:18px 20px}
+.card h3{font-size:18px;font-weight:700;margin-bottom:12px}
+.msg{font-size:21px;line-height:1.35;border-left:4px solid #2f5bff;padding-left:14px}
+.msg+.msg{margin-top:14px;color:#c9d1ea;font-size:18px;border-color:#33456e}
+.up{display:flex;justify-content:space-between;font-size:20px;padding:6px 0}.up b{color:#1eff00;font-weight:600}
+.buffs{display:flex;gap:10px}.buff{flex:1;background:#101a33;border-radius:8px;padding:10px;font-size:18px}.buff span{display:block;font-stretch:75%;font-size:28px;font-weight:700}
+</style></head><body>
+<nav class="rail"><div class="logo">G</div><div class="it on">Run</div><div class="it">Map</div><div class="it">Ask</div><div class="it">Gear</div><div class="it">Set</div></nav>
+<div class="main">
+<header class="strip">
+ <div><div class="big">L14</div><div class="lab">Warrior · Skyborne</div></div>
+ <div><div class="bar"><i></i><b></b></div><div class="lab">8,210 / 13,200 XP · 1,850 rested</div></div>
+ <div class="stat"><div class="big">18.4k</div><svg class="spark" width="130" height="22"><polyline fill="none" stroke="#33d17a" stroke-width="3" points="0,18 20,15 40,16 60,10 80,12 100,6 130,4"/></svg><div class="lab">XP / hour</div></div>
+ <div class="stat"><div class="big">16m</div><div class="lab">to level 15</div></div>
+ <div class="stat"><div class="big">1:42:07</div><div class="lab">session</div></div>
+</header>
+<section class="work">
+ <div>
+  <div class="plate"><div class="k">Now · step 12 of 61 · Elwynn Forest</div>
+   <h1>Turn in Infestation Investigation</h1>
+   <div class="where"><span class="dist">60 yd</span><span class="to">Elatrell Featherlight, Thendal Grove · right here</span></div></div>
+  <div class="splits"><div class="sh"><span>Steps 12 to 18, Elwynn Forest</span><span>modelled · delta</span></div>
+   <div class="row done"><span class="n">11</span><span>Kill Pesky Cirrusflies</span><span class="t">4:10</span><span class="d g">−0:22</span></div>
+   <div class="row"><span class="n">13</span><span>Accept The Cirrusfly Queen</span><span class="t">0:20</span><span class="d">—</span></div>
+   <div class="row"><span class="n">14</span><span>The Anchors of Zephras · 85 XP</span><span class="t">3:40</span><span class="d">—</span></div>
+   <div class="row"><span class="n">15</span><span>Juvenile Vuldren (8) · 30 yd NE</span><span class="t">5:05</span><span class="d">—</span></div>
+   <div class="row"><span class="n">16</span><span>Harmony in Balance · Rorian</span><span class="t">1:15</span><span class="d">—</span></div>
+  </div>
+ </div>
+ <aside class="side">
+  <div class="card"><h3>Coach</h3>
+   <div class="msg">Kill Pesky Cirrusflies 80 yards east, and kill Juvenile Vuldren you pass.</div>
+   <div class="msg">You're 1m 40s ahead of the plan. Keep the turn-in for step 16.</div></div>
+  <div class="card"><h3>Upgrades</h3><div class="up"><span>Linen Cloak · back</span><b>+6%</b></div><div class="up"><span>Worn Shortsword</span><span class="lab">not better</span></div></div>
+  <div class="card"><h3>Buffs and reminders</h3><div class="buffs"><div class="buff"><span>1:42</span>Battle Shout</div><div class="buff"><span>29:40</span>Fortitude</div></div>
+   <div class="up"><span>Repair near a smith</span><span class="lab">open</span></div></div>
+ </aside>
+</section></div></body></html>
