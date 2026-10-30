@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.join(ROOT, "companion"))
@@ -34,6 +35,9 @@ assert P("when I hit 10 remind me to train") == ("train", {"kind": "level", "lev
 assert P("remind me to check my mail in 15 minutes") == ("check my mail", {"kind": "time", "minutes": 15})
 assert P("remind me to sell junk next time I'm at a vendor") == ("sell junk", {"kind": "npc", "role": "vendor"})
 assert P("what's my next step") is None
+assert P("coach, remind me to train") == ("train", {"kind": "auto"}) and P("hey coach remind me to train")[0] == "train"
+t0 = time.time()
+assert R._REQ.match("coach" + "  coach" * 40 + "!") is None and time.time() - t0 < 1, "no runaway backtracking (py/redos)"
 assert P("remind me to hand in the wolf meat") == ("hand in the wolf meat", {"kind": "auto"}), "no place in 'hand in'"
 assert P("remind me to buy bandages at the vendor") == ("buy bandages", {"kind": "npc", "role": "vendor"})
 assert R.role_from_words("buy arrows") == "ammo" and R.role_from_words("visit my class trainer") == "class_trainer"

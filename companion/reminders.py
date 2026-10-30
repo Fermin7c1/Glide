@@ -361,7 +361,7 @@ class Env:
 # ------------------------------------------------------------------------------------------------------
 # "remind me ..." without the AI (offline, or a model without tools)
 # ------------------------------------------------------------------------------------------------------
-_REQ = re.compile(r"^(?:hey\s+|coach\s*,?\s+|please\s+|can you\s+|could you\s+)*remind me\s+(?:to\s+|about\s+)?(.+)$", re.I)
+_REQ = re.compile(r"^(?:hey\s+|coach(?:\s*,\s*|\s+)|please\s+|can you\s+|could you\s+)*remind me\s+(?:to\s+|about\s+)?(.+)$", re.I)
 _WHEN = re.compile(r"^(.*?)\s*,?\s+(when|once|next time|if|as soon as|whenever)\s+(.+)$", re.I)
 _END_TIME = re.compile(r"^(.+?)\s+in\s+(\d+)\s*(?:min|mins|minute|minutes)$", re.I)
 _END_LEVEL = re.compile(r"^(.+?)\s+(?:at|by|on)\s+(?:level|lvl)\s+(\d{1,2})$", re.I)
