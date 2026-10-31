@@ -489,7 +489,8 @@ they don't spell out.
 - **Contract 4 and files on disk additive (desktop IPC, `app-settings.json`): first-run setup** (`desktop` probe
   re-recorded: the `keys:test` channel). A new install opens a guided setup (`desktop/src/renderer/setup.ts`): the
   game folder and addon, push-to-talk recognition, key and a microphone check, the coach's voice, and an AI provider
-  whose key is tested before it's saved (`keys:test(env, value?)`, answering the model ids the key can use) with
+  (Anthropic, Gemini, OpenAI as the custom endpoint "openai" at api.openai.com, or OpenRouter) whose key is tested
+  before it's saved (`keys:test(env, value?)`, answering the model ids the key can use) with
   balanced or best models. `AppSettings.setupDone` marks it finished or skipped; a player whose WoW folder was set
   before it existed gets `"before-setup"` at start and never sees it; Settings > General runs it again. Settings it
   writes go through the existing `config:set`, `keys:set` and `app:settings:set`. The player asked (2026-10-30).

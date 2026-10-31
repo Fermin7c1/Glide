@@ -11,15 +11,17 @@ import { show } from "./nav.js";
 import { live } from "./state.js";
 import { AddonStatus, KeyStatus, KnownKey, Obj, TtsProvider, WowClient } from "./types.js";
 
-type Ai = "anthropic" | "gemini" | "openrouter" | "none";
+type Ai = "anthropic" | "gemini" | "openai" | "openrouter" | "none";
 interface Step { id: string; title: string; icon: string; draw(host: HTMLElement): void | Promise<void>; next(): Promise<boolean> }
 
-const AI_KEY: Record<Exclude<Ai, "none">, string> = { anthropic: "ANTHROPIC_API_KEY", gemini: "GEMINI_API_KEY", openrouter: "OPENROUTER_API_KEY" };
+const AI_KEY: Record<Exclude<Ai, "none">, string> = { anthropic: "ANTHROPIC_API_KEY", gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY" };
+// OpenAI's chat models go through the engine's custom endpoints; picking OpenAI adds this one
+const OPENAI_ENDPOINT = { id: "openai", label: "OpenAI", base_url: "https://api.openai.com/v1", key_env: "OPENAI_API_KEY" };
 const STT_KEY: Record<string, string> = { groq: "GROQ_API_KEY", openai: "OPENAI_API_KEY", deepgram: "DEEPGRAM_API_KEY" };
 const TTS_KEY: Record<string, string> = { openai: "OPENAI_API_KEY", elevenlabs: "ELEVENLABS_API_KEY", azure: "AZURE_SPEECH_KEY", google: "GOOGLE_TTS_API_KEY" };
 const SAMPLE = "Next: turn in Kobold Camp Cleanup to Marshal McBride, 40 yards north.";
-// [preferred id, any id of the same family]: the newest of the family the key lists when the preferred one isn't
-// there. [fast, deep] per quality.
+// [fallback id, its family]: the newest model of the family the key lists, else the fallback. [fast, deep] per quality.
 type Preset = [string, RegExp][];
 const PRESETS: Record<Exclude<Ai, "none">, Record<"balanced" | "best", Preset>> = {
   anthropic: {
@@ -29,6 +31,10 @@ const PRESETS: Record<Exclude<Ai, "none">, Record<"balanced" | "best", Preset>> 
   gemini: {
     balanced: [["gemini:gemini-3.5-flash-lite", /^gemini:gemini-[\d.]+-flash-lite$/], ["gemini:gemini-3.8-flash", /^gemini:gemini-[\d.]+-flash$/]],
     best: [["gemini:gemini-3.8-flash", /^gemini:gemini-[\d.]+-flash$/], ["gemini:gemini-3.1-pro", /^gemini:gemini-[\d.]+-pro$/]],
+  },
+  openai: {
+    balanced: [["ep:openai:gpt-5-mini", /^ep:openai:gpt-[\d.]+-mini$/], ["ep:openai:gpt-5", /^ep:openai:gpt-[\d.]+$/]],
+    best: [["ep:openai:gpt-5", /^ep:openai:gpt-[\d.]+$/], ["ep:openai:gpt-5", /^ep:openai:gpt-[\d.]+$/]],
   },
   openrouter: {
     balanced: [["anthropic/claude-haiku-5.5", /^anthropic\/claude-haiku-/], ["anthropic/claude-sonnet-5.5", /^anthropic\/claude-sonnet-/]],
@@ -297,16 +303,16 @@ async function nextVoice(): Promise<boolean> {
 }
 
 // ---- 4. AI help ----------------------------------------------------------------------------------------------
-/** The newest model of a preset's family the key can use (the preferred id when the key wasn't tested). */
+/** The newest model of a preset's family the key can use (the fallback when it lists none, or wasn't tested). */
 function resolve([pref, family]: [string, RegExp]): string {
   const ms = pick.models;
-  if (!ms?.length || ms.includes(pref)) return pref;
+  if (!ms?.length) return pref;
   const num = (id: string) => (id.match(/\d+/g) || []).map(Number);
   const newer = (a: string, b: string) => { const x = num(a), y = num(b); for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
   return ms.filter((m) => family.test(m) && !/preview|exp|latest|:free$/.test(m)).reduce((best, m) => (!best || newer(m, best) ? m : best), "") || pref;
 }
 const modelsFor = (ai: Exclude<Ai, "none">, q: "balanced" | "best") => PRESETS[ai][q].map(resolve);
-const short = (id: string) => id.replace(/^gemini:/, "").replace(/^anthropic\//, "");
+const short = (id: string) => id.replace(/^gemini:|^ep:openai:|^anthropic\//, "");
 
 function drawAi(host: HTMLElement): void {
   const ai = pick.ai;
@@ -316,6 +322,8 @@ function drawAi(host: HTMLElement): void {
     + (ai === "anthropic" ? aiMore("anthropic") : "")
     + choice("su-ai", "gemini", ai, "Google Gemini", "Free tier, and about a minute to set up.")
     + (ai === "gemini" ? aiMore("gemini") : "")
+    + choice("su-ai", "openai", ai, "OpenAI (GPT)", "GPT models, on prepaid credit on your OpenAI account.")
+    + (ai === "openai" ? aiMore("openai") : "")
     + choice("su-ai", "openrouter", ai, "OpenRouter", "One key for models from every vendor.")
     + (ai === "openrouter" ? aiMore("openrouter") : "")
     + choice("su-ai", "none", ai, "Not now", "Glide still coaches every step for free: callouts, the route and reminders. Questions get answers once you add a key in Settings.")
@@ -333,7 +341,8 @@ function aiMore(ai: Exclude<Ai, "none">): string {
       <div class="row"><button type="button" class="btn" id="su-test">${icon("check")}Test the key</button><span id="su-test-msg" class="help" role="status"></span></div>
       <div class="su-choices su-sub">
         ${choice("su-q", "balanced", pick.quality, "Balanced", `${esc(short(bf))} for callouts and spoken questions, ${esc(short(bd))} for typed questions.`, "Recommended")}
-        ${choice("su-q", "best", pick.quality, "Best answers", `${esc(short(xf))} and ${esc(short(xd))}: better answers, and costs more.`)}
+        ${choice("su-q", "best", pick.quality, "Best answers", xf === xd ? `${esc(short(xf))} for everything: better answers, and costs more.`
+          : `${esc(short(xf))} and ${esc(short(xd))}: better answers, and costs more.`)}
       </div>
       <p class="help">Any other model, and what each costs an hour: Settings &gt; AI models &amp; keys.</p></div>`;
 }
@@ -366,7 +375,12 @@ async function nextAi(): Promise<boolean> {
   if (pick.ai === "none") return true;
   if (!pick.models && !(await testAiKey())) return false;
   const [fast, deep] = modelsFor(pick.ai, pick.quality);
-  return !!(await call("config:set", { companion: { llm: { enabled: true, fast_model: fast, deep_model: deep } } }));
+  const llm: Obj = { enabled: true, fast_model: fast, deep_model: deep };
+  const eps: Obj[] = live.config.companion?.llm?.endpoints || [];
+  if (pick.ai === "openai" && !eps.some((e) => e.id === OPENAI_ENDPOINT.id)) llm.endpoints = [...eps, OPENAI_ENDPOINT];   // the whole list, as Settings saves it
+  const next = await call("config:set", { companion: { llm } });
+  if (next) live.config = next;
+  return !!next;
 }
 
 // ---- 5. ready ----------------------------------------------------------------------------------------------
@@ -449,7 +463,8 @@ export async function openSetup(): Promise<void> {
   if (sp.provider && sp.provider !== "windows") pick.tts = sp.provider;
   pick.voiceName = sp.voiceName || "";
   const fast = String(llm.fast_model || "");
-  pick.ai = fast.startsWith("gemini:") && hasKey("GEMINI_API_KEY") ? "gemini" : fast.includes("/") && hasKey("OPENROUTER_API_KEY") ? "openrouter" : "anthropic";
+  pick.ai = fast.startsWith("gemini:") && hasKey("GEMINI_API_KEY") ? "gemini" : fast.startsWith("ep:openai:") && hasKey("OPENAI_API_KEY") ? "openai"
+    : fast.includes("/") && hasKey("OPENROUTER_API_KEY") ? "openrouter" : "anthropic";
   pick.models = null;
   document.body.classList.add("in-setup");
   $("setup").hidden = false;

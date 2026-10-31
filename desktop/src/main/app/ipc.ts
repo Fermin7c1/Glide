@@ -182,7 +182,7 @@ function keyChannels(): void {
 }
 
 /** A model key against its own vendor: a key that lists models works. Answers the ids it can use, newest first where
- * the vendor orders them (Gemini's as gemini:<id>, the engine's form). OpenRouter's list is public, so its key is
+ * the vendor orders them, in the engine's form (Gemini's as gemini:<id>, OpenAI's as ep:openai:<id>). OpenRouter's list is public, so its key is
  * checked on its own route. */
 async function testModelKey(env: string, key: string): Promise<{ ok: boolean; models?: string[]; error?: string }> {
   const get = async (url: string, headers: Record<string, string>) => {
@@ -199,6 +199,11 @@ async function testModelKey(env: string, key: string): Promise<{ ok: boolean; mo
     if (env === "GEMINI_API_KEY" || env === "GOOGLE_API_KEY") {
       const d = await get("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { "x-goog-api-key": key });
       return { ok: true, models: (d.models || []).map((m: any) => String(m.name || "").replace(/^models\//, "gemini:")).filter((id: string) => id !== "gemini:") };
+    }
+    if (env === "OPENAI_API_KEY") {
+      // OpenAI's chat models reach the coach as the "openai" custom endpoint (setup.ts adds it)
+      const d = await get("https://api.openai.com/v1/models", { authorization: `Bearer ${key}` });
+      return { ok: true, models: (d.data || []).map((m: any) => m.id && `ep:openai:${m.id}`).filter(Boolean) };
     }
     if (env === "OPENROUTER_API_KEY") {
       await get("https://openrouter.ai/api/v1/key", { authorization: `Bearer ${key}` });
