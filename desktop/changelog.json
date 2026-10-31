@@ -2,6 +2,17 @@
   "_about": "What's new: shown in the app (click the version number). Newest first. Add an entry with every release.",
   "versions": [
     {
+      "version": "0.4.1",
+      "date": "2026-10-30",
+      "title": "Keeping your keys safe",
+      "items": [
+        "Your saved API keys keep working on newer versions of Glide: the way they're stored encrypted moved to Windows' newer method, and keys you saved before read back as they are.",
+        "The addon's /glide scan new and /glide scan all find quests again (they had been coming up empty; /glide scan range always worked).",
+        "Glide runs on a newer, more secure version of its app framework, along with updates to the parts it's built on.",
+        "Tidier under the hood: leftover code for data sources Glide no longer uses is gone, with no change to what the coach knows."
+      ]
+    },
+    {
       "version": "0.4.0",
       "date": "2026-10-30",
       "title": "Open source",
