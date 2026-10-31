@@ -1,6 +1,7 @@
-# Builds the Windows installer and publishes it to the public Fermin7c1/Glide-releases repo whenever the desktop
-# app's version (desktop/package.json) changes on main, after the CI checks (ci.yml) pass. Installed apps check
-# that repo and update themselves.
+# Builds the Windows installer and publishes it to the public Fermin7c1/Glide-releases repo on every push to main
+# that changes what players get (the paths below: what the installer ships), after the CI checks (ci.yml) pass.
+# Installed apps check that repo and update themselves. The version is the next patch after the last release, or
+# desktop/package.json's version when it was raised by hand (scripts/next-release.js); it is never committed back.
 #
 # Needs the secret RELEASES_TOKEN in the "release" environment (Settings > Environments): a fine-grained GitHub
 # token with access to Fermin7c1/Glide-releases only, permission "Contents: Read and write", with an expiry. The
@@ -10,7 +11,16 @@ name: Release desktop app
 on:
   push:
     branches: [main]
-    paths: [desktop/package.json]
+    paths:
+      - companion/**
+      - knowledge/**
+      - tools/**
+      - wowfiles/**
+      - addon/Glide/**
+      - data/seed/**
+      - requirements.txt
+      - desktop/**
+      - "!desktop/**/*.md"
   workflow_dispatch:
 
 permissions:
@@ -38,6 +48,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0          # the commit subjects since the last release go into What's new
 
       - name: Version, and is it released already?
         id: ver
@@ -53,7 +64,15 @@ jobs:
             Write-Host "::error::Can't reach Fermin7c1/Glide-releases with RELEASES_TOKEN. Create the public repo (with a README) and give the token access to it."
             exit 1
           }
-          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          # the last published release, and the commit it was built from (its notes say "source: <sha>"; before
+          # automatic releases, the last commit that changed the version line)
+          $latest = gh release view --repo Fermin7c1/Glide-releases --json tagName,body 2>$null | ConvertFrom-Json
+          $since = if ($latest -and $latest.body -match 'source: ([0-9a-f]{40})') { $Matches[1] } else {
+            git log -1 --format=%H -G '.version.: .[0-9]' -- package.json }
+          $env:LATEST = if ($latest) { $latest.tagName } else { "" }
+          $env:SINCE = $since
+          $v = (node scripts/next-release.js) -replace '^version=', ''
+          if ($LASTEXITCODE -ne 0 -or -not $v) { exit 1 }
           "version=$v" >> $env:GITHUB_OUTPUT
           # only a published release counts; a draft is a run that didn't finish, and this one finishes it
           $draft = gh release view "v$v" --repo Fermin7c1/Glide-releases --json isDraft --jq .isDraft 2>$null
@@ -88,7 +107,7 @@ jobs:
           $v = $env:VER
           gh release view "v$v" --repo Fermin7c1/Glide-releases *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes "Glide $v"
+            gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes "Glide $v`n`nsource: $env:GITHUB_SHA"
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
           exit 0

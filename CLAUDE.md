@@ -16,8 +16,8 @@ TypeScript) and the knowledge layer and tools (`knowledge/`, `tools/`, `wowfiles
   a scratch engine or server never uses port 8797.
 - **Stop processes only by exact executable path or by the PID you started.** Never by name or command-line match:
   that has killed unrelated programs.
-- **No commit, push, merge, tag or release unless asked.** Changing `version` in `desktop/package.json` triggers a
-  release to every player: never change it unless the task is a release.
+- **No commit, push, merge, tag or release unless asked.** Every push to `main` that touches what the installer
+  ships releases to every player (CONTRIBUTING.md, Releases), so a push to `main` is a release.
 - **API keys are never written to `config.json`** (or any file in the repository). The app keeps them encrypted;
   the engine reads them from the environment.
 - **No Blizzard assets in the repository or the installer**, except ones granted for it. Game data the app needs

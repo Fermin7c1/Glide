@@ -41,7 +41,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0          # the whole history: the version-bump check looks back to the last release
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
@@ -88,23 +87,3 @@ jobs:
       # needs node (desktop probe) and Edge (dashboard probe; windows-latest ships it in Program Files (x86))
       - name: Golden masters (portable tier)
         run: python tests/golden/golden.py check --portable
-
-      # The engine, knowledge, tools, game-file readers and addon reach players only in a release, and a release
-      # happens when desktop/package.json's version changes. A warning, not a failure: work in progress between
-      # releases is normal; this only says what the next release will carry.
-      - name: Changes waiting for a release
-        if: github.workflow == 'CI'      # not when release.yml runs these checks: that run is the release
-        run: |
-          # this repository has no release tags (they're in Fermin7c1/Glide-releases), so the last release is the
-          # last commit that changed the version line
-          $last = git log -1 --format=%H -G '.version.: .[0-9]' -- desktop/package.json
-          if (-not $last) { Write-Host "no version change found"; exit 0 }
-          $v = (Get-Content desktop/package.json -Raw | ConvertFrom-Json).version
-          $changed = @(git diff --name-only $last HEAD -- companion knowledge tools wowfiles addon)
-          if ($changed.Count) {
-            $list = ($changed | Select-Object -First 8) -join ", "
-            Write-Host "::warning title=Not released yet::$($changed.Count) file(s) under companion/, knowledge/, tools/, wowfiles/ or addon/ changed since version $v ($($last.Substring(0, 7))) without a desktop version bump: $list"
-          } else {
-            Write-Host "nothing waiting: no engine or addon change since version $v"
-          }
-          exit 0

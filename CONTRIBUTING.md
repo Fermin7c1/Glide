@@ -80,10 +80,13 @@ app. A difference is either a bug (fix it) or an intended change: record it in `
 
 ## Releases
 
-A release happens when `version` in `desktop/package.json` changes on `main`: `.github/workflows/release.yml` runs the
-CI checks, builds the installer and publishes it to `Fermin7c1/Glide-releases`, and installed apps update from there.
-So change that version only to release, and only as its own commit. The engine, knowledge, tools, `wowfiles/` and the
-addon reach players only through a release; CI warns when they changed since the last version bump.
+Every push to `main` that changes what the installer ships (the engine, knowledge, tools, `wowfiles/`, the addon,
+`data/seed/`, `requirements.txt` or `desktop/`) is a release: `.github/workflows/release.yml` runs the CI checks,
+builds the installer as the next patch version and publishes it to `Fermin7c1/Glide-releases`, and installed apps
+update from there. The version is never committed back; `desktop/scripts/next-release.js` picks it. Raise `version`
+in `desktop/package.json` by hand only for a new minor or major version. What's new gets an entry from the commit
+subjects since the last release unless `desktop/changelog.json` already has one for that version, so write commit
+subjects a player can read.
 
 The installer ships only what the engine runs (`build.extraResources` in `desktop/package.json`): a new
 development-only script in `tools/` or `knowledge/` belongs in its exclusions.
