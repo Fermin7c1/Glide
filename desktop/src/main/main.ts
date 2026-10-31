@@ -162,6 +162,11 @@ function announceUpdate(): void {
 async function start(): Promise<void> {
   Menu.setApplicationMenu(null);   // no File/Edit menu bar popping up on Alt (the overlay's drag key)
   settings.load();
+  // first-run setup is for new installs: a player whose WoW folder was set before it existed doesn't get it
+  if (!settings.current.setupDone && readConfig().wow_dir) {
+    settings.current.setupDone = "before-setup";
+    settings.save();
+  }
   engine.file?.header("app start", `Glide ${app.getVersion()}${isDev ? " (dev)" : ""}`, `Electron ${process.versions.electron}`);
   for (const problem of [appSettingsProblem(), secretsProblem()]) if (problem) engine.note(`[settings] ${problem}`);
   await loadSecrets().catch((e: Error) => engine.note(`[settings] the saved API keys can't be read: ${e.message}`));

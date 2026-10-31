@@ -47,6 +47,7 @@ export const SCHEMA: Tab[] = [
         { key: "app:engineArgs.noKb", label: "Rebuild the knowledge base in the background", type: "bool", def: true, invert: true, restart: true,
           help: "Merges new recordings and RestedXP updates while you play, then switches over without a restart." },
       ] },
+      { title: "First-run setup", special: "setup-again" },
       { title: "Walking map", special: "walk-map" },
       { title: "Data", special: "data-home" },
     ],

@@ -58,6 +58,7 @@
    "engine:stop",
    "keys:list",
    "keys:set",
+   "keys:test",
    "overlay:dragStart",
    "overlay:resize",
    "overlay:unlock",
@@ -291,6 +292,10 @@
       }
      ],
      "title": "Coach process"
+    },
+    {
+     "special": "setup-again",
+     "title": "First-run setup"
     },
     {
      "special": "walk-map",

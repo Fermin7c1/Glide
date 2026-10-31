@@ -51,6 +51,8 @@ export interface AppSettings {
   lastVersion?: string;           // the version that ran last, to say "updated to x.y.z" once
   notesSeen?: string;             // the newest version whose notes the user has seen (What's new)
   sessionBarOrder?: string[];     // the footer's pieces (their data-sb keys) in the order the user dragged them into
+  setupDone?: string;             // first-run setup finished or skipped (the version then; "before-setup" for players
+                                  // who had a WoW folder set before it existed): unset shows it
 }
 /** A window's change to the app settings: objects merge, and a null value removes the key (back to the default). */
 export type AppSettingsPatch = { [K in keyof AppSettings]?: AppSettings[K] | null };
@@ -104,6 +106,8 @@ export interface KeyStatus { env: string; saved: boolean; fromEnv: boolean; hint
 export interface Footprint { cpu: number; memMB: number; processes: number }
 
 export interface EndpointTest { ok: boolean; models?: string[]; error?: string }
+/** A model key tried against its vendor (keys:test): the model ids it can use (Gemini's as gemini:<id>). */
+export interface KeyTest { ok: boolean; models?: string[]; error?: string }
 
 /** What each channel takes and answers (the renderer gets the answer once the main process's promise settles). */
 export interface InvokeMap {
@@ -134,6 +138,7 @@ export interface InvokeMap {
   "keys:list": () => { known: KnownKey[]; status: KeyStatus[] };
   "keys:set": (env: string, value: string) => KeyStatus[];
   "endpoint:test": (baseUrl: string, keyEnv: string) => EndpointTest;
+  "keys:test": (env: string, value?: string) => KeyTest;      // value: a pasted key, before it's saved; else the saved one
   // the addon and folders
   "addon:status": () => AddonStatus;
   "addon:detect": () => WowClient[];

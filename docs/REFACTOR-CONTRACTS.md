@@ -486,3 +486,10 @@ they don't spell out.
   start with the asynchronous ones (`loadSecrets`, before the engine starts) and kept in memory; `setKey` is async,
   still starts from the file on disk, runs one at a time, and a key Windows asks to re-encrypt is saved again.
   `secrets.json` keeps its format, and keys saved by earlier versions read as before. The player asked (2026-10-30).
+- **Contract 4 and files on disk additive (desktop IPC, `app-settings.json`): first-run setup** (`desktop` probe
+  re-recorded: the `keys:test` channel). A new install opens a guided setup (`desktop/src/renderer/setup.ts`): the
+  game folder and addon, push-to-talk recognition, key and a microphone check, the coach's voice, and an AI provider
+  whose key is tested before it's saved (`keys:test(env, value?)`, answering the model ids the key can use) with
+  balanced or best models. `AppSettings.setupDone` marks it finished or skipped; a player whose WoW folder was set
+  before it existed gets `"before-setup"` at start and never sees it; Settings > General runs it again. Settings it
+  writes go through the existing `config:set`, `keys:set` and `app:settings:set`. The player asked (2026-10-30).

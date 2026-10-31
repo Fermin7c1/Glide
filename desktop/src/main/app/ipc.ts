@@ -158,6 +158,11 @@ function keyChannels(): void {
     await setKey(env, value);
     return keyStatus(endpointKeyEnvs());
   });
+  handle("keys:test", async (env: string, value?: string) => {
+    const key = String(value || "").trim() || keyValue(String(env));
+    if (!key) return { ok: false, error: "no key to test: paste one first" };
+    return testModelKey(String(env), key);
+  });
   handle("endpoint:test", async (baseUrl: string, keyEnv: string) => {
     const base = String(baseUrl || "").replace(/\/+$/, "");
     if (!/^https?:\/\//i.test(base)) return { ok: false, error: "the address must start with https:// (or http:// for one on this PC)" };
@@ -174,6 +179,36 @@ function keyChannels(): void {
       return { ok: false, error: String((e as Error).message || e) };
     }
   });
+}
+
+/** A model key against its own vendor: a key that lists models works. Answers the ids it can use, newest first where
+ * the vendor orders them (Gemini's as gemini:<id>, the engine's form). OpenRouter's list is public, so its key is
+ * checked on its own route. */
+async function testModelKey(env: string, key: string): Promise<{ ok: boolean; models?: string[]; error?: string }> {
+  const get = async (url: string, headers: Record<string, string>) => {
+    const r = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+    if (r.status === 401 || r.status === 403) throw new Error("the key was refused: check it was copied whole");
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return (await r.json()) as any;
+  };
+  try {
+    if (env === "ANTHROPIC_API_KEY") {
+      const d = await get("https://api.anthropic.com/v1/models?limit=100", { "x-api-key": key, "anthropic-version": "2023-06-01" });
+      return { ok: true, models: (d.data || []).map((m: any) => m.id).filter(Boolean) };
+    }
+    if (env === "GEMINI_API_KEY" || env === "GOOGLE_API_KEY") {
+      const d = await get("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { "x-goog-api-key": key });
+      return { ok: true, models: (d.models || []).map((m: any) => String(m.name || "").replace(/^models\//, "gemini:")).filter((id: string) => id !== "gemini:") };
+    }
+    if (env === "OPENROUTER_API_KEY") {
+      await get("https://openrouter.ai/api/v1/key", { authorization: `Bearer ${key}` });
+      const d = await get("https://openrouter.ai/api/v1/models", {});
+      return { ok: true, models: (d.data || []).map((m: any) => m.id).filter(Boolean) };
+    }
+    return { ok: false, error: `${env} isn't a model key Glide can test` };
+  } catch (e) {
+    return { ok: false, error: String((e as Error).message || e) };
+  }
 }
 
 function addonChannels({ engine }: IpcDeps): void {

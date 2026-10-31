@@ -166,6 +166,23 @@
     <div class="sb-item sb-mode" data-sb="mode" data-prio="2" id="sb-mode-wrap" title="Coach"><svg class="icon" id="sb-mode-ic" aria-hidden="true"><use href="#i-bot"/></svg><b id="sb-mode">–</b></div>
   </footer>
 </main>
+<section id="setup" class="setup" hidden aria-labelledby="su-title">
+  <aside class="su-side">
+    <div class="brand"><img src="icon.png" alt="" width="40" height="40"><span>Glide</span></div>
+    <p class="su-cap">Setting up</p>
+    <ol id="su-steps" class="su-list"></ol>
+    <div class="grow"></div>
+    <button id="su-skip" class="btn ghost" type="button">Skip setup</button>
+  </aside>
+  <div class="su-main">
+    <div id="su-body" class="su-body"></div>
+    <footer class="su-foot">
+      <button id="su-back" class="btn ghost big" type="button">Back</button>
+      <span id="su-hint" class="grow" role="status" aria-live="polite"></span>
+      <button id="su-next" class="btn primary big" type="button">Continue</button>
+    </footer>
+  </div>
+</section>
 <div id="toast" aria-live="polite"></div>
 <script type="module" src="app.js"></script>
 </body>

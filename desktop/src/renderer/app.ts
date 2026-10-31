@@ -19,11 +19,13 @@ import { renderEndpoints } from "./settings/endpoints.js";
 import { renderKeys } from "./settings/keys.js";
 import { renderModelPicker } from "./settings/model-picker.js";
 import { renderOverlayUnlock } from "./settings/overlay-position.js";
+import { renderSetupAgain } from "./settings/setup-again.js";
 import { registerPanels, renderSettings, wireSettings } from "./settings/page.js";
 import { renderVoices } from "./settings/voices.js";
 import { renderWalkMap } from "./settings/walk-map.js";
 import { renderSpeechInstall, wireSpeechStatus } from "./settings/whisper.js";
 import { live } from "./state.js";
+import { openSetup, wireSetup } from "./setup.js";
 import { refreshStatus, wireStatus } from "./status.js";
 import { UpdateStatus } from "./types.js";
 import { onUpdate, wireUpdates } from "./updates.js";
@@ -40,6 +42,7 @@ registerPanels({
   "walk-map": renderWalkMap,
   "data-home": renderDataHome,
   "overlay-unlock": renderOverlayUnlock,
+  "setup-again": renderSetupAgain,
 });
 
 wireNav();
@@ -59,6 +62,7 @@ wireAddon();
 wireMemory();
 wireStatus();
 wireUpdates();
+wireSetup();
 
 // ---- start ------------------------------------------------------------------------------------------------
 (async () => {
@@ -70,7 +74,9 @@ wireUpdates();
   onEngine((await call("engine:get"))!);
   onUpdate((await call("update:get")) || ({} as UpdateStatus));
   const cfg0 = (await call("config:get")) || {};
-  if (!cfg0.wow_dir) { show("addon"); toast("Welcome to Glide. Start by choosing your World of Warcraft folder, then install the addon.", false, 10000); }
   live.speech = (await call("speech:status")) || {};
   renderSettings();
+  // a new install walks through setup first; one that skipped it starts on the Addon page until the game is set
+  if (!live.appSettings.setupDone) openSetup();
+  else if (!cfg0.wow_dir) { show("addon"); toast("Start by choosing your World of Warcraft folder, then install the addon.", false, 10000); }
 })();

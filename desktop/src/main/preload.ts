@@ -12,7 +12,7 @@ const INVOKE = new Set<InvokeChannel>([
   "app:info", "app:settings:get", "app:settings:set", "app:note", "app:logs", "app:changelog", "app:mute",
   "tts:synth", "tts:voices", "res:watch", "update:get", "update:check", "update:install", "update:download",
   // config.json, API keys and custom endpoints
-  "config:get", "config:set", "keys:list", "keys:set", "endpoint:test",
+  "config:get", "config:set", "keys:list", "keys:set", "endpoint:test", "keys:test",
   // the addon and folders
   "addon:status", "addon:detect", "addon:install", "dialog:folder", "data:import", "shell:open",
   // offline speech recognition

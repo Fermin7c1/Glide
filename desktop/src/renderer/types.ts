@@ -2,7 +2,7 @@
 // them. They are defined once, in desktop/src/shared (type-only files both builds compile), and re-exported here.
 
 export type {
-  AddonStatus, AppInfo, AppSettings, AppSettingsPatch, EngineRunState, EngineStatus, Footprint, KeyGuide, KeyStatus, KnownKey,
+  AddonStatus, AppInfo, AppSettings, AppSettingsPatch, EngineRunState, EngineStatus, Footprint, KeyGuide, KeyStatus, KeyTest, KnownKey,
   LogLine, Obj, SpeechSettings, SpeechStatus, TtsProvider, UpdateStatus, Voice, WhisperModel, WowClient,
 } from "../shared/ipc.js";
 export type {
