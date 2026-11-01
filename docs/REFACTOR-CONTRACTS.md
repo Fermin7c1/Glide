@@ -527,3 +527,11 @@ they don't spell out.
   and `Skyborne@Horde`), and the `<<` condition check moved, unchanged otherwise, into
   `desktop/src/renderer/rxp-conditions.ts` (tested by `tests/test_rxp_conditions.py`). The player reported it
   (2026-11-01).
+- **Follow-up, contract 4 additive: RestedXP's free guides in the Explorer.** A bought string holds the levels RestedXP
+  sells (about 20-60 and the dungeon guides); the starter zones to about 20, Zephras Isle and the Mage AoE routes come
+  free inside the RestedXP addon (`Guides/forever`), so the Explorer showed no 1-20 guides. `rxp_import.py status`
+  now ends with one more entry for them (`{"id": "rxp-free", "free": true, "source", "items", ...}`, read from the
+  installed RestedXP, else the seed snapshot, as the knowledge build does), `guide rxp-free <index>` opens one, and
+  `RxpImport` gains the optional `free` and `source`. The Addon page's added list leaves that entry out; the Explorer
+  lists each group in level order. A free guide with a bought guide's group and name is left out. The player reported
+  it (2026-11-01).

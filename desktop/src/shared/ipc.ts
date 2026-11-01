@@ -188,6 +188,8 @@ export interface RxpImport {
   items?: RxpGuideSummary[];         // per-guide metadata for the interactive guide browser
   rxp: "waiting" | "done" | "failed";
   error: string | null;              // RestedXP's reason, when it failed
+  free?: boolean;                    // RestedXP's free guides (id "rxp-free"): for the Explorer, not an added string
+  source?: string | null;            // where the free guides were read: "RestedXP v4.11.15" or "Glide's copy"
 }
 /** What adding a string answered: the guides it holds, or why it couldn't be added (error, as the player reads it). */
 export interface RxpImportResult {

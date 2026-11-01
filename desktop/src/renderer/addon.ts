@@ -52,7 +52,8 @@ function rxpState(r: RxpImport): string {
 
 async function refreshRxp(): Promise<void> {
   const list = ((await quiet("addon:rxpImports")) as RxpImport[]) || [];
-  $("rxp-list").innerHTML = list.map((r) => {
+  // RestedXP's free guides come last: the Explorer lists them, but they aren't a string the player added
+  $("rxp-list").innerHTML = list.filter((r) => !r.free).map((r) => {
     const when = r.added ? new Date(r.added * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
     return `<li><div class="row"><b>${esc(packName(r.guides))}</b>${when ? ` <span class="dim">added ${esc(when)}</span>` : ""}<span class="grow"></span><button type="button" class="btn rxp-browse-pack" data-pack="${esc(r.id)}">Browse guides</button></div><span>${rxpState(r)}</span></li>`;
   }).join("");

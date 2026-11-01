@@ -168,6 +168,62 @@ try:
     assert "ns.rxpImports = {\n}" in R.handoff_lua([("x", {"guides": []})])
     assert R._lua_string('a"b\\c\n0\x019') == '"a\\"b\\\\c\\n0\\0019"'
     assert L.eval(R._lua_string('a"b\\c\n0\x019')) == 'a"b\\c\n0\x019'
+
+    # ---- RestedXP's free guides (the starter zones to ~20) come with its addon, not in a bought string ----------
+    # the Explorer lists them after the added strings, read from the installed addon's Guides/forever
+    rxp = os.path.join(wow, "Interface", "AddOns", "RXPGuides")
+    os.makedirs(os.path.join(rxp, "Guides", "forever", "dungeon"))
+    os.makedirs(os.path.join(rxp, "Guides", "classic"))
+    with open(os.path.join(rxp, "RXPGuides.toc"), "w", encoding="utf-8") as fh:
+        fh.write("## Interface: 11507\n## Version: v4.11.15\n")
+    free_durotar = ("RXPGuides.RegisterGuide([[\n#classic\n#group RestedXP Forever Guide (H)\n#name 1-6 Durotar\n"
+                    "step\n    .goto Durotar,43.3,68.5\n]])\nRXPGuides.RegisterGuide([[\n#group RestedXP Forever Guide (H)\n"
+                    "#name 6-12 Durotar\nstep\n    .accept 4641\n]])\n"
+                    # the same group and name as a bought guide (G1): the bought one wins, the free one isn't listed
+                    "RXPGuides.RegisterGuide([[\n#group RestedXP Horde 1-30\n#name 1-6 Durotar\nstep\n    .accept 1\n]])\n")
+    with open(os.path.join(rxp, "Guides", "forever", "Horde-01-12_Durotar.lua"), "w", encoding="utf-8") as fh:
+        fh.write(free_durotar)
+    with open(os.path.join(rxp, "Guides", "forever", "RestedXP-Skyborne.lua"), "w", encoding="utf-8") as fh:
+        fh.write("RXPGuides.RegisterGuide([[\n#group RestedXP Forever Guide (A) << Alliance\n#group RestedXP Forever "
+                 "Guide (H) << Horde\n#name 1-9 Zephras Isle\nstep\n    .goto Zephras Isle,50,50\n]])\n")
+    with open(os.path.join(rxp, "Guides", "forever", "dungeon", "RestedXP-Skyborne.lua"), "w", encoding="utf-8") as fh:
+        fh.write("RXPGuides.RegisterGuide([[\n#group RestedXP Forever Dungeon Guide (A)\n#name 1-9 Zephras Isle\n"
+                 "step\n    .goto Zephras Isle,50,50\n]])\n")
+    with open(os.path.join(rxp, "Guides", "classic", "Classic-Horde-01-12_Durotar.lua"), "w", encoding="utf-8") as fh:
+        fh.write("RXPGuides.RegisterGuide([[\n#group RestedXP Classic\n#name 1-6 Not Forever\nstep\n]])\n")
+    listed = R.status(home, wow)
+    assert [x["id"] for x in listed] == [r3["id"], r["id"], R.FREE_ID], "the free guides come last, once"
+    free = listed[-1]
+    assert free["free"] and free["source"] == "RestedXP v4.11.15" and free["rxp"] == "done", free
+    got = sorted((it["group"], it["name"], it["faction"]) for it in free["items"])
+    assert got == [("RestedXP Forever Dungeon Guide (A)", "1-9 Zephras Isle", "Alliance"),
+                   ("RestedXP Forever Guide (A)", "1-9 Zephras Isle", "Alliance"),          # Zephras: both factions
+                   ("RestedXP Forever Guide (H)", "1-6 Durotar", "Horde"),
+                   ("RestedXP Forever Guide (H)", "1-9 Zephras Isle", "Horde"),
+                   ("RestedXP Forever Guide (H)", "6-12 Durotar", "Horde")], got
+    zeph = [it["index"] for it in free["items"] if it["name"] == "1-9 Zephras Isle" and "Dungeon" not in it["group"]]
+    assert len(zeph) == 2 and zeph[0] == zeph[1], "both factions open the same guide"
+    # the Explorer opens a free guide by its index, as it opens a bought one
+    first = next(it for it in free["items"] if it["name"] == "1-6 Durotar")
+    d = R.guide_detail(home, R.FREE_ID, first["index"], wow)
+    assert d["name"] == "1-6 Durotar" and d["id"] == R.FREE_ID and len(d["steps"]) == 1, d
+    try:
+        R.guide_detail(home, R.FREE_ID, 99, wow)
+        raise AssertionError("an index past the free guides opened something")
+    except R.ImportProblem:
+        pass
+    # the free guides never go to the addon for RestedXP (it has them already)
+    R.sync(home, wow)
+    assert "Zephras" not in open(handoff, encoding="utf-8").read() and R.FREE_ID not in open(handoff, encoding="utf-8").read()
+    # without RestedXP installed: Glide's copy (the seed snapshot the knowledge build falls back to)
+    source, seed_free = R.free_guides(ROOT, None)
+    names = {g["name"] for g in seed_free}
+    assert source == "Glide's copy" and len(seed_free) >= 20 and "1-6 Durotar" in names, (source, len(seed_free))
+    zephras = [g for g in seed_free if g["name"].endswith("Zephras Isle") and "dungeon" not in g["file"]]
+    assert zephras and all(len(g["groups"]) == 2 for g in zephras), [g["groups"] for g in zephras]
+    # no addon and no seed: nothing extra listed, the added strings still are
+    shutil.rmtree(rxp)
+    assert [x["id"] for x in R.status(home, wow)] == [r3["id"], r["id"]]
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

@@ -166,6 +166,9 @@ def decode(parsed, key):
 
 
 _STEP_LINE = re.compile(r"^\s*step\b", re.M)
+FREE_ID = "rxp-free"        # the Guide & Route Explorer's id for RestedXP's free guides (an import's id is hex)
+_REGISTER = re.compile(r"RXPGuides\.RegisterGuide\(\[\[")
+_GROUP_LINE = re.compile(r"^\s*#group[ \t]+([^\r\n]+)", re.M)
 
 
 def guide_meta(text):
@@ -210,6 +213,71 @@ def guide_summary(index, g):
     }
 
 
+def free_guides(root, wow_dir):
+    """(source, [{"groups", "name", "text", "file"}]): RestedXP's free Forever guides, which come with the RestedXP
+    addon instead of in a bought string (the starter zones to about level 20, Zephras Isle, the Mage AoE routes and
+    their dungeon variants). They are read where the knowledge build reads them (tools/build_db.py free_guide_texts):
+    the installed addon's Guides/forever, else the seed snapshot. A guide RestedXP files under one group per faction
+    ("#group ... (A) << Alliance" and "(H) << Horde") lists every group."""
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
+    from knowledge import store as kstore
+    files, source = [], None
+    rxp_dir = os.path.join(wow_dir, *kstore.RXP_ADDON_DIR) if wow_dir else None
+    if rxp_dir and os.path.isdir(rxp_dir):
+        for p in kstore.rxp_files(rxp_dir):
+            rel = os.path.relpath(p, os.path.join(rxp_dir, "Guides")).replace(os.sep, "/")
+            if rel.lower().startswith("forever/"):
+                try:
+                    with open(p, encoding="utf-8", errors="replace") as fh:
+                        files.append((rel, fh.read()))
+                except OSError as e:
+                    log_once("rxp_import.free_guides", e)
+        source = "RestedXP %s" % (kstore.rxp_version(rxp_dir) or "addon") if files else None
+    seed = os.path.join(root, "data", "seed", "seed.json.gz")
+    if not files and os.path.exists(seed):
+        try:
+            import gzip
+            with gzip.open(seed, "rt", encoding="utf-8") as fh:
+                files = sorted(((json.load(fh).get("sources") or {}).get("rxp_free") or {}).items())
+            source = "Glide's copy" if files else None
+        except (OSError, ValueError) as e:
+            log_once("rxp_import.free_seed", e)
+    out = []
+    for rel, text in files:
+        for chunk in _REGISTER.split(text)[1:]:
+            body = chunk.split("]])", 1)[0]
+            m_step = _STEP_LINE.search(body)
+            hdr = body[:m_step.start()] if m_step else body
+            groups = []
+            for g in _GROUP_LINE.findall(hdr):
+                g = g.split("--")[0].split("<<")[0].strip()
+                if g and g not in groups:
+                    groups.append(g)
+            name = guide_meta(body)[1]
+            if name and groups:
+                out.append({"groups": groups, "name": name, "text": body, "file": rel})
+    return source, out
+
+
+def free_catalog(root, wow_dir, taken=()):
+    """The Explorer's entry for RestedXP's free guides, shaped like an import (status()), or None when there are none.
+    A free guide whose group and name a bought one also has (`taken`: {(group, name)}) is left out."""
+    source, guides = free_guides(root, wow_dir)
+    items = []
+    for i, g in enumerate(guides):
+        for grp in g["groups"]:
+            if (grp, g["name"]) in taken:
+                continue
+            item = guide_summary(i, {"group": grp, "name": g["name"], "text": g["text"]})
+            item["faction"] = "Alliance" if "(A)" in grp else "Horde" if "(H)" in grp else item["faction"]
+            items.append(item)
+    if not items:
+        return None
+    return {"id": FREE_ID, "free": True, "source": source, "added": None, "account": None,
+            "guides": [it["name"] for it in items], "items": items, "rxp": "done", "found": None, "error": None}
+
+
 def _entity_names(root, qids, npcs, items):
     """Best-effort {quests: {id: name}, npcs: {id: name}, items: {id: name}} from data/glide.db when present."""
     out = {"quests": {}, "npcs": {}, "items": {}}
@@ -241,10 +309,14 @@ def _entity_names(root, qids, npcs, items):
     return out
 
 
-def guide_detail(root, iid, index):
-    """Full parsed guide (steps, waypoints, loops, lines, actions, commentary) for the interactive guide browser."""
-    rec = load_store(root)["imports"].get(str(iid))
-    guides = (rec.get("guides") if isinstance(rec, dict) else None) or []
+def guide_detail(root, iid, index, wow_dir=None):
+    """Full parsed guide (steps, waypoints, loops, lines, actions, commentary) for the interactive guide browser:
+    guide `index` of an added string, or of RestedXP's free guides (iid FREE_ID)."""
+    if str(iid) == FREE_ID:
+        guides = [{"group": g["groups"][0], "name": g["name"], "text": g["text"]} for g in free_guides(root, wow_dir)[1]]
+    else:
+        rec = load_store(root)["imports"].get(str(iid))
+        guides = (rec.get("guides") if isinstance(rec, dict) else None) or []
     idx = int(index)
     if idx < 0 or idx >= len(guides) or not isinstance(guides[idx], dict):
         raise ImportProblem("Guide not found in that import.")
@@ -496,7 +568,9 @@ def sync(root, wow_dir):
 
 def status(root, wow_dir):
     """[{"id", "added", "account", "guides": [names], "items": [guide_summary], "rxp": "waiting"|"done"|"failed",
-    "found", "error"}], newest first: each added string and whether RestedXP has it yet."""
+    "found", "error"}], newest first: each added string and whether RestedXP has it yet. Last, when there are any,
+    RestedXP's free guides as one more entry ({"id": FREE_ID, "free": True, "source", ...}, free_catalog), so the
+    Explorer lists the levels a bought string leaves to them."""
     done = handed_over(wow_dir)
     out = []
     for iid, rec in load_store(root)["imports"].items():
@@ -508,6 +582,13 @@ def status(root, wow_dir):
                     "items": [guide_summary(i, g) for i, g in enumerate(raw_guides)],
                     "rxp": state, "found": note.get("ok"), "error": note.get("err")})
     out.sort(key=lambda r: r.get("added") or 0, reverse=True)
+    try:
+        free = free_catalog(root, wow_dir, {(it["group"], it["name"]) for r in out for it in r["items"]})
+    except Exception as e:  # noqa: BLE001 - the added guides still list without them
+        log_once("rxp_import.free_catalog", e)
+        free = None
+    if free:
+        out.append(free)
     return out
 
 
@@ -566,7 +647,7 @@ def main(argv=None):
         elif cmd == "sync":
             out = {"ok": True, "handoff": bool(sync(ROOT, wow_dir))}
         elif cmd == "guide" and len(argv) >= 3:
-            out = {"ok": True, "guide": guide_detail(ROOT, argv[1], int(argv[2]))}
+            out = {"ok": True, "guide": guide_detail(ROOT, argv[1], int(argv[2]), wow_dir)}
         else:
             out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide"}
     except ImportProblem as e:

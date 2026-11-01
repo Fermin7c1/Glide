@@ -712,7 +712,14 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
     }));
     for (const it of items) entries.push({ ...it, packId: imp.id });
   }
-  catalog = entries;
+  // each group in level order, so RestedXP's free 1-20 guides come before a bought string's 20-60 ones
+  const groupOrder = new Map<string, number>();
+  entries.forEach((e) => { if (!groupOrder.has(e.group)) groupOrder.set(e.group, groupOrder.size); });
+  const startLevel = (name: string) => { const m = /^\s*0?(\d+)\s*-/.exec(name); return m ? Number(m[1]) : 999; };
+  catalog = entries
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => groupOrder.get(a.e.group)! - groupOrder.get(b.e.group)! || startLevel(a.e.name) - startLevel(b.e.name) || a.i - b.i)
+    .map((x) => x.e);
   if (!catalog.length) {
     sec.hidden = true;
     return;
