@@ -135,6 +135,10 @@ try:
 
     st = {x["id"]: x for x in R.status(home, wow)}
     assert st[r["id"]]["rxp"] == "waiting" and st[r["id"]]["guides"] == ["1-6 Durotar", "6-11 Durotar"], st
+    assert [it["steps"] for it in st[r["id"]]["items"]] == [2, 1], st[r["id"]]["items"]
+    gd = R.guide_detail(home, r["id"], 0)
+    assert gd["name"] == "1-6 Durotar" and len(gd["steps"]) == 2 and gd["steps"][1]["x"] == 43.3, gd
+    assert gd["steps"][0]["actions"][0]["verb"] == "accept" and gd["steps"][0]["actions"][0]["quest_id"] == 4641
     assert [x["id"] for x in R.status(home, wow)] == [r3["id"], r["id"]], "newest first"
 
     # the addon noted the hand-offs (GlideRecorderDB.rxpImports): MAIN's string failed on ALT but RestedXP took it

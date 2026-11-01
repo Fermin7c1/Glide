@@ -92,6 +92,92 @@ export interface AddonStatus {
   upToDate: boolean;
 }
 export interface WowClient { path: string; flavor: string }
+export interface RxpGuideSummary {
+  index: number;
+  group: string;
+  subgroup: string | null;
+  name: string;
+  next: string | null;
+  faction: "Alliance" | "Horde" | null;
+  defaultFor: string | null;
+  version: number | null;
+  steps: number;
+}
+export interface RxpGuideWaypoint {
+  x: number;
+  y: number;
+  zone: string | null;
+  ui_map: number | null;
+  radius?: number | null;
+  mode?: string | null;
+  text?: string | null;
+}
+export interface RxpGuideLoop {
+  kind: "loop" | "line";
+  zone: string | null;
+  ui_map: number | null;
+  points: [number, number][];
+  range?: number | null;
+}
+export interface RxpGuideAction {
+  line: number | null;
+  verb: string;
+  kind?: string | null;
+  text: string | null;
+  raw_text: string | null;
+  comment?: string | null;
+  cond: string | null;
+  quest_id: number | null;
+  quest_name: string | null;
+  entity_kind: string | null;
+  entity_id: number | null;
+  entity_name: string | null;
+  units?: string[] | null;
+  qty: number | null;
+  zone: string | null;
+  ui_map: number | null;
+  x: number | null;
+  y: number | null;
+  location?: string | null;
+  url?: string | null;
+  level?: number | null;
+  xp?: number | null;
+}
+export interface RxpGuideStep {
+  idx: number;
+  line: number;
+  text: string | null;
+  comments: string | null;
+  cond: string | null;
+  flags: Record<string, unknown>;
+  zone: string | null;
+  ui_map: number | null;
+  x: number | null;
+  y: number | null;
+  waypoints: RxpGuideWaypoint[];
+  loops: RxpGuideLoop[];
+  actions: RxpGuideAction[];
+}
+export interface RxpGuideDetail {
+  id: string;
+  index: number;
+  name: string;
+  displayname: string | null;
+  group: string;
+  subgroup: string | null;
+  next: string | null;
+  next_list: { name: string | null; group: string | null; cond: string | null }[];
+  level_min: number | null;
+  level_max: number | null;
+  faction: string | null;
+  default_for: string | null;
+  version: number | null;
+  cond: string | null;
+  comments: string | null;
+  zones: { ui_map: number; name: string }[];
+  steps: RxpGuideStep[];
+  mapImages?: Record<number, string>;
+}
 /** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it
  * yet; the Glide addon hands it to RestedXP's importer at the next login ("waiting"), then notes "done" or "failed". */
 export interface RxpImport {
@@ -99,6 +185,7 @@ export interface RxpImport {
   added: number | null;              // unix seconds
   account: string | null;            // the WTF account folder whose RestedXP key opened it
   guides: string[];                  // the guides' names
+  items?: RxpGuideSummary[];         // per-guide metadata for the interactive guide browser
   rxp: "waiting" | "done" | "failed";
   error: string | null;              // RestedXP's reason, when it failed
 }
@@ -164,7 +251,7 @@ export interface InvokeMap {
   "addon:detect": () => WowClient[];
   "addon:install": () => { done: string[]; status: AddonStatus };
   "addon:rxpImport": (text: string) => RxpImportResult;   // add a RestedXP guide string (companion/rxp_import.py)
-  "addon:rxpImports": () => RxpImport[];                  // the strings added, and whether RestedXP has them yet
+  "addon:rxpImports": (id?: string, index?: number) => RxpImport[] | RxpGuideDetail | null; // list or one parsed guide
   "dialog:folder": (title: string, defaultPath?: string) => string | null;
   "data:import": (from: string) => boolean;
   "shell:open": (target: string) => string | void;

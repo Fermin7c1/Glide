@@ -165,12 +165,195 @@ def decode(parsed, key):
     return texts
 
 
+_STEP_LINE = re.compile(r"^\s*step\b", re.M)
+
+
 def guide_meta(text):
     """(group, name) from a guide's #group and #name lines (a "<< condition" after the group dropped)."""
     def first(tag):
         m = re.search(r"^\s*#%s[ \t]+([^\r\n]+)" % tag, text, re.M)
         return m.group(1).split("<<")[0].strip() if m else None
     return first("group"), first("name")
+
+
+def guide_summary(index, g):
+    """Lightweight summary of one stored guide dict for the guide browser's list."""
+    text = (g.get("text") if isinstance(g, dict) else "") or ""
+    m_step = _STEP_LINE.search(text)
+    hdr = text[:m_step.start()] if m_step else text
+
+    def tag(name):
+        m = re.search(r"^\s*#%s[ \t]+([^\r\n]+)" % name, hdr, re.M)
+        return m.group(1).split("--")[0].split("<<")[0].strip() if m else None
+
+    group = (g.get("group") if isinstance(g, dict) else None) or tag("group") or "RestedXP"
+    name = (g.get("name") if isinstance(g, dict) else None) or tag("name") or "?"
+    subgroup = tag("subgroup")
+    nxt = tag("next")
+    default_for = tag("defaultfor")
+    ver = tag("version")
+    faction = None
+    if re.search(r"<<\s*Alliance\b|\(A\)|\bAlliance\b", hdr + " " + group):
+        faction = "Alliance"
+    elif re.search(r"<<\s*Horde\b|\(H\)|\bHorde\b", hdr + " " + group):
+        faction = "Horde"
+    return {
+        "index": int(index),
+        "group": group,
+        "subgroup": subgroup,
+        "name": name,
+        "next": nxt,
+        "faction": faction,
+        "defaultFor": default_for,
+        "version": int(ver) if ver and ver.isdigit() else None,
+        "steps": len(_STEP_LINE.findall(text)),
+    }
+
+
+def _entity_names(root, qids, npcs, items):
+    """Best-effort {quests: {id: name}, npcs: {id: name}, items: {id: name}} from data/glide.db when present."""
+    out = {"quests": {}, "npcs": {}, "items": {}}
+    db_path = os.path.join(root, "data", "glide.db")
+    if not os.path.exists(db_path) or not (qids or npcs or items):
+        return out
+    import sqlite3
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % db_path.replace("\\", "/"), uri=True)
+    except sqlite3.Error:
+        return out
+    try:
+        if qids:
+            ph = ",".join("?" * len(qids))
+            for qid, name in conn.execute("SELECT id, name FROM quests WHERE id IN (%s) AND name IS NOT NULL" % ph,
+                                          tuple(qids)):
+                out["quests"][int(qid)] = name
+        for kind, ids, bucket in (("npc", npcs, "npcs"), ("item", items, "items")):
+            if ids:
+                ph = ",".join("?" * len(ids))
+                for eid, name in conn.execute(
+                        "SELECT id, name FROM entities WHERE kind = ? AND id IN (%s) AND name IS NOT NULL" % ph,
+                        (kind, *ids)):
+                    out[bucket][int(eid)] = name
+    except sqlite3.Error:
+        pass
+    finally:
+        conn.close()
+    return out
+
+
+def guide_detail(root, iid, index):
+    """Full parsed guide (steps, waypoints, loops, lines, actions, commentary) for the interactive guide browser."""
+    rec = load_store(root)["imports"].get(str(iid))
+    guides = (rec.get("guides") if isinstance(rec, dict) else None) or []
+    idx = int(index)
+    if idx < 0 or idx >= len(guides) or not isinstance(guides[idx], dict):
+        raise ImportProblem("Guide not found in that import.")
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
+    from knowledge.rxp_parser.guide import parse_guide
+    from knowledge.rxp_parser.maps import DEFAULT_MAPS
+    parsed = parse_guide(guides[idx].get("text") or "")
+    qids, npcs, items = set(), set(), set()
+    for st in parsed.get("steps") or ():
+        for a in st.get("actions") or ():
+            if a.get("quest_id"):
+                qids.add(int(a["quest_id"]))
+            if a.get("entity_kind") == "npc" and a.get("entity_id"):
+                npcs.add(int(a["entity_id"]))
+            elif a.get("entity_kind") == "item" and a.get("entity_id"):
+                items.add(int(a["entity_id"]))
+    names = _entity_names(root, qids, npcs, items)
+    steps_out = []
+    zones_seen = {}
+    for st in parsed.get("steps") or ():
+        actions_out = []
+        wps = []
+        loops = []
+        for a in st.get("actions") or ():
+            verb = a.get("verb")
+            if not verb:
+                continue
+            args = a.get("args") or {}
+            um = args.get("ui_map")
+            zname = DEFAULT_MAPS.name(um) if um else (args.get("zone") or st.get("zone"))
+            if um and zname:
+                zones_seen[int(um)] = zname
+            if verb in ("goto", "groundgoto", "flygoto", "waypoint", "pin", "questgoto", "treasure", "rare"):
+                if args.get("x") is not None and args.get("y") is not None:
+                    wps.append({"x": args["x"], "y": args["y"], "zone": zname, "ui_map": um,
+                                "radius": args.get("radius"), "mode": args.get("mode") or verb,
+                                "text": a.get("text") or args.get("tooltip")})
+            elif verb in ("loop", "line") and args.get("points"):
+                pts = [p for p in args["points"] if isinstance(p, list) and len(p) == 2 and p[0] is not None and p[1] is not None]
+                if pts:
+                    loops.append({"kind": verb, "zone": zname, "ui_map": um, "points": pts, "range": args.get("range")})
+            qid = a.get("quest_id")
+            ekind, eid = a.get("entity_kind"), a.get("entity_id")
+            ename = (names["npcs"].get(int(eid)) if ekind == "npc" and eid else
+                     names["items"].get(int(eid)) if ekind == "item" and eid else None) or args.get("name")
+            units = [u.get("name") for u in (args.get("units") or ()) if isinstance(u, dict) and u.get("name")]
+            actions_out.append({
+                "line": a.get("line"),
+                "verb": verb,
+                "kind": args.get("kind"),
+                "text": a.get("text"),
+                "raw_text": args.get("text_raw") or a.get("text"),
+                "comment": args.get("comment"),
+                "cond": (a.get("cond") or {}).get("raw"),
+                "quest_id": qid,
+                "quest_name": names["quests"].get(int(qid)) if qid else None,
+                "entity_kind": ekind,
+                "entity_id": eid,
+                "entity_name": ename,
+                "units": units or None,
+                "qty": a.get("qty"),
+                "zone": zname,
+                "ui_map": um,
+                "x": args.get("x"),
+                "y": args.get("y"),
+                "location": args.get("location"),
+                "url": args.get("url") if verb == "link" else None,
+                "level": args.get("level") if verb in ("xp", "maxlevel", "skill") else None,
+                "xp": args.get("xp") if verb in ("xp", "maxlevel") else None,
+            })
+        if st.get("ui_map") and st.get("zone"):
+            zones_seen[int(st["ui_map"])] = st["zone"]
+        flags = {k: v for k, v in (st.get("flags") or {}).items() if k != "cond_flags"}
+        steps_out.append({
+            "idx": st["idx"],
+            "line": st["line"],
+            "text": st.get("text"),
+            "comments": st.get("comments"),
+            "cond": (st.get("cond") or {}).get("raw"),
+            "flags": flags,
+            "zone": st.get("zone"),
+            "ui_map": st.get("ui_map"),
+            "x": st.get("x"),
+            "y": st.get("y"),
+            "waypoints": wps,
+            "loops": loops,
+            "actions": actions_out,
+        })
+    return {
+        "id": str(iid),
+        "index": idx,
+        "name": parsed.get("name") or guides[idx].get("name") or "?",
+        "displayname": parsed.get("displayname"),
+        "group": parsed.get("grp") or guides[idx].get("group") or "RestedXP",
+        "subgroup": parsed.get("subgroup"),
+        "next": parsed.get("next"),
+        "next_list": [{"name": n.get("name"), "group": n.get("group"), "cond": (n.get("cond") or {}).get("raw")}
+                      for n in (parsed.get("next_list") or ())],
+        "level_min": parsed.get("level_min"),
+        "level_max": parsed.get("level_max"),
+        "faction": parsed.get("faction"),
+        "default_for": parsed.get("default_for"),
+        "version": parsed.get("version"),
+        "cond": (parsed.get("cond") or {}).get("raw"),
+        "comments": parsed.get("comments"),
+        "zones": [{"ui_map": k, "name": v} for k, v in zones_seen.items()],
+        "steps": steps_out,
+    }
 
 
 # ------------------------------------------------------------------------------------------------
@@ -312,16 +495,18 @@ def sync(root, wow_dir):
 
 
 def status(root, wow_dir):
-    """[{"id", "added", "account", "guides": [names], "rxp": "waiting"|"done"|"failed", "found", "error"}], newest
-    first: each added string and whether RestedXP has it yet."""
+    """[{"id", "added", "account", "guides": [names], "items": [guide_summary], "rxp": "waiting"|"done"|"failed",
+    "found", "error"}], newest first: each added string and whether RestedXP has it yet."""
     done = handed_over(wow_dir)
     out = []
     for iid, rec in load_store(root)["imports"].items():
         note = done.get(iid) or {}
         state = "done" if note.get("ok") else "failed" if note.get("err") else "waiting"
+        raw_guides = rec.get("guides") or ()
         out.append({"id": iid, "added": rec.get("added"), "account": rec.get("account"),
-                    "guides": [g.get("name") or "?" for g in rec.get("guides") or ()], "rxp": state,
-                    "found": note.get("ok"), "error": note.get("err")})
+                    "guides": [g.get("name") or "?" for g in raw_guides],
+                    "items": [guide_summary(i, g) for i, g in enumerate(raw_guides)],
+                    "rxp": state, "found": note.get("ok"), "error": note.get("err")})
     out.sort(key=lambda r: r.get("added") or 0, reverse=True)
     return out
 
@@ -380,8 +565,10 @@ def main(argv=None):
             out = {"ok": True, "imports": status(ROOT, wow_dir)}
         elif cmd == "sync":
             out = {"ok": True, "handoff": bool(sync(ROOT, wow_dir))}
+        elif cmd == "guide" and len(argv) >= 3:
+            out = {"ok": True, "guide": guide_detail(ROOT, argv[1], int(argv[2]))}
         else:
-            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync"}
+            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide"}
     except ImportProblem as e:
         out = {"ok": False, "error": str(e)}
     except Exception as e:  # noqa: BLE001 - the app shows the reason, whatever it is

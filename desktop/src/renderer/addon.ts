@@ -3,6 +3,7 @@
 import type { RxpImport } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc, icon, toast } from "./dom.js";
+import { openGuide, updateRxpBrowser, wireRxpBrowser } from "./rxp-browser.js";
 import { enginePost, live } from "./state.js";
 import { refreshStatus } from "./status.js";
 
@@ -50,11 +51,18 @@ function rxpState(r: RxpImport): string {
 }
 
 async function refreshRxp(): Promise<void> {
-  const list = (await quiet("addon:rxpImports")) || [];
+  const list = ((await quiet("addon:rxpImports")) as RxpImport[]) || [];
   $("rxp-list").innerHTML = list.map((r) => {
     const when = r.added ? new Date(r.added * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-    return `<li><span><b>${esc(packName(r.guides))}</b>${when ? ` <span class="dim">added ${esc(when)}</span>` : ""}</span><span>${rxpState(r)}</span></li>`;
+    return `<li><div class="row"><b>${esc(packName(r.guides))}</b>${when ? ` <span class="dim">added ${esc(when)}</span>` : ""}<span class="grow"></span><button type="button" class="btn rxp-browse-pack" data-pack="${esc(r.id)}">Browse guides</button></div><span>${rxpState(r)}</span></li>`;
   }).join("");
+  $("rxp-list").querySelectorAll<HTMLButtonElement>(".rxp-browse-pack").forEach((b) => {
+    b.onclick = () => {
+      openGuide(b.dataset.pack!, 0);
+      $("rxpb-block").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  });
+  await updateRxpBrowser(list);
 }
 
 /** Add a guide string: the pasted one, or `text` read from the file `from`. */
@@ -162,4 +170,5 @@ export function wireAddon(): void {
     e.preventDefault();
     addRxpFile(e.dataTransfer.files[0]);
   });
+  wireRxpBrowser();
 }

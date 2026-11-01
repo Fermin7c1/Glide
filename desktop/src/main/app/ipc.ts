@@ -9,7 +9,7 @@ import { defaultHome, isCheckout, isDev, logsDir, pythonCommand, whisperDirs } f
 import { ResourceSampler } from "../resources";
 import { keyStatus, KNOWN_KEYS, setKey } from "../secrets";
 import { listWhisperModels, Speech } from "../speech";
-import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpImport, RxpImportResult } from "../../shared/ipc";
+import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpImport, RxpImportResult } from "../../shared/ipc";
 import { appSettingsProblem, Obj } from "../store";
 import { synth, TTS_KEYS, voices as ttsVoices } from "../tts";
 import { Updater } from "../updater";
@@ -243,7 +243,26 @@ function addonChannels({ engine }: IpcDeps): void {
       : `RestedXP guide string not added: ${r.error}`);
     return r;
   });
-  handle("addon:rxpImports", async () => ((await rxpTool(engine, "status")).imports || []) as RxpImport[]);
+  handle("addon:rxpImports", async (id?: string, index?: number) => {
+    if (id !== undefined && index !== undefined) {
+      const r = await engine.pythonJson([path.join("companion", "rxp_import.py"), "guide", String(id), String(index)], "", engineOptions());
+      const g = (r.guide || null) as RxpGuideDetail | null;
+      if (g && Array.isArray(g.zones)) {
+        const maps: Record<number, string> = {};
+        for (const z of g.zones) {
+          for (const dir of [engineHome(), path.join(__dirname, "..", "..", "..", "..")]) {
+            const p = path.join(dir, "data", "gamedata", "maps", `${z.ui_map}.png`);
+            if (fs.existsSync(p)) {
+              try { maps[z.ui_map] = `data:image/png;base64,${fs.readFileSync(p).toString("base64")}`; break; } catch { /* ignore */ }
+            }
+          }
+        }
+        g.mapImages = maps;
+      }
+      return g;
+    }
+    return ((await rxpTool(engine, "status")).imports || []) as RxpImport[];
+  });
 }
 
 /** Folders: pick one, open one (or a web page) outside the app, import another Glide folder's data. */

@@ -517,4 +517,7 @@ they don't spell out.
 - **Addon 0.17.2, files on disk: RestedXP imports decrypted before loading into the game.** `companion/rxp_import.py`
   now writes the decrypted guide texts (`guides = { ... }`) to `Data/RXPImports.lua` instead of the encrypted string,
   and `RXPImport.lua` hands each plain guide text directly to RestedXP's `ImportGuide` in small batches instead of
-  running `guideImporter:ImportString` (base64 + RC4 + zlib) inside the client. The player asked (2026-11-01).
+  running `guideImporter:ImportString` (base64 + RC4 + zlib) inside the client. `rxp_import.py status` also includes
+  per-guide summaries (`items`) and `rxp_import.py guide <id> <index>` (`addon:rxpImports(id, index)`) returns the
+  parsed guide (`knowledge/rxp_parser`) for the Addon page's interactive RestedXP Guide & Route Explorer
+  (`desktop/src/renderer/rxp-browser.ts`). The player asked (2026-11-01).
