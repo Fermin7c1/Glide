@@ -58,11 +58,25 @@ assert store.rxp_fingerprint(os.path.join(tmp, "nope")) is None
 
 # ---- build_db: free guides from the installed addon, skip when unchanged, newest text wins -----------------
 out = os.path.join(tmp, "glide.db")
+build_root = os.path.join(tmp, "build_root")
+os.makedirs(os.path.join(build_root, "data", "seed"))
+try:
+    os.link(os.path.join(ROOT, "data", "seed", "seed.json.gz"),
+            os.path.join(build_root, "data", "seed", "seed.json.gz"))
+except OSError:
+    shutil.copy(os.path.join(ROOT, "data", "seed", "seed.json.gz"),
+                os.path.join(build_root, "data", "seed", "seed.json.gz"))
 
 
 def run_build(*extra):
-    r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "build_db.py"), "--wow",
-                        os.path.join(tmp, "wow"), "--out", out, *extra], capture_output=True, text=True)
+    code = ("import argparse, sys; sys.path.insert(0, %r); sys.path.insert(0, %r); "
+            "import build_db; build_db.ROOT = %r; "
+            "ap = argparse.ArgumentParser(); ap.add_argument('--wow'); ap.add_argument('--out'); "
+            "ap.add_argument('--force', action='store_true'); ap.add_argument('--compare'); "
+            "build_db.build(ap.parse_args(%r))"
+            % (ROOT, os.path.join(ROOT, "tools"), build_root,
+               ["--wow", os.path.join(tmp, "wow"), "--out", out, *extra]))
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return r.stdout
 

@@ -7,9 +7,9 @@ sometimes leaves there), never with another account's; the guides kept for the k
 reads them); the addon's Data/RXPImports.lua written as Lua the game loads, and emptied once the addon noted
 RestedXP took the string. Strings that aren't one, or are another account's, say why.
 
-The addon side, under Lua 5.1 with a mocked WoW API and a stand-in for RestedXP's importer: after login each waiting
-string goes to RestedXP's ImportString once, the outcome is noted in GlideRecorderDB.rxpImports, nothing goes twice,
-a failure is retried only by /glide rxpimport, and without RestedXP nothing breaks. Needs lupa.
+The addon side, under Lua 5.1 with a mocked WoW API and a stand-in for RestedXP's ImportGuide: after login each waiting
+pack's decrypted guides go to RestedXP's ImportGuide in batches, the outcome is noted in GlideRecorderDB.rxpImports,
+nothing goes twice, a failure is retried only by /glide rxpimport, and without RestedXP nothing breaks. Needs lupa.
 
 Run: python3 tests/test_rxp_import.py   (prints OK)
 """
@@ -122,14 +122,16 @@ try:
     assert texts["RestedXP Horde 1-30||1-6 Durotar"]["_t"] == 1_790_000_000
     assert build_db.rxp_imported(os.path.join(tmp, "missing.json")) == {}
 
-    # the addon's file: Lua the game loads, with every waiting string as it was pasted (line breaks gone)
+    # the addon's file: Lua the game loads, with the decrypted guide texts (never the encrypted string)
     handoff = os.path.join(wow, R.HANDOFF)
+    handoff_text = open(handoff, encoding="utf-8").read()
+    assert s1 not in handoff_text, "the encrypted string is already decrypted before writing Data/RXPImports.lua"
     L = lua51.LuaRuntime(unpack_returned_tuples=True)
     ns = L.table()
     L.eval("function(src, ns) local f, e = loadstring(src, '@RXPImports.lua') if not f then error(e) end f('Glide', ns) end")(
-        open(handoff, encoding="utf-8").read(), ns)
-    got = {e.id: (e.n, e.s) for e in ns.rxpImports.values()}
-    assert got == {r["id"]: (2, s1), r3["id"]: (1, R.clean(encode([G3], "Alt#2222")))}, got
+        handoff_text, ns)
+    got = {e.id: (e.n, [e.guides[i] for i in range(1, len(e.guides) + 1)]) for e in ns.rxpImports.values()}
+    assert got == {r["id"]: (2, [G1, G2]), r3["id"]: (1, [G3])}, got
 
     st = {x["id"]: x for x in R.status(home, wow)}
     assert st[r["id"]]["rxp"] == "waiting" and st[r["id"]]["guides"] == ["1-6 Durotar", "6-11 Durotar"], st
@@ -151,20 +153,21 @@ try:
     assert R.sync(home, wow) == handoff
     left = open(handoff, encoding="utf-8").read()
     assert r["id"] not in left and r3["id"] in left, left[:300]
-    # an addon install puts back the shipped, empty file: sync writes the waiting string again
+    # an addon install puts back the shipped, empty file: sync writes the waiting guides again
     shutil.copy(os.path.join(ROOT, "addon", "Glide", "Data", "RXPImports.lua"), handoff)
     assert r3["id"] not in open(handoff, encoding="utf-8").read()
     R.sync(home, wow)
     assert r3["id"] in open(handoff, encoding="utf-8").read()
     # no Glide addon in the folder: nothing written there, the guides are still the coach's
     assert R.sync(home, os.path.join(tmp, "elsewhere")) is None
-    # a string with anything a Lua file could be broken by is never written into one
-    assert "ns.rxpImports = {\n}" in R.handoff_lua([("x", {"string": '1|2:ab"]]) os.exit()%|3', "guides": []})])
-    assert R._lua_string('a"b\\c\n') == '"a\\"b\\\\c\\10"'
+    # a record with no guide text is skipped; control bytes + following digits round-trip through Lua 5.1 intact
+    assert "ns.rxpImports = {\n}" in R.handoff_lua([("x", {"guides": []})])
+    assert R._lua_string('a"b\\c\n0\x019') == '"a\\"b\\\\c\\n0\\0019"'
+    assert L.eval(R._lua_string('a"b\\c\n0\x019')) == 'a"b\\c\n0\x019'
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
-# ---- the addon hands each waiting string to RestedXP's importer once -----------------------------------------------
+# ---- the addon hands each waiting pack's decrypted guides to RestedXP's ImportGuide --------------------------------
 L = lua51.LuaRuntime(unpack_returned_tuples=True)
 L.execute(wowmock.MOCK)
 L.execute(r"""
@@ -173,32 +176,34 @@ function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostri
 function last() return PRINTED[#PRINTED] or "" end
 COMBAT_LOCK = false
 function InCombatLockdown() return COMBAT_LOCK end
--- RestedXP's importer: ImportString starts a background import (the worker frame shows) and answers true, or answers
--- false and a reason; finish(err) ends the running import as RestedXP does (progressError and its status history)
+-- RestedXP's ImportGuide: takes one decrypted guide text and returns the parsed guide table (with .name), or fails
+-- when REFUSE is set; workerFrame:IsShown() delays Glide while RestedXP's own worker is busy
 CALLS = {}
+MENUS = 0
 REFUSE = nil
 local worker = { shown = false }
 function worker:IsShown() return self.shown end
-RXP = { workerFrame = worker, guideImporter = { gui = { importStatusHistory = {} } } }
-function RXP.guideImporter:ImportString(s)
-  CALLS[#CALLS+1] = s
-  if REFUSE then return false, REFUSE end
-  self.importCoroutine = {}
-  worker.shown = true
-  self.gui.progressError = false
-  return true
-end
-function finish(err)
-  RXP.guideImporter.importCoroutine = nil
-  worker.shown = false
-  RXP.guideImporter.gui.progressError = err ~= nil
-  if err then table.insert(RXP.guideImporter.gui.importStatusHistory, 1, err) end
+function setBusy(v) worker.shown = v end
+RXP = {
+  workerFrame = worker,
+  RXPFrame = { GenerateMenuTable = function() end },
+  ScheduleTask = function(_, fn) if fn then MENUS = MENUS + 1 end end,
+  guideImporter = { UpdateImportUI = function() end },
+}
+function RXP.ImportGuide(text)
+  CALLS[#CALLS+1] = text
+  if REFUSE then error(REFUSE, 0) end
+  local name = text:match("#name%s+([^\r\n]+)")
+  if not name then return nil end
+  return { name = name, imported = true }
 end
 function ticks(n) for _ = 1, n do tick() end end
 """)
 ns = L.table()
-handoff_src = R.handoff_lua([("aaa", {"string": "2|123:QUJD%|40000", "guides": [{}, {}]}),
-                             ("bbb", {"string": "1|456:REVG%|40000", "guides": [{}]})])
+# "aaa" has 20 guides (> BATCH = 15, so it spans two ticks); "bbb" has 1 guide
+g_many = [{"text": "#group G\n#name Guide %d\nstep\n" % i} for i in range(1, 21)]
+handoff_src = R.handoff_lua([("aaa", {"guides": g_many}),
+                             ("bbb", {"guides": [{"text": G3}]})])
 run = L.eval("function(src, name, a, ns) local f, e = loadstring(src, name) if not f then error(e) end return f(a, ns) end")
 for name in ("Core.lua", "Data/RXPImports.lua", "RXPImport.lua"):
     src = handoff_src if name == "Data/RXPImports.lua" else open(os.path.join(ROOT, "addon", "Glide", name), encoding="utf-8").read()
@@ -207,46 +212,45 @@ G = L.globals()
 G.fire("ADDON_LOADED", "Glide")
 G.COMBAT_LOCK = True                 # in combat at login: nothing starts until it's over
 G.fire("PLAYER_LOGIN")
-G.ticks(16)
+G.ticks(4)
 assert len(G.CALLS) == 0, "waits for the end of combat"
 G.COMBAT_LOCK = False
-G.ticks(8)
-assert list(G.CALLS.values()) == ["2|123:QUJD%|40000"], list(G.CALLS.values())
-assert "handing the 2 RestedXP guides" in G.last(), G.last()
-G.ticks(16)
-assert len(G.CALLS) == 1, "one import at a time: the next waits for RestedXP's worker"
-G.finish()
-G.ticks(8)
+G.setBusy(True)                      # RestedXP's worker is busy: waits for it too
+G.ticks(4)
+assert len(G.CALLS) == 0, "waits for RestedXP's worker"
+G.setBusy(False)
+G.ticks(1)                           # first batch of "aaa": 15 of 20 guides
+assert len(G.CALLS) == 15, len(G.CALLS)
+assert "handing the 20 RestedXP guides" in G.last(), G.last()
+G.ticks(1)                           # second batch of "aaa": remaining 5 guides, then done
+assert len(G.CALLS) == 20 and G.MENUS == 1, (len(G.CALLS), G.MENUS)
 notes = G.GlideRecorderDB.rxpImports
 assert notes["aaa"].ok and notes["aaa"].err is None, dict(notes["aaa"])
-assert any("RestedXP now has the 2 guides" in p for p in G.PRINTED.values())
-G.ticks(8)
-assert list(G.CALLS.values())[-1] == "1|456:REVG%|40000" and len(G.CALLS) == 2
-G.finish("Account mismatch, import string does not apply to current account")
-G.ticks(16)
-assert notes["bbb"].ok is False and "Account mismatch" in notes["bbb"].err, dict(notes["bbb"])
+assert any("RestedXP now has the 20 guides" in p for p in G.PRINTED.values())
+G.REFUSE = "Error parsing guide: bad step"
+G.ticks(1)                           # next tick tries "bbb", which fails
+assert list(G.CALLS.values())[-1] == G3 and len(G.CALLS) == 21
+assert notes["bbb"].ok is False and "Error parsing guide" in notes["bbb"].err, dict(notes["bbb"])
 assert "/glide rxpimport tries again" in G.last(), G.last()
-G.ticks(40)
-assert len(G.CALLS) == 2, "a failed string isn't retried by itself"
+G.ticks(10)
+assert len(G.CALLS) == 21, "a failed pack isn't retried by itself"
 
 # the next login: RestedXP has "aaa", "bbb" failed: nothing goes again
 G.fire("PLAYER_LOGIN")
-G.ticks(40)
-assert len(G.CALLS) == 2, list(G.CALLS.values())
-# /glide rxpimport tries the failed one again, once; RestedXP refusing it outright is noted too
-G.REFUSE = "Incompatible guide, for 40000 version vs 40100"
+G.ticks(10)
+assert len(G.CALLS) == 21, len(G.CALLS)
+# /glide rxpimport tries the failed one again, once
+G.REFUSE = "Incompatible guide"
 G.SlashCmdList.GLIDE("rxpimport")
-G.ticks(8)
-assert list(G.CALLS.values())[-1] == "1|456:REVG%|40000" and len(G.CALLS) == 3
+G.ticks(1)
+assert list(G.CALLS.values())[-1] == G3 and len(G.CALLS) == 22
 assert "Incompatible guide" in notes["bbb"].err and "Incompatible guide" in G.last(), G.last()
-G.ticks(40)
-assert len(G.CALLS) == 3, "tried once per command"
+G.ticks(10)
+assert len(G.CALLS) == 22, "tried once per command"
 G.REFUSE = None
 G.SlashCmdList.GLIDE("rxpimport")
-G.ticks(8)
-G.finish()
-G.ticks(8)
-assert notes["bbb"].ok and len(G.CALLS) == 4
+G.ticks(1)
+assert notes["bbb"].ok and len(G.CALLS) == 23 and G.MENUS == 2
 G.SlashCmdList.GLIDE("rxpimport")
 assert "already has every guide" in G.last(), G.last()
 
@@ -255,7 +259,7 @@ G.GlideRecorderDB.rxpImports = L.table()
 G.RXP = None
 before = len(G.PRINTED)
 G.fire("PLAYER_LOGIN")
-G.ticks(40)
+G.ticks(10)
 said = [p for p in list(G.PRINTED.values())[before:] if "RestedXP isn't loaded" in p]
 assert len(said) == 1, list(G.PRINTED.values())[before:]
 print("OK")

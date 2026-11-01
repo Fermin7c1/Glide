@@ -12,9 +12,10 @@ Adding a string:
      (no match: "this string is for another Battle.net account");
   2. the guide texts go to data/rxp_imports/imports.json, which the knowledge build (tools/build_db.py) reads like
      RestedXP's own cache, so the coach knows the route at its next refresh;
-  3. the string itself goes to <wow_dir>/Interface/AddOns/Glide/Data/RXPImports.lua, and at the next login the Glide
-     addon (RXPImport.lua) hands it to RestedXP's own importer: RestedXP checks and stores it as if pasted.
-The addon notes each hand-off in GlideRecorderDB.rxpImports[id]; once one is done the string leaves the addon's file.
+  3. the decrypted guide texts also go to <wow_dir>/Interface/AddOns/Glide/Data/RXPImports.lua, and at the next login
+     the Glide addon (RXPImport.lua) loads them straight into RestedXP (ImportGuide) without running RestedXP's
+     in-game string decryptor.
+The addon notes each hand-off in GlideRecorderDB.rxpImports[id]; once one is done its guides leave the addon's file.
 An addon install replaces the addon's folder (and that file with it), so the app syncs again after installing.
 
 Run by the desktop app (`python companion/rxp_import.py add|status|sync`, the string on stdin for add), answering
@@ -42,7 +43,7 @@ STORE = os.path.join("data", "rxp_imports", "imports.json")
 HANDOFF = os.path.join("Interface", "AddOns", "Glide", "Data", "RXPImports.lua")
 # one encrypted chunk: <checksum><mode><base64>%  (RestedXP's LoadImportBuffer; mode ":" is the only one it reads)
 _CHUNK = re.compile(r"(-?\d+)(\D)([A-Za-z0-9+/=]+)%", re.ASCII)
-_SAFE = re.compile(r"^[0-9A-Za-z+/=|:%-]+$")          # what a string may hold to be written into a Lua file
+_LUA_ESC = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "\t": "\\t"}
 MAX_LEN = 64 << 20
 INCOMPLETE = ("That guide string is incomplete. Download the guide file from RestedXP again, or copy all of its string "
               "again.")
@@ -252,29 +253,32 @@ def guide_texts(root):
 
 
 def _lua_string(s):
-    """s as a Lua string literal (quotes, backslashes and control bytes escaped)."""
+    """s as a Lua string literal (quotes, backslashes and control bytes escaped; 3-digit \\ddd so a digit after
+    a control byte is never read as part of the escape)."""
     out = []
     for ch in str(s):
-        o = ord(ch)
-        if ch in "\\\"":
-            out.append("\\" + ch)
-        elif o < 32 or o == 127:
-            out.append("\\%d" % o)
+        esc = _LUA_ESC.get(ch)
+        if esc is not None:
+            out.append(esc)
         else:
-            out.append(ch)
+            o = ord(ch)
+            out.append("\\%03d" % o if o < 32 or o == 127 else ch)
     return '"%s"' % "".join(out)
 
 
 def handoff_lua(pending):
-    """The addon's Data/RXPImports.lua for these imports ([(id, record)])."""
-    lines = ["-- Written by the Glide app (companion/rxp_import.py): the RestedXP guide strings you added in the app,",
-             "-- handed to RestedXP's own importer at your next login (RXPImport.lua). The app rewrites this file.",
+    """The addon's Data/RXPImports.lua for these imports ([(id, record)]): the decrypted guide texts."""
+    lines = ["-- Written by the Glide app (companion/rxp_import.py): the RestedXP guides you added in the app,",
+             "-- already decrypted for RestedXP at your next login (RXPImport.lua). The app rewrites this file.",
              "local _, ns = ...", "ns.rxpImports = {"]
     for iid, rec in pending:
-        s = rec.get("string") or ""
-        if not _SAFE.match(s):
+        texts = [g.get("text") for g in (rec.get("guides") or ())
+                 if isinstance(g, dict) and isinstance(g.get("text"), str) and g.get("text")]
+        if not texts:
             continue
-        lines.append("    { id = %s, n = %d, s = %s }," % (_lua_string(iid), len(rec.get("guides") or ()), _lua_string(s)))
+        body = ",\n        ".join(_lua_string(t) for t in texts)
+        lines.append("    { id = %s, n = %d, guides = {\n        %s,\n    } },"
+                     % (_lua_string(iid), len(texts), body))
     lines.append("}")
     return "\n".join(lines) + "\n"
 

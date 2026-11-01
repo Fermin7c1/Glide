@@ -514,3 +514,7 @@ they don't spell out.
   README) and the addon's (`addon/Glide/Media/icon.tga`, 64 x 64: the AddOns list's `IconTexture` and the minimap
   button, shown whole: no game-icon frame to trim). The drawn `icon.svg` is gone; `render-icon.js` renders the artwork.
   The player asked (2026-11-01).
+- **Addon 0.17.2, files on disk: RestedXP imports decrypted before loading into the game.** `companion/rxp_import.py`
+  now writes the decrypted guide texts (`guides = { ... }`) to `Data/RXPImports.lua` instead of the encrypted string,
+  and `RXPImport.lua` hands each plain guide text directly to RestedXP's `ImportGuide` in small batches instead of
+  running `guideImporter:ImportString` (base64 + RC4 + zlib) inside the client. The player asked (2026-11-01).

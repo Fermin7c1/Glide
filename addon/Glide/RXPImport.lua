@@ -1,20 +1,23 @@
--- RestedXP guide strings added in the Glide app, so a guide bought while you can't stop to import it reaches
--- RestedXP anyway. The app writes them to Data/RXPImports.lua (companion/rxp_import.py); after login, each one this
--- account hasn't handed over yet goes to RestedXP's own importer, as if pasted into its import window: RestedXP checks
--- the string against the account and keeps the guides itself. Once per string and account, out of combat, noted in
--- GlideRecorderDB.rxpImports[id] = { t, ok, err } (the app reads it to tell you RestedXP has them).
--- "/glide rxpimport" tries the ones that failed again.
+-- RestedXP guides added in the Glide app, already decrypted on the PC so the game never runs RestedXP's string
+-- decryptor. The app writes the plain guide texts to Data/RXPImports.lua (companion/rxp_import.py); after login, each
+-- pack this account hasn't loaded yet goes straight to RestedXP's ImportGuide (or RXPGuides.ImportGuide), which parses
+-- and caches each guide in RestedXP's own SavedVariables. Done in small batches out of combat, once per pack and
+-- account, and noted in GlideRecorderDB.rxpImports[id] = { t, ok, err } (the app reads it to tell you RestedXP has
+-- them). "/glide rxpimport" tries the ones that failed again.
 local _, ns = ...
 local rec = ns.rec
 
-local START_AFTER = 20      -- seconds after login: RestedXP has loaded its own guides by then
-local POLL = 2              -- seconds between looks at RestedXP's importer while it works
+local START_AFTER = 5       -- seconds after login: RestedXP has initialised its database by then
+local POLL = 0.25           -- seconds between batches while loading guides into RestedXP
+local BATCH = 15            -- guides handed to RestedXP per tick: fast, well under Hardcore's 200 ms script cap
 
--- RestedXP's importer (its UI/V2/GuideImporter.lua and GuideLoader.lua), or nil when RestedXP isn't loaded
-local function importer()
+-- RestedXP's one-guide importer (GuideLoader.lua addon.ImportGuide / RXPGuides.ImportGuide), or nil when not loaded
+local function importFn()
     local R = _G.RXP
-    local gi = type(R) == "table" and R.guideImporter
-    if type(gi) == "table" and type(gi.ImportString) == "function" then return gi, R end
+    if type(R) ~= "table" then return nil end
+    local fn = R.ImportGuide or (type(R.RXPGuides) == "table" and R.RXPGuides.ImportGuide)
+        or (type(_G.RXPGuides) == "table" and _G.RXPGuides.ImportGuide)
+    if type(fn) == "function" then return fn, R end
 end
 
 local function notes()
@@ -27,12 +30,13 @@ end
 local ticker, current, retry
 local tried = {}            -- ids started this session: each goes to RestedXP once per run
 
--- the next string this account hasn't handed over (with retry, also one that failed)
+-- the next pack this account hasn't loaded yet (with retry, also one that failed)
 local function nextPending()
     local done = notes()
     if not done then return nil end
     for _, e in ipairs(ns.rxpImports or {}) do
-        if type(e) == "table" and type(e.id) == "string" and type(e.s) == "string" and not tried[e.id] then
+        if type(e) == "table" and type(e.id) == "string" and type(e.guides) == "table" and #e.guides > 0
+           and not tried[e.id] then
             local n = done[e.id]
             if not n or (retry and not n.ok) then return e end
         end
@@ -46,47 +50,63 @@ local function stop()
     ticker, current, retry = nil, nil, false
 end
 
--- one look: note how the running import ended, or start the next one when RestedXP is free and we're out of combat
-local function step()
-    local gi, R = importer()
-    if not gi then
-        if nextPending() then rec.Print("RestedXP isn't loaded: the guides you added in the Glide app wait for it.") end
-        return stop()
+local function refreshMenu(R)
+    if type(R.ScheduleTask) == "function" and type(R.RXPFrame) == "table" and R.RXPFrame.GenerateMenuTable then
+        pcall(R.ScheduleTask, R, R.RXPFrame.GenerateMenuTable)
     end
-    local busy = gi.importCoroutine ~= nil or (type(R.workerFrame) == "table" and R.workerFrame:IsShown())
-    if current then
-        if busy then return end
-        local gui = type(gi.gui) == "table" and gi.gui or {}
-        local ok = not gui.progressError
-        local why = type(gui.importStatusHistory) == "table" and gui.importStatusHistory[1]
-        notes()[current.id] = { t = rec.Now(), ok = ok, err = (not ok) and tostring(why or "?") or nil }
-        if ok then
-            rec.Print(("RestedXP now has the %d %s you added in the Glide app."):format(current.n or 0, plural(current.n)))
-        else
-            rec.Print(("RestedXP couldn't add the %s from the Glide app: %s (/glide rxpimport tries again)")
-                :format(plural(current.n), tostring(why or "?")))
-        end
-        current = nil
-        if not nextPending() then stop() end
-        return
-    end
-    if busy or (InCombatLockdown and InCombatLockdown()) then return end
-    local e = nextPending()
-    if not e then return stop() end
-    tried[e.id] = true
-    local called, started, err = pcall(gi.ImportString, gi, e.s)
-    if called and started then
-        current = e
-        rec.Print(("handing the %d RestedXP %s you added in the Glide app to RestedXP..."):format(e.n or 0, plural(e.n)))
-    else
-        local why = tostring((called and err) or started or "?")
-        notes()[e.id] = { t = rec.Now(), ok = false, err = why }
-        rec.Print(("RestedXP couldn't add the %s from the Glide app: %s (/glide rxpimport tries again)")
-            :format(plural(e.n), why))
+    if type(R.guideImporter) == "table" and type(R.guideImporter.UpdateImportUI) == "function" then
+        pcall(R.guideImporter.UpdateImportUI, R.guideImporter)
     end
 end
 
--- start looking (true), or false when nothing is waiting or it already runs
+-- one batch of decrypted guides handed straight to RestedXP's ImportGuide when RestedXP is free and out of combat
+local function step()
+    local fn, R = importFn()
+    if not fn then
+        if current or nextPending() then
+            rec.Print("RestedXP isn't loaded: the guides you added in the Glide app wait for it.")
+        end
+        return stop()
+    end
+    local busy = (type(R.workerFrame) == "table" and R.workerFrame:IsShown())
+        or (InCombatLockdown and InCombatLockdown())
+    if busy then return end
+    if not current then
+        local e = nextPending()
+        if not e then return stop() end
+        tried[e.id] = true
+        local total = e.n or #e.guides
+        current = { e = e, i = 1, total = total }
+        rec.Print(("handing the %d RestedXP %s you added in the Glide app to RestedXP..."):format(total, plural(total)))
+    end
+    local e = current.e
+    local guides = e.guides
+    local last = math.min(current.i + BATCH - 1, #guides)
+    while current.i <= last do
+        local g = guides[current.i]
+        current.i = current.i + 1
+        if type(g) == "string" and #g > 0 then
+            local ok, res, err = pcall(fn, g)
+            if not ok or type(res) ~= "table" or not res.name then
+                local why = tostring((not ok and res) or err or (type(res) == "string" and res) or "Error parsing guide")
+                notes()[e.id] = { t = rec.Now(), ok = false, err = why }
+                rec.Print(("RestedXP couldn't add the %s from the Glide app: %s (/glide rxpimport tries again)")
+                    :format(plural(current.total), why))
+                current = nil
+                if not nextPending() then stop() end
+                return
+            end
+        end
+    end
+    if current.i <= #guides then return end
+    refreshMenu(R)
+    notes()[e.id] = { t = rec.Now(), ok = true }
+    rec.Print(("RestedXP now has the %d %s you added in the Glide app."):format(current.total, plural(current.total)))
+    current = nil
+    if not nextPending() then stop() end
+end
+
+-- start loading (true), or false when nothing is waiting or it already runs
 local function start(again)
     if ticker then return false end
     retry = again or false

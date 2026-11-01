@@ -10,6 +10,7 @@ monkeypatched clock never leak into another. Each declares its tier (TIER = "...
 need only the repository (and tools like node or Edge), so their snapshots hold on any machine; "machine" probes read
 this machine's data (data/kb.db, glide.db) and pin behaviour for a refactor on this machine only.
 """
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import re
@@ -70,8 +71,10 @@ def main(argv):
     names = [a for a in argv[1:] if a != "--portable"] or (PORTABLE if "--portable" in argv else PROBES)
     os.makedirs(SNAP, exist_ok=True)
     bad = 0
+    with ThreadPoolExecutor(max_workers=min(len(names), 6) or 1) as pool:
+        results = dict(zip(names, pool.map(run_probe, names)))
     for name in names:
-        got = run_probe(name)
+        got = results[name]
         path = os.path.join(SNAP, name + ".json")
         if mode == "record":
             with open(path, "w", encoding="utf-8", newline="\n") as fh:
