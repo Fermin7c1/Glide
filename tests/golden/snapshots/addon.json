@@ -136,10 +136,12 @@
  "toc": [
   "Data\\QuestIDs.lua",
   "Data\\VendorTreasures.lua",
+  "Data\\RXPImports.lua",
   "Core.lua",
   "Recorder.lua",
   "Scanner.lua",
   "RXPDump.lua",
+  "RXPImport.lua",
   "Codec.lua",
   "State.lua",
   "Gear.lua",

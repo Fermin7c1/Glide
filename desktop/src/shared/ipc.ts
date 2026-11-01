@@ -92,6 +92,26 @@ export interface AddonStatus {
   upToDate: boolean;
 }
 export interface WowClient { path: string; flavor: string }
+/** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it
+ * yet; the Glide addon hands it to RestedXP's importer at the next login ("waiting"), then notes "done" or "failed". */
+export interface RxpImport {
+  id: string;
+  added: number | null;              // unix seconds
+  account: string | null;            // the WTF account folder whose RestedXP key opened it
+  guides: string[];                  // the guides' names
+  rxp: "waiting" | "done" | "failed";
+  error: string | null;              // RestedXP's reason, when it failed
+}
+/** What adding a string answered: the guides it holds, or why it couldn't be added (error, as the player reads it). */
+export interface RxpImportResult {
+  ok: boolean;
+  error?: string;
+  id?: string;
+  account?: string;
+  guides?: string[];
+  again?: boolean;                   // the same string was added before
+  handoff?: boolean;                 // written for the addon (false: no Glide addon in the WoW folder)
+}
 
 /** How to get a key, shown under it in Settings: the page that makes keys, the steps, what a key looks like, cost.
  * plan: the badge (free = no card ever, free-tier = free with limits, credit = free starting credit, paid); free = the
@@ -143,6 +163,8 @@ export interface InvokeMap {
   "addon:status": () => AddonStatus;
   "addon:detect": () => WowClient[];
   "addon:install": () => { done: string[]; status: AddonStatus };
+  "addon:rxpImport": (text: string) => RxpImportResult;   // add a RestedXP guide string (companion/rxp_import.py)
+  "addon:rxpImports": () => RxpImport[];                  // the strings added, and whether RestedXP has them yet
   "dialog:folder": (title: string, defaultPath?: string) => string | null;
   "data:import": (from: string) => boolean;
   "shell:open": (target: string) => string | void;

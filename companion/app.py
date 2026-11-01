@@ -842,6 +842,8 @@ class App:
         if not self.args.sim and not self.args.no_archive:
             from archiver import Archiver
             Archiver(glideconfig.wow_dir(ROOT), ROOT, log=console_log).start()
+        if not self.args.sim:
+            threading.Thread(target=self._sync_rxp_imports, daemon=True).start()
         self.start_ptt()
         if not self.args.sim and not getattr(self.args, "no_kb", False):
             import kb_refresh
@@ -850,6 +852,15 @@ class App:
             self.navbuild = kb_refresh.NavBuilder(ROOT, log=console_log,
                                                   first_map=self._continent, wait_for=self.refresher)
             self.navbuild.start()
+
+    def _sync_rxp_imports(self):
+        """The RestedXP strings added in the app that RestedXP doesn't have yet back in the addon's
+        Data/RXPImports.lua (an addon update replaced it), and the ones it has out of it (rxp_import.sync)."""
+        try:
+            import rxp_import
+            rxp_import.sync(ROOT, glideconfig.wow_dir(ROOT))
+        except Exception as e:  # noqa: BLE001 - the next start tries again
+            log_once("rxp_import.sync", e)
 
     def _run_under_app(self, port):
         """Run by the desktop app: it shows the overlay and speaks; the companion stops when the app closes its

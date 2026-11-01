@@ -9,7 +9,7 @@ import { defaultHome, isCheckout, isDev, logsDir, pythonCommand, whisperDirs } f
 import { ResourceSampler } from "../resources";
 import { keyStatus, KNOWN_KEYS, setKey } from "../secrets";
 import { listWhisperModels, Speech } from "../speech";
-import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult } from "../../shared/ipc";
+import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpImport, RxpImportResult } from "../../shared/ipc";
 import { appSettingsProblem, Obj } from "../store";
 import { synth, TTS_KEYS, voices as ttsVoices } from "../tts";
 import { Updater } from "../updater";
@@ -216,16 +216,34 @@ async function testModelKey(env: string, key: string): Promise<{ ok: boolean; mo
   }
 }
 
+/** companion/rxp_import.py add|status|sync in the engine home (the string, for add, on its stdin). */
+function rxpTool(engine: Engine, cmd: "add" | "status" | "sync", input = ""): Promise<Record<string, unknown>> {
+  return engine.pythonJson([path.join("companion", "rxp_import.py"), cmd], input, engineOptions());
+}
+
 function addonChannels({ engine }: IpcDeps): void {
   handle("addon:status", () => addon.status(engineHome(), (readConfig().wow_dir as string) || null));
   handle("addon:detect", () => addon.detectWow());
-  handle("addon:install", () => {
+  handle("addon:install", async () => {
     const wow = readConfig().wow_dir as string;
     if (!wow) throw new Error("set the WoW folder first");
     const done = addon.install(engineHome(), wow);
     done.forEach((line) => engine.note(line));
+    // the install replaced the addon's folder: put back the RestedXP strings it hasn't handed over yet
+    try {
+      await rxpTool(engine, "sync");
+    } catch (e) {
+      engine.note(`RestedXP guides for the addon: ${(e as Error).message}`);
+    }
     return { done, status: addon.status(engineHome(), wow) };
   });
+  handle("addon:rxpImport", async (text: string) => {
+    const r = (await rxpTool(engine, "add", String(text || ""))) as unknown as RxpImportResult;
+    engine.note(r.ok ? `RestedXP guide string added: ${(r.guides || []).length} guides${r.handoff ? ", waiting in the addon for RestedXP" : ""}`
+      : `RestedXP guide string not added: ${r.error}`);
+    return r;
+  });
+  handle("addon:rxpImports", async () => ((await rxpTool(engine, "status")).imports || []) as RxpImport[]);
 }
 
 /** Folders: pick one, open one (or a web page) outside the app, import another Glide folder's data. */

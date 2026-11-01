@@ -116,6 +116,14 @@
         <div id="addon-msg" class="note-line"></div>
         <p class="help">After installing or updating, restart WoW completely; /reload doesn't load new addon files. Your addon settings and recordings are kept: they live in WTF\…\SavedVariables.</p>
       </div>
+      <div class="block">
+        <h2>Add a RestedXP guide</h2>
+        <p class="help">Paste the guide string RestedXP gave you, and you don't have to stop playing to import it. The coach learns the route now, and at your next login the Glide addon hands the string to RestedXP, so you never open its import window. It works for the Battle.net account that plays RestedXP on this PC.</p>
+        <textarea id="rxp-string" rows="4" spellcheck="false" autocomplete="off" placeholder="Paste your RestedXP guide string" aria-label="RestedXP guide string"></textarea>
+        <div class="row"><button id="rxp-add" class="btn primary"><svg class="icon"><use href="#i-plus"/></svg>Add guide</button></div>
+        <div id="rxp-msg" class="note-line" aria-live="polite"></div>
+        <ul id="rxp-list" class="rxp-list"></ul>
+      </div>
     </div>
   </section>
 

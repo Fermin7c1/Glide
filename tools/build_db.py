@@ -6,6 +6,7 @@ Inputs (all optional except the seed):
   data/archive/wdb/**.wdb + live Cache/WDB   what the server sent the client (wdb.py)
   data/archive/sv/*.lua + live SavedVariables/Glide.lua (or old GlideRecorder.lua)   recorder sessions
   data/archive/sv/RXPGuides*.lua + live RXPGuides.lua   RestedXP's own guide cache (best effort)
+  data/rxp_imports/imports.json          RestedXP guide strings added in the app (companion/rxp_import.py)
 
 Field precedence for quests, highest first:
   wdb (server) > recorder (seen in game) > scan (API) > ForeverGuide (its data from Questie)
@@ -165,6 +166,27 @@ def rxp_from_own_sv(files):
                 for x in v:
                     walk(x, f_t)
         walk(data, _mtime(f))
+    return out
+
+
+def rxp_imported(path):
+    """The guide texts of the RestedXP strings added in the app (companion/rxp_import.py keeps them in
+    data/rxp_imports/imports.json), as guide-text candidates timed when they were added."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for rec in ((data.get("imports") if isinstance(data, dict) else None) or {}).values():
+        if not isinstance(rec, dict):
+            continue
+        for g in rec.get("guides") or ():
+            if isinstance(g, dict) and isinstance(g.get("text"), str) and g["text"]:
+                key = "%s||%s" % (g.get("group") or "?", g.get("name") or len(g["text"]))
+                cand = {"text": g["text"], "how": "import", "_t": as_float(rec.get("added")) or 0}
+                if newer(cand, out.get(key)):
+                    out[key] = cand
     return out
 
 
@@ -464,16 +486,19 @@ def gather_inputs(args):
     wdb_dirs = sorted(glob.glob(os.path.join(ROOT, "data", "archive", "wdb", "*"))) + [live["wdb"]]
     sv_files = sorted(glob.glob(os.path.join(ROOT, "data", "archive", "sv", "Glide*.lua"))) + live["sv"]
     rxp_sv_files = sorted(glob.glob(os.path.join(ROOT, "data", "archive", "sv", "RXPGuides*.lua"))) + live["rxp_sv"]
+    rxp_imports = os.path.join(ROOT, "data", "rxp_imports", "imports.json")
     rxp_dir = os.path.join(wow, *kstore.RXP_ADDON_DIR) if wow else None
     rxp_ver = kstore.rxp_version(rxp_dir) if rxp_dir else None
     addon_guides = [p for p in kstore.rxp_files(rxp_dir)
                     if os.path.relpath(p, rxp_dir).replace(os.sep, "/").lower().startswith("guides/")]
     out = args.out or os.path.join(ROOT, "data", "glide.db")
-    fingerprint = input_fingerprint([os.path.join(ROOT, "data", "seed", "seed.json.gz")] + sv_files + rxp_sv_files
+    fingerprint = input_fingerprint([os.path.join(ROOT, "data", "seed", "seed.json.gz"), rxp_imports] + sv_files
+                                    + rxp_sv_files
                                     + addon_guides + ([os.path.join(rxp_dir, "RXPGuides.toc")] if rxp_dir else []),
                                     wdb_dirs)
     return {"wdb_dirs": wdb_dirs, "sv_files": sv_files, "rxp_sv_files": rxp_sv_files, "rxp_dir": rxp_dir,
-            "rxp_ver": rxp_ver, "addon_guides": addon_guides, "out": out, "fingerprint": fingerprint}
+            "rxp_ver": rxp_ver, "addon_guides": addon_guides, "rxp_imports": rxp_imports, "out": out,
+            "fingerprint": fingerprint}
 
 
 def up_to_date(args, out, fingerprint):
@@ -718,7 +743,7 @@ def build(args):
     free_src, free_guides = free_guide_texts(inputs, seed)
     w = load_wdb(inputs["wdb_dirs"])
     sessions, session_files, rxp_texts, rxp_steps_sv = load_sessions(inputs["sv_files"])
-    for k, v in rxp_from_own_sv(inputs["rxp_sv_files"]).items():
+    for k, v in list(rxp_from_own_sv(inputs["rxp_sv_files"]).items()) + list(rxp_imported(inputs["rxp_imports"]).items()):
         if newer(v, rxp_texts.get(k)):
             rxp_texts[k] = v
     log("wdb quests:", len(w["quests"]), "| sessions:", len(sessions), "| owned RXP guide texts:", len(rxp_texts))

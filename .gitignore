@@ -21,6 +21,7 @@ data/eval/
 data/*.db
 data/*.db-*
 data/*.tmp*
+data/rxp_imports/
 config.json
 
 # Third-party downloads and scratch

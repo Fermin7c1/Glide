@@ -494,3 +494,14 @@ they don't spell out.
   balanced or best models. `AppSettings.setupDone` marks it finished or skipped; a player whose WoW folder was set
   before it existed gets `"before-setup"` at start and never sees it; Settings > General runs it again. Settings it
   writes go through the existing `config:set`, `keys:set` and `app:settings:set`. The player asked (2026-10-30).
+- **Addon 0.17.0, contracts 4, 7 and files on disk additive: RestedXP guides added from the app** (`addon` and
+  `desktop` goldens re-recorded: the TOC's two new files and the two new channels).
+  The Addon page takes a RestedXP guide string (`addon:rxpImport(text)`, `addon:rxpImports()`), so a guide bought
+  mid-session reaches the coach and RestedXP without the game's import window. `companion/rxp_import.py` opens it
+  with the key RestedXP saved for the account on this PC (`RXPData.cache` in its account SavedVariables; never a
+  typed BattleTag), keeps the guide texts in `data/rxp_imports/imports.json` (new; `tools/build_db.py` reads them
+  like RestedXP's own cache) and writes the string to the installed addon's `Data/RXPImports.lua` (new, shipped
+  empty; the app writes it again after an addon install and the engine at start). At login the addon's
+  `RXPImport.lua` hands each waiting string to RestedXP's own `guideImporter:ImportString`, once per string and
+  account, and notes the outcome in `GlideRecorderDB.rxpImports[id] = {t, ok, err}` (new field);
+  `/glide rxpimport` (new command) tries failed ones again. The strip is unchanged. The player asked (2026-11-01).

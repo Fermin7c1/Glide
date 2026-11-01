@@ -126,6 +126,30 @@ export class Engine extends EventEmitter {
     });
   }
 
+  /** Run one of the engine's Python tools in the engine home with `input` on its stdin, and answer the JSON object
+   * it prints last (the lines before it and its stderr go to the log). The API keys stay out of its environment. */
+  pythonJson(args: string[], input: string, o: EngineOptions): Promise<Record<string, unknown>> {
+    return new Promise((resolve, reject) => {
+      const p = this.spawnPython(args, { ...o, env: {} }, { stdio: ["pipe", "pipe", "pipe"] });
+      let out = "";
+      p.stdout?.on("data", (d) => (out += d.toString("utf8")));
+      p.stderr?.on("data", (d) => this.addLog("err", d.toString("utf8")));
+      p.on("error", reject);
+      p.on("exit", () => {
+        const lines = out.trim().split(/\r?\n/);
+        const answer = lines.pop() || "";
+        if (lines.length) this.addLog("out", lines.join("\n"));
+        try {
+          resolve(JSON.parse(answer));
+        } catch {
+          reject(new Error(`${args[0]} gave no answer`));
+        }
+      });
+      p.stdin?.on("error", () => undefined);       // a tool that exits before reading all of it
+      p.stdin?.end(input, "utf8");
+    });
+  }
+
   async start(o: EngineOptions): Promise<void> {
     if (this.proc) return;
     this.opts = o;
