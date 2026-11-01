@@ -44,6 +44,8 @@ HANDOFF = os.path.join("Interface", "AddOns", "Glide", "Data", "RXPImports.lua")
 _CHUNK = re.compile(r"(-?\d+)(\D)([A-Za-z0-9+/=]+)%", re.ASCII)
 _SAFE = re.compile(r"^[0-9A-Za-z+/=|:%-]+$")          # what a string may hold to be written into a Lua file
 MAX_LEN = 64 << 20
+INCOMPLETE = ("That guide string is incomplete. Download the guide file from RestedXP again, or copy all of its string "
+              "again.")
 
 
 class ImportProblem(Exception):
@@ -66,16 +68,17 @@ def parse(text):
     one."""
     s = clean(text)
     if not s:
-        raise ImportProblem("That isn't a RestedXP guide string: paste the whole string RestedXP gave you.")
+        raise ImportProblem("That isn't a RestedXP guide string. Choose the guide file you downloaded from RestedXP, "
+                            "or paste its whole string.")
     if len(s) > MAX_LEN:
-        raise ImportProblem("That string is too long to be a RestedXP guide string.")
+        raise ImportProblem("That's too long to be a RestedXP guide string.")
     count = re.match(r"^(\d+)\|", s, re.ASCII)
     version = re.search(r"\|(\d+)$", s, re.ASCII)
     if not count or not version or not re.search(r"\|(\d+):", s, re.ASCII):
-        raise ImportProblem("That string is incomplete: copy it again from RestedXP, all of it, and paste it here.")
+        raise ImportProblem(INCOMPLETE)
     chunks = [(int(m.group(1)), m.group(2), m.group(3)) for m in _CHUNK.finditer(s)]
     if not chunks:
-        raise ImportProblem("That string is incomplete: copy it again from RestedXP, all of it, and paste it here.")
+        raise ImportProblem(INCOMPLETE)
     return {"count": int(count.group(1)), "version": int(version.group(1)), "chunks": chunks, "string": s}
 
 

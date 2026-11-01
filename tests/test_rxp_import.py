@@ -104,7 +104,10 @@ try:
     r = R.add(home, wow, pasted, now=1_790_000_000)
     assert r["ok"] and r["account"] == "MAIN" and r["guides"] == ["1-6 Durotar", "6-11 Durotar"], r
     assert r["handoff"] and not r["again"], r
-    again = R.add(home, wow, s1, now=1_790_000_500)
+    # the same string as RestedXP's downloaded guide file, read by the app as text: a BOM, wrapped lines, a newline
+    as_file = "\ufeff" + "\n".join(s1[i:i + 76] for i in range(0, len(s1), 76)) + "\r\n"
+    assert R.parse(as_file)["string"] == s1
+    again = R.add(home, wow, as_file, now=1_790_000_500)
     assert again["again"] and again["id"] == r["id"], again
     assert R.load_store(home)["imports"][r["id"]]["added"] == 1_790_000_000, "added keeps the first time"
     # a string for ALT (whose RestedXP left the BattleTag in RXPData.cache)

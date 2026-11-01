@@ -505,3 +505,7 @@ they don't spell out.
   `RXPImport.lua` hands each waiting string to RestedXP's own `guideImporter:ImportString`, once per string and
   account, and notes the outcome in `GlideRecorderDB.rxpImports[id] = {t, ok, err}` (new field);
   `/glide rxpimport` (new command) tries failed ones again. The strip is unchanged. The player asked (2026-11-01).
+- **Follow-up, player-visible text: a guide file too.** RestedXP delivers a guide as a downloaded file holding the
+  string, so the Addon page's "Choose file" (or dropping the file on the box) reads it in the window and adds it
+  through the same `addon:rxpImport(text)`; no channel or file changes. The engine's messages name the file as
+  well as the pasted string. The player asked (2026-11-01).

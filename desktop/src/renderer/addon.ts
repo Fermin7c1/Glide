@@ -26,6 +26,7 @@ export async function refreshAddon(): Promise<void> {
   b.innerHTML = icon("download") + (s.installed ? (s.upToDate ? "Reinstall addon" : `Update to ${esc(s.bundled)}`) : "Install addon");
   $<HTMLButtonElement>("addon-open").disabled = !s.wowOk;
   $<HTMLButtonElement>("rxp-add").disabled = !s.wowOk;
+  $<HTMLButtonElement>("rxp-file").disabled = !s.wowOk;
   addonCurrent = !!s.installed && s.upToDate;
   refreshRxp();
 }
@@ -56,19 +57,26 @@ async function refreshRxp(): Promise<void> {
   }).join("");
 }
 
-async function addRxpGuide(): Promise<void> {
-  const box = $<HTMLTextAreaElement>("rxp-string"), btn = $<HTMLButtonElement>("rxp-add");
-  if (!box.value.trim()) {
-    $("rxp-msg").innerHTML = `<span class="warn">Paste the string RestedXP gave you first.</span>`;
+/** Add a guide string: the pasted one, or `text` read from the file `from`. */
+async function addRxpGuide(text?: string, from?: string): Promise<void> {
+  const box = $<HTMLTextAreaElement>("rxp-string");
+  const btns = [$<HTMLButtonElement>("rxp-add"), $<HTMLButtonElement>("rxp-file")];
+  const s = text ?? box.value;
+  if (!s.trim()) {
+    $("rxp-msg").innerHTML = from ? `<span class="bad">${esc(from)} is empty.</span>`
+      : `<span class="warn">Choose the file you downloaded, or paste the string RestedXP gave you first.</span>`;
     return;
   }
-  btn.disabled = true;
-  $("rxp-msg").innerHTML = `<span class="dim">Checking it against your RestedXP account…</span>`;
-  const r = await call("addon:rxpImport", box.value);
-  btn.disabled = false;
+  btns.forEach((b) => (b.disabled = true));
+  $("rxp-msg").innerHTML = `<span class="dim">Checking ${from ? esc(from) : "it"} against your RestedXP account…</span>`;
+  const r = await call("addon:rxpImport", s);
+  btns.forEach((b) => (b.disabled = false));
   if (!r) { $("rxp-msg").innerHTML = ""; return; }
-  if (!r.ok) { $("rxp-msg").innerHTML = `<span class="bad">${esc(r.error || "It couldn't be added.")}</span>`; return; }
-  box.value = "";
+  if (!r.ok) {
+    $("rxp-msg").innerHTML = `<span class="bad">${from ? `${esc(from)}: ` : ""}${esc(r.error || "It couldn't be added.")}</span>`;
+    return;
+  }
+  if (!from) box.value = "";
   let coach = "The coach learns the route when it starts.";
   if (live.engineUrl) {
     // the knowledge refresh reads the new guides; coaching goes on meanwhile
@@ -76,8 +84,28 @@ async function addRxpGuide(): Promise<void> {
   }
   const rxp = !r.handoff ? "Install the Glide addon above so RestedXP gets it too."
     : addonCurrent ? "RestedXP gets it at your next login or /reload." : "Update the Glide addon above, then RestedXP gets it at your next login.";
-  $("rxp-msg").innerHTML = `<span class="ok">${r.again ? "Added again" : "Added"}: ${esc(guideCount((r.guides || []).length))}.</span> ${coach} ${rxp}`;
+  $("rxp-msg").innerHTML = `<span class="ok">${r.again ? "Added again" : "Added"}${from ? ` from ${esc(from)}` : ""}: ${esc(guideCount((r.guides || []).length))}.</span> ${coach} ${rxp}`;
   refreshRxp();
+}
+
+const MAX_GUIDE_FILE = 64 * 1024 * 1024;     // companion/rxp_import.py MAX_LEN: RestedXP's strings are a few MB
+
+/** A guide file chosen or dropped: its text goes in as if pasted (RestedXP's downloads are the string itself). */
+async function addRxpFile(f: File | undefined): Promise<void> {
+  if (!f) return;
+  if (f.size > MAX_GUIDE_FILE) {
+    $("rxp-msg").innerHTML = `<span class="bad">${esc(f.name)} is too big to be a RestedXP guide file.</span>`;
+    return;
+  }
+  $("rxp-msg").innerHTML = `<span class="dim">Reading ${esc(f.name)}…</span>`;
+  let text: string;
+  try {
+    text = await f.text();
+  } catch {
+    $("rxp-msg").innerHTML = `<span class="bad">Couldn't read ${esc(f.name)}.</span>`;
+    return;
+  }
+  await addRxpGuide(text, f.name);
 }
 
 async function setWowDir(p: string): Promise<void> {
@@ -118,5 +146,20 @@ export function wireAddon(): void {
     }
   };
   $("addon-open").onclick = () => live.config.wow_dir && call("shell:open", live.config.wow_dir + "\\Interface\\AddOns");
-  $("rxp-add").onclick = addRxpGuide;
+  $("rxp-add").onclick = () => addRxpGuide();
+  const pick = $<HTMLInputElement>("rxp-file-input");
+  $("rxp-file").onclick = () => pick.click();
+  pick.onchange = () => {
+    const f = pick.files?.[0];
+    pick.value = "";                          // the same file can be chosen again
+    addRxpFile(f);
+  };
+  // the downloaded file dropped on the box: read it, never let the window open it
+  const box = $("rxp-string");
+  box.addEventListener("dragover", (e) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); });
+  box.addEventListener("drop", (e) => {
+    if (!e.dataTransfer?.files.length) return;
+    e.preventDefault();
+    addRxpFile(e.dataTransfer.files[0]);
+  });
 }
