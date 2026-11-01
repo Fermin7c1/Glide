@@ -5,6 +5,7 @@ import type { RxpGuideAction, RxpGuideDetail, RxpGuideStep, RxpGuideSummary, Rxp
 import { call } from "./bridge.js";
 import { $, esc } from "./dom.js";
 import { live } from "./state.js";
+import { conditionApplies } from "./rxp-conditions.js";
 
 const MAP_W = 1002;
 const MAP_H = 668;
@@ -19,11 +20,6 @@ const RXP_COLORS: Record<string, string> = {
   RXP_WARN_: "#fcdc00",
   RXP_PICK_: "#db2eef",
   RXP_BUY_: "#2ecc40",
-};
-
-const RACE_FACTION: Record<string, "Alliance" | "Horde"> = {
-  Human: "Alliance", Dwarf: "Alliance", NightElf: "Alliance", Gnome: "Alliance", Draenei: "Alliance",
-  Orc: "Horde", Scourge: "Horde", Undead: "Horde", Tauren: "Horde", Troll: "Horde", Skyborne: "Horde", BloodElf: "Horde",
 };
 
 interface CatalogEntry extends RxpGuideSummary {
@@ -58,7 +54,7 @@ const filter = {
   group: "",
   search: "",
   stepSearch: "",
-  race: "",
+  race: "",                 // the race picker's value: "Human", ..., or "Skyborne@Alliance" / "Skyborne@Horde"
   cls: "",
   ssf: false,
   groupQuests: true,
@@ -66,51 +62,9 @@ const filter = {
   showAllCond: false,
 };
 
-/** Evaluate RestedXP's `<<` condition string (GuideLoader.lua applies) against the selected race/class. */
+/** Evaluate RestedXP's `<<` condition string against the picked race (with its faction) and class. */
 function condApplies(raw: string | null | undefined): boolean {
-  if (!raw || !raw.trim()) return true;
-  const race = filter.race ? (filter.race === "Undead" ? "Scourge" : filter.race) : "";
-  const faction = filter.race ? RACE_FACTION[filter.race] || "" : "";
-  const cls = filter.cls.toUpperCase();
-  if (!race && !cls) return true;   // "All Races" + "All Classes": show everything
-
-  const evalLit = (lit: string): boolean => {
-    if (lit === "TRUE") return true;
-    if (lit === "FALSE") return false;
-    const e = lit === "Undead" ? "Scourge" : lit === "Haranir" ? "Harronir" : lit;
-    const up = e.toUpperCase() === "DK" ? "DEATHKNIGHT" : e.toUpperCase();
-    if (/^\d+$/.test(e)) return true;
-    if (up === "CLASSIC" || up === "FOREVER" || e === "enUS") return true;
-    const isClass = ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID", "DEATHKNIGHT"].includes(up);
-    const isFaction = e === "Alliance" || e === "Horde";
-    const isRace = e in RACE_FACTION;
-    if (isClass) return !cls || up === cls;
-    if (isFaction) return !faction || e === faction;
-    if (isRace) return !race || e === race;
-    return true;
-  };
-
-  const evalExpr = (expr: string): boolean => {
-    let s = expr;
-    let prev = "";
-    while (s !== prev && /(!?)\(\s*([^()]*?)\s*\)/.test(s)) {
-      prev = s;
-      s = s.replace(/(!?)\(\s*([^()]*?)\s*\)/g, (_m, neg, inner) => (evalExpr(inner) !== (neg === "!") ? "TRUE" : "FALSE"));
-    }
-    for (const branch of s.split("/")) {
-      const tokens = branch.match(/!?[A-Za-z0-9]+/g);
-      if (!tokens || !tokens.length) continue;
-      let allOk = true;
-      for (const tok of tokens) {
-        const neg = tok.startsWith("!");
-        const lit = neg ? tok.slice(1) : tok;
-        if (evalLit(lit) === neg) { allOk = false; break; }
-      }
-      if (allOk) return true;
-    }
-    return false;
-  };
-  return evalExpr(raw);
+  return conditionApplies(raw, filter.race, filter.cls);
 }
 
 function stepFlagsShown(flags: Record<string, unknown>): boolean {

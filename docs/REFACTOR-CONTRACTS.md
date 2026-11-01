@@ -521,3 +521,9 @@ they don't spell out.
   per-guide summaries (`items`) and `rxp_import.py guide <id> <index>` (`addon:rxpImports(id, index)`) returns the
   parsed guide (`knowledge/rxp_parser`) for the Addon page's interactive RestedXP Guide & Route Explorer
   (`desktop/src/renderer/rxp-browser.ts`). The player asked (2026-11-01).
+- **Follow-up, player-visible text: Skyborne under both factions in the Explorer's race picker.** Skyborne joins
+  either faction, but the Guide & Route Explorer listed it only under Horde and read every Skyborne pick as Horde,
+  hiding an Alliance Skyborne's steps. The picker now offers it under Alliance and Horde (values `Skyborne@Alliance`
+  and `Skyborne@Horde`), and the `<<` condition check moved, unchanged otherwise, into
+  `desktop/src/renderer/rxp-conditions.ts` (tested by `tests/test_rxp_conditions.py`). The player reported it
+  (2026-11-01).
