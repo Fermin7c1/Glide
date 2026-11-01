@@ -3,7 +3,7 @@
 -- when the data strip is off (the companion sees nothing). Settings live in GlideLinkDB.minimap (angle, hide).
 local _, ns = ...
 
-local ICON = "Interface\\Icons\\Ability_Rogue_Sprint"
+local ICON = "Interface\\AddOns\\Glide\\Media\\icon"    -- Glide's own icon (Media/icon.tga), as in the AddOns list
 local button
 
 local DEFAULTS = { angle = 200 }
@@ -66,7 +66,7 @@ local function create()
     local icon = button:CreateTexture(nil, "ARTWORK")
     icon:SetSize(17, 17); icon:SetPoint("TOPLEFT", 7, -6)
     icon:SetTexture(ICON)
-    icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    -- the whole artwork: it has no frame to trim, as a game icon has (a round mask would cut the wing and the toe)
     button.icon = icon
     local border = button:CreateTexture(nil, "OVERLAY")
     border:SetSize(53, 53); border:SetPoint("TOPLEFT")

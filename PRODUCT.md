@@ -35,7 +35,7 @@ The coach reasons from the player's live game state plus a knowledge base built 
 ## Brand Commitments
 
 - Name: Glide to 60 ("Glide" for short).
-- App icon: the drawn icon, desktop/assets/icon.svg (a red-orange winged boot in neon line work, speeding up and to the right on black), rendered to icon.png by scripts/render-icon.js. It replaced the game's Sprint icon on 2026-10-30 when the repository went public: no Blizzard art in the repository or the installer.
+- App icon: the pixel-art winged boot, desktop/assets/icon-source.png (a brown leather boot with a pale wing, a cream outline and a flame trail, speeding up and to the right on dark navy), made official by the player on 2026-11-01. scripts/render-icon.js renders it to icon.png (the app, its installer, tray and README); the addon's own copy is addon/Glide/Media/icon.tga (the AddOns list and the minimap button). It replaced the drawn neon icon (icon.svg), which had replaced the game's Sprint icon when the repository went public: no Blizzard art in the repository or the installer.
 
 ## Evidence on Hand
 

@@ -509,3 +509,8 @@ they don't spell out.
   string, so the Addon page's "Choose file" (or dropping the file on the box) reads it in the window and adds it
   through the same `addon:rxpImport(text)`; no channel or file changes. The engine's messages name the file as
   well as the pasted string. The player asked (2026-11-01).
+- **Addon 0.17.1 and the app: Glide's official icon** (what the player sees). The player's pixel-art winged boot
+  (`desktop/assets/icon-source.png`) is the app's icon (`icon.png`: window, installer, tray, update splash,
+  README) and the addon's (`addon/Glide/Media/icon.tga`, 64 x 64: the AddOns list's `IconTexture` and the minimap
+  button, shown whole: no game-icon frame to trim). The drawn `icon.svg` is gone; `render-icon.js` renders the artwork.
+  The player asked (2026-11-01).
