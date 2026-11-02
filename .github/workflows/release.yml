@@ -1,11 +1,13 @@
 # Builds the Windows installer and publishes it to the public Fermin7c1/Glide-releases repo on every push to main
-# that changes what players get (the paths below: what the installer ships), after the CI checks (ci.yml) pass.
+# that changes what players get (the paths below: what the installer ships), once the CI checks (ci.yml) pass: the
+# installer builds and uploads to a draft release alongside the checks, and only publishing the draft waits for them.
 # Installed apps check that repo and update themselves. The version is the next patch after the last release, or
 # desktop/package.json's version when it was raised by hand (scripts/next-release.js); it is never committed back.
 #
 # Needs the secret RELEASES_TOKEN in the "release" environment (Settings > Environments): a fine-grained GitHub
 # token with access to Fermin7c1/Glide-releases only, permission "Contents: Read and write", with an expiry. The
-# environment has a required reviewer and allows only main, so nothing else can reach the token or publish.
+# environment has a required reviewer and allows only main, so nothing else can reach the token or publish (two
+# jobs use it, build and publish: with a reviewer required, each asks).
 name: Release desktop app
 
 on:
@@ -26,20 +28,26 @@ on:
 permissions:
   contents: read
 
+# one run at a time, start to end (version, build, publish), so two runs never claim the same version
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  # the same checks as every push (ci.yml: tests, portable golden masters, linters, desktop build); a release is
-  # built only when they pass
+  # the same checks as every push (ci.yml: tests, portable golden masters, linters, desktop build); they run while
+  # the installer builds, and the release is published only when they pass (publish, below)
   test:
     uses: ./.github/workflows/ci.yml
 
-  release:
-    needs: test
+  # builds the installer and uploads it to a draft release, alongside the tests. A draft is invisible to installed
+  # apps (they only see published releases), so nothing reaches a player before publish has seen the tests pass. A
+  # draft whose tests failed is taken over by the next run (the same version: only a published release moves it on)
+  build:
     runs-on: windows-latest
     environment: release
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      exists: ${{ steps.ver.outputs.exists }}
     defaults:
       run:
         shell: pwsh
@@ -83,6 +91,15 @@ jobs:
           # only a published release counts; a draft is a run that didn't finish, and this one finishes it
           $draft = gh release view "v$v" --repo Fermin7c1/Glide-releases --json isDraft --jq .isDraft 2>$null
           $exists = if ($LASTEXITCODE -eq 0 -and $draft -eq "false") { "true" } else { "false" }
+          # a re-run of an older run ("Re-run all jobs") whose commit the last published release already holds: the
+          # next version would be that older code, published as the newest. A new commit releases again.
+          if ($exists -eq "false" -and $env:GITHUB_RUN_ATTEMPT -ne "1" -and $since) {
+            git merge-base --is-ancestor HEAD $since 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "::notice::$env:LATEST already holds this commit (source $since): nothing to release"
+              $exists = "true"
+            }
+          }
           "exists=$exists" >> $env:GITHUB_OUTPUT
           Write-Host "desktop version $v, already released: $exists"
           exit 0
@@ -98,9 +115,35 @@ jobs:
         if: steps.ver.outputs.exists == 'false'
         run: npm ci
 
-      - name: Bundled Python
+      # fetch-python.ps1's output depends only on the script (its pinned, hash-checked downloads) and the runner
+      # image (the Visual C++ runtime DLLs it copies from System32): cached under both, it is rebuilt when either
+      # changes. A cache is saved only by a job that succeeded, and only main's runs reach this environment.
+      - name: Runner image
+        id: img
         if: steps.ver.outputs.exists == 'false'
+        run: '"image=${env:ImageOS}-${env:ImageVersion}" >> $env:GITHUB_OUTPUT'
+
+      - name: Bundled Python (cache)
+        id: pycache
+        if: steps.ver.outputs.exists == 'false'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: desktop/build/python
+          key: bundled-python-${{ steps.img.outputs.image }}-${{ hashFiles('desktop/scripts/fetch-python.ps1') }}
+
+      - name: Bundled Python
+        if: steps.ver.outputs.exists == 'false' && steps.pycache.outputs.cache-hit != 'true'
         run: npm run python
+
+      # the script's own smoke test, on the cached runtime (writing no __pycache__ into what ships)
+      - name: Bundled Python works
+        if: steps.ver.outputs.exists == 'false' && steps.pycache.outputs.cache-hit == 'true'
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONNOUSERSITE: "1"
+        run: |
+          build\python\python.exe -c "import sys, sqlite3, ctypes, winsound, json, zlib, numpy; print('python', sys.version.split()[0], 'numpy', numpy.__version__)"
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::the cached bundled Python doesn't run"; exit 1 }
 
       # electron-builder uploads the installer and its blockmap in parallel, and each upload creates the release if
       # it can't find one; two creates race and the loser fails the build. A draft made up front is found by both.
@@ -130,10 +173,37 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: npm run release
 
-      # installed apps only see published releases, so this goes last: a failed upload never reaches them
+  # installed apps only see published releases, so this goes last and waits for both jobs: a failed (or cancelled,
+  # or skipped) test, build or upload never reaches them, since a job that didn't succeed skips the jobs that need it
+  publish:
+    needs: [test, build]
+    if: needs.build.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      # only the draft this run built, whole: a re-run of an old run's failed jobs must not publish a draft a newer
+      # run has taken over (its notes name that run's commit), or mark an old version latest again
       - name: Publish the release
-        if: steps.ver.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
-          VER: ${{ steps.ver.outputs.version }}
-        run: gh release edit "v$env:VER" --repo Fermin7c1/Glide-releases --draft=false --latest
+          VER: ${{ needs.build.outputs.version }}
+          REPO: Fermin7c1/Glide-releases
+        run: |
+          set -euo pipefail
+          info=$(gh release view "v$VER" --repo "$REPO" --json isDraft,body,assets)
+          src=$(jq -r .body <<<"$info" | sed -n 's/.*source: \([0-9a-f]\{40\}\).*/\1/p' | head -n 1)
+          if [ "$src" != "$GITHUB_SHA" ]; then
+            echo "::error::v$VER was built from ${src:-an unknown commit}, not $GITHUB_SHA: not publishing it"
+            exit 1
+          fi
+          if [ "$(jq -r .isDraft <<<"$info")" != "true" ]; then
+            echo "v$VER is published already"
+            exit 0
+          fi
+          for f in latest.yml "Glide-to-60-Setup-$VER.exe" "Glide-to-60-Setup-$VER.exe.blockmap"; do
+            if ! jq -e --arg f "$f" '[.assets[].name] | index($f) != null' <<<"$info" >/dev/null; then
+              echo "::error::the v$VER draft has no $f: not publishing it"
+              exit 1
+            fi
+          done
+          gh release edit "v$VER" --repo "$REPO" --draft=false --latest
