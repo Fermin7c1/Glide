@@ -567,7 +567,9 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
    screen: their bodies scale by --inv (1 / zoom), and line widths and dashes are multiplied by it */
 .rxpb-map-stage { cursor: grab; touch-action: none; }
 .rxpb-map-stage.dragging { cursor: grabbing; }
-.rxpb-map-layer { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.rxpb-map-layer { position: absolute; inset: 0; transform-origin: 0 0; }
+/* a raster layer only while the map moves; at rest it is drawn sharp again at the new zoom */
+.rxpb-map-stage.moving .rxpb-map-layer { will-change: transform; }
 #rxpb-map-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
 #rxpb-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .rxpb-body { transform: scale(var(--inv, 1)); }
@@ -579,9 +581,12 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-hovercard { position: absolute; z-index: 4; width: 300px; max-width: 70%; padding: 10px 12px; border-radius: 8px; pointer-events: none;
   background: rgba(12, 12, 27, 0.96); box-shadow: 0 0 0 1px #363e6d, 0 12px 28px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 6px; }
 .rxpb-hovercard[hidden] { display: none; }
-.rxpb-hc-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: #9aa4d6; }
+.rxpb-hc-head { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; font-size: 12px; color: #9aa4d6; }
 .rxpb-hc-head b { color: var(--gold-hi); font-size: 13px; }
 .rxpb-hc-text { font-size: 13.5px; line-height: 1.4; color: #f0f2fa; }
+.rxpb-hc-line { font-size: 13px; line-height: 1.4; color: #dfe3f2; }
+.rxpb-hc-line.dim { color: #9aa4d6; font-size: 12px; }
+.rxpb-hc-head .warn { color: #ffb36b; font-weight: 650; }
 .rxpb-pin:focus { outline: none; }
 .rxpb-pin:focus-visible .rxpb-body > circle:not(.rxpb-pin-pulse) { stroke: var(--gold-hi); stroke-width: 3.5; }
 .rxpb-map-tools { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
@@ -595,15 +600,79 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-mt-chk input { accent-color: var(--gold); margin: 0; }
 .rxpb-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: calc(1px * var(--inv, 1)); }
 .rxpb-map-note { fill: #fff3d6; font-size: 17px; paint-order: stroke; stroke: rgba(12, 13, 18, 0.85); stroke-width: 4px; }
-.rxpb-path-future { fill: none; stroke: rgba(255, 250, 240, 0.28); stroke-width: calc(2.2px * var(--inv, 1)); stroke-dasharray: calc(5px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
-.rxpb-path-case { fill: none; stroke: rgba(0, 0, 0, 0.72); stroke-width: calc(6.5px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
-.rxpb-path-done { fill: none; stroke: rgba(242, 194, 79, 0.65); stroke-width: calc(3px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
-.rxpb-leg-case { fill: none; stroke: rgba(0, 0, 0, 0.85); stroke-width: calc(8.5px * var(--inv, 1)); stroke-linecap: round; }
-.rxpb-leg-walk { fill: none; stroke: #fffaf0; stroke-width: calc(3.8px * var(--inv, 1)); stroke-linecap: round; }
-.rxpb-leg-flow { fill: none; stroke: var(--gold); stroke-width: calc(3.8px * var(--inv, 1)); stroke-dasharray: calc(8px * var(--inv, 1)) calc(10px * var(--inv, 1)); stroke-linecap: round; animation: rxpb-dash 1s linear infinite; }
-.rxpb-step-chain { fill: none; stroke: #00bcd4; stroke-width: calc(3px * var(--inv, 1)); stroke-dasharray: calc(5px * var(--inv, 1)) calc(5px * var(--inv, 1)); }
-.rxpb-loop { fill: rgba(255, 87, 34, 0.14); stroke: #ff5722; stroke-width: calc(2.8px * var(--inv, 1)); stroke-dasharray: calc(6px * var(--inv, 1)) calc(4px * var(--inv, 1)); }
-@keyframes rxpb-dash { to { stroke-dashoffset: -18; } }
+/* the route: every leg of the map, faint (the coach screen's look: walk white on a dark case, flight dotted cyan, a
+   hearth / deathskip / boat a faint arc with its glyph, anything not worked out yet a faint dashed straight line);
+   the legs to the current target bright in the active layer, gold dashes flowing toward it */
+.rxpb-rleg, .rxpb-aleg { cursor: pointer; }
+.rxpb-rleg.is-done { display: none; }
+.show-done .rxpb-rleg.is-done { display: inline; }
+.rxpb-r-case { fill: none; stroke: rgba(0, 0, 0, 0.5); stroke-width: calc(5px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-r-walk { fill: none; stroke: rgba(255, 250, 240, 0.62); stroke-width: calc(2px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-r-fly { fill: none; stroke: rgba(79, 216, 255, 0.8); stroke-width: calc(2.6px * var(--inv, 1)); stroke-linecap: round;
+  stroke-dasharray: calc(0.5px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
+.rxpb-r-approx { fill: none; stroke: rgba(255, 250, 240, 0.34); stroke-width: calc(1.8px * var(--inv, 1)); stroke-dasharray: calc(4px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
+.rxpb-r-jump { fill: none; stroke-width: calc(1.8px * var(--inv, 1)); stroke-dasharray: calc(3px * var(--inv, 1)) calc(5px * var(--inv, 1)); opacity: 0.6; }
+.j-hearth { stroke: #d580ff; } .j-death { stroke: #ff5722; } .j-boat { stroke: #8fb4ff; }
+.rxpb-rleg.is-done .rxpb-r-walk { stroke: rgba(242, 194, 79, 0.7); }
+.rxpb-rleg.is-sel .rxpb-r-walk, .rxpb-rleg.is-sel .rxpb-r-approx, .rxpb-rleg:hover .rxpb-r-walk, .rxpb-rleg:hover .rxpb-r-approx { stroke: var(--gold-hi); }
+.rxpb-rleg.is-sel .rxpb-r-fly, .rxpb-rleg:hover .rxpb-r-fly { stroke: #b5efff; }
+.rxpb-rleg.is-sel .rxpb-r-jump, .rxpb-rleg:hover .rxpb-r-jump { opacity: 1; }
+.rxpb-hit { fill: none; stroke: transparent; stroke-width: calc(14px * var(--inv, 1)); pointer-events: stroke; stroke-linecap: round; }
+.rxpb-a-case { fill: none; stroke: rgba(0, 0, 0, 0.85); stroke-width: calc(8.5px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-a-walk { fill: none; stroke: #fffaf0; stroke-width: calc(3.8px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-a-fly { fill: none; stroke: #4fd8ff; stroke-width: calc(4px * var(--inv, 1)); stroke-linecap: round; stroke-dasharray: calc(1px * var(--inv, 1)) calc(9px * var(--inv, 1)); }
+.rxpb-r-case.fly { stroke: rgba(0, 0, 0, 0.35); }
+.rxpb-a-approx { fill: none; stroke: rgba(255, 250, 240, 0.8); stroke-width: calc(2.6px * var(--inv, 1)); stroke-dasharray: calc(6px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
+.rxpb-a-jump { fill: none; stroke-width: calc(3px * var(--inv, 1)); stroke-dasharray: calc(5px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
+.rxpb-leg-flow { fill: none; stroke: var(--gold); stroke-width: calc(3.8px * var(--inv, 1)); stroke-dasharray: calc(8px * var(--inv, 1)) calc(10px * var(--inv, 1));
+  stroke-linecap: round; animation: rxpb-dash 1s linear infinite; pointer-events: none; }
+.rxpb-land { fill: #4fd8ff; stroke: #000; stroke-width: 2; }
+.rxpb-land:not(.on) { fill: rgba(79, 216, 255, 0.6); }
+.rxpb-jump-dot { fill: rgba(12, 13, 18, 0.85); stroke-width: 1.6; }
+.rxpb-jump-glyph { font: 700 11px var(--f-ui); text-anchor: middle; pointer-events: none; stroke: none; }
+.rxpb-jump-glyph.j-hearth { fill: #d580ff; } .rxpb-jump-glyph.j-death { fill: #ff8a65; } .rxpb-jump-glyph.j-boat { fill: #8fb4ff; }
+/* where a leg crosses the edge: "from <zone>" / "to <zone>", opens that zone */
+.rxpb-edge { cursor: pointer; }
+.rxpb-rleg.is-done .rxpb-edge, .rxpb-rleg .rxpb-edge text { display: none; }
+.rxpb-rleg:hover .rxpb-edge text { display: inline; }
+.rxpb-edge circle { fill: #12152b; stroke: #fffaf0; stroke-width: 1.8; }
+.rxpb-edge text { font: 650 12px var(--f-ui); fill: #fff3d6; paint-order: stroke; stroke: rgba(12, 13, 18, 0.9); stroke-width: 3.5px; }
+.rxpb-edge.on circle { fill: var(--gold); stroke: #000; }
+.rxpb-edge:hover text, .rxpb-edge:focus-visible text { fill: var(--gold-hi); }
+.rxpb-edge:focus { outline: none; }
+/* the guide's zones on a continent: an outline and the name; a click opens the zone */
+.rxpb-zone { cursor: pointer; }
+.rxpb-zone rect { fill: rgba(255, 250, 240, 0.03); stroke: rgba(255, 250, 240, 0.4); stroke-width: calc(1.2px * var(--inv, 1)); stroke-dasharray: calc(4px * var(--inv, 1)) calc(4px * var(--inv, 1)); }
+.rxpb-zone:hover rect, .rxpb-zone:focus-visible rect { fill: rgba(242, 194, 79, 0.08); stroke: var(--gold); }
+.rxpb-zone text { font: 650 12px var(--f-ui); fill: #fff3d6; paint-order: stroke; stroke: rgba(12, 13, 18, 0.9); stroke-width: 3.5px; }
+.rxpb-zone:focus { outline: none; }
+/* grind loops and objectives: per step, shown for the current one (and the one picked), under the pins */
+.rxpb-sloops, .rxpb-sobjs { display: none; }
+.rxpb-sloops.on, .rxpb-sobjs.on { display: inline; }
+.rxpb-loop { fill: rgba(255, 87, 34, 0.12); stroke: #ff5722; stroke-width: calc(2.8px * var(--inv, 1)); stroke-dasharray: calc(6px * var(--inv, 1)) calc(4px * var(--inv, 1)); cursor: pointer; }
+.rxpb-loop:hover, .rxpb-loop.is-sel { fill: rgba(255, 87, 34, 0.22); stroke-width: calc(3.6px * var(--inv, 1)); }
+polyline.rxpb-loop { fill: none; }
+.rxpb-obj { cursor: pointer; }
+.rxpb-obj circle, .rxpb-obj rect { stroke: rgba(0, 0, 0, 0.85); stroke-width: 1.4; }
+.rxpb-obj.r-kill circle, .rxpb-obj.r-kill rect { fill: #ff6257; }
+.rxpb-obj.r-loot circle, .rxpb-obj.r-loot rect { fill: #00bcd4; }
+.rxpb-obj.r-use circle, .rxpb-obj.r-use rect { fill: #db2eef; }
+.rxpb-obj.r-talk circle, .rxpb-obj.r-talk rect { fill: #00ff25; }
+.rxpb-obj.r-area circle, .rxpb-obj.r-area rect { fill: #fcdc00; }
+.rxpb-obj circle.ring { fill: none !important; stroke: #fcdc00; stroke-width: 2.2; }
+.rxpb-obj.elite circle { stroke: var(--gold-hi); stroke-width: 2; }
+.rxpb-obj:hover circle, .rxpb-obj:hover rect, .rxpb-obj.is-sel circle, .rxpb-obj.is-sel rect { stroke: #fff; stroke-width: 2.2; }
+.rxpb-ohull { stroke-width: calc(1.4px * var(--inv, 1)); stroke-dasharray: calc(3px * var(--inv, 1)) calc(3px * var(--inv, 1)); cursor: pointer; }
+.rxpb-ohull.r-kill { fill: rgba(255, 98, 87, 0.1); stroke: rgba(255, 98, 87, 0.75); }
+.rxpb-ohull.r-loot { fill: rgba(0, 188, 212, 0.1); stroke: rgba(0, 188, 212, 0.75); }
+.rxpb-ohull.r-use { fill: rgba(219, 46, 239, 0.1); stroke: rgba(219, 46, 239, 0.75); }
+.rxpb-ohull.r-talk { fill: rgba(0, 255, 37, 0.08); stroke: rgba(0, 255, 37, 0.6); }
+.rxpb-ohull.r-area { fill: rgba(252, 220, 0, 0.08); stroke: rgba(252, 220, 0, 0.7); }
+.rxpb-ohull:hover, .rxpb-ohull.is-sel { stroke-width: calc(2.2px * var(--inv, 1)); }
+/* the current step's path points: RestedXP's arrow walks through them on the way */
+.rxpb-pathdot circle { fill: #fffaf0; stroke: rgba(0, 0, 0, 0.85); stroke-width: 1.4; }
+.rxpb-pathdot:hover circle { fill: var(--gold-hi); }
+@keyframes rxpb-dash { to { stroke-dashoffset: calc(-18px * var(--inv, 1)); } }
 
 .rxpb-pin { cursor: pointer; transition: transform 0.12s var(--ease-out); }
 .rxpb-pin circle { fill: #181c29; stroke: #fffaf0; stroke-width: 2.2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.75)); }
@@ -618,11 +687,17 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-pin.k-travel text { fill: #4fd8ff; }
 .rxpb-pin.k-hearth circle { fill: #2a143d; stroke: #d580ff; }
 .rxpb-pin.k-death circle { fill: #420c0c; stroke: #ff5722; }
-.rxpb-pin.is-done { opacity: 0.62; }
+.rxpb-pin.is-done { opacity: 0.62; display: none; }
+.show-done .rxpb-pin.is-done, .rxpb-pin.is-done.is-pinned { display: inline; }
+.rxpb-pin.is-cur .rxpb-pin-dot { r: 15px; }
+.rxpb-pin.is-pinned .rxpb-pin-dot { r: 13px; }
+.rxpb-pin:not(.is-cur) .rxpb-pin-pulse { display: none; }
+.rxpb-pin.small .rxpb-body { transform: scale(calc(var(--inv, 1) * 0.72)); }
+.rxpb-pin.small:not(.is-cur) text { display: none; }
 .rxpb-pin.is-cur circle { stroke: #fff; stroke-width: 3.2; }
 .rxpb-pin.is-cur text { font-size: 13px; }
 .rxpb-pin.is-pinned circle { stroke: var(--gold-hi); stroke-width: 3.2; }
-.rxpb-pin-pulse { fill: none; stroke: var(--gold-hi); stroke-width: 2.5; pointer-events: none; animation: rxpb-pulse 1.5s ease-out infinite; }
+.rxpb-pin .rxpb-pin-pulse { fill: none !important; stroke: var(--gold-hi); stroke-width: 2.5; pointer-events: none; animation: rxpb-pulse 1.5s ease-out infinite; }
 @keyframes rxpb-pulse { 0% { r: 13; opacity: 0.95; } 100% { r: 28; opacity: 0; } }
 
 .rxpb-subwp { cursor: pointer; }
@@ -641,11 +716,12 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-arrow-txt span { font-size: 12px; color: #d0d4e8; font-variant-numeric: tabular-nums; }
 
 /* Clickable Map Element Inspector */
-.rxpb-inspector { position: absolute; left: 12px; right: 12px; bottom: 12px; max-height: 40%; overflow: hidden; padding: 10px 12px;
+.rxpb-inspector { position: absolute; left: 12px; bottom: 12px; width: 420px; max-width: calc(100% - 24px); max-height: 40%; overflow: hidden; padding: 10px 12px;
   border-radius: 8px; background: rgba(12, 12, 27, 0.95); box-shadow: 0 0 0 1.5px var(--gold-dim), 0 14px 34px rgba(0,0,0,0.75); backdrop-filter: blur(8px);
   display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; }
 .rxpb-inspector[hidden] { display: none; }
-.rxpb-ins-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rxpb-ins-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #9aa4d6; }
+.rxpb-ins-head b { color: var(--gold-hi); font-size: 13.5px; }
 .rxpb-step-pill { padding: 2px 8px; border-radius: 5px; background: #363e6d; color: #fff; font-weight: 700; font-size: 12px; }
 .rxpb-ins-coord { color: var(--gold-hi); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
 .rxpb-ins-close { margin-left: auto; background: none; border: 0; color: var(--ink-2); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
@@ -658,10 +734,11 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-tl-play { height: 32px; padding: 0 12px; flex: none; }
 #rxpb-speed { height: 32px; font-size: 13px; flex: none; width: 72px; min-width: 0; padding-right: 4px; }
 .rxpb-tl-pos { flex: none; min-width: 9ch; font-weight: 650; font-size: 13.5px; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-.rxpb-scrub-wrap { position: relative; flex: 1; min-width: 80px; height: 40px; display: flex; flex-direction: column; justify-content: flex-end; }
+.rxpb-scrub-wrap { position: relative; flex: 1; min-width: 80px; height: 48px; display: flex; flex-direction: column; justify-content: flex-end; }
 #rxpb-scrub { width: 100%; margin: 0 0 2px; cursor: pointer; accent-color: var(--gold); background: transparent; }
 /* the ticks sit above the slider, each a glyph (the pins' own) as well as a colour, so they're clickable and tell apart */
-.rxpb-tl-ticks { position: absolute; left: 8px; right: 8px; top: 0; height: 18px; }
+.rxpb-tl-ticks { position: absolute; left: 8px; right: 8px; top: 0; height: 30px; }
+.tl-tick.row2 { top: 14px; }
 .tl-tick { position: absolute; top: 0; width: 14px; height: 16px; margin-left: -7px; padding: 0; border: 0; border-radius: 3px; background: none;
   font: 700 11px/16px var(--f-ui); text-align: center; cursor: pointer; opacity: 0.8; }
 .tl-tick:hover, .tl-tick.on { opacity: 1; background: rgba(255, 255, 255, 0.1); z-index: 1; }
@@ -671,7 +748,7 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .tl-tick.tl-travel { color: #4fd8ff; }
 .tl-tick.tl-hearth { color: #d580ff; }
 .tl-tick.tl-death { color: #ff5722; }
-.tl-zone { position: absolute; top: 0; height: 40px; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.35); pointer-events: none; }
+.tl-zone { position: absolute; top: 0; height: 48px; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.35); pointer-events: none; }
 
 /* In-Game Style RestedXP Guide Window (RXP Blue theme: Themes.lua #0c0c1b / #121228 / #363e6d) */
 .rxpb-window { display: flex; flex-direction: column; border-radius: var(--radius-m); overflow: hidden;
