@@ -3,13 +3,16 @@
 // directional arrows, objectives, and guide commentary.
 // Which steps show and their numbers come from the engine (rxp-model.ts reads its masks); every step is known by its
 // number in the guide (st.idx), never by its place in the filtered list, so a filter change keeps what was picked.
-import type { RxpGuideAction, RxpGuideDetail, RxpGuideStep, RxpGuideSummary, RxpGuideWaypoint, RxpImport } from "../shared/ipc.js";
+import type { RxpFactsTarget, RxpGuideAction, RxpGuideDetail, RxpGuideFacts, RxpGuideStep, RxpGuideSummary, RxpGuideWaypoint,
+  RxpImport, RxpRouteLeg, RxpRoutes } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
 import { currentPage, show } from "./nav.js";
 import { live } from "./state.js";
-import { comboOf, Visibility } from "./rxp-model.js";
-import { bearingDeg, yards, yardsText } from "./rxp-geometry.js";
+import { comboOf, racePick, Visibility } from "./rxp-model.js";
+import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
+import { durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt, type Stop,
+  stopsOf } from "./rxp-route.js";
 
 const MAP_W = 1002;
 const MAP_H = 668;
@@ -43,6 +46,8 @@ interface VisibleStep {
 }
 
 const cache = new Map<string, RxpGuideDetail>();
+// each opened guide's real step count (its #include steps expanded): the list counts the guide's own step lines
+const stepCounts = new Map<string, number>();
 let catalog: CatalogEntry[] = [];
 let currentGuide: RxpGuideDetail | null = null;
 let vis: Visibility | null = null;          // the current guide's masks
@@ -52,12 +57,24 @@ let activeSrc: number | null = null;        // the current step (st.idx)
 let activeIdx = 0;          // its position in visibleSteps (derived from activeSrc)
 let activeWpIdx = 0;        // the active sub-waypoint: its position in the step's own waypoints
 let activeMapId: number | null = null;
-/** The element picked on the map: a step's pin (or one of its sub-waypoints, sub = its waypoint position). */
-let selected: { kind: "step" | "wp"; src: number; sub?: number } | null = null;
+/** The element picked on the map (shown in the inspector): a step's pin, one of its waypoints (sub = its position in
+ * the step's waypoints), a leg (key, src = the step it arrives at), a grind loop or an objective (sub = its index). */
+let selected: { kind: "step" | "wp" | "leg" | "loop" | "obj"; src: number; sub?: number; key?: string } | null = null;
 let playTimer: number | null = null;
 let playMs = 1500;
 const checkedObjs = new Set<string>();      // `${guide id}:${index}:${st.idx}:${action line}`
 let defaultsApplied = false;                // the toggles start from the coach's settings once, then are the player's
+// the route: the legs between the listed steps' stops (rxp-route.ts planLegs), and the engine's worked-out legs
+let planned: PlanLeg[] = [];
+let legsByTo = new Map<number, PlanLeg[]>();     // st.idx -> the legs arriving at that step (the way in, then its own)
+let stopsBySrc = new Map<number, Stop[]>();
+const routeLegs = new Map<string, RxpRouteLeg>();    // the current guide's legs from addon:rxpRoutes, by leg key
+let routesVersion = 0;
+let visKey = "";                               // the steps listed (st.idx and number): what the layers were built for
+const listKeyOf = () => visKey;                         // bumps when routeLegs changes: the route layer is rebuilt
+let facts: RxpGuideFacts | null = null;        // what the knowledge base knows of the current guide (map targets)
+let factsVersion = 0;
+const factsCache = new Map<string, RxpGuideFacts | null>();
 
 // Filter state (matches RestedXP's in-game player & profile checks)
 const filter = {
@@ -119,9 +136,12 @@ function centerOn(x: number, y: number): void {
   applyView();
 }
 
+/** With "Follow step": centre the map on where the current step sends the player (its target waypoint, else its pin). */
 function followStep(): void {
-  const cur = visibleSteps[activeIdx];
-  if (filter.follow && cur && cur.ui_map === activeMapId && cur.step.x != null && cur.step.y != null) centerOn(cur.step.x, cur.step.y);
+  if (!filter.follow || activeMapId == null) return;
+  const tgt = targetStop(visibleSteps[activeIdx]);
+  const at = tgt ? pointOn(activeMapId, tgt.um, tgt.x, tgt.y) : null;
+  if (at) centerOn(at.x, at.y);
 }
 
 /** The characters the race and class pickers allow (positions in the guide's players). */
@@ -263,12 +283,20 @@ function rebuildVisibleSteps(): void {
   }
   visibleSteps = out;
   posBySrc = new Map(out.map((vs, i) => [vs.src, i]));
+  planned = planLegs(out.map((vs) => vs.step));
+  legsByTo = new Map();
+  for (const l of planned) {
+    if (!legsByTo.has(l.to)) legsByTo.set(l.to, []);
+    legsByTo.get(l.to)!.push(l);
+  }
+  stopsBySrc = new Map(out.map((vs) => [vs.src, stopsOf(vs.step)]));
+  visKey = out.map((v) => `${v.src}${v.rxpNum ?? "-"}`).join(",");
   // the same step as before the change, else the next one still listed (else the last)
   activeIdx = 0;
   if (activeSrc != null && out.length) {
     const at = posBySrc.get(activeSrc);
     activeIdx = at ?? (() => { const i = out.findIndex((vs) => vs.src > activeSrc!); return i >= 0 ? i : out.length - 1; })();
-    if (at === undefined) activeWpIdx = 0;
+    if (at === undefined) activeWpIdx = pinStop(out[activeIdx].step)?.wi ?? 0;
   }
   activeSrc = out[activeIdx]?.src ?? null;
   if (selected && !posBySrc.has(selected.src)) selected = null;
@@ -282,35 +310,334 @@ function mapImageUrl(uiMap: number | null): string | null {
   return currentGuide?.mapImages?.[uiMap] || (live.engineUrl ? `${live.engineUrl}/map/${uiMap}.png` : null);
 }
 
-/** Render the interactive zone map, route trail, directional arrows, clickable pins, and RXP Arrow widget. */
+const mapsGeo = () => currentGuide?.maps;
+const mapName = (um: number | null | undefined) => (um == null ? "" : currentGuide?.zones.find((z) => z.ui_map === um)?.name
+  || currentGuide?.maps?.[String(um)]?.name || `Map ${um}`);
+
+/** Whether map `um` is a continent the guide's zones lie on (the continent view): zones there have a rectangle. */
+function isParentMap(um: number | null): boolean {
+  const maps = mapsGeo();
+  return um != null && !!maps && Object.values(maps).some((g) => g?.parent === um && g.rect);
+}
+
+/** The continent view the guide gets: the parent map shared by at least two of its zones (each with its rectangle
+ * there), or by one zone when a leg flies or crosses into another zone; null for a one-zone guide or without a
+ * knowledge base. */
+function continentTab(): number | null {
+  const g = currentGuide, maps = mapsGeo();
+  if (!g || !maps) return null;
+  const count = new Map<number, number>();
+  for (const z of g.zones) {
+    const geo = maps[String(z.ui_map)];
+    if (geo?.parent && geo.rect) count.set(geo.parent, (count.get(geo.parent) || 0) + 1);
+  }
+  let best: number | null = null;
+  for (const [p, n] of count) if (n >= 2 && (best == null || n > (count.get(best) || 0))) best = p;
+  return best;
+}
+
+/** A point of map `from` on map `um` (percent): the same map, or a zone's point on its continent view. */
+function pointOn(um: number, from: number, x: number, y: number): { x: number; y: number } | null {
+  if (from === um) return { x, y };
+  return isParentMap(um) ? between(mapsGeo(), from, um, x, y) : null;
+}
+
+const SVGP = (pts: Pt[]) => pts.map(([x, y]) => `${mapX(x)},${mapY(y)}`).join(" ");
+const MODE_GLYPH: Record<string, string> = { hearth: "⌂", death: "☠", boat: "⚓" };
+
+/** One piece of a leg as SVG: walking legs as the coach screen draws them (a dark case, the line, gold dashes
+ * flowing toward the step when it's the leg being walked), flights dotted cyan with a landing circle, hearths,
+ * deathskips and boats as a faint arc with their glyph, and anything not worked out yet as a faint straight line. */
+function pieceSvg(p: Piece, active: boolean): string {
+  const out: string[] = [];
+  const st = active ? "a" : "r";
+  for (const run of p.runs) {
+    const pts = SVGP(run);
+    if (p.mode === "walk") {
+      out.push(`<polyline class="rxpb-${st}-case" points="${pts}"/><polyline class="rxpb-${st}-walk" points="${pts}"/>`);
+      if (active) out.push(`<polyline class="rxpb-leg-flow" points="${pts}"/>`);
+    } else if (p.mode === "fly") {
+      out.push(`<polyline class="rxpb-${st}-case fly" points="${pts}"/><polyline class="rxpb-${st}-fly" points="${pts}"/>`);
+    } else if (p.mode === "straight") {
+      out.push(`<polyline class="rxpb-${st}-approx" points="${pts}"/>`);
+    } else {
+      out.push(`<polyline class="rxpb-${st}-jump j-${p.mode}" points="${pts}"/>`);
+    }
+  }
+  const last = p.runs[p.runs.length - 1], end = last[last.length - 1];
+  if (p.mode === "fly" && !p.exit) {
+    out.push(`<g transform="translate(${mapX(end[0])},${mapY(end[1])})"><g class="rxpb-body"><circle class="rxpb-land${active ? " on" : ""}" r="${active ? 6.5 : 4.5}"/></g></g>`);
+  }
+  if (MODE_GLYPH[p.mode]) {
+    const all = p.runs.flat(), mid = all[Math.floor(all.length / 2)];
+    out.push(`<g transform="translate(${mapX(mid[0])},${mapY(mid[1])})"><g class="rxpb-body"><circle class="rxpb-jump-dot j-${p.mode}" r="${active ? 10 : 8}"/>`
+      + `<text class="rxpb-jump-glyph j-${p.mode}" dy="0.35em">${MODE_GLYPH[p.mode]}</text></g></g>`);
+  }
+  return out.join("");
+}
+
+/** A marker where a leg crosses the map's edge: "from <zone>" where it comes in, "to <zone>" where it leaves;
+ * clicking it opens that zone's map. */
+function edgeSvg(at: Pt, um: number, dir: "from" | "to", active: boolean): string {
+  const [x, y] = at;
+  // the label sits inside the map, away from the edge it marks
+  const anchor = x > 92 ? "end" : x < 8 ? "start" : "middle";
+  const dx = anchor === "end" ? -12 : anchor === "start" ? 12 : 0, dy = y > 92 ? -14 : y < 8 ? 18 : anchor === "middle" ? -14 : 4;
+  const label = `${dir === "from" ? "from" : "to"} ${mapName(um)}`;
+  return `<g class="rxpb-edge${active ? " on" : ""}" data-kind="edge" data-map="${um}" data-dir="${dir}" tabindex="0" role="button"
+      aria-label="${esc(`${dir === "from" ? "The way comes from" : "The way goes on to"} ${mapName(um)}: open its map`)}" transform="translate(${mapX(x)},${mapY(y)})">
+    <g class="rxpb-body"><circle r="${active ? 6 : 4.5}"/><text x="${dx}" y="${dy}" text-anchor="${anchor}">${esc(label)} ›</text></g></g>`;
+}
+
+const ROLE_NAME: Record<string, string> = { kill: "Kill", loot: "Loot", use: "Use", talk: "Talk to", area: "Go to" };
+const RANK_NAME: Record<number, string> = { 1: "Elite", 2: "Rare elite", 3: "Boss", 4: "Rare" };
+
+/** The shape of one objective point: a kill target a dot (gold-rimmed when elite), an object a diamond, a quest
+ * area a ring. */
+function objShape(t: RxpFactsTarget): string {
+  if (t.kind === "object") return `<rect x="-3.6" y="-3.6" width="7.2" height="7.2" transform="rotate(45)"/>`;
+  if (t.kind === "poi") return `<circle class="ring" r="5"/>`;
+  return `<circle r="${(t.rank || 0) >= 1 ? 4.6 : 3.8}"/>`;
+}
+
+let layersKey = "";           // what the persistent layers were built for: rebuilt only when it changes
+
+/** Build the map's persistent layers for this map: the route (every leg), grind loops and objectives (per step,
+ * shown for the current one), the pins, and the zone outlines on a continent view. Selecting a step later only
+ * moves classes (updateClasses) and redraws the active layer (drawActive). */
+function buildLayers(mapId: number | null, imgUrl: string | null): void {
+  const svgEl = $("rxpb-map-svg");
+  const focusedSrc = (document.activeElement as Element | null)?.closest?.<SVGGElement>(".rxpb-pin")?.dataset.src;
+  const maps = mapsGeo();
+  const parentView = isParentMap(mapId);
+  const grid: string[] = [], zones: string[] = [], route: string[] = [], loops: string[] = [], objs: string[] = [], pins: string[] = [];
+  if (!imgUrl) {
+    for (let g = 10; g < 100; g += 10) {
+      grid.push(`<line x1="${mapX(g)}" y1="0" x2="${mapX(g)}" y2="${MAP_H}" class="rxpb-grid"/>`);
+      grid.push(`<line x1="0" y1="${mapY(g)}" x2="${MAP_W}" y2="${mapY(g)}" class="rxpb-grid"/>`);
+    }
+  }
+  if (mapId != null && parentView && currentGuide) {
+    // the guide's zones on the continent: an outline and the name, a click opens the zone
+    for (const z of currentGuide.zones) {
+      const r = maps?.[String(z.ui_map)]?.rect;
+      if (!r || maps?.[String(z.ui_map)]?.parent !== mapId) continue;
+      const [x0, y0, x1, y1] = r;
+      zones.push(`<g class="rxpb-zone" data-kind="zone" data-map="${z.ui_map}" tabindex="0" role="button" aria-label="${esc(`${z.name}: open its map`)}">
+        <rect x="${mapX(Math.min(x0, x1))}" y="${mapY(Math.min(y0, y1))}" width="${Math.abs(mapX(x1) - mapX(x0)).toFixed(1)}" height="${Math.abs(mapY(y1) - mapY(y0)).toFixed(1)}"/>
+        <g transform="translate(${mapX((x0 + x1) / 2)},${mapY(Math.min(y0, y1))})"><g class="rxpb-body"><text y="14" text-anchor="middle">${esc(z.name)}</text></g></g></g>`);
+    }
+  }
+  if (mapId != null) {
+    for (const leg of planned) {
+      const eng = routeLegs.get(leg.key);
+      const pieces = legPieces(leg, eng, mapId, maps);
+      if (!pieces.length) continue;
+      const hit = pieces.flatMap((p) => p.runs).map((run) => `<polyline class="rxpb-hit" points="${SVGP(run)}"/>`).join("");
+      let edges = "";
+      if (!parentView) {
+        const first = pieces[0], last = pieces[pieces.length - 1];
+        if (first.enter && leg.pa.um !== mapId) edges += edgeSvg(first.enter, leg.pa.um, "from", false);
+        if (last.exit && leg.pb.um !== mapId) edges += edgeSvg(last.exit, leg.pb.um, "to", false);
+      }
+      route.push(`<g class="rxpb-rleg${eng ? "" : " pending"}" data-kind="leg" data-leg="${leg.key}" data-pos="${leg.pos}">${pieces.map((p) => pieceSvg(p, false)).join("")}${hit}${edges}</g>`);
+    }
+    for (const vs of visibleSteps) {
+      if (!parentView) {
+        const ls = (vs.step.loops || []).map((lp, li) => ({ lp, li })).filter(({ lp }) => (!lp.ui_map || lp.ui_map === mapId) && lp.points.length > 1);
+        if (ls.length) {
+          loops.push(`<g class="rxpb-sloops" data-src="${vs.src}">${ls.map(({ lp, li }) => `<${lp.kind === "loop" ? "polygon" : "polyline"} class="rxpb-loop" data-kind="loop" data-src="${vs.src}" data-sub="${li}" points="${SVGP(lp.points as Pt[])}"/>`).join("")}</g>`);
+        }
+        const ts = (facts?.targets?.[String(vs.src)] || []).map((t, ti) => ({ t, ti })).filter(({ t }) => t.ui_map === mapId && t.points?.length);
+        if (ts.length) {
+          const parts: string[] = [];
+          for (const { t, ti } of ts) {
+            for (const grp of t.groups || []) {
+              if (grp.length >= 3) parts.push(`<polygon class="rxpb-ohull r-${t.role}" data-kind="obj" data-src="${vs.src}" data-sub="${ti}" points="${SVGP(hull(grp as Pt[]))}"/>`);
+            }
+          }
+          for (const { t, ti } of ts) {
+            const shape = objShape(t);
+            parts.push(`<g class="rxpb-obj r-${t.role} k-${t.kind}${(t.rank || 0) >= 1 ? " elite" : ""}" data-kind="obj" data-src="${vs.src}" data-sub="${ti}">`
+              + t.points.map(([x, y]) => `<g transform="translate(${mapX(x)},${mapY(y)})"><g class="rxpb-body">${shape}</g></g>`).join("") + `</g>`);
+          }
+          objs.push(`<g class="rxpb-sobjs" data-src="${vs.src}">${parts.join("")}</g>`);
+        }
+      }
+      const stop = pinStop(vs.step);
+      const at = stop ? pointOn(mapId, stop.um, stop.x, stop.y) : null;
+      if (!at || at.x < -2 || at.x > 102 || at.y < -2 || at.y > 102) continue;
+      const sym = vs.kind === "accept" ? "!" : vs.kind === "turnin" ? "?" : vs.kind === "combat" ? "⚔"
+        : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : stepNum(vs);
+      pins.push(`<g class="rxpb-pin k-${vs.kind}${parentView ? " small" : ""}" data-kind="step" data-src="${vs.src}" data-pos="${posBySrc.get(vs.src)}"
+        transform="translate(${mapX(at.x)},${mapY(at.y)})" tabindex="0" role="button" aria-label="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}">
+        <g class="rxpb-body"><circle class="rxpb-pin-pulse" r="22"/><circle class="rxpb-pin-dot" r="10.5"/><text dy="0.35em">${esc(sym)}</text></g></g>`);
+    }
+  }
+  const zoneSteps = visibleSteps.some((vs) => vs.ui_map === mapId && vs.step.x != null);
+  let note = "";
+  if (!zoneSteps && !parentView && currentGuide) {
+    const why = currentGuide.world_only && !currentGuide.placed
+      ? "Glide can't place this guide on the map yet: it needs the zone data in its knowledge base, which builds while the coach runs."
+      : "No waypoints in this zone for the steps shown.";
+    note = `<text class="rxpb-map-note" x="${MAP_W / 2}" y="${MAP_H / 2}" text-anchor="middle">${esc(why)}</text>`;
+  }
+  svgEl.innerHTML = `<defs></defs>${grid.join("")}<g id="rxpb-l-zones">${zones.join("")}</g><g id="rxpb-l-route">${route.join("")}</g>`
+    + `<g id="rxpb-l-loops">${loops.join("")}</g><g id="rxpb-l-objectives">${objs.join("")}</g><g id="rxpb-l-leg"></g>`
+    + `<g id="rxpb-l-pins">${pins.join("")}</g><g id="rxpb-l-active"></g><g id="rxpb-l-hl"></g>${note}`;
+  if (focusedSrc) svgEl.querySelector<SVGGElement>(`.rxpb-pin[data-src="${focusedSrc}"]`)?.focus();
+}
+
+/** The current step and what's selected, as classes on the persistent layers: pins done / current / next, the legs
+ * walked and still to walk, the current step's loops and objectives shown, the selected element marked. */
+function updateClasses(): void {
+  const svgEl = $("rxpb-map-svg");
+  svgEl.classList.toggle("show-done", filter.showDone);
+  const selSrc = selected?.src ?? null;
+  svgEl.querySelectorAll<SVGGElement>(".rxpb-pin").forEach((g) => {
+    const pos = Number(g.dataset.pos), src = Number(g.dataset.src);
+    g.classList.toggle("is-cur", pos === activeIdx);
+    g.classList.toggle("is-done", pos < activeIdx);
+    g.classList.toggle("is-next", pos > activeIdx);
+    g.classList.toggle("is-pinned", selected?.kind === "step" && src === selSrc && pos !== activeIdx);
+  });
+  svgEl.querySelectorAll<SVGGElement>(".rxpb-rleg").forEach((g) => {
+    const pos = Number(g.dataset.pos);
+    g.classList.toggle("is-done", pos < activeIdx);
+    g.classList.toggle("is-cur", pos === activeIdx);
+    g.classList.toggle("is-sel", selected?.kind === "leg" && g.dataset.leg === selected.key);
+  });
+  svgEl.querySelectorAll<SVGGElement>(".rxpb-sloops, .rxpb-sobjs").forEach((g) => {
+    const src = Number(g.dataset.src);
+    g.classList.toggle("on", src === activeSrc || (src === selSrc && selected?.kind !== "leg"));
+  });
+  svgEl.querySelectorAll<SVGElement>(".rxpb-loop, .rxpb-obj, .rxpb-ohull").forEach((el) => {
+    el.classList.toggle("is-sel", !!selected && selected.kind === el.dataset.kind && Number(el.dataset.src) === selSrc
+      && Number(el.dataset.sub) === selected.sub);
+  });
+}
+
+/** The step's waypoints that are stops (not path points), each with its letter: the map and the step's waypoint
+ * buttons letter the same places. */
+function stopLetters(st: RxpGuideStep): Map<number, string> {
+  const out = new Map<number, string>();
+  let n = 0;
+  for (const { w, wi } of stepWaypoints(st)) if (w.mode !== "path") out.set(wi, letter(n++));
+  return out;
+}
+
+/** The current step's target: the waypoint picked, else where its pin is. */
+function targetStop(vs: VisibleStep | undefined): Stop | null {
+  if (!vs) return null;
+  return stopsBySrc.get(vs.src)?.find((s) => s.wi === activeWpIdx) || pinStop(vs.step);
+}
+
+/** The legs walked to reach the current step's target: the way in from the step before, then the step's own legs
+ * up to the target. */
+function activeLegs(): PlanLeg[] {
+  const vs = visibleSteps[activeIdx];
+  if (!vs) return [];
+  const stops = stopsBySrc.get(vs.src) || [];
+  const tgt = targetStop(vs);
+  const upTo = Math.max(0, stops.findIndex((s) => s.wi === tgt?.wi));
+  const order = new Map(stops.map((s, i) => [s.wi, i]));
+  return (legsByTo.get(vs.src) || []).filter((l) => (order.get(l.b) ?? 0) <= upTo);
+}
+
+/** Redraw the active layer: the legs to the current target in the coach screen's style, an arrowhead into the
+ * target, the current step's path points (small dots) and its lettered stops. */
+function drawActive(mapId: number | null): void {
+  const legEl = document.getElementById("rxpb-l-leg"), actEl = document.getElementById("rxpb-l-active");
+  if (!legEl || !actEl) return;
+  const vs = visibleSteps[activeIdx];
+  const lines: string[] = [], marks: string[] = [];
+  if (vs && mapId != null) {
+    const parentView = isParentMap(mapId);
+    const legs = activeLegs();
+    let first: Pt | null = null, lastRun: Pt[] | null = null;
+    for (const leg of legs) {
+      const pieces = legPieces(leg, routeLegs.get(leg.key), mapId, mapsGeo());
+      lines.push(`<g class="rxpb-aleg" data-kind="leg" data-leg="${leg.key}">${pieces.map((p) => pieceSvg(p, true)).join("")}`
+        + pieces.flatMap((p) => p.runs).map((run) => `<polyline class="rxpb-hit" points="${SVGP(run)}"/>`).join("") + `</g>`);
+      if (!parentView && pieces.length) {
+        if (pieces[0].enter && leg.pa.um !== mapId) marks.push(edgeSvg(pieces[0].enter, leg.pa.um, "from", true));
+        const lp = pieces[pieces.length - 1];
+        if (lp.exit && leg.pb.um !== mapId) marks.push(edgeSvg(lp.exit, leg.pb.um, "to", true));
+      }
+      for (const p of pieces) {
+        if (!first && !p.enter && leg === legs[0]) first = p.runs[0][0];
+        if (p.mode !== "fly") lastRun = p.runs[p.runs.length - 1];
+      }
+    }
+    if (first) marks.push(`<g transform="translate(${mapX(first[0])},${mapY(first[1])})"><g class="rxpb-body"><circle class="rxpb-leg-start" r="4.5"/></g></g>`);
+    if (lastRun && lastRun.length > 1) {
+      // an arrowhead short of the target pin, along the last stretch
+      const [x2, y2] = lastRun[lastRun.length - 1].map((v, i) => (i ? mapY(v) : mapX(v)));
+      let k = lastRun.length - 2;
+      while (k > 0 && Math.hypot(mapX(lastRun[k][0]) - x2, mapY(lastRun[k][1]) - y2) < 24) k--;
+      const x1 = mapX(lastRun[k][0]), y1 = mapY(lastRun[k][1]);
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (len > 4) {
+        const back = Math.min(len / 2, 22);
+        const deg = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+        marks.push(`<g transform="translate(${(x2 - ((x2 - x1) / len) * back).toFixed(1)},${(y2 - ((y2 - y1) / len) * back).toFixed(1)}) rotate(${deg.toFixed(1)})">`
+          + `<g class="rxpb-body"><path class="rxpb-arrowhead" d="M 7 0 L -5 -5.5 L -2 0 L -5 5.5 Z"/></g></g>`);
+      }
+    }
+    // the current step's own places: path points as small dots, stops lettered when there are several
+    const letters = stopLetters(vs.step);
+    const stops = (stopsBySrc.get(vs.src) || []).filter((s) => s.wi >= 0);
+    for (const s of stops) {
+      const at = pointOn(mapId, s.um, s.x, s.y);
+      if (!at) continue;
+      const tr = `transform="translate(${mapX(at.x)},${mapY(at.y)})"`;
+      if (s.path) {
+        marks.push(`<g class="rxpb-pathdot" data-kind="wp" data-src="${vs.src}" data-sub="${s.wi}" ${tr}><g class="rxpb-body"><circle r="3.4"/></g></g>`);
+      } else if (letters.size > 1 && letters.has(s.wi)) {
+        const on = s.wi === activeWpIdx;
+        marks.push(`<g class="rxpb-subwp${on ? " on" : ""}" data-kind="wp" data-src="${vs.src}" data-sub="${s.wi}" ${tr} tabindex="0" role="button"
+          aria-label="Waypoint ${letters.get(s.wi)}"><g class="rxpb-body"><circle r="${on ? 11 : 8}"/><text dy="0.35em">${letters.get(s.wi)}</text></g></g>`);
+      }
+    }
+  }
+  legEl.innerHTML = lines.join("");
+  actEl.innerHTML = marks.join("");
+}
+
+/** The yards and time of the legs to the current target, when the engine has worked them all out. */
+function activeLegTotals(): { yd: number | null; s: number | null } {
+  const legs = activeLegs();
+  if (!legs.length) return { yd: null, s: null };
+  let yd = 0, s = 0;
+  for (const l of legs) {
+    const e = routeLegs.get(l.key);
+    if (!e || e.yd == null) return { yd: null, s: null };
+    yd += e.yd;
+    s += e.s || 0;
+  }
+  return { yd, s: s || null };
+}
+
+/** Render the zone map: the zone tabs, the image, the persistent layers (when the guide, map, steps, routes or
+ * objectives changed), the classes for the current step, the active leg, the arrow and the inspector. */
 function renderMap(): void {
   const wrap = $("rxpb-map-stage");
   if (!wrap || !currentGuide) return;
   const cur = visibleSteps[activeIdx];
   const mapId = activeMapId ?? cur?.ui_map ?? currentGuide.zones[0]?.ui_map ?? null;
-  const zoneName = currentGuide.zones.find((z) => z.ui_map === mapId)?.name || cur?.zone || "Zone Map";
+  const zoneName = mapName(mapId) || cur?.zone || "Zone Map";
 
-  // Zone tabs (when a guide crosses multiple zones)
+  // Zone tabs (when a guide crosses multiple zones), and the continent when it spans zones on one
   const zoneCounts = new Map<number, number>();
   for (const vs of visibleSteps) {
     if (vs.step.ui_map != null) zoneCounts.set(vs.step.ui_map, (zoneCounts.get(vs.step.ui_map) || 0) + 1);
   }
-  $("rxpb-zones").innerHTML = currentGuide.zones.map((z) => {
-    const cnt = zoneCounts.get(z.ui_map) || 0;
-    return `<button type="button" class="rxpb-ztab${z.ui_map === mapId ? " on" : ""}" data-map="${z.ui_map}">${esc(z.name)} <span>${cnt}</span></button>`;
-  }).join("");
-  $("rxpb-zones").querySelectorAll<HTMLButtonElement>("button").forEach((b) => {
-    b.onclick = () => {
-      activeMapId = Number(b.dataset.map);
-      // If current step isn't in this zone, jump to the first step in this zone
-      const firstInZone = visibleSteps.findIndex((vs) => vs.step.ui_map === activeMapId);
-      if (firstInZone >= 0 && visibleSteps[activeIdx]?.step.ui_map !== activeMapId) {
-        selectStep(firstInZone, false);
-      } else {
-        renderMap();
-      }
-    };
-  });
+  const cont = continentTab();
+  const tabs = currentGuide.zones.map((z) => ({ um: z.ui_map, name: z.name, cnt: zoneCounts.get(z.ui_map) || 0, cont: false }));
+  if (cont != null && !tabs.some((t) => t.um === cont)) tabs.push({ um: cont, name: mapName(cont), cnt: visibleSteps.length, cont: true });
+  const tabsHtml = tabs.map((t) => `<button type="button" role="tab" aria-selected="${t.um === mapId}" tabindex="${t.um === mapId ? 0 : -1}"
+    class="rxpb-ztab${t.um === mapId ? " on" : ""}${t.cont ? " cont" : ""}" data-map="${t.um}"${t.cont ? ` title="The whole route across ${esc(t.name)}"` : ""}>${t.cont ? "◎ " : ""}${esc(t.name)} <span>${t.cnt}</span></button>`).join("");
+  if ($("rxpb-zones").innerHTML !== tabsHtml) $("rxpb-zones").innerHTML = tabsHtml;
 
   if (view.map !== mapId) {
     view.map = mapId;
@@ -328,186 +655,37 @@ function renderMap(): void {
     wrap.classList.add("no-img");
   }
 
-  // Collect steps that have coordinates in this zone
-  const zoneSteps = visibleSteps
-    .map((vs, idx) => ({ vs, idx }))
-    .filter(({ vs }) => vs.ui_map === mapId && vs.step.x != null && vs.step.y != null);
-
-  const svg: string[] = [];
-  svg.push(`<defs>
-    <marker id="rxpb-arr-done" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
-      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="rgba(242,194,79,0.55)"/>
-    </marker>
-    <marker id="rxpb-arr-cur" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ffd877"/>
-    </marker>
-  </defs>`);
-
-  // Subtle coordinate grid when no map texture is loaded
-  if (!imgUrl) {
-    for (let g = 10; g < 100; g += 10) {
-      svg.push(`<line x1="${mapX(g)}" y1="0" x2="${mapX(g)}" y2="${MAP_H}" class="rxpb-grid"/>`);
-      svg.push(`<line x1="0" y1="${mapY(g)}" x2="${MAP_W}" y2="${mapY(g)}" class="rxpb-grid"/>`);
-    }
+  const key = `${currentGuide.id}:${currentGuide.index}|${mapId}|${imgUrl ? 1 : 0}|${listKeyOf()}|${routesVersion}|${factsVersion}|${filter.showAllCond}`;
+  if (key !== layersKey) {
+    layersKey = key;
+    buildLayers(mapId, imgUrl);
   }
+  updateClasses();
+  drawActive(mapId);
 
-  // Steps before the current one are hidden unless "Done steps" is on (a busy hub is otherwise a pile of old pins);
-  // the step the player pinned stays
-  const pinnedSrc = selected?.src ?? null;
-  const shownSteps = zoneSteps.filter(({ vs, idx }) => filter.showDone || idx >= activeIdx || vs.src === pinnedSrc);
-
-  // An arrowhead at (x, y) pointing along (dx, dy), in a body that keeps its size on screen at any zoom
-  const arrowhead = (x: number, y: number, dx: number, dy: number, cls: string) => {
-    if (!dx && !dy) return "";
-    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-    return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${deg.toFixed(1)})"><g class="rxpb-body">`
-      + `<path class="rxpb-arrowhead ${cls}" d="M 7 0 L -5 -5.5 L -2 0 L -5 5.5 Z"/></g></g>`;
-  };
-  const midArrows = (pts: [number, number][], cls: string) => pts.slice(1).map(([x2, y2], i) => {
-    const [x1, y1] = pts[i];
-    return Math.hypot(x2 - x1, y2 - y1) > 18 ? arrowhead((x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1, cls) : "";
-  }).join("");
-
-  // 1. Future route path (steps after activeIdx in this zone)
-  const futurePts = zoneSteps.filter((z) => z.idx >= activeIdx).map((z) => `${mapX(z.vs.step.x!)},${mapY(z.vs.step.y!)}`);
-  if (futurePts.length > 1) {
-    svg.push(`<polyline class="rxpb-path-future" points="${futurePts.join(" ")}"/>`);
-  }
-
-  // 2. Completed route path (steps up to activeIdx in this zone), with "Done steps" on
-  const pastSteps = zoneSteps.filter((z) => z.idx <= activeIdx);
-  if (filter.showDone && pastSteps.length > 1) {
-    const pts = pastSteps.map((z) => [mapX(z.vs.step.x!), mapY(z.vs.step.y!)] as [number, number]);
-    const pastPts = pts.map(([x, y]) => `${x},${y}`).join(" ");
-    svg.push(`<polyline class="rxpb-path-case" points="${pastPts}"/>`);
-    svg.push(`<polyline class="rxpb-path-done" points="${pastPts}"/>`);
-    svg.push(midArrows(pts, "done"));
-  }
-
-  // 3. Active leg (from previous waypoint in this zone to the current step's waypoint)
-  let prevX: number | null = null;
-  let prevY: number | null = null;
-  for (let i = activeIdx - 1; i >= 0; i--) {
-    const p = visibleSteps[i];
-    if (p.ui_map === mapId && p.step.x != null && p.step.y != null) {
-      prevX = p.step.x;
-      prevY = p.step.y;
-      break;
-    }
-  }
-  // the active step's waypoints on this map, each keeping its letter (its place in the step's own list)
-  const curWps = cur ? stepWaypoints(cur.step).filter(({ w }) => !w.ui_map || w.ui_map === mapId) : [];
-  const targetWp = (curWps.find(({ wi }) => wi === activeWpIdx) || curWps[0])?.w
-    || (cur && cur.ui_map === mapId && cur.step.x != null ? { x: cur.step.x, y: cur.step.y! } : null);
-
-  if (prevX != null && prevY != null && targetWp && (Math.hypot(targetWp.x - prevX, targetWp.y - prevY) > 0.2)) {
-    const [x1, y1, x2, y2] = [mapX(prevX), mapY(prevY), mapX(targetWp.x), mapY(targetWp.y)];
-    const legPts = `${x1},${y1} ${x2},${y2}`;
-    svg.push(`<polyline class="rxpb-leg-case" points="${legPts}"/>`);
-    svg.push(`<polyline class="rxpb-leg-walk" points="${legPts}"/>`);
-    svg.push(`<polyline class="rxpb-leg-flow" points="${legPts}"/>`);
-    // where the leg starts (the last step, whose pin may be hidden) and an arrowhead short of the target pin
-    svg.push(`<g transform="translate(${x1},${y1})"><g class="rxpb-body"><circle class="rxpb-leg-start" r="4.5"/></g></g>`);
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const back = Math.min(len / 2, 22);
-    svg.push(arrowhead(x2 - ((x2 - x1) / len) * back, y2 - ((y2 - y1) / len) * back, x2 - x1, y2 - y1, ""));
-  }
-
-  // 4. Multi-waypoint chain within the active step itself
-  if (curWps.length > 1) {
-    const pts = curWps.map(({ w }) => [mapX(w.x), mapY(w.y)] as [number, number]);
-    svg.push(`<polyline class="rxpb-step-chain" points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}"/>`);
-    svg.push(midArrows(pts, "chain"));
-  }
-
-  // 5. Grinding loops / lines (.loop / .line) on the active step
-  for (const lp of cur?.step.loops || []) {
-    if ((!lp.ui_map || lp.ui_map === mapId) && lp.points.length > 1) {
-      const pts = lp.points.map(([x, y]) => `${mapX(x)},${mapY(y)}`).join(" ");
-      const tag = lp.kind === "loop" ? "polygon" : "polyline";
-      svg.push(`<${tag} class="rxpb-loop" points="${pts}"/>`);
-    }
-  }
-
-  // Nothing to draw: say why rather than leave a bare map
-  if (!zoneSteps.length) {
-    const why = currentGuide.world_only && !currentGuide.placed
-      ? "Glide can't place this guide on the map yet: it needs the zone data in its knowledge base, which builds while the coach runs."
-      : "No waypoints in this zone for the steps shown.";
-    svg.push(`<text class="rxpb-map-note" x="${MAP_W / 2}" y="${MAP_H / 2}" text-anchor="middle">${esc(why)}</text>`);
-  }
-
-  // 6. Step waypoint pins (clickable!), each body keeping its size on screen at any zoom
-  for (const { vs, idx } of shownSteps) {
-    const isCur = idx === activeIdx;
-    const isPinned = vs.src === pinnedSrc;
-    const isDone = idx < activeIdx;
-    const cx = mapX(vs.step.x!);
-    const cy = mapY(vs.step.y!);
-    const stateCls = isCur ? "is-cur" : isDone ? "is-done" : "is-next";
-    const sym = vs.kind === "accept" ? "!" : vs.kind === "turnin" ? "?" : vs.kind === "combat" ? "⚔"
-      : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : stepNum(vs);
-    const r = isCur ? 15 : isPinned ? 13 : 10.5;
-    svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-src="${vs.src}" transform="translate(${cx},${cy})"
-      tabindex="0" role="button" aria-label="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}">
-      <g class="rxpb-body">${isCur ? `<circle class="rxpb-pin-pulse" r="22"/>` : ""}<circle r="${r}"/>
-      <text dy="0.35em">${esc(sym)}</text></g>
-    </g>`);
-  }
-
-  // 7. Sub-waypoints of the active step (when a step has >1 .goto)
-  if (curWps.length > 1) {
-    curWps.forEach(({ w, wi }) => {
-      const cx = mapX(w.x), cy = mapY(w.y);
-      const on = wi === activeWpIdx;
-      svg.push(`<g class="rxpb-subwp${on ? " on" : ""}" data-wp="${wi}" transform="translate(${cx},${cy})">
-        <title>Waypoint ${letter(wi)}: (${w.x.toFixed(1)}, ${w.y.toFixed(1)}) ${esc(w.text || "")}</title>
-        <g class="rxpb-body"><circle r="${on ? 11 : 8}"/>
-        <text dy="0.35em">${letter(wi)}</text></g>
-      </g>`);
-    });
-  }
-
-  // the pin that had keyboard focus gets it back after the redraw
-  const focusedSrc = (document.activeElement as Element | null)?.closest?.<SVGGElement>(".rxpb-pin")?.dataset.src;
-  $("rxpb-map-svg").innerHTML = svg.join("");
-  $("rxpb-map-svg").querySelectorAll<SVGGElement>(".rxpb-pin").forEach((g) => {
-    g.onclick = (e) => {
-      e.stopPropagation();
-      const src = Number(g.dataset.src);
-      selected = { kind: "step", src };
-      selectSrc(src, true);
-    };
-  });
-  if (focusedSrc) $("rxpb-map-svg").querySelector<SVGGElement>(`.rxpb-pin[data-src="${focusedSrc}"]`)?.focus();
-  $("rxpb-map-svg").querySelectorAll<SVGGElement>(".rxpb-subwp").forEach((g) => {
-    g.onclick = (e) => {
-      e.stopPropagation();
-      activeWpIdx = Number(g.dataset.wp);
-      if (cur) selected = { kind: "wp", src: cur.src, sub: activeWpIdx };
-      renderMap();
-      renderActiveStep();
-    };
-  });
-
-  // Update the RestedXP Waypoint Arrow HUD widget
+  // Update the RestedXP Waypoint Arrow HUD widget: where the current target is, how far and how long the way there
   const arrowHud = $("rxpb-arrow-hud");
-  if (targetWp) {
+  const tgt = targetStop(cur);
+  if (tgt) {
+    const legs = activeLegs();
+    const from = legs[0]?.pa;
     let deg = 0;
-    let distText = `${targetWp.x.toFixed(1)}, ${targetWp.y.toFixed(1)}`;
-    if (prevX != null && prevY != null && (prevX !== targetWp.x || prevY !== targetWp.y)) {
-      // real yards and a compass bearing from the zone's size (the knowledge base); no yard figure without it
-      const dx = targetWp.x - prevX, dy = targetWp.y - prevY;
-      deg = bearingDeg(currentGuide.maps, mapId, dx, dy);
-      const yd = yardsText(yards(currentGuide.maps, mapId, dx, dy));
-      if (yd) distText += ` · ${yd}`;
+    let distText = `${tgt.x.toFixed(1)}, ${tgt.y.toFixed(1)}`;
+    const totals = activeLegTotals();
+    if (from && from.um === tgt.um && (from.x !== tgt.x || from.y !== tgt.y)) {
+      const dx = tgt.x - from.x, dy = tgt.y - from.y;
+      deg = bearingDeg(mapsGeo(), tgt.um, dx, dy);
     }
+    const ydv = totals.yd ?? (from && from.um === tgt.um ? yards(mapsGeo(), tgt.um, tgt.x - from.x, tgt.y - from.y) : null);
+    const yd = ydv != null && ydv >= 1 ? yardsText(ydv) : "";
+    if (yd) distText += ` · ${yd}`;
+    if (totals.s) distText += ` · ${durText(totals.s)}`;
     arrowHud.hidden = false;
     arrowHud.innerHTML = `<div class="rxpb-arrow-wheel"><svg viewBox="0 0 36 36" style="transform:rotate(${deg.toFixed(1)}deg)">
         <path d="M18 3 L30 30 L18 23 L6 30 Z" fill="#00ff25" stroke="#081a0b" stroke-width="2"/>
       </svg></div>
       <div class="rxpb-arrow-txt">
-        <b>${esc(zoneName)}</b>
+        <b>${esc(tgt.um !== mapId ? mapName(tgt.um) : zoneName)}</b>
         <span>${esc(distText)}</span>
       </div>`;
   } else {
@@ -517,32 +695,101 @@ function renderMap(): void {
   renderInspector();
 }
 
-/** Render the floating map inspector card when a map pin is clicked/selected. */
+/** What a map element's card says (hover card and inspector alike): a head line and the body. */
+function elementCard(kind: string, src: number, sub: number | null, legK: string | null): { head: string; body: string } | null {
+  const at = posBySrc.get(src);
+  const vs = at !== undefined ? visibleSteps[at] : undefined;
+  if (kind === "step" && vs) {
+    const st = vs.step;
+    const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
+    const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
+    const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
+    return {
+      head: `<b>Step ${stepNum(vs)}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}`,
+      body: `<div class="rxpb-hc-text">${text ? formatRxpText(text) : esc(stepHeadline(st))}</div>`
+        + (badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""),
+    };
+  }
+  if (kind === "wp" && vs && sub != null) {
+    const w = vs.step.waypoints?.[sub];
+    if (!w) return null;
+    const path = w.mode === "path";
+    const l = stopLetters(vs.step).get(sub);
+    return {
+      head: `<b>${path ? "On the way" : `Waypoint ${l || ""}`}</b><span>Step ${stepNum(vs)} · ${esc(w.zone || vs.zone || "")} ${w.x.toFixed(1)}, ${w.y.toFixed(1)}</span>`,
+      body: `<div class="rxpb-hc-text">${path ? "RestedXP's arrow walks you through here on the way to the step." : w.text ? formatRxpText(w.text) : "Click to aim the arrow here."}</div>`,
+    };
+  }
+  if (kind === "leg" && legK) {
+    const leg = planned.find((l) => l.key === legK);
+    if (!leg) return null;
+    const info = legInfo(leg, routeLegs.get(leg.key), mapsGeo(), mapName);
+    const a = posBySrc.get(leg.from), b = posBySrc.get(leg.to);
+    const fromTxt = a !== undefined ? `Step ${stepNum(visibleSteps[a])}` : "", toTxt = b !== undefined ? `step ${stepNum(visibleSteps[b])}` : "";
+    return {
+      head: `<b>${esc(info.head)}</b><span>${leg.from === leg.to ? `Inside step ${esc(toTxt.replace("step ", ""))}` : `${esc(fromTxt)} → ${esc(toTxt)}`}</span>`,
+      body: info.lines.map((l) => `<div class="rxpb-hc-line">${esc(l)}</div>`).join("") + (info.approx && routeLegs.has(leg.key) ? `<div class="rxpb-hc-line dim">Part of it is a straight guess.</div>` : ""),
+    };
+  }
+  if (kind === "loop" && vs && sub != null) {
+    const lp = vs.step.loops?.[sub];
+    if (!lp) return null;
+    let per = 0;
+    const pts = lp.points as Pt[];
+    for (let i = 1; i < pts.length + (lp.kind === "loop" ? 1 : 0); i++) {
+      const p = pts[i - 1], q = pts[i % pts.length];
+      const yd = yards(mapsGeo(), lp.ui_map || vs.ui_map, q[0] - p[0], q[1] - p[1]);
+      if (yd == null) { per = NaN; break; }
+      per += yd;
+    }
+    const kills = (vs.step.actions || []).filter((x) => x.verb === "mob" || x.verb === "kill" || x.verb === "complete").map((x) => actionBadge(x)?.label).filter(Boolean);
+    return {
+      head: `<b>${lp.kind === "loop" ? "Grind loop" : "Grind line"}</b><span>Step ${stepNum(vs)}${isFinite(per) && per ? ` · ${yardsText(per)} ${lp.kind === "loop" ? "around" : "long"}` : ""}</span>`,
+      body: `<div class="rxpb-hc-text">${lp.kind === "loop" ? "Circle this loop" : "Walk up and down this line"}${lp.range ? `, staying within ${lp.range} yd of it,` : ""} until the step is done.</div>`
+        + (kills.length ? `<div class="rxpb-hc-line">${esc(kills.slice(0, 3).join(" · "))}</div>` : ""),
+    };
+  }
+  if (kind === "obj" && vs && sub != null) {
+    const t = facts?.targets?.[String(src)]?.[sub];
+    if (!t) return null;
+    const quest = (vs.step.actions || []).find((x) => x.quest_id != null && x.quest_id === t.quest);
+    const item = t.role === "loot" ? (vs.step.actions || []).find((x) => x.verb === "collect" && (!t.quest || x.quest_id === t.quest))?.entity_name : null;
+    const bits = [t.level ? `level ${t.level}` : "", t.rank ? RANK_NAME[t.rank] || "" : ""].filter(Boolean);
+    return {
+      head: `<b>${esc(`${ROLE_NAME[t.role] || ""} ${t.name || (t.kind === "poi" ? "the quest area" : `#${t.id}`)}`.trim())}</b>${bits.length ? `<span class="${(t.rank || 0) >= 1 ? "warn" : ""}">${esc(bits.join(" · "))}</span>` : ""}`,
+      body: (item ? `<div class="rxpb-hc-line">For ${esc(item)}</div>` : "")
+        + (quest ? `<div class="rxpb-hc-line">${esc(quest.quest_name || `Quest #${quest.quest_id}`)}</div>` : "")
+        + `<div class="rxpb-hc-line dim">${t.points.length > 1 ? `${t.points.length} places near the step` : "Near the step"}</div>`,
+    };
+  }
+  return null;
+}
+
+/** The inspector: the selected map element of any kind, as a compact card that never scrolls. */
 function renderInspector(): void {
   const box = $("rxpb-inspector");
-  const at = selected ? posBySrc.get(selected.src) : undefined;
-  const vs = at !== undefined ? visibleSteps[at] : undefined;
-  if (!vs) {
+  const c = selected ? elementCard(selected.kind, selected.src, selected.sub ?? null, selected.key ?? null) : null;
+  if (!c) {
     box.hidden = true;
     return;
   }
-  const st = vs.step;
-  const lines = (st.actions || []).filter((a) => a.raw_text || a.text || a.verb !== "goto");
-  const badges = lines.map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
-  const coord = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} (${st.x.toFixed(1)}, ${st.y.toFixed(1)})` : (st.zone || vs.zone || "No waypoint");
   box.hidden = false;
-  box.innerHTML = `<div class="rxpb-ins-head">
-      <span class="rxpb-step-pill">Step ${stepNum(vs)}</span>
-      <span class="rxpb-ins-coord">${esc(coord)}</span>
-      ${st.cond ? `<span class="rxpb-cond-pill">&lt;&lt; ${esc(st.cond)}</span>` : ""}
-      <button type="button" class="rxpb-ins-close" id="rxpb-ins-close" title="Close details">×</button>
-    </div>
-    ${badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}`;
+  box.innerHTML = `<div class="rxpb-ins-head">${c.head}<button type="button" class="rxpb-ins-close" id="rxpb-ins-close" title="Close details (Esc)" aria-label="Close details">×</button></div>${c.body}`;
   const closeBtn = document.getElementById("rxpb-ins-close");
-  if (closeBtn) closeBtn.onclick = () => { selected = null; box.hidden = true; renderMap(); };
+  if (closeBtn) closeBtn.onclick = clearSelection;
 }
 
+/** Close the inspector (Escape, its ×). */
+function clearSelection(): void {
+  selected = null;
+  hideHoverCard();
+  updateClasses();
+  renderInspector();
+}
+
+
 const KIND_GLYPH: Record<string, string> = { accept: "!", turnin: "?", combat: "⚔", travel: "✦", hearth: "⌂", death: "☠" };
+const KIND_RANK: Record<string, number> = { travel: 6, hearth: 6, death: 6, turnin: 4, accept: 3, combat: 1 };
 const KIND_NAME: Record<string, string> = { accept: "Accept", turnin: "Turn in", combat: "Objective", travel: "Flight",
   hearth: "Hearth", death: "Deathskip" };
 
@@ -566,17 +813,23 @@ function renderTimeline(): void {
 
   const ticks: string[] = [];
   if (n > 1) {
+    // in a crowded hub the glyphs would pile up: two rows, the travel and quest moments first, the rest left out
+    // (the slider still reaches every step)
+    const width = $("rxpb-tl-ticks").clientWidth || 600;
+    const marked = visibleSteps.map((vs, i) => ({ vs, i })).filter(({ vs, i }) => vs.kind !== "step" || i === activeIdx);
+    const rows = layoutTicks(marked.map(({ vs, i }) => ({ x: (i / (n - 1)) * width, rank: i === activeIdx ? 9 : KIND_RANK[vs.kind] || 0 })), 13);
     let prevZone = visibleSteps[0]?.zone;
     visibleSteps.forEach((vs, i) => {
-      const pct = ((i / (n - 1)) * 100).toFixed(2);
       if (vs.zone && vs.zone !== prevZone) {
         prevZone = vs.zone;
-        ticks.push(`<i class="tl-zone" style="left:${pct}%"></i>`);
+        ticks.push(`<i class="tl-zone" style="left:${((i / (n - 1)) * 100).toFixed(2)}%"></i>`);
       }
-      if (vs.kind !== "step") {
-        const label = `Step ${stepNum(vs)}, ${KIND_NAME[vs.kind]}: ${stepHeadline(vs.step)}`;
-        ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
-      }
+    });
+    marked.forEach(({ vs, i }, k) => {
+      if (rows[k] < 0 || vs.kind === "step") return;
+      const pct = ((i / (n - 1)) * 100).toFixed(2);
+      const label = `Step ${stepNum(vs)}, ${KIND_NAME[vs.kind]}: ${stepHeadline(vs.step)}`;
+      ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${rows[k] ? " row2" : ""}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
     });
   }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
@@ -641,9 +894,10 @@ function activeStepHtml(vs: VisibleStep): string {
       </div>
     </div>`);
   }
-  const wps = st.waypoints || [];
-  const wpPills = stepWaypoints(st).map(({ w, wi }) => `<button type="button" tabindex="-1" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
-    📍 ${esc(w.zone || st.zone || "Zone")} <b>${w.x.toFixed(1)}, ${w.y.toFixed(1)}</b>${wps.length > 1 ? ` <em>(${letter(wi)})</em>` : ""}
+  // the places the step sends the player (RestedXP's path points are only on the way there), lettered as on the map
+  const letters = stopLetters(st);
+  const wpPills = stepWaypoints(st).filter(({ wi }) => letters.has(wi)).map(({ w, wi }) => `<button type="button" tabindex="-1" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
+    📍 ${esc(w.zone || st.zone || "Zone")} <b>${w.x.toFixed(1)}, ${w.y.toFixed(1)}</b>${letters.size > 1 ? ` <em>(${letters.get(wi)})</em>` : ""}
   </button>`).join("");
   return `<div class="rxpb-active-step">
     <div class="rxpb-cs-head">
@@ -736,13 +990,80 @@ function selectStep(idx: number, scrollList = true): void {
   if (!visibleSteps.length) return;
   activeIdx = Math.max(0, Math.min(visibleSteps.length - 1, idx));
   activeSrc = visibleSteps[activeIdx].src;
-  activeWpIdx = 0;
   const vs = visibleSteps[activeIdx];
+  activeWpIdx = pinStop(vs.step)?.wi ?? 0;
   if (vs && vs.ui_map != null) activeMapId = vs.ui_map;
+  // a step reached by a flight shows on the continent, where the whole flight is drawn
+  const cont = continentTab();
+  const inLeg = (legsByTo.get(vs.src) || []).find((l) => l.from !== l.to);
+  if (cont != null && inLeg && inLeg.kind === "fly" && mapsGeo()?.[String(inLeg.pa.um)]?.parent === cont
+      && mapsGeo()?.[String(inLeg.pb.um)]?.parent === cont) activeMapId = cont;
   renderTimeline();
   renderStepList(scrollList);
   renderMap();
   followStep();
+  scheduleRoutes();
+}
+
+// ---- the walking routes: asked of the engine nearest the current step first, again while legs are pending ------
+let routesTimer: number | null = null;
+let routesBusy = false;
+let routesAgain = false;
+let routesIdle = 0;                            // answers in a row that brought no new leg (stop asking after a few)
+
+/** Ask for the routes soon (debounced: scrubbing asks once, for where it stops). */
+function scheduleRoutes(delay = 300): void {
+  if (routesTimer) window.clearTimeout(routesTimer);
+  routesTimer = window.setTimeout(() => { routesTimer = null; requestRoutes(); }, delay);
+}
+
+/** One request in flight per guide: the visible steps, the current one first; legs the budget didn't reach come
+ * back pending and are asked for again (each call mostly reads the engine's cache). */
+async function requestRoutes(): Promise<void> {
+  const g = currentGuide;
+  if (!g || !visibleSteps.length) return;
+  if (routesBusy) { routesAgain = true; return; }
+  routesBusy = true;
+  const seq = openSeq;
+  const faction = racePick(filter.race).faction || g.faction || null;
+  let r: RxpRoutes | undefined;
+  try {
+    r = await quiet("addon:rxpRoutes", g.id, g.index, { steps: visibleSteps.map((v) => v.src), focus: activeSrc ?? undefined,
+      budget_ms: 2500, faction, level: g.level_min });
+  } finally {
+    routesBusy = false;
+  }
+  if (seq !== openSeq || currentGuide !== g) { if (routesAgain) { routesAgain = false; requestRoutes(); } return; }
+  let added = 0;
+  for (const leg of r?.legs || []) {
+    const k = `${leg.from}:${leg.a}>${leg.to}:${leg.b}`;
+    const old = routeLegs.get(k);
+    if (!old || JSON.stringify(old) !== JSON.stringify(leg)) { routeLegs.set(k, leg); added++; }
+  }
+  routesIdle = added ? 0 : routesIdle + 1;
+  if (added) {
+    routesVersion++;
+    if (currentPage() === "guides") renderMap();
+  }
+  const more = !!r && !r.error && !r.unavailable && (r.pending || []).length > 0 && routesIdle < 3;
+  if (routesAgain || (more && currentPage() === "guides")) {
+    routesAgain = false;
+    requestRoutes();
+  }
+}
+
+/** What the knowledge base knows of the guide (its map targets): asked once per guide, after the guide is drawn. */
+async function requestFacts(g: RxpGuideDetail): Promise<void> {
+  const key = `${g.id}:${g.index}`;
+  let f = factsCache.get(key);
+  if (f === undefined) {
+    f = ((await quiet("addon:rxpFacts", g.id, g.index)) as RxpGuideFacts | null | undefined) ?? null;
+    factsCache.set(key, f);
+  }
+  if (currentGuide !== g) return;
+  facts = f;
+  factsVersion++;
+  renderMap();
 }
 
 /** Make the step with this guide step number (st.idx) the current one, when it is listed. */
@@ -799,6 +1120,15 @@ export async function openGuide(packId: string, index: number): Promise<void> {
     return;
   }
   currentGuide = g;
+  if (stepCounts.get(key) !== g.steps.length) {
+    stepCounts.set(key, g.steps.length);
+    for (const c of catalog) if (c.packId === packId && c.index === index) c.steps = g.steps.length;
+  }
+  routeLegs.clear();
+  routesVersion++;
+  routesIdle = 0;
+  facts = null;
+  factsVersion++;
   vis = g.players && g.vis_masks ? new Visibility(g.players, g.vis_masks) : null;
   if (!defaultsApplied && g.defaults) {
     // the toggles start as the coach plays (config.json "rxp", else solo self-found and group quests on)
@@ -828,11 +1158,14 @@ export async function openGuide(packId: string, index: number): Promise<void> {
   $<HTMLSelectElement>("rxpb-guide").value = key;
 
   rebuildVisibleSteps();
+  activeWpIdx = visibleSteps.length ? pinStop(visibleSteps[0].step)?.wi ?? 0 : 0;
   renderHeader();
   renderCharacter();
   renderTimeline();
   renderStepList(false);
   renderMap();
+  scheduleRoutes(0);
+  requestFacts(g);
 }
 
 function populateGuideSelect(): void {
@@ -877,7 +1210,7 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
     const items = imp.items || imp.guides.map((name, index) => ({
       index, group: "RestedXP", subgroup: null, name, next: null, faction: null, defaultFor: null, version: null, steps: 0,
     }));
-    for (const it of items) entries.push({ ...it, packId: imp.id });
+    for (const it of items) entries.push({ ...it, packId: imp.id, steps: stepCounts.get(`${imp.id}:${it.index}`) ?? it.steps });
   }
   // each group in level order, so RestedXP's free 1-20 guides come before a bought string's 20-60 ones
   const groupOrder = new Map<string, number>();
@@ -922,25 +1255,24 @@ export function browseGuide(packId: string, index: number): void {
   show("guides");               // the page loads its list (refreshGuides), then opens this guide
 }
 
-/** The card a pin shows while hovered or focused: the step's instruction, its quests and targets, where it is. */
-function showHoverCard(g: SVGGElement): void {
-  const at = posBySrc.get(Number(g.dataset.src));
-  const vs = at !== undefined ? visibleSteps[at] : undefined;
+/** The card a map element shows while hovered or focused (pins, waypoints, legs, loops, objectives), beside it or
+ * beside the pointer for a long element (a leg, a loop, an objective cluster); kept inside the map. */
+function showHoverCard(el: SVGElement, pt?: { x: number; y: number }): void {
   const card = $("rxpb-hovercard");
-  if (!vs) { card.hidden = true; return; }
-  const st = vs.step;
-  const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
-  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
-  const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
-  card.innerHTML = `<div class="rxpb-hc-head"><b>Step ${stepNum(vs)}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}</div>
-    <div class="rxpb-hc-text">${text ? formatRxpText(text) : esc(stepHeadline(st))}</div>
-    ${badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}`;
+  const kind = el.dataset.kind || "";
+  const c = kind === "edge" || kind === "zone"
+    ? { head: `<b>${esc(mapName(Number(el.dataset.map)))}</b>`, body: `<div class="rxpb-hc-line">${kind === "edge" ? (el.dataset.dir === "from" ? "The way comes in from here." : "The way goes on there.") + " " : ""}Click to open its map.</div>` }
+    : elementCard(kind, Number(el.dataset.src ?? (kind === "leg" ? planned.find((l) => l.key === el.dataset.leg)?.to : NaN)),
+      el.dataset.sub != null ? Number(el.dataset.sub) : null, el.dataset.leg ?? null);
+  if (!c) { card.hidden = true; return; }
+  card.innerHTML = `<div class="rxpb-hc-head">${c.head}</div>${c.body}`;
   card.hidden = false;
-  // beside the pin, kept inside the map
-  const stage = $("rxpb-map-stage").getBoundingClientRect(), pin = g.getBoundingClientRect();
+  const stage = $("rxpb-map-stage").getBoundingClientRect();
+  const box = pt && (kind === "leg" || kind === "loop" || kind === "obj")
+    ? { left: pt.x - 4, right: pt.x + 4, top: pt.y - 4 } : el.getBoundingClientRect();
   const w = card.offsetWidth, h = card.offsetHeight;
-  let left = pin.right - stage.left + 10, top = pin.top - stage.top - 6;
-  if (left + w > stage.width - 8) left = pin.left - stage.left - w - 10;
+  let left = box.right - stage.left + 10, top = box.top - stage.top - 6;
+  if (left + w > stage.width - 8) left = box.left - stage.left - w - 10;
   top = Math.max(8, Math.min(stage.height - h - 8, top));
   card.style.left = `${Math.max(8, left)}px`;
   card.style.top = `${top}px`;
@@ -950,13 +1282,54 @@ function hideHoverCard(): void {
   $("rxpb-hovercard").hidden = true;
 }
 
-/** Zoom with the wheel, pan by dragging, the whole zone on double-click; the view buttons and toggles. */
+/** Open another map's tab (an edge marker, a zone outline on the continent). */
+function openMap(um: number): void {
+  activeMapId = um;
+  hideHoverCard();
+  renderMap();
+}
+
+/** Click (or Enter / Space) on a map element: a pin makes its step current; a waypoint aims the arrow; a leg, a loop
+ * or an objective opens in the inspector; an edge marker or a zone outline opens that map. */
+function pickElement(el: SVGElement): void {
+  const kind = el.dataset.kind, src = Number(el.dataset.src);
+  if (kind === "step") {
+    selected = { kind: "step", src };
+    stopPlay();
+    selectSrc(src, true);
+  } else if (kind === "wp") {
+    if (src !== activeSrc) selectSrc(src, true);
+    activeWpIdx = Number(el.dataset.sub);
+    selected = { kind: "wp", src, sub: activeWpIdx };
+    renderMap();
+    renderActiveStep();
+    followStep();
+  } else if (kind === "leg") {
+    const leg = planned.find((l) => l.key === el.dataset.leg);
+    if (leg) { selected = { kind: "leg", src: leg.to, key: leg.key }; updateClasses(); renderInspector(); }
+  } else if (kind === "loop" || kind === "obj") {
+    selected = { kind, src, sub: Number(el.dataset.sub) };
+    updateClasses();
+    renderInspector();
+  } else if (kind === "edge" || kind === "zone") {
+    openMap(Number(el.dataset.map));
+  }
+}
+
+let wheelTimer: number | null = null;
+
+/** Zoom with the wheel (Ctrl+wheel stays the app's own zoom), pan by dragging, the whole zone on double-click; the
+ * view buttons and toggles; hover, focus and click on every map element through one set of listeners. */
 function wireMapView(): void {
   const stage = $("rxpb-map-stage");
   const onMapItself = (e: Event) => !(e.target as HTMLElement).closest(".rxpb-map-tools, .rxpb-inspector, .rxpb-arrow-hud");
   stage.addEventListener("wheel", (e) => {
-    if (!onMapItself(e)) return;
+    if (e.ctrlKey || !onMapItself(e)) return;
     e.preventDefault();
+    // the layer is a raster only while it moves; at rest the browser draws it sharp at the new zoom
+    stage.classList.add("moving");
+    if (wheelTimer) window.clearTimeout(wheelTimer);
+    wheelTimer = window.setTimeout(() => { stage.classList.remove("moving"); wheelTimer = null; }, 220);
     const r = stage.getBoundingClientRect();
     zoomAt(e.deltaY < 0 ? 1.25 : 1 / 1.25, e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
@@ -970,16 +1343,16 @@ function wireMapView(): void {
     if (!drag) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!drag.moved && Math.hypot(dx, dy) < 4) return;
-    if (!drag.moved) { drag.moved = true; stage.classList.add("dragging"); }
+    if (!drag.moved) { drag.moved = true; stage.classList.add("dragging", "moving"); hideHoverCard(); }
     const { w, h } = stageSize();
     view.fx = drag.fx + dx / w;
     view.fy = drag.fy + dy / h;
     applyView();
   });
   window.addEventListener("pointerup", () => {
-    if (drag?.moved) justDragged = true;       // the click that ends a drag doesn't pick a pin
+    if (drag?.moved) justDragged = true;       // the click that ends a drag doesn't pick anything
     drag = null;
-    stage.classList.remove("dragging");
+    stage.classList.remove("dragging", "moving");
   });
   stage.addEventListener("click", (e) => { if (justDragged) { e.stopPropagation(); justDragged = false; } }, true);
   stage.addEventListener("dblclick", (e) => { if (onMapItself(e)) resetView(); });
@@ -992,36 +1365,49 @@ function wireMapView(): void {
   };
   $<HTMLInputElement>("rxpb-showdone").onchange = (e) => {
     filter.showDone = (e.target as HTMLInputElement).checked;
-    renderMap();
+    updateClasses();
   };
   new ResizeObserver(() => applyView()).observe(stage);
 
-  // pins: a card on hover or keyboard focus; Enter or Space on a focused pin picks it
+  // every map element: a card on hover or keyboard focus, a click (or Enter / Space) picks it
   const svgEl = $("rxpb-map-svg");
-  const pinOf = (e: Event) => (e.target as Element).closest<SVGGElement>(".rxpb-pin");
-  svgEl.addEventListener("pointerover", (e) => { const g = pinOf(e); if (g && !drag) showHoverCard(g); });
+  const elOf = (t: EventTarget | null) => (t as Element | null)?.closest?.<SVGElement>("[data-kind]") || null;
+  svgEl.addEventListener("pointerover", (e) => { const el = elOf(e.target); if (el && !drag) showHoverCard(el, { x: e.clientX, y: e.clientY }); });
   svgEl.addEventListener("pointerout", (e) => {
-    const to = (e as PointerEvent).relatedTarget as Element | null;
-    if (pinOf(e) && !to?.closest?.(".rxpb-pin")) hideHoverCard();       // left the pin (not just moved within it)
+    const el = elOf(e.target);
+    if (el && elOf((e as PointerEvent).relatedTarget) !== el) hideHoverCard();       // left it (not just moved within it)
   });
-  svgEl.addEventListener("focusin", (e) => { const g = pinOf(e); if (g) showHoverCard(g); });
+  svgEl.addEventListener("focusin", (e) => { const el = elOf(e.target); if (el) showHoverCard(el); });
   svgEl.addEventListener("focusout", hideHoverCard);
+  svgEl.addEventListener("click", (e) => {
+    const el = elOf(e.target);
+    if (!el) return;
+    e.stopPropagation();
+    pickElement(el);
+  });
   svgEl.addEventListener("keydown", (e) => {
-    const g = pinOf(e);
-    if (g && (e.key === "Enter" || e.key === " ")) {
+    const el = elOf(e.target);
+    if (el && (e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
       e.stopPropagation();
-      (g as unknown as HTMLElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      pickElement(el);
     }
   });
   stage.addEventListener("wheel", hideHoverCard, { passive: true });
-  stage.addEventListener("pointerdown", hideHoverCard);
 }
+
 
 /** On the Guides page, away from a text box: left/right step, Space walks the route or stops, +/- zoom, 0 whole zone. */
 function wireKeys(): void {
   document.addEventListener("keydown", (e) => {
     if (currentPage() !== "guides" || e.ctrlKey || e.altKey || e.metaKey || !visibleSteps.length) return;
+    if (e.key === "Escape") {
+      // the card, else the inspector (a popover closes itself first)
+      const card = $("rxpb-hovercard");
+      if (!card.hidden && !selected) { hideHoverCard(); e.preventDefault(); return; }
+      if (selected) { clearSelection(); e.preventDefault(); }
+      return;
+    }
     // a text box, a select, a checkbox or the timeline slider handles its own keys (the slider steps on arrows);
     // Space on a focused button presses it
     const el = e.target as HTMLElement;
@@ -1062,6 +1448,7 @@ function wireStepList(): void {
       if (wp?.ui_map) activeMapId = wp.ui_map;
       renderActiveStep();
       renderMap();
+      followStep();
       return;
     }
     const row = el.closest<HTMLElement>(".rxpb-obj-row");
@@ -1158,6 +1545,8 @@ export function wireRxpBrowser(): void {
     renderTimeline();
     renderStepList(true);
     renderMap();
+    routesIdle = 0;
+    scheduleRoutes();
   };
   $("rxpb-race").onchange = (e) => { filter.race = (e.target as HTMLSelectElement).value; refilter(); };
   $("rxpb-class").onchange = (e) => { filter.cls = (e.target as HTMLSelectElement).value; refilter(); };
@@ -1173,6 +1562,30 @@ export function wireRxpBrowser(): void {
   $("rxpb-prev").onclick = () => { stopPlay(); selectStep(activeIdx - 1, true); };
   $("rxpb-next").onclick = () => { stopPlay(); selectStep(activeIdx + 1, true); };
   $("rxpb-play").onclick = togglePlay;
+  // zone tabs (and the continent): open that map; a zone the current step isn't in starts at its first step
+  const zonesEl = $("rxpb-zones");
+  zonesEl.addEventListener("click", (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>("button[data-map]");
+    if (!b) return;
+    const um = Number(b.dataset.map);
+    if (!b.classList.contains("cont") && visibleSteps[activeIdx]?.ui_map !== um) {
+      const first = visibleSteps.findIndex((vs) => vs.ui_map === um);
+      activeMapId = um;
+      if (first >= 0) { stopPlay(); selectStep(first, true); activeMapId = um; renderMap(); return; }
+    }
+    openMap(um);
+  });
+  zonesEl.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const tabs = Array.from(zonesEl.querySelectorAll<HTMLButtonElement>("button[data-map]"));
+    const at = tabs.findIndex((t) => t === document.activeElement);
+    if (at < 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const next = tabs[(at + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+    next.click();
+    zonesEl.querySelector<HTMLButtonElement>(`button[data-map="${next.dataset.map}"]`)?.focus();
+  });
   $("rxpb-tl-ticks").addEventListener("click", (e) => {
     const t = (e.target as Element).closest<HTMLElement>(".tl-tick");
     if (t) { stopPlay(); selectSrc(Number(t.dataset.src), true); }

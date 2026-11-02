@@ -636,3 +636,21 @@ they don't spell out.
   reads "12 / 334". The map inspector is a compact card without a scrollbar. Narrow windows narrow the guide window
   and the map (a container query) instead of stacking the columns, so the page never scrolls down to 900 x 600.
   No IPC, file or state change. Guides page plan, phase 0 item 6 (explorer-ui recommendations 7 and 9, 2026-11-02).
+- **Guides map: the route drawn, objectives, and everything on the map explained (contract 8, player-visible).** The
+  map draws every leg between the listed steps' stops from `addon:rxpRoutes` (asked nearest the current step first,
+  one request in flight per guide, asked again while legs are pending): walked legs over the walking map (the coach
+  screen's case + line, gold dashes flowing on the leg being walked), flights dotted cyan with a landing circle,
+  hearths / deathskips / boats a faint arc with ⌂ ☠ ⚓, legs not worked out yet a faint dashed straight line. A step's
+  pin sits on its first stop that isn't one of RestedXP's path points; the current step's path points are small dots,
+  only its stops are lettered (and its waypoint buttons list only those, with the same letters). Legs crossing a
+  zone edge are cut there with a "from <zone>" / "to <zone>" marker that opens that zone; a continent tab ("◎
+  Kalimdor") appears when the guide spans zones on one, shows zone outlines (click opens the zone) and the whole
+  route, and opens by itself for a step reached by a flight. The current step's kill / loot / use targets from
+  `addon:rxpFacts` (`targets`) draw under the pins, a shape per kind and a dashed outline around each cluster. Pins,
+  waypoints, legs (yards, time, compass directions, areas passed, what it was routed over), loops and objectives
+  (target, level, rank) all show a card on hover or focus and open in the inspector on click; Escape closes it. The
+  map is built in persistent layers (`#rxpb-l-route`, `-loops`, `-objectives`, `-leg`, `-pins`, `-active`, `-hl`),
+  rebuilt only when the guide, map, steps, routes or targets change. Follow centres on the current target; the map
+  is a raster layer only while it moves (sharp at rest); Ctrl+wheel is left to the app's zoom. Timeline ticks share
+  two rows and the least important give way in a crowded hub; the guide picker shows an opened guide's real step
+  count (its #include steps expanded). No IPC, file or state change. Guides page plan, phase 1 items 1-7.
