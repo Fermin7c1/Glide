@@ -27,20 +27,22 @@ desk = os.path.join(tmp, "desktop")
 
 
 def git(*args):
-    # a repo-local identity for the scratch commits (never the global config)
+    # a repo-local identity for the scratch commits (never the global config); no automatic maintenance (each
+    # commit would start another git process or two)
     r = subprocess.run([git_exe, "-c", "user.name=Glide test", "-c", "user.email=test@example.invalid",
-                        "-c", "commit.gpgsign=false", *args], cwd=tmp, capture_output=True, text=True,
-                       encoding="utf-8")
+                        "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0", *args],
+                       cwd=tmp, capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, (args, r.stderr)
     return r.stdout.strip()
 
 
-def commit(subject):
+def commit(subject, sha=False):
+    """Commit everything with this subject; sha=True returns the commit's id (one git process fewer otherwise)."""
     with open(os.path.join(tmp, "log.txt"), "a", encoding="utf-8") as fh:
         fh.write(subject + "\n")
     git("add", "-A")
     git("commit", "-q", "-m", subject)
-    return git("rev-parse", "HEAD")
+    return git("rev-parse", "HEAD") if sha else None
 
 
 def write_json(path, data):
@@ -68,11 +70,11 @@ try:
     write_json(os.path.join(desk, "changelog.json"), cl)
     commit("Release: clearer What's new notes for 0.4.1")          # 0.4.1's entry, committed by hand (no source)
     commit("Guides show dungeon steps")
-    c2 = commit("Docs: the plan")
+    c2 = commit("Docs: the plan", sha=True)
     commit("Guides map draws flights")                            # a failed run's draft, 0.4.3: no entry of its own
-    c3 = commit("CI: faster checks")
+    c3 = commit("CI: faster checks", sha=True)
     commit("Narrate reads the steps aloud")
-    c4 = commit("Knowledge refresh 2026-11-01")
+    c4 = commit("Knowledge refresh 2026-11-01", sha=True)
     commit("Steps ahead fade on the map")                          # this build: 0.4.5
 
     releases = [release("v0.4.4", c4, date="2026-11-02T01:00:00Z"), release("v0.4.3", c3, draft=True),
