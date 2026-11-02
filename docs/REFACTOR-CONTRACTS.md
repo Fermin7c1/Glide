@@ -591,3 +591,14 @@ they don't spell out.
   optional `max_expand` (None keeps the coach's searches as they are) and `walk_world`. Nothing is drawn yet: the
   Guides page uses it in phase 1 of docs/plans/guides-explorer.md (recommendation "Drawn walking routes" 1-8,
   2026-11-02).
+- **Follow-up, contracts 4 and 7 additive: per-guide facts for the Guides page.** A new command
+  `rxp_import.py facts <id> <index> [CLASS|-] [RACE|-]` answers `{"ok": true, "facts": ...}` and a new IPC channel
+  `addon:rxpFacts(id, index, cls?, race?)` (types `RxpGuideFacts` and its parts in `desktop/src/shared/ipc.ts`) carries
+  it: the kb match (exact, aligned by step text and quests, or none) with its idx map, per quest its accept/objective/
+  turn-in/gate steps and, with kb, name, level, follow-ups and what skipping it loses (`simulate.unreachable`, the
+  coach's skip rule), map targets for objective steps, the prep list (buys, Auction House collects, bank trips), the
+  class's `step_brief` plan and hazards. Built read-only by the new `knowledge/api/explorer.py` `guide_facts` over the
+  newest kb (`data/kb.db` or a staged `data/kb.next-*.db`, refusing another schema version); without kb it still
+  answers quest steps and prep. `_entity_names` (the `guide` command's quest, NPC and item names) now reads kb first
+  and glide.db second. No table, column or player-visible text changes; only the `desktop` golden probe is
+  re-recorded (the new channel). Guides page plan, phases 3-5 (docs/plans/guides-explorer.md).

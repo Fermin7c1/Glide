@@ -14,7 +14,8 @@ const INVOKE = new Set<InvokeChannel>([
   // config.json, API keys and custom endpoints
   "config:get", "config:set", "keys:list", "keys:set", "endpoint:test", "keys:test",
   // the addon and folders
-  "addon:status", "addon:detect", "addon:install", "addon:rxpImport", "addon:rxpImports", "addon:rxpRoutes", "dialog:folder", "data:import", "shell:open",
+  "addon:status", "addon:detect", "addon:install", "addon:rxpImport", "addon:rxpImports", "addon:rxpRoutes",
+  "addon:rxpFacts", "dialog:folder", "data:import", "shell:open",
   // offline speech recognition
   "speech:status", "speech:install", "speech:models", "speech:download", "speech:delete",
   // the overlay
