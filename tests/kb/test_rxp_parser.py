@@ -300,10 +300,25 @@ def test_load(glide_db):
     print("load: %d guides, %d steps, %d actions in %.2fs" % (r["guides"], r["steps"], r["actions"], dt))
 
 
+def test_world_loop():
+    """Regression: a .loop in world form (RestedXP's Forever guides: `.loop 25,1411/1,wy,wx,...`) was read as map
+    percent on no map, so its world numbers became the loop's points. It is now read as .line reads world form:
+    the map and continent from the zone, the pairs as [wx, wy] in wpoints (knowledge/sources/finalize.py puts them
+    on the map)."""
+    g = P.parse_guide("#group G\n#name N\nstep\n    .loop 25,1411/1,-4200,-600,-4250,-650,-4300,-600\n"
+                      "    .loop +40,Durotar,40.1,50.2,42.3,52.4\n    .line 1411/1,-4200,-600,-4250,-650\n")
+    world, mapped, line = (a["args"] for a in g["steps"][0]["actions"])
+    check(world["ui_map"] == 1411 and world["continent"] == 1 and world["range"] == 25.0, world)
+    check(world["wpoints"] == [[-600.0, -4200.0], [-650.0, -4250.0], [-600.0, -4300.0]] and "points" not in world, world)
+    check(world["wpoints"][:2] == line["wpoints"], "a world .loop reads its pairs as a world .line does")
+    check(mapped["ui_map"] == 1411 and mapped["style"] == "+" and mapped["points"] == [[40.1, 50.2], [42.3, 52.4]], mapped)
+
+
 def main():
     test_plain()
     test_conditions()
     test_line_grammar()
+    test_world_loop()
     tmp = fixture.tmpdir("rxp-")
     try:
         glide_db = os.path.join(tmp, "glide.db")

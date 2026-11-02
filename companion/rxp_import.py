@@ -309,6 +309,84 @@ def _entity_names(root, qids, npcs, items):
     return out
 
 
+def _map_bounds(root, maps):
+    """{ui_map: map_bounds row} for these maps from data/kb.db (the knowledge build's world <-> map transforms, from
+    the game client's own map data), or {} without a knowledge base."""
+    path = os.path.join(root, "data", "kb.db")
+    maps = sorted(m for m in maps if isinstance(m, int))
+    if not maps or not os.path.exists(path):
+        return {}
+    import sqlite3
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % path.replace("\\", "/"), uri=True)
+        conn.row_factory = sqlite3.Row
+        try:
+            return {r["ui_map"]: dict(r) for r in conn.execute(
+                "SELECT * FROM map_bounds WHERE ui_map IN (%s)" % ",".join("?" * len(maps)), maps)}
+        finally:
+            conn.close()
+    except sqlite3.Error as e:
+        log_once("rxp_import.map_bounds", e)
+        return {}
+
+
+def place_world_points(parsed, bounds):
+    """Map positions (percent) for what a guide gives only in world coordinates: RestedXP's Forever guides write
+    `.goto 1411/1,-4251.46,-607.35` (map, continent, world), and the parser keeps those as wx/wy with x/y empty. As
+    the knowledge build's last step does for its copy (knowledge/sources/finalize.py): the step's x/y, an action's
+    args x/y, and a .loop/.line's points from its wpoints, the columns' convention detected once for the guide. A
+    point that falls off its map stays unplaced. Changes `parsed` in place; returns how many positions it placed."""
+    from knowledge.sources import finalize
+
+    def map_of(args):
+        return finalize._map_of(args)       # noqa: SLF001 - the knowledge build's own reading of an action's map
+    samples = []
+    for st in parsed.get("steps") or ():
+        if st.get("x") is None and st.get("wx") is not None and st.get("wy") is not None and st.get("ui_map") in bounds:
+            samples.append((st["ui_map"], st["wx"], st["wy"]))
+        for a in st.get("actions") or ():
+            args = a.get("args") or {}
+            um = map_of(args)
+            if um not in bounds:
+                continue
+            if isinstance(args.get("wx"), (int, float)) and isinstance(args.get("wy"), (int, float)) and args.get("x") is None:
+                samples.append((um, args["wx"], args["wy"]))
+            for p in args.get("wpoints") or ():
+                if isinstance(p, list) and len(p) == 2 and None not in p:
+                    samples.append((um, p[0], p[1]))
+    if not samples:
+        return 0
+    swap, _, _ = finalize.detect_swap(samples[:2000], bounds)
+    placed = 0
+
+    def put(um, wx, wy):
+        xy = finalize._convert(bounds[um], wx, wy, swap)     # noqa: SLF001
+        return (round(xy[0], 2), round(xy[1], 2)) if finalize._on_map(xy) else None     # noqa: SLF001
+    for st in parsed.get("steps") or ():
+        if st.get("x") is None and st.get("wx") is not None and st.get("wy") is not None and st.get("ui_map") in bounds:
+            xy = put(st["ui_map"], st["wx"], st["wy"])
+            if xy:
+                st["x"], st["y"] = xy
+                placed += 1
+        for a in st.get("actions") or ():
+            args = a.get("args") or {}
+            um = map_of(args)
+            if um not in bounds:
+                continue
+            if isinstance(args.get("wx"), (int, float)) and isinstance(args.get("wy"), (int, float)) and args.get("x") is None:
+                xy = put(um, args["wx"], args["wy"])
+                if xy:
+                    args["x"], args["y"] = xy
+                    placed += 1
+            if isinstance(args.get("wpoints"), list) and not args.get("points"):
+                pts = [put(um, p[0], p[1]) if isinstance(p, list) and len(p) == 2 and None not in p else None
+                       for p in args["wpoints"]]
+                if any(pts):
+                    args["points"] = [list(p) if p else [None, None] for p in pts]
+                    placed += 1
+    return placed
+
+
 def guide_detail(root, iid, index, wow_dir=None):
     """Full parsed guide (steps, waypoints, loops, lines, actions, commentary) for the interactive guide browser:
     guide `index` of an added string, or of RestedXP's free guides (iid FREE_ID)."""
@@ -325,6 +403,12 @@ def guide_detail(root, iid, index, wow_dir=None):
     from knowledge.rxp_parser.guide import parse_guide
     from knowledge.rxp_parser.maps import DEFAULT_MAPS
     parsed = parse_guide(guides[idx].get("text") or "")
+    # RestedXP's Forever guides give positions in world coordinates: put them on their maps (kb.db's map bounds)
+    steps_in = parsed.get("steps") or ()
+    maps_used = {st.get("ui_map") for st in steps_in}
+    maps_used |= {(a.get("args") or {}).get("ui_map") for st in steps_in for a in st.get("actions") or ()}
+    world_only = sum(1 for st in parsed.get("steps") or () if st.get("x") is None and st.get("wx") is not None)
+    placed = place_world_points(parsed, _map_bounds(root, maps_used)) if world_only else 0
     qids, npcs, items = set(), set(), set()
     for st in parsed.get("steps") or ():
         for a in st.get("actions") or ():
@@ -425,6 +509,10 @@ def guide_detail(root, iid, index, wow_dir=None):
         "comments": parsed.get("comments"),
         "zones": [{"ui_map": k, "name": v} for k, v in zones_seen.items()],
         "steps": steps_out,
+        # steps RestedXP placed only in world coordinates, and whether they could be put on the map: without the
+        # knowledge base's map bounds (data/kb.db) the map has nothing to draw, and the Explorer says why
+        "world_only": world_only,
+        "placed": placed,
     }
 
 

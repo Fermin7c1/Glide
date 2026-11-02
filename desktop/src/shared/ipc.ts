@@ -177,6 +177,8 @@ export interface RxpGuideDetail {
   zones: { ui_map: number; name: string }[];
   steps: RxpGuideStep[];
   mapImages?: Record<number, string>;
+  world_only?: number;               // steps RestedXP placed only in world coordinates
+  placed?: number;                   // of those, the positions put on their maps (needs the knowledge base's map bounds)
 }
 /** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it
  * yet; the Glide addon hands it to RestedXP's importer at the next login ("waiting"), then notes "done" or "failed". */

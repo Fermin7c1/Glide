@@ -221,6 +221,40 @@ try:
     assert source == "Glide's copy" and len(seed_free) >= 20 and "1-6 Durotar" in names, (source, len(seed_free))
     zephras = [g for g in seed_free if g["name"].endswith("Zephras Isle") and "dungeon" not in g["file"]]
     assert zephras and all(len(g["groups"]) == 2 for g in zephras), [g["groups"] for g in zephras]
+    # Regression: RestedXP's Forever guides give positions in world coordinates (".goto 1411/1,-4251.46,-607.35":
+    # map, continent, world), which the parser keeps as wx/wy with x/y empty, so the Explorer's map drew nothing.
+    # With the knowledge base's map bounds (data/kb.db map_bounds) they land on the map, as the knowledge build's
+    # finalize step puts them for the coach; a .loop's world points too.
+    with open(os.path.join(rxp, "Guides", "forever", "Horde-World.lua"), "w", encoding="utf-8") as fh:
+        fh.write("RXPGuides.RegisterGuide([[\n#group RestedXP Forever Guide (H)\n#name 7-9 World Coords\nstep\n"
+                 "    .goto 1411/1,-4251.46,-607.35\n    .accept 4641\nstep\n    .goto 1411/1,-4281.07,-720.15\n"
+                 "    .goto 1411/1,-4300.00,-800.00\n    .loop 25,1411/1,-4200,-600,-4250,-650,-4300,-600\n]])\n")
+    free = R.status(home, wow)[-1]
+    wi = next(it["index"] for it in free["items"] if it["name"] == "7-9 World Coords")
+    no_kb = R.guide_detail(home, R.FREE_ID, wi, wow)
+    assert no_kb["world_only"] == 2 and no_kb["placed"] == 0 and all(s["x"] is None for s in no_kb["steps"]), no_kb
+    # Durotar's bounds, made up so the parser's columns read as is land on the map and swapped ones don't
+    B = {"wx0": 1000.0, "wx1": -1500.0, "wy0": -3800.0, "wy1": -5000.0}
+    import sqlite3
+    os.makedirs(os.path.join(home, "data"), exist_ok=True)
+    kb = sqlite3.connect(os.path.join(home, "data", "kb.db"))
+    kb.execute("CREATE TABLE map_bounds(ui_map INTEGER PRIMARY KEY, continent INT, wx0 REAL, wy0 REAL, wx1 REAL, "
+               "wy1 REAL, src TEXT)")
+    kb.execute("INSERT INTO map_bounds VALUES (1411, 1, ?, ?, ?, ?, 'db2')", (B["wx0"], B["wy0"], B["wx1"], B["wy1"]))
+    kb.commit()
+    kb.close()
+
+    def on_map(wx, wy):         # knowledge.store.world_to_map: x spans world Y, y spans world X
+        return (round((wy - B["wy0"]) / (B["wy1"] - B["wy0"]) * 100, 2), round((wx - B["wx0"]) / (B["wx1"] - B["wx0"]) * 100, 2))
+    d = R.guide_detail(home, R.FREE_ID, wi, wow)
+    s1, s2 = d["steps"]
+    assert (s1["x"], s1["y"]) == on_map(-607.35, -4251.46), (s1["x"], s1["y"], on_map(-607.35, -4251.46))
+    assert d["placed"] >= 2 and 0 <= s1["x"] <= 100 and 0 <= s1["y"] <= 100, d["placed"]
+    assert [(w["x"], w["y"]) for w in s2["waypoints"]] == [on_map(-720.15, -4281.07), on_map(-800.0, -4300.0)], s2
+    loop = s2["loops"][0]
+    assert loop["kind"] == "loop" and loop["points"] == [list(on_map(-600, -4200)), list(on_map(-650, -4250)),
+                                                         list(on_map(-600, -4300))], loop
+
     # no addon and no seed: nothing extra listed, the added strings still are
     shutil.rmtree(rxp)
     assert [x["id"] for x in R.status(home, wow)] == [r3["id"], r["id"]]

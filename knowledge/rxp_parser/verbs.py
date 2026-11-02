@@ -150,9 +150,15 @@ def _p_loop(L, raw, text, maps):
     if rng[:1] in ("+", "*", "@"):
         a["style"], rng = rng[0], rng[1:]
     a["range"] = lua_float(rng)
-    zone = _get(L, 1)
-    a["zone"], a["ui_map"] = zone, maps.ui_map(zone)
-    a["points"] = _points(L[2:])
+    zone = _get(L, 1) or ""
+    a["zone"] = zone
+    m = re.match(r"([0-9]+)/([0-9]+)", zone[1:] if zone[:1] == "+" else zone)
+    if m:                                  # world form, as .line: pairs are (wy, wx) in the text, stored as [wx, wy]
+        a["ui_map"], a["continent"] = int(m.group(1)), int(m.group(2))
+        a["wpoints"] = [[q[1], q[0]] for q in _points(L[2:])]
+    else:
+        a["ui_map"] = maps.ui_map(zone)
+        a["points"] = _points(L[2:])
     return a
 
 

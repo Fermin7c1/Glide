@@ -318,6 +318,14 @@ function renderMap(): void {
     }
   }
 
+  // Nothing to draw: say why rather than leave a bare map
+  if (!zoneSteps.length) {
+    const why = currentGuide.world_only && !currentGuide.placed
+      ? "Glide can't place this guide on the map yet: it needs the zone data in its knowledge base, which builds while the coach runs."
+      : "No waypoints in this zone for the steps shown.";
+    svg.push(`<text class="rxpb-map-note" x="${MAP_W / 2}" y="${MAP_H / 2}" text-anchor="middle">${esc(why)}</text>`);
+  }
+
   // 6. Step waypoint pins (clickable!)
   for (const { vs, idx } of zoneSteps) {
     const isCur = idx === activeIdx;

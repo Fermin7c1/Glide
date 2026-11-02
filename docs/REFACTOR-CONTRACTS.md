@@ -535,3 +535,12 @@ they don't spell out.
   `RxpImport` gains the optional `free` and `source`. The Addon page's added list leaves that entry out; the Explorer
   lists each group in level order. A free guide with a bought guide's group and name is left out. The player reported
   it (2026-11-01).
+- **Follow-up, knowledge parser and the Explorer's map: world-coordinate positions.** RestedXP's Forever guides give
+  `.goto 1411/1,wy,wx` in world coordinates, which the parser keeps as wx/wy (the knowledge build's finalize step
+  puts them on the map for the coach), but the Explorer parsed guides itself and read only map percent, so its map
+  drew nothing. `rxp_import.py guide` now places them with kb.db's `map_bounds` the same way
+  (`place_world_points`, finalize's swap detection), and answers `world_only` / `placed` so an unplaceable guide says
+  why. The parser (`knowledge/rxp_parser/verbs.py` `_p_loop`) now reads a world-form `.loop 25,1411/1,...` as `.line`
+  already did (`ui_map`, `continent`, `wpoints`); before, its world numbers became map-percent points on no map. A
+  machine-tier `parser`/`knowledge` golden on the development PC differs only where a guide has a world-form `.loop`;
+  re-record those probes there if they flag it. The player reported the empty map (2026-11-02).
