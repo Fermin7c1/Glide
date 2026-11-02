@@ -252,12 +252,55 @@ def test_params():
     assert AP.fact("analyzer.kill.search_s") == "p:analyzer.kill.search_s"
 
 
+def test_param_memos():
+    """Walks share their travel legs, kill XP and kill times per KB for the parameter values in force (2d6fa17, the
+    coach's pace estimate re-walks the guide on every new step). A parameter change must start them over, and a
+    scoped overlay must neither read nor fill them: a value remembered under other parameters would be served as
+    the coach's time."""
+    from knowledge.analyzer import model as M
+    from knowledge.mechanics import params as MP
+    data = get_data(kb())
+    rt = R.Route(kb(), DM, WARRIOR)
+    gen = MP.generation()
+    assert gen is not None
+    w1, w2 = M.Walker(data, rt), M.Walker(data, rt)
+    assert w1._legs is w2._legs and w1._kt is w2._kt and w1._kxp is w2._kxp, "walks of one KB share the memos"
+    um = next(p[0] for s in rt.steps for p in s.get("path") or () if data.map_size(p[0])[0])
+    a, b = (um, 20.0, 20.0), (um, 30.0, 35.0)               # a plain run on one map (no recorded path, no tram)
+    t1 = w1._leg(a, b, 10)
+    assert t1 is not None and t1[2] is None and not t1[3], t1
+    assert w2._leg(a, b, 10) is t1, "the second walk reuses the first one's leg"
+    faster = AP.get("travel.run_speed") * 2
+    with MP.scoped({"travel.run_speed": faster}):
+        assert MP.generation() is None
+        ws = M.Walker(data, rt)
+        assert ws._legs is None and ws._kt is not w1._kt, "under an overlay a walk keeps its own memos"
+        assert ws._leg(a, b, 10)[0] < t1[0], "the overlay's run speed is used"
+    assert M.Walker(data, rt)._leg(a, b, 10) is t1, "nothing from the overlay was remembered"
+    try:
+        # (the KB in use outranks a process override for the keys it lists, so the value may not move here; what
+        # matters is that nothing from before the change is reused)
+        MP.apply({"travel.run_speed": faster})
+        assert MP.generation() != gen
+        w3 = M.Walker(data, rt)
+        assert w3._legs is not w1._legs and not w3._legs, "a parameter change starts the memos over"
+        t3 = w3._leg(a, b, 10)
+        with MP.scoped({"travel.run_speed": AP.get("travel.run_speed")}):    # no memo: worked out afresh
+            fresh = M.Walker(data, rt)._leg(a, b, 10)
+        assert t3 is not t1 and t3 == fresh, (t3, fresh)
+    finally:
+        MP.reset()
+        get_data(kb())                                       # the KB's values in force again (reset dropped them)
+    assert M.Walker(data, rt)._leg(a, b, 10)[0] == t1[0]
+
+
 if __name__ == "__main__":
     FX["tmp"] = fixture.tmpdir("analyzer-")
     try:
         FX["kb"], _summary, _root, FX["run"] = fixture.build(FX["tmp"])
         get_data(kb())
         test_params()
+        test_param_memos()
         test_route()
         test_analyze()
         test_simulate()
