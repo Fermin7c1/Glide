@@ -131,47 +131,57 @@
   </section>
 
   <section id="page-guides" class="page">
-    <header class="pagehead rxpb-head">
-      <div class="rxpb-titles"><h1>Guides</h1><p class="lede">Walk your RestedXP route on the zone map, step by step.</p></div>
-      <div class="rxpb-filters">
-        <select id="rxpb-group" aria-label="Guide group"></select>
-        <select id="rxpb-guide" aria-label="Guide"></select>
-        <input id="rxpb-search" type="search" placeholder="Filter guides…" aria-label="Filter guides" spellcheck="false">
-        <select id="rxpb-race" aria-label="Race filter">
-          <option value="">All Races</option>
-          <optgroup label="Alliance">
-            <option value="Human">Human</option>
-            <option value="Dwarf">Dwarf</option>
-            <option value="NightElf">Night Elf</option>
-            <option value="Gnome">Gnome</option>
-            <option value="Skyborne@Alliance">Skyborne</option>
-          </optgroup>
-          <optgroup label="Horde">
-            <option value="Orc">Orc</option>
-            <option value="Undead">Undead</option>
-            <option value="Tauren">Tauren</option>
-            <option value="Troll">Troll</option>
-            <option value="Skyborne@Horde">Skyborne</option>
-          </optgroup>
-        </select>
-        <select id="rxpb-class" aria-label="Class filter">
-          <option value="">All Classes</option>
-          <option value="WARRIOR">Warrior</option>
-          <option value="PALADIN">Paladin</option>
-          <option value="HUNTER">Hunter</option>
-          <option value="ROGUE">Rogue</option>
-          <option value="PRIEST">Priest</option>
-          <option value="SHAMAN">Shaman</option>
-          <option value="MAGE">Mage</option>
-          <option value="WARLOCK">Warlock</option>
-          <option value="DRUID">Druid</option>
-        </select>
-        <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-grp" checked><span>Group quests</span></label>
-        <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-ssf"><span>SSF</span></label>
-        <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-hc"><span>Hardcore</span></label>
-        <label class="rxpb-chk-pill" title="Show steps for other classes/races dimmed with their << condition"><input type="checkbox" id="rxpb-allcond"><span>Show all &lt;&lt;</span></label>
+    <h1 class="sr-only">Guides</h1>
+    <div class="rxpb-toolbar" role="toolbar" aria-label="Guide and character">
+      <select id="rxpb-group" aria-label="Guide group"></select>
+      <select id="rxpb-guide" aria-label="Guide"></select>
+      <input id="rxpb-search" type="search" placeholder="Filter guides…" aria-label="Filter guides" spellcheck="false">
+      <div class="rxpb-char">
+        <button type="button" class="rxpb-chip" id="rxpb-char-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="rxpb-char-pop"
+          title="Whose steps to show: RestedXP's own step numbers when one race and class are picked"><span>Character</span> <b id="rxpb-char-label">Everyone</b></button>
+        <div class="rxpb-pop" id="rxpb-char-pop" role="dialog" aria-label="Character and RestedXP settings" hidden>
+          <div class="rxpb-pop-row">
+            <select id="rxpb-race" aria-label="Race filter">
+              <option value="">All Races</option>
+              <optgroup label="Alliance">
+                <option value="Human">Human</option>
+                <option value="Dwarf">Dwarf</option>
+                <option value="NightElf">Night Elf</option>
+                <option value="Gnome">Gnome</option>
+                <option value="Skyborne@Alliance">Skyborne</option>
+              </optgroup>
+              <optgroup label="Horde">
+                <option value="Orc">Orc</option>
+                <option value="Undead">Undead</option>
+                <option value="Tauren">Tauren</option>
+                <option value="Troll">Troll</option>
+                <option value="Skyborne@Horde">Skyborne</option>
+              </optgroup>
+            </select>
+            <select id="rxpb-class" aria-label="Class filter">
+              <option value="">All Classes</option>
+              <option value="WARRIOR">Warrior</option>
+              <option value="PALADIN">Paladin</option>
+              <option value="HUNTER">Hunter</option>
+              <option value="ROGUE">Rogue</option>
+              <option value="PRIEST">Priest</option>
+              <option value="SHAMAN">Shaman</option>
+              <option value="MAGE">Mage</option>
+              <option value="WARLOCK">Warlock</option>
+              <option value="DRUID">Druid</option>
+            </select>
+          </div>
+          <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-ssf" checked><span>Solo self-found</span></label>
+          <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-grp" checked><span>Group quests</span></label>
+          <label class="rxpb-chk-pill"><input type="checkbox" id="rxpb-hc"><span>Hardcore</span></label>
+          <label class="rxpb-chk-pill" title="Also list other characters' steps, dimmed and unnumbered"><input type="checkbox" id="rxpb-allcond"><span>Show all &lt;&lt;</span></label>
+          <p class="rxpb-pop-note" id="rxpb-char-note"></p>
+        </div>
       </div>
-    </header>
+      <span class="grow"></span>
+      <label class="rxpb-chk-pill" title="Keep the current step in the middle of the map"><input type="checkbox" id="rxpb-follow"><span>Follow step</span></label>
+      <label class="rxpb-chk-pill" title="Show the pins of the steps before the current one"><input type="checkbox" id="rxpb-showdone"><span>Done steps</span></label>
+    </div>
     <div class="empty-state rxpb-empty-page" id="rxpb-empty" hidden>
       <h1>No guides yet</h1>
       <p>RestedXP's free guides show here once RestedXP is installed in your WoW folder, and guides you buy show once you add them on the Addon page.</p>
@@ -191,57 +201,39 @@
               <button type="button" class="rxpb-mt" id="rxpb-zoom-in" title="Zoom in (scroll wheel, +)" aria-label="Zoom in">+</button>
               <button type="button" class="rxpb-mt" id="rxpb-zoom-out" title="Zoom out (scroll wheel, -)" aria-label="Zoom out">&minus;</button>
               <button type="button" class="rxpb-mt" id="rxpb-zoom-reset" title="Whole zone (double-click the map, 0)" aria-label="Show the whole zone">&#x2922;</button>
-              <label class="rxpb-mt-chk" title="Keep the current step in the middle of the map"><input type="checkbox" id="rxpb-follow"><span>Follow step</span></label>
-              <label class="rxpb-mt-chk" title="Show the pins of the steps before the current one"><input type="checkbox" id="rxpb-showdone"><span>Done steps</span></label>
             </div>
             <div class="rxpb-hovercard" id="rxpb-hovercard" role="tooltip" hidden></div>
             <div class="rxpb-inspector" id="rxpb-inspector" hidden></div>
           </div>
         </div>
         <div class="rxpb-timeline">
-          <div class="rxpb-tl-bar">
-            <button type="button" id="rxpb-prev" class="btn" title="Previous step">◀</button>
-            <button type="button" id="rxpb-play" class="btn primary">▶ Walk route</button>
-            <button type="button" id="rxpb-next" class="btn" title="Next step">▶</button>
-            <select id="rxpb-speed" aria-label="Walkthrough speed" title="Walkthrough speed">
-              <option value="2200">0.75×</option>
-              <option value="1500" selected>1×</option>
-              <option value="850">2×</option>
-              <option value="450">4×</option>
-            </select>
-            <span class="rxpb-tl-pos" id="rxpb-tl-pos">Step 1</span>
-            <span class="grow"></span>
-            <span class="rxpb-tl-zone" id="rxpb-tl-zone"></span>
-          </div>
+          <button type="button" id="rxpb-prev" class="btn rxpb-tl-btn" title="Previous step (Left)" aria-label="Previous step">◀</button>
+          <button type="button" id="rxpb-play" class="btn primary rxpb-tl-play" title="Walk the route (Space)">▶ Walk</button>
+          <button type="button" id="rxpb-next" class="btn rxpb-tl-btn" title="Next step (Right)" aria-label="Next step">▶</button>
+          <select id="rxpb-speed" aria-label="Walkthrough speed" title="Walkthrough speed">
+            <option value="2200">0.75×</option>
+            <option value="1500" selected>1×</option>
+            <option value="850">2×</option>
+            <option value="450">4×</option>
+          </select>
           <div class="rxpb-scrub-wrap">
-            <div class="rxpb-tl-ticks" id="rxpb-tl-ticks"></div>
-            <input type="range" id="rxpb-scrub" min="0" max="0" value="0" aria-label="Step timeline scrubber">
+            <div class="rxpb-tl-ticks" id="rxpb-tl-ticks" aria-label="Accepts, turn-ins, objectives, flights, hearths, deathskips and zone changes along the route"></div>
+            <input type="range" id="rxpb-scrub" min="0" max="0" value="0" aria-label="Step timeline">
           </div>
-          <div class="rxpb-legend">
-            <span><i class="leg-dot k-accept"></i>! Accept</span>
-            <span><i class="leg-dot k-turnin"></i>? Turn in</span>
-            <span><i class="leg-dot k-combat"></i>⚔ Objective / Kill</span>
-            <span><i class="leg-dot k-travel"></i>✦ Flight / Travel</span>
-            <span><i class="leg-dot k-hearth"></i>⌂ Hearth</span>
-            <span><i class="leg-dot k-death"></i>☠ Deathskip</span>
-          </div>
+          <span class="rxpb-tl-pos" id="rxpb-tl-pos" aria-live="polite">Step 1</span>
         </div>
       </div>
 
-      <div class="rxpb-window" aria-label="RestedXP Guide Window">
+      <div class="rxpb-window" aria-label="RestedXP guide window">
         <header class="rxpb-win-hdr">
           <div class="rxpb-win-titles">
             <span class="rxpb-win-sub" id="rxpb-win-sub">RestedXP</span>
             <b class="rxpb-win-title" id="rxpb-win-title">Select a guide</b>
           </div>
+          <input id="rxpb-step-search" type="search" placeholder="Search steps…" aria-label="Search steps, quests, NPCs" spellcheck="false">
           <button type="button" class="btn rxpb-next-guide" id="rxpb-next-guide" hidden></button>
         </header>
-        <div class="rxpb-active-step" id="rxpb-active-step"></div>
-        <div class="rxpb-list-hdr">
-          <span>All steps in guide</span>
-          <input id="rxpb-step-search" type="search" placeholder="Search steps, quests, NPCs…" aria-label="Search steps" spellcheck="false">
-        </div>
-        <ol class="rxpb-step-list" id="rxpb-step-list"></ol>
+        <ol class="rxpb-step-list" id="rxpb-step-list" role="listbox" aria-label="Guide steps"></ol>
       </div>
     </div>
   </section>

@@ -36,6 +36,16 @@ groups = {m.group(1): re.findall(r'<option value="([^"]+)">', m.group(2))
 assert groups == {"Alliance": ["Human", "Dwarf", "NightElf", "Gnome", "Skyborne@Alliance"],
                   "Horde": ["Orc", "Undead", "Tauren", "Troll", "Skyborne@Horde"]}, groups
 
+# the tight page: one toolbar row (the character picks in a popover), the step list a listbox where the current step
+# opens (no separate current-step box), timeline ticks above the slider, no legend row, no 900 px stacking rule
+page = re.search(r'<section id="page-guides".*?</section>', html, re.S).group(0)
+assert 'class="rxpb-toolbar"' in page and 'class="pagehead' not in page
+assert re.search(r'id="rxpb-char-pop"[^>]*role="dialog"[^>]*hidden', page) and page.index("rxpb-char-pop") < page.index('id="rxpb-race"')
+assert 'role="listbox"' in page and 'id="rxpb-active-step"' not in page and "rxpb-legend" not in page
+css = open(os.path.join(DESK, "src", "renderer", "app.css"), encoding="utf-8").read()
+assert "@media (max-width: 900px) { .rxpb-workspace" not in css and "@container guides" in css
+assert "object-fit: fill" in re.search(r"#rxpb-map-img \{[^}]*\}", css).group(0)
+
 # map images go by URL (glide://map/<id>.png, served by the main process), not as base64 over IPC on every open
 csp = re.search(r'Content-Security-Policy"\s+content="([^"]+)"', html).group(1)
 assert "glide:" in re.search(r"img-src([^;]+)", csp).group(1), csp

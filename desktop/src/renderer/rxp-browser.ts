@@ -529,8 +529,6 @@ function renderInspector(): void {
   const st = vs.step;
   const lines = (st.actions || []).filter((a) => a.raw_text || a.text || a.verb !== "goto");
   const badges = lines.map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
-  const instructions = (st.actions || []).filter((a) => a.raw_text || a.text)
-    .map((a) => `<div class="rxpb-ins-line">${formatRxpText(a.raw_text || a.text)}</div>`).join("");
   const coord = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} (${st.x.toFixed(1)}, ${st.y.toFixed(1)})` : (st.zone || vs.zone || "No waypoint");
   box.hidden = false;
   box.innerHTML = `<div class="rxpb-ins-head">
@@ -539,14 +537,17 @@ function renderInspector(): void {
       ${st.cond ? `<span class="rxpb-cond-pill">&lt;&lt; ${esc(st.cond)}</span>` : ""}
       <button type="button" class="rxpb-ins-close" id="rxpb-ins-close" title="Close details">×</button>
     </div>
-    ${badges.length ? `<div class="rxpb-badges">${badges.map((b) => `<span class="rxpb-badge ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}
-    ${instructions ? `<div class="rxpb-ins-body">${instructions}</div>` : ""}
-    ${st.comments ? `<div class="rxpb-comment">💬 ${esc(st.comments)}</div>` : ""}`;
+    ${badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}`;
   const closeBtn = document.getElementById("rxpb-ins-close");
   if (closeBtn) closeBtn.onclick = () => { selected = null; box.hidden = true; renderMap(); };
 }
 
-/** Render the timeline scrubber track with event ticks and playback controls. */
+const KIND_GLYPH: Record<string, string> = { accept: "!", turnin: "?", combat: "⚔", travel: "✦", hearth: "⌂", death: "☠" };
+const KIND_NAME: Record<string, string> = { accept: "Accept", turnin: "Turn in", combat: "Objective", travel: "Flight",
+  hearth: "Hearth", death: "Deathskip" };
+
+/** The timeline: the slider, the position, and above the slider a glyph tick for each accept, turn-in, objective,
+ * flight, hearth and deathskip (the pins' own glyphs and colours), plus a dashed line where the zone changes. */
 function renderTimeline(): void {
   const n = visibleSteps.length;
   const slider = $<HTMLInputElement>("rxpb-scrub");
@@ -556,14 +557,13 @@ function renderTimeline(): void {
 
   const cur = visibleSteps[activeIdx];
   const numbered = visibleSteps.reduce((k, vs) => k + (vs.rxpNum != null ? 1 : 0), 0);
-  $("rxpb-tl-pos").textContent = !n ? "No steps" : cur?.rxpNum != null ? `Step ${cur.rxpNum} of ${numbered}`
-    : `Another character's step (guide step ${cur?.src ?? "?"})`;
-  $("rxpb-tl-zone").textContent = cur?.zone ? `${cur.zone}${cur.step.x != null ? ` (${cur.step.x.toFixed(1)}, ${cur.step.y!.toFixed(1)})` : ""}` : "";
+  $("rxpb-tl-pos").textContent = !n ? "No steps" : cur?.rxpNum != null ? `${cur.rxpNum} / ${numbered}` : "Other's";
+  $("rxpb-tl-pos").setAttribute("aria-label", cur?.rxpNum != null ? `Step ${cur.rxpNum} of ${numbered}` : "Another character's step");
+  $("rxpb-tl-pos").title = cur ? `${cur.zone || ""}${cur.step.x != null ? ` (${cur.step.x.toFixed(1)}, ${cur.step.y!.toFixed(1)})` : ""}` : "";
   $<HTMLButtonElement>("rxpb-prev").disabled = activeIdx <= 0;
   $<HTMLButtonElement>("rxpb-next").disabled = activeIdx >= n - 1;
-  $<HTMLButtonElement>("rxpb-play").innerHTML = playTimer ? "⏸ Pause" : "▶ Walk route";
+  $<HTMLButtonElement>("rxpb-play").textContent = playTimer ? "⏸ Pause" : "▶ Walk";
 
-  // Build color-coded event ticks along the timeline track
   const ticks: string[] = [];
   if (n > 1) {
     let prevZone = visibleSteps[0]?.zone;
@@ -571,167 +571,164 @@ function renderTimeline(): void {
       const pct = ((i / (n - 1)) * 100).toFixed(2);
       if (vs.zone && vs.zone !== prevZone) {
         prevZone = vs.zone;
-        ticks.push(`<i class="tl-tick tl-zone" style="left:${pct}%" data-src="${vs.src}" title="Zone: ${esc(vs.zone)} (Step ${stepNum(vs)})"></i>`);
+        ticks.push(`<i class="tl-zone" style="left:${pct}%"></i>`);
       }
       if (vs.kind !== "step") {
-        ticks.push(`<i class="tl-tick tl-${vs.kind}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}"></i>`);
+        const label = `Step ${stepNum(vs)}, ${KIND_NAME[vs.kind]}: ${stepHeadline(vs.step)}`;
+        ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
       }
     });
   }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
-  $("rxpb-tl-ticks").querySelectorAll<HTMLElement>(".tl-tick").forEach((el) => {
-    el.onclick = () => selectSrc(Number(el.dataset.src), true);
-  });
 }
 
-/** Render the RestedXP in-game CurrentStepFrame + header + #next guide chain button. */
-function renderActiveStep(): void {
+/** The guide window's header: the guide's name and RestedXP's #next guide. */
+function renderHeader(): void {
   if (!currentGuide) return;
   $("rxpb-win-title").textContent = currentGuide.displayname || currentGuide.name;
   $("rxpb-win-sub").textContent = [currentGuide.group, currentGuide.subgroup].filter(Boolean).join(" · ");
-
-  // Next guide button (#next in RXP)
   const nextBtn = $<HTMLButtonElement>("rxpb-next-guide");
   const who = pickedPlayers();
   const nextEntry = (currentGuide.next_list || []).find((n) => n.name && (!vis || vis.actionShown(n.vis, who)));
-  if (nextEntry && nextEntry.name) {
-    // the group RestedXP names (#next Group\Name), else the group being browsed: a Dungeon guide's next is the
-    // Dungeon guide of that name, not the Speedrun one; only then any group
-    const target = nextEntry.name.trim().toLowerCase();
-    const cg = currentGuide;
-    const group = nextEntry.group || catalog.find((c) => c.packId === cg.id && c.index === cg.index
-      && (!filter.group || c.group === filter.group))?.group || cg.group;
-    const named = (c: CatalogEntry) => c.name.toLowerCase() === target;
-    const endsAs = (c: CatalogEntry) => c.name.toLowerCase().endsWith(target);
-    const match = catalog.find((c) => c.group === group && named(c)) || catalog.find((c) => c.group === group && endsAs(c))
-      || catalog.find(named) || catalog.find(endsAs);
-    if (match) {
-      nextBtn.hidden = false;
-      nextBtn.textContent = `Next: ${match.name} →`;
-      nextBtn.onclick = () => openGuide(match.packId, match.index);
-    } else {
-      nextBtn.hidden = true;
-    }
-  } else {
-    nextBtn.hidden = true;
+  nextBtn.hidden = true;
+  if (!nextEntry || !nextEntry.name) return;
+  // the group RestedXP names (#next Group\Name), else the group being browsed: a Dungeon guide's next is the
+  // Dungeon guide of that name, not the Speedrun one; only then any group
+  const target = nextEntry.name.trim().toLowerCase();
+  const cg = currentGuide;
+  const group = nextEntry.group || catalog.find((c) => c.packId === cg.id && c.index === cg.index
+    && (!filter.group || c.group === filter.group))?.group || cg.group;
+  const named = (c: CatalogEntry) => c.name.toLowerCase() === target;
+  const endsAs = (c: CatalogEntry) => c.name.toLowerCase().endsWith(target);
+  const match = catalog.find((c) => c.group === group && named(c)) || catalog.find((c) => c.group === group && endsAs(c))
+    || catalog.find(named) || catalog.find(endsAs);
+  if (match) {
+    nextBtn.hidden = false;
+    nextBtn.textContent = `Next: ${match.name} →`;
+    nextBtn.title = `Open ${match.name}`;
+    nextBtn.onclick = () => openGuide(match.packId, match.index);
   }
+}
 
-  const box = $("rxpb-active-step");
-  const vs = visibleSteps[activeIdx];
-  if (!vs) {
-    box.innerHTML = `<div class="rxpb-empty">No steps match the current character filter.</div>`;
-    return;
-  }
+/** The current step as it opens in the list (RestedXP's CurrentStepFrame): its objectives to tick, waypoints and notes. */
+function activeStepHtml(vs: VisibleStep): string {
+  const g = currentGuide!;
   const st = vs.step;
   const flagPills: string[] = [];
   if (st.flags?.sticky) flagPills.push(`<span class="rxpb-flag">Sticky</span>`);
   if (st.flags?.optional) flagPills.push(`<span class="rxpb-flag">Optional</span>`);
   if (st.flags?.completewith) flagPills.push(`<span class="rxpb-flag">Complete with next</span>`);
+  if (st.flags?.included_from) flagPills.push(`<span class="rxpb-flag" title="${esc(String(st.flags.included_from))}">From ${esc(String(st.flags.included_from).split("||").pop() || "")}</span>`);
   if (st.cond) flagPills.push(`<span class="rxpb-cond-pill">&lt;&lt; ${esc(st.cond)}</span>`);
-
-  // Step elements (instructions, objectives, actions)
   const rows: string[] = [];
-  const visibleActions = (st.actions || []).filter((a) => filter.showAllCond || actionApplies(a));
-  visibleActions.forEach((a) => {
+  for (const a of (st.actions || []).filter((x) => filter.showAllCond || actionApplies(x))) {
     const b = actionBadge(a);
     const hasText = !!(a.raw_text || a.text);
-    if (!b && !hasText && a.verb !== "goto" && a.verb !== "link") return;
-    if (a.verb === "goto" && !hasText) return;    // pure coordinate lines are shown in the waypoint pills below
-    const objKey = `${currentGuide!.id}:${currentGuide!.index}:${st.idx}:${a.line ?? a.verb}`;
+    if (!b && !hasText && a.verb !== "goto" && a.verb !== "link") continue;
+    if (a.verb === "goto" && !hasText) continue;    // pure coordinate lines are the waypoint pills below
+    const objKey = `${g.id}:${g.index}:${st.idx}:${a.line ?? a.verb}`;
     const done = checkedObjs.has(objKey);
     const isCheckable = a.verb !== "text" || a.kind === "+";
     const condTag = a.cond ? ` <span class="rxpb-cond-pill">&lt;&lt; ${esc(a.cond)}</span>` : "";
     const commentTag = a.comment ? `<div class="rxpb-line-comment">-- ${esc(a.comment)}</div>` : "";
     const urlLink = a.url ? ` <a href="${esc(a.url)}" class="rxpb-ext" data-url="${esc(a.url)}">[Video / Link ↗]</a>` : "";
     rows.push(`<div class="rxpb-obj-row${done ? " done" : ""}" data-obj="${esc(objKey)}">
-      ${isCheckable ? `<input type="checkbox" class="rxpb-chk" ${done ? "checked" : ""} aria-label="Complete objective">` : `<span class="rxpb-bullet">•</span>`}
+      ${isCheckable ? `<input type="checkbox" class="rxpb-chk" tabindex="-1" ${done ? "checked" : ""} aria-label="Objective done">` : `<span class="rxpb-bullet">•</span>`}
       <div class="rxpb-obj-body">
         ${b ? `<span class="rxpb-badge ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>` : ""}
         ${hasText ? `<div class="rxpb-obj-text">${formatRxpText(a.raw_text || a.text)}${urlLink}${condTag}</div>` : `${urlLink}${condTag}`}
         ${commentTag}
       </div>
     </div>`);
-  });
-
-  // Clickable sub-waypoint coordinate pills
+  }
   const wps = st.waypoints || [];
-  const wpPills = stepWaypoints(st).map(({ w, wi }) => `<button type="button" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
+  const wpPills = stepWaypoints(st).map(({ w, wi }) => `<button type="button" tabindex="-1" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
     📍 ${esc(w.zone || st.zone || "Zone")} <b>${w.x.toFixed(1)}, ${w.y.toFixed(1)}</b>${wps.length > 1 ? ` <em>(${letter(wi)})</em>` : ""}
   </button>`).join("");
-
-  box.innerHTML = `<div class="rxpb-cs-head">
+  return `<div class="rxpb-active-step">
+    <div class="rxpb-cs-head">
       <span class="rxpb-cs-num">${vs.rxpNum != null ? `Step ${vs.rxpNum}` : "Another character's step"}</span>
       <div class="rxpb-cs-flags">${flagPills.join("")}</div>
     </div>
     <div class="rxpb-cs-rows">${rows.length ? rows.join("") : `<div class="rxpb-obj-text dim">Travel / transition step</div>`}</div>
     ${wpPills ? `<div class="rxpb-wp-bar">${wpPills}</div>` : ""}
-    ${st.comments ? `<div class="rxpb-comment">💬 ${esc(st.comments)}</div>` : ""}`;
-
-  box.querySelectorAll<HTMLElement>(".rxpb-obj-row").forEach((row) => {
-    const chk = row.querySelector<HTMLInputElement>(".rxpb-chk");
-    if (!chk) return;
-    row.onclick = (e) => {
-      if ((e.target as HTMLElement).tagName === "A") return;
-      const key = row.dataset.obj!;
-      if (checkedObjs.has(key)) checkedObjs.delete(key);
-      else checkedObjs.add(key);
-      renderActiveStep();
-      renderStepList();
-    };
-  });
-  box.querySelectorAll<HTMLAnchorElement>(".rxpb-ext").forEach((a) => {
-    a.onclick = (e) => { e.preventDefault(); if (a.dataset.url) call("shell:open", a.dataset.url); };
-  });
-  box.querySelectorAll<HTMLButtonElement>(".rxpb-wp-pill").forEach((btn) => {
-    btn.onclick = () => {
-      activeWpIdx = Number(btn.dataset.wp);
-      const wp = wps[activeWpIdx];
-      if (wp?.ui_map) activeMapId = wp.ui_map;
-      renderActiveStep();
-      renderMap();
-    };
-  });
+    ${st.comments ? `<div class="rxpb-comment">💬 ${esc(st.comments)}</div>` : ""}
+  </div>`;
 }
 
-/** Render the scrollable RestedXP step list below the active step frame. */
-function renderStepList(scrollActive = false): void {
-  const listEl = $("rxpb-step-list");
-  if (!listEl) return;
-  const q = filter.stepSearch.trim().toLowerCase();
-  const items: string[] = [];
-  visibleSteps.forEach((vs, i) => {
-    const st = vs.step;
-    const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
-    const summaryText = st.text || badges.map((b) => b.label).join(" · ") || stepHeadline(st);
-    if (q) {
-      const hay = `${stepNum(vs)} ${summaryText} ${st.zone || ""} ${st.comments || ""} ${badges.map((b) => b.label).join(" ")}`.toLowerCase();
-      if (!hay.includes(q)) return;
-    }
-    const on = i === activeIdx;
-    const done = i < activeIdx;
-    const coord = st.x != null && st.y != null ? `${st.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
-    items.push(`<li class="rxpb-sitem k-${vs.kind}${on ? " on" : ""}${done ? " done" : ""}${vs.dimmed ? " dimmed" : ""}" data-src="${vs.src}">
-      <div class="rxpb-sitem-top">
+/** One step in the list: collapsed (number, instruction, badges), or opened when it's the current step. */
+function stepItemHtml(vs: VisibleStep, i: number): string {
+  const st = vs.step;
+  const on = i === activeIdx;
+  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
+  const summaryText = st.text || badges.map((b) => b.label).join(" · ") || stepHeadline(st);
+  const coord = st.x != null && st.y != null ? `${st.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
+  return `<div class="rxpb-sitem-top">
         <span class="rxpb-snum">${stepNum(vs)}</span>
         <span class="rxpb-stitle">${formatRxpText((st.actions || []).find((a) => a.raw_text)?.raw_text || summaryText)}</span>
         ${coord ? `<span class="rxpb-scoord">${esc(coord)}</span>` : ""}
       </div>
       ${badges.length ? `<div class="rxpb-sbadges">${badges.slice(0, 4).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}
-    </li>`);
-  });
-  listEl.innerHTML = items.length ? items.join("") : `<li class="rxpb-empty">No steps match "${esc(filter.stepSearch)}".</li>`;
-  listEl.querySelectorAll<HTMLLIElement>(".rxpb-sitem").forEach((li) => {
-    li.onclick = () => selectSrc(Number(li.dataset.src), false);
-  });
-  if (scrollActive) {
-    // scroll the list itself (scrollIntoView would also scroll the page around it)
-    const activeLi = listEl.querySelector<HTMLElement>(".rxpb-sitem.on");
-    if (activeLi) {
-      const top = activeLi.offsetTop - listEl.offsetTop, bottom = top + activeLi.offsetHeight;
-      if (top < listEl.scrollTop) listEl.scrollTo({ top, behavior: "smooth" });
-      else if (bottom > listEl.scrollTop + listEl.clientHeight) listEl.scrollTo({ top: bottom - listEl.clientHeight, behavior: "smooth" });
+      ${on ? activeStepHtml(vs) : ""}`;
+}
+
+function setItemState(li: HTMLElement, i: number): void {
+  const vs = visibleSteps[i];
+  const on = i === activeIdx;
+  li.className = `rxpb-sitem k-${vs.kind}${on ? " on" : ""}${i < activeIdx ? " done" : ""}${vs.dimmed ? " dimmed" : ""}`;
+  li.setAttribute("aria-selected", on ? "true" : "false");
+  li.tabIndex = on ? 0 : -1;
+}
+
+let listKey = "";             // what the list was built for (guide, steps listed, search): rebuilt only when it changes
+let listShownSrc: number | null = null;     // the step opened in the list
+
+/** The step list (a listbox, the guide window's one scroller). Built once per guide, filter or search; moving the
+ * current step only closes the old item and opens the new one. */
+function renderStepList(scrollActive = false): void {
+  const listEl = $("rxpb-step-list");
+  if (!listEl || !currentGuide) return;
+  const q = filter.stepSearch.trim().toLowerCase();
+  const key = `${currentGuide.id}:${currentGuide.index}|${visibleSteps.map((v) => `${v.src}${v.rxpNum ?? "-"}`).join(",")}|${q}`;
+  const hadFocus = listEl.contains(document.activeElement);
+  if (key !== listKey) {
+    listKey = key;
+    const items: string[] = [];
+    visibleSteps.forEach((vs, i) => {
+      if (q) {
+        const st = vs.step;
+        const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { label: string }[];
+        const hay = `${stepNum(vs)} ${st.text || ""} ${stepHeadline(st)} ${st.zone || ""} ${st.comments || ""} ${badges.map((b) => b.label).join(" ")}`.toLowerCase();
+        if (!hay.includes(q) && i !== activeIdx) return;
+      }
+      items.push(`<li role="option" id="rxpb-s-${vs.src}" data-src="${vs.src}">${stepItemHtml(vs, i)}</li>`);
+    });
+    listEl.innerHTML = items.length ? items.join("") : `<li class="rxpb-empty">${q ? `No steps match "${esc(filter.stepSearch)}".` : "No steps for this character."}</li>`;
+    listEl.querySelectorAll<HTMLLIElement>("li[data-src]").forEach((li) => setItemState(li, posBySrc.get(Number(li.dataset.src))!));
+  } else if (listShownSrc !== activeSrc) {
+    for (const src of [listShownSrc, activeSrc]) {
+      const li = src != null ? document.getElementById(`rxpb-s-${src}`) : null;
+      const at = src != null ? posBySrc.get(src) : undefined;
+      if (li && at !== undefined) li.innerHTML = stepItemHtml(visibleSteps[at], at);
     }
+    // done/current classes move with the current step
+    listEl.querySelectorAll<HTMLLIElement>("li[data-src]").forEach((li) => setItemState(li, posBySrc.get(Number(li.dataset.src))!));
   }
+  listShownSrc = activeSrc;
+  const activeLi = activeSrc != null ? document.getElementById(`rxpb-s-${activeSrc}`) : null;
+  if (activeLi && hadFocus && document.activeElement !== activeLi && !activeLi.contains(document.activeElement)) activeLi.focus({ preventScroll: true });
+  if (scrollActive && activeLi) {
+    // scroll the list itself (scrollIntoView would also scroll the page around it); a tall current step shows its top
+    const top = activeLi.offsetTop - listEl.offsetTop, bottom = top + activeLi.offsetHeight;
+    if (top < listEl.scrollTop || activeLi.offsetHeight > listEl.clientHeight) listEl.scrollTo({ top: Math.max(0, top - 8), behavior: "smooth" });
+    else if (bottom > listEl.scrollTop + listEl.clientHeight) listEl.scrollTo({ top: bottom - listEl.clientHeight + 8, behavior: "smooth" });
+  }
+}
+
+/** Re-open the current step in the list (its ticked objectives or waypoint changed). */
+function renderActiveStep(): void {
+  const li = activeSrc != null ? document.getElementById(`rxpb-s-${activeSrc}`) : null;
+  if (li) li.innerHTML = stepItemHtml(visibleSteps[activeIdx], activeIdx);
 }
 
 /** Make the step at this place in the list the current one. */
@@ -743,7 +740,6 @@ function selectStep(idx: number, scrollList = true): void {
   const vs = visibleSteps[activeIdx];
   if (vs && vs.ui_map != null) activeMapId = vs.ui_map;
   renderTimeline();
-  renderActiveStep();
   renderStepList(scrollList);
   renderMap();
   followStep();
@@ -832,8 +828,9 @@ export async function openGuide(packId: string, index: number): Promise<void> {
   $<HTMLSelectElement>("rxpb-guide").value = key;
 
   rebuildVisibleSteps();
+  renderHeader();
+  renderCharacter();
   renderTimeline();
-  renderActiveStep();
   renderStepList(false);
   renderMap();
 }
@@ -1048,6 +1045,84 @@ function wireKeys(): void {
   });
 }
 
+/** The step list: click a step to make it current; in the current step, tick objectives, pick a waypoint, open a
+ * link; Up/Down/Home/End/PageUp/PageDown move through the steps (a listbox with a roving tabindex). */
+function wireStepList(): void {
+  const listEl = $("rxpb-step-list");
+  listEl.addEventListener("click", (e) => {
+    const el = e.target as HTMLElement;
+    const li = el.closest<HTMLLIElement>("li[data-src]");
+    if (!li) return;
+    const link = el.closest<HTMLAnchorElement>(".rxpb-ext");
+    if (link) { e.preventDefault(); if (link.dataset.url) call("shell:open", link.dataset.url); return; }
+    const pill = el.closest<HTMLButtonElement>(".rxpb-wp-pill");
+    if (pill) {
+      activeWpIdx = Number(pill.dataset.wp);
+      const wp = visibleSteps[activeIdx]?.step.waypoints?.[activeWpIdx];
+      if (wp?.ui_map) activeMapId = wp.ui_map;
+      renderActiveStep();
+      renderMap();
+      return;
+    }
+    const row = el.closest<HTMLElement>(".rxpb-obj-row");
+    if (row && row.querySelector(".rxpb-chk") && Number(li.dataset.src) === activeSrc) {
+      if (el.tagName === "INPUT") e.preventDefault();      // the row toggles it (a click on the box would toggle twice)
+      const key = row.dataset.obj!;
+      if (checkedObjs.has(key)) checkedObjs.delete(key);
+      else checkedObjs.add(key);
+      renderActiveStep();
+      return;
+    }
+    if (Number(li.dataset.src) !== activeSrc) { stopPlay(); selectSrc(Number(li.dataset.src), false); }
+  });
+  listEl.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.altKey || e.metaKey || (e.target as HTMLElement).closest("input, a")) return;
+    const page = Math.max(1, Math.floor(listEl.clientHeight / 56));
+    const to: Record<string, number> = { ArrowDown: activeIdx + 1, ArrowUp: activeIdx - 1, Home: 0, End: visibleSteps.length - 1,
+      PageDown: activeIdx + page, PageUp: activeIdx - page };
+    if (!(e.key in to)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    stopPlay();
+    selectStep(to[e.key], true);
+    const li = activeSrc != null ? document.getElementById(`rxpb-s-${activeSrc}`) : null;
+    li?.focus({ preventScroll: true });
+  });
+}
+
+const RACE_NAMES: Record<string, string> = { NightElf: "Night Elf", "Skyborne@Alliance": "Skyborne (Alliance)",
+  "Skyborne@Horde": "Skyborne (Horde)" };
+
+/** The Character chip: who the steps are for and the RestedXP settings, in a few words. */
+function renderCharacter(): void {
+  const race = filter.race ? RACE_NAMES[filter.race] || filter.race : "";
+  const cls = filter.cls ? filter.cls[0] + filter.cls.slice(1).toLowerCase() : "";
+  const who = race && cls ? `${race} ${cls}` : race ? `${race}, any class` : cls ? `Any ${cls}` : "Everyone";
+  const opts = [filter.ssf ? "SSF" : "", filter.groupQuests ? "group" : "", filter.hardcore ? "HC" : ""].filter(Boolean);
+  $("rxpb-char-label").textContent = opts.length ? `${who} · ${opts.join(", ")}` : who;
+  const one = vis ? vis.pick(filter.race, filter.cls).length === 1 : false;
+  $("rxpb-char-note").textContent = !vis ? "" : one ? "Step numbers are RestedXP's own for this character."
+    : "Showing the steps any of these characters gets. Pick a race and a class for RestedXP's own step numbers.";
+}
+
+/** The Character chip opens its popover; Escape or a click elsewhere closes it. */
+function wireCharacter(): void {
+  const btn = $<HTMLButtonElement>("rxpb-char-btn"), pop = $("rxpb-char-pop");
+  const open = (on: boolean) => {
+    pop.hidden = !on;
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+    if (on) pop.querySelector<HTMLElement>("select")?.focus();
+  };
+  btn.onclick = () => open(pop.hasAttribute("hidden"));
+  document.addEventListener("pointerdown", (e) => {
+    if (!pop.hidden && !(e.target as Element).closest(".rxpb-char")) open(false);
+  });
+  pop.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); open(false); btn.focus(); }
+  });
+  renderCharacter();
+}
+
 export function wireRxpBrowser(): void {
   wireMapView();
   wireKeys();
@@ -1078,9 +1153,10 @@ export function wireRxpBrowser(): void {
   };
   const refilter = () => {
     rebuildVisibleSteps();
+    renderHeader();
+    renderCharacter();
     renderTimeline();
-    renderActiveStep();
-    renderStepList(false);
+    renderStepList(true);
     renderMap();
   };
   $("rxpb-race").onchange = (e) => { filter.race = (e.target as HTMLSelectElement).value; refilter(); };
@@ -1097,6 +1173,12 @@ export function wireRxpBrowser(): void {
   $("rxpb-prev").onclick = () => { stopPlay(); selectStep(activeIdx - 1, true); };
   $("rxpb-next").onclick = () => { stopPlay(); selectStep(activeIdx + 1, true); };
   $("rxpb-play").onclick = togglePlay;
+  $("rxpb-tl-ticks").addEventListener("click", (e) => {
+    const t = (e.target as Element).closest<HTMLElement>(".tl-tick");
+    if (t) { stopPlay(); selectSrc(Number(t.dataset.src), true); }
+  });
+  wireStepList();
+  wireCharacter();
   $("rxpb-speed").onchange = (e) => {
     playMs = Number((e.target as HTMLSelectElement).value) || 1600;
     if (playTimer !== null) { stopPlay(); togglePlay(); }
