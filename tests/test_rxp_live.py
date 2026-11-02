@@ -21,10 +21,11 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 DESK = os.path.join(ROOT, "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-model.ts")
 sys.path.insert(0, ROOT)
 sys.path.append(os.path.join(ROOT, "companion"))
@@ -58,8 +59,8 @@ assert s["rxp_name"] == "05-11 Dun Morogh" and s["rxp_group"] == "RestedXP, Fore
 long = R.guide_summary(0, {"name": "1-10 " + "Ä" * 30, "group": "G", "text": ""})["rxp_name"]
 assert long.startswith("01-10 ") and len(long.encode("utf-8")) <= 40 and "�" not in long, long
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -93,12 +94,7 @@ step_cases.append({"p": 0, "combo": 3, "n": 0, "want": None})
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-live-")
 try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
-                       timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-model.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    mjs = os.path.join(tmp, "rxp-model.mjs")
-    os.replace(os.path.join(tmp, "rxp-model.js"), mjs)
+    mjs = os.path.join(desktop_ts.renderer(), "renderer", "rxp-model.js")     # (the tests' shared compile)
     data = os.path.join(tmp, "data.json")
     with open(data, "w", encoding="utf-8") as fh:
         json.dump({"items": items, "live": live_cases, "vis": vis, "steps": step_cases}, fh)
@@ -114,7 +110,7 @@ const races = [['Scourge', 'Horde'], ['Undead', 'Horde'], ['NightElf', 'Alliance
 const classes = ['mage', 'WARRIOR', 'DEATHKNIGHT', '', null].map(m.liveClassPick);
 const names = ['05-11  Dun Morogh', '5-11 dun morogh', '10-12 Durotar\\uFFFD', ' 01 - 06 X '].map(m.normGuideName);
 console.log(JSON.stringify({found, pos, races, classes, names}));
-""" % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(data))
+""" % (json.dumps(desktop_ts.url(mjs)), json.dumps(data))
     r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
                        timeout=60)
     assert r.returncode == 0, "running rxp-model failed: %s" % r.stderr[-2000:]

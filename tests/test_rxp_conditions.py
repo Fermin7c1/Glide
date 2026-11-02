@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The Guides page's race picker and the steps it lists (desktop/src/renderer/rxp-model.ts, compiled with the project's
-TypeScript into a temp folder and run under Node), read from the masks the engine sends with each guide
-(companion/rxp_explorer.py; tests/test_rxp_explorer.py checks those against the coach's numbering).
+TypeScript once for all the tests (desktop_ts.py) and run under Node), read from the masks the engine sends with each
+guide (companion/rxp_explorer.py; tests/test_rxp_explorer.py checks those against the coach's numbering).
 
 - The picker offers Skyborne (WoW Forever) under both factions, the value naming its side (regression: it listed
   Skyborne only under Horde and read every Skyborne as Horde).
@@ -20,10 +20,11 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 DESK = os.path.join(ROOT, "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-model.ts")
 sys.path.insert(0, ROOT)
 sys.path.append(os.path.join(ROOT, "companion"))
@@ -54,8 +55,8 @@ assert "base64" not in ipc_src and "glide://map/" in ipc_src
 main_src = open(os.path.join(DESK, "src", "main", "main.ts"), encoding="utf-8").read()
 assert 'registerSchemesAsPrivileged([{ scheme: "glide"' in main_src and 'protocol.handle("glide"' in main_src
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -114,12 +115,7 @@ assert who("Gnome", "DRUID") == [] and len(who("Human", "")) == 6 and len(who("S
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-model-")
 try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
-                       timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-model.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    mjs = os.path.join(tmp, "rxp-model.mjs")
-    os.replace(os.path.join(tmp, "rxp-model.js"), mjs)
+    mjs = os.path.join(desktop_ts.renderer(), "renderer", "rxp-model.js")     # (the tests' shared compile)
     data = os.path.join(tmp, "data.json")
     with open(data, "w", encoding="utf-8") as fh:
         json.dump({"guides": guides, "cases": cases}, fh)
@@ -134,7 +130,7 @@ const v0 = vs[0], hm = v0.pick('Human', 'MAGE'), orc = v0.pick('Orc', '');
 const acts = D.guides[0].acts.map(a => [v0.actionShown(a, hm), v0.actionShown(a, orc)]);
 console.log(JSON.stringify({got, acts, combo: [m.comboOf(true, true, false), m.comboOf(false, false, true)],
   picks: ['Skyborne@Alliance', 'Skyborne@Horde', 'Skyborne', 'Undead', 'Gnome', ''].map(m.racePick)}));
-""" % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(data))
+""" % (json.dumps(desktop_ts.url(mjs)), json.dumps(data))
     r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
                        timeout=60)
     assert r.returncode == 0, "running rxp-model failed: %s" % r.stderr[-2000:]

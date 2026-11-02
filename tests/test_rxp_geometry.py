@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Yards, bearings and moving points between maps on the Guides page (desktop/src/renderer/rxp-geometry.ts, compiled
-with the project's TypeScript into a temp folder and run under Node).
+with the project's TypeScript once for all the tests (desktop_ts.py) and run under Node).
 
 Regressions: the arrow's "~N yd" treated every zone as 3500 x 2400 yd (The Barrens is about 10,000 yd across), and its
 bearing was worked out in map percent, where 1 % of x is 1.5 times 1 % of y: a move 10 % right and 10 % up read 45°
@@ -10,18 +10,17 @@ Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
 import math
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
+
+import desktop_ts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESK = os.path.join(HERE, "..", "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-geometry.ts")
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -44,22 +43,13 @@ CALLS = [
     ["yardsText", 412.4], ["yardsText", 46.4], ["yardsText", None],
 ]
 
-tmp = tempfile.mkdtemp(prefix="glide-rxp-geometry-")
-try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
-                       timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-geometry.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    mjs = os.path.join(tmp, "rxp-geometry.mjs")
-    os.replace(os.path.join(tmp, "rxp-geometry.js"), mjs)
-    code = ("import(%s).then(m => console.log(JSON.stringify(%s.map(([f, ...a]) => m[f](...a)))))"
-            % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(CALLS)))
-    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
-                       timeout=60)
-    assert r.returncode == 0, "running rxp-geometry failed: %s" % r.stderr[-2000:]
-    got = json.loads(r.stdout)
-finally:
-    shutil.rmtree(tmp, ignore_errors=True)
+mjs = os.path.join(desktop_ts.renderer(), "renderer", "rxp-geometry.js")     # (the tests' shared compile)
+code = ("import(%s).then(m => console.log(JSON.stringify(%s.map(([f, ...a]) => m[f](...a)))))"
+        % (json.dumps(desktop_ts.url(mjs)), json.dumps(CALLS)))
+r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
+                   timeout=60)
+assert r.returncode == 0, "running rxp-geometry failed: %s" % r.stderr[-2000:]
+got = json.loads(r.stdout)
 
 
 def near(a, b, tol=1e-6):

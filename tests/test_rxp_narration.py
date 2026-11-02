@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What the Guides page says aloud with Narrate on (desktop/src/renderer/rxp-narration.ts, compiled with the project's
-TypeScript into a temp folder and run under Node): each step's instruction as spoken English, and the way to the next
-step only when there's a real way to go.
+TypeScript once for all the tests (desktop_ts.py) and run under Node): each step's instruction as spoken English, and
+the way to the next step only when there's a real way to go.
 
 Checks: RestedXP's markup never reaches the voice (colour codes, |T textures|t, ">>", [item] brackets, quest ids);
 the instruction is said once even when the text and the verbs both name it; the transition is said for a walk of
@@ -12,18 +12,17 @@ no route a straight bearing, and no zone size no number.
 Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
+
+import desktop_ts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESK = os.path.join(HERE, "..", "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-narration.ts")
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -163,23 +162,12 @@ WANT = [
     "north", "north-east", "south", "north", "north",
 ]
 
-tmp = tempfile.mkdtemp(prefix="glide-rxp-narration-")
-try:
-    out = os.path.join(tmp, "out")
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--moduleResolution", "bundler",
-                        "--strict", "--skipLibCheck", "--rootDir", os.path.join(DESK, "src"), "--outDir", out],
-                       capture_output=True, text=True, encoding="utf-8", timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-narration.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    with open(os.path.join(out, "package.json"), "w", encoding="utf-8") as fh:
-        fh.write('{"type": "module"}')
-    mod = os.path.join(out, "renderer", "rxp-narration.js")
-    code = ("import(%s).then(m => console.log(JSON.stringify(%s.map(([f, ...a]) => m[f](...a)))))"
-            % (json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), json.dumps(CALLS)))
-    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8", timeout=60)
-    assert r.returncode == 0, "running rxp-narration failed: %s" % r.stderr[-2000:]
-    got = json.loads(r.stdout)
-finally:
-    shutil.rmtree(tmp, ignore_errors=True)
+mod = os.path.join(desktop_ts.renderer(), "renderer", "rxp-narration.js")     # (the tests' shared compile)
+code = ("import(%s).then(m => console.log(JSON.stringify(%s.map(([f, ...a]) => m[f](...a)))))"
+        % (json.dumps(desktop_ts.url(mod)), json.dumps(CALLS)))
+r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8", timeout=60)
+assert r.returncode == 0, "running rxp-narration failed: %s" % r.stderr[-2000:]
+got = json.loads(r.stdout)
 
 assert len(got) == len(WANT) == len(CALLS)
 wrong = [(c[0], json.dumps(c[1:])[:120], g, w) for c, g, w in zip(CALLS, got, WANT) if g != w]
