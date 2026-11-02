@@ -248,13 +248,13 @@ function addonChannels({ engine }: IpcDeps): void {
       const r = await engine.pythonJson([path.join("companion", "rxp_import.py"), "guide", String(id), String(index)], "", engineOptions());
       const g = (r.guide || null) as RxpGuideDetail | null;
       if (g && Array.isArray(g.zones)) {
+        // the zone images by URL (glide://map/<id>.png, main.ts), for the zones and continents that have one
         const maps: Record<number, string> = {};
-        for (const z of g.zones) {
+        const ids = new Set<number>(g.zones.map((z) => z.ui_map));
+        for (const m of Object.values(g.maps || {})) if (m && m.parent) ids.add(m.parent);
+        for (const id of ids) {
           for (const dir of [engineHome(), path.join(__dirname, "..", "..", "..", "..")]) {
-            const p = path.join(dir, "data", "gamedata", "maps", `${z.ui_map}.png`);
-            if (fs.existsSync(p)) {
-              try { maps[z.ui_map] = `data:image/png;base64,${fs.readFileSync(p).toString("base64")}`; break; } catch { /* ignore */ }
-            }
+            if (fs.existsSync(path.join(dir, "data", "gamedata", "maps", `${id}.png`))) { maps[id] = `glide://map/${id}.png`; break; }
           }
         }
         g.mapImages = maps;

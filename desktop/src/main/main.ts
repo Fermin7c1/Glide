@@ -3,9 +3,10 @@
 //
 // This file puts the parts together (app/: the windows, the tray, the IPC channels) and runs the app's life:
 // start, the actions shared by the tray, the shortcuts and the windows, and quitting.
-import { app, globalShortcut, Menu, screen } from "electron";
+import { app, globalShortcut, Menu, net, protocol, screen } from "electron";
 import fs from "fs";
 import path from "path";
+import { pathToFileURL } from "url";
 import type { EventChannel, EventMap } from "../shared/ipc";
 import * as addon from "./addon";
 import { Engine } from "./engine";
@@ -24,6 +25,24 @@ import { MainWindow } from "./app/main-window";
 import { Overlay } from "./app/overlay";
 import { settings } from "./app/settings";
 import { AppTray, MUTE_SHORTCUT, OVERLAY_SHORTCUT } from "./app/tray";
+
+// glide://map/<uiMapID>.png: the zone images the engine extracted from the player's own client
+// (data/gamedata/maps), loaded by URL so a guide doesn't ship them over IPC; registered before the app is ready
+protocol.registerSchemesAsPrivileged([{ scheme: "glide", privileges: { standard: true, secure: true } }]);
+
+/** Answer glide://map/<id>.png from the engine home's map images (else the development checkout's). */
+function serveGlideScheme(): void {
+  protocol.handle("glide", (req) => {
+    const u = new URL(req.url);
+    const m = u.host === "map" ? /^\/(\d{1,6})\.png$/.exec(u.pathname) : null;
+    if (!m) return new Response("not found", { status: 404 });
+    for (const dir of [engineHome(), path.join(__dirname, "..", "..", "..")]) {
+      const p = path.join(dir, "data", "gamedata", "maps", `${m[1]}.png`);
+      if (fs.existsSync(p)) return net.fetch(pathToFileURL(p).href);
+    }
+    return new Response("no map image", { status: 404 });
+  });
+}
 
 let quitting = false;
 const engine = new Engine();
@@ -162,6 +181,7 @@ function announceUpdate(): void {
 async function start(): Promise<void> {
   Menu.setApplicationMenu(null);   // no File/Edit menu bar popping up on Alt (the overlay's drag key)
   settings.load();
+  serveGlideScheme();
   // first-run setup is for new installs: a player whose WoW folder was set before it existed doesn't get it
   if (!settings.current.setupDone && readConfig().wow_dir) {
     settings.current.setupDone = "before-setup";

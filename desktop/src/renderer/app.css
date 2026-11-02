@@ -547,7 +547,7 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-map-stage { cursor: grab; touch-action: none; }
 .rxpb-map-stage.dragging { cursor: grabbing; }
 .rxpb-map-layer { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
-#rxpb-map-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+#rxpb-map-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
 #rxpb-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .rxpb-body { transform: scale(var(--inv, 1)); }
 .rxpb-arrowhead { fill: var(--gold); stroke: rgba(0, 0, 0, 0.8); stroke-width: 1.2; }

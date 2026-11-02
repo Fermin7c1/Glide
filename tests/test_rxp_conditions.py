@@ -36,6 +36,14 @@ groups = {m.group(1): re.findall(r'<option value="([^"]+)">', m.group(2))
 assert groups == {"Alliance": ["Human", "Dwarf", "NightElf", "Gnome", "Skyborne@Alliance"],
                   "Horde": ["Orc", "Undead", "Tauren", "Troll", "Skyborne@Horde"]}, groups
 
+# map images go by URL (glide://map/<id>.png, served by the main process), not as base64 over IPC on every open
+csp = re.search(r'Content-Security-Policy"\s+content="([^"]+)"', html).group(1)
+assert "glide:" in re.search(r"img-src([^;]+)", csp).group(1), csp
+ipc_src = open(os.path.join(DESK, "src", "main", "app", "ipc.ts"), encoding="utf-8").read()
+assert "base64" not in ipc_src and "glide://map/" in ipc_src
+main_src = open(os.path.join(DESK, "src", "main", "main.ts"), encoding="utf-8").read()
+assert 'registerSchemesAsPrivileged([{ scheme: "glide"' in main_src and 'protocol.handle("glide"' in main_src
+
 node = shutil.which("node")
 if not node or not os.path.exists(TSC):
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
