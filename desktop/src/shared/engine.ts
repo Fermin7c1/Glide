@@ -62,7 +62,7 @@ export interface EngineState {
   training: unknown;
   flight_paths: unknown;
   rxp_skipped: unknown;
-  rxp_settings: unknown;
+  rxp_settings: RxpSettings | null;
   vendor_treasure: unknown;
   consumables: unknown;
   corpse: unknown;
@@ -113,6 +113,9 @@ export interface EngineState {
   overlay_step: string | null;
 }
 
+/** RestedXP's settings for the character, from the addon (page X); null until it arrives. */
+export interface RxpSettings { ssf: boolean; group_quests: boolean }
+
 /** event: message: a line of the coach's feed. The dashboard also shows its own lines in the same shape (kind
  * "question" for what you asked, "error" when it couldn't send it). */
 export interface CoachMessage {
@@ -141,7 +144,10 @@ export type CommunityEvent = Community | null;
 /** GET /events?lite=1, the light stream for the desktop app's overlay and session bar: the same events, but its init
  * and state carry only these keys (companion/dashboard.py LITE_KEYS) and it gets no community event. */
 export type LiteState = Pick<EngineState, "overlay_step" | "frames" | "level" | "zone" | "session_minutes" | "coach" |
-  "models" | "refresh" | "navbuild" | "reminders">;
+  "models" | "refresh" | "navbuild" | "reminders" | "name" | "class" | "race" | "faction" | "guide" | "guide_group" | "step" |
+  "rxp_settings">;
+/** The live character and their RestedXP guide step, from the light stream (the Guides page's "Your step"). */
+export type LiveGame = Pick<EngineState, "name" | "class" | "race" | "faction" | "guide" | "guide_group" | "step" | "rxp_settings">;
 export interface LiteInitEvent { state: LiteState; messages: CoachMessage[] }
 
 /** event: ptt: push-to-talk as it happens: the key is held (listening), the recording is being turned into text

@@ -1,7 +1,7 @@
 // What the window currently knows, shared by its pages: the coach (engine) and its streamed status, the app's
 // settings and config.json, and the speech and update status from the main process. Each value has one writer
 // (named below); the others read it.
-import { AppSettings, EngineRunState, NavBuild, Obj, Refresh, Reminder, SpeechStatus, UpdateStatus } from "./types.js";
+import { AppSettings, EngineRunState, LiveGame, NavBuild, Obj, Refresh, Reminder, SpeechStatus, UpdateStatus } from "./types.js";
 
 export const live = {
   engineUrl: null as string | null,            // the coach's HTTP server while it runs (coach.ts)
@@ -12,6 +12,8 @@ export const live = {
   refresh: null as Refresh | null,                 // the engine's refresher status, from the state stream (every second)
   nav: null as NavBuild | null,                     // the walking map build's status, from the same stream
   reminders: [] as Reminder[],                      // the open reminders, from the same stream
+  game: null as LiveGame | null,                    // the character in game and their RestedXP step, from the same stream
+                                                    // (session-bar.ts; null while the coach is stopped or before login)
   speech: {} as Partial<SpeechStatus>,         // offline speech recognition (settings/whisper.ts)
   update: {} as Partial<UpdateStatus>,         // the updater (updates.ts)
 };

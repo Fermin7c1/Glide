@@ -6,6 +6,6 @@ export type {
   LogLine, Obj, SpeechSettings, SpeechStatus, TtsProvider, UpdateStatus, Voice, WhisperModel, WowClient,
 } from "../shared/ipc.js";
 export type {
-  CoachMessage, CoachStats, EngineState, InitEvent, LiteInitEvent, LiteState, Models, NavBuild, Refresh, Reminder,
+  CoachMessage, CoachStats, EngineState, InitEvent, LiteInitEvent, LiteState, LiveGame, Models, NavBuild, Refresh, Reminder,
   PttEvent, SpeakEvent,
 } from "../shared/engine.js";

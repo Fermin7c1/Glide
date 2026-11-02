@@ -8,8 +8,8 @@ import type { RxpFactsTarget, RxpGuideAction, RxpGuideDetail, RxpGuideFacts, Rxp
 import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
 import { currentPage, show } from "./nav.js";
-import { live } from "./state.js";
-import { comboOf, racePick, Visibility } from "./rxp-model.js";
+import { coachRunning, live } from "./state.js";
+import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
 import { durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt, type Stop,
   stopsOf } from "./rxp-route.js";
@@ -64,6 +64,9 @@ let playTimer: number | null = null;
 let playMs = 1500;
 const checkedObjs = new Set<string>();      // `${guide id}:${index}:${st.idx}:${action line}`
 let defaultsApplied = false;                // the toggles start from the coach's settings once, then are the player's
+let liveApplied = false;                    // the pickers took the live character's values (once a session)
+let pickersTouched = false;                 // the player changed the race, class or a toggle
+let liveSrc: number | null = null;          // the live character's step in the open guide (st.idx), null when not open
 // the route: the legs between the listed steps' stops (rxp-route.ts planLegs), and the engine's worked-out legs
 let planned: PlanLeg[] = [];
 let legsByTo = new Map<number, PlanLeg[]>();     // st.idx -> the legs arriving at that step (the way in, then its own)
@@ -831,6 +834,11 @@ function renderTimeline(): void {
       const label = `Step ${stepNum(vs)}, ${KIND_NAME[vs.kind]}: ${stepHeadline(vs.step)}`;
       ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${rows[k] ? " row2" : ""}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
     });
+    const li = liveSrc != null ? posBySrc.get(liveSrc) : undefined;
+    if (li !== undefined) {
+      const label = `${liveWho()} is here: step ${stepNum(visibleSteps[li])}`;
+      ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-live" style="left:${((li / (n - 1)) * 100).toFixed(2)}%" data-src="${liveSrc}" title="${esc(label)}" aria-label="${esc(label)}"></button>`);
+    }
   }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
 }
@@ -929,8 +937,9 @@ function stepItemHtml(vs: VisibleStep, i: number): string {
 function setItemState(li: HTMLElement, i: number): void {
   const vs = visibleSteps[i];
   const on = i === activeIdx;
-  li.className = `rxpb-sitem k-${vs.kind}${on ? " on" : ""}${i < activeIdx ? " done" : ""}${vs.dimmed ? " dimmed" : ""}`;
+  li.className = `rxpb-sitem k-${vs.kind}${on ? " on" : ""}${i < activeIdx ? " done" : ""}${vs.dimmed ? " dimmed" : ""}${vs.src === liveSrc ? " live" : ""}`;
   li.setAttribute("aria-selected", on ? "true" : "false");
+  if (vs.src === liveSrc) li.setAttribute("aria-current", "location"); else li.removeAttribute("aria-current");
   li.tabIndex = on ? 0 : -1;
 }
 
@@ -1159,6 +1168,8 @@ export async function openGuide(packId: string, index: number): Promise<void> {
 
   rebuildVisibleSteps();
   activeWpIdx = visibleSteps.length ? pinStop(visibleSteps[0].step)?.wi ?? 0 : 0;
+  liveSrc = liveStepSrc();
+  renderLive();
   renderHeader();
   renderCharacter();
   renderTimeline();
@@ -1237,6 +1248,9 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
   wantGuide = null;
   if (want && catalog.some((c) => c.packId === want.packId && c.index === want.index)) {
     await openGuide(want.packId, want.index);
+  } else if (!liveApplied && !pickersTouched && liveEntry()) {
+    // the first show with the coach running: the character's guide, picks and step
+    await jumpToLive();
   } else if (!currentGuide || !catalog.some((c) => c.packId === currentGuide!.id && c.index === currentGuide!.index)) {
     // Prefer a starter 1-6 / 1-10 / 1-11 guide by default if present, else the first guide
     const starter = catalog.find((c) => /^0?1-\d+/.test(c.name)) || catalog[0];
@@ -1247,6 +1261,131 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
 /** The Guides page was shown: the guides added in the app and RestedXP's free ones, read fresh. */
 export async function refreshGuides(): Promise<void> {
   await updateRxpBrowser(((await quiet("addon:rxpImports")) as RxpImport[]) || []);
+  liveKey = "";               // the step may have moved while the page was away
+  liveGameChanged();
+}
+
+// ---- the live character: their guide and step, from the coach's light stream (live.game) ------------------------
+
+/** The character in game, while the coach runs and they are on a RestedXP guide step. */
+function liveGame() {
+  const g = live.game;
+  return coachRunning() && g && g.guide && g.step != null && g.step > 0 ? g : null;
+}
+
+const liveWho = () => live.game?.name || "Your character";
+
+/** The page's guide the character plays, or null (not on a guide, or a guide the page doesn't have). */
+function liveEntry(): CatalogEntry | null {
+  const g = liveGame();
+  return g ? liveGuide(catalog, g.guide, g.guide_group, g.faction) : null;
+}
+
+const isOpen = (e: CatalogEntry | null) => !!e && !!currentGuide && currentGuide.id === e.packId && currentGuide.index === e.index;
+
+/** The character's RestedXP settings: the addon's solo self-found and group quests, else the coach's (config.json),
+ * and hardcore from config.json (the strip doesn't carry it). */
+function liveSettings(): { ssf: boolean; groupQuests: boolean; hardcore: boolean } {
+  const rs = live.game?.rxp_settings, d = currentGuide?.defaults;
+  return { ssf: rs?.ssf ?? d?.ssf ?? filter.ssf, groupQuests: rs?.group_quests ?? d?.group_quests ?? filter.groupQuests,
+    hardcore: d?.hardcore ?? filter.hardcore };
+}
+
+/** The live step in the open guide (st.idx), numbered for the character and their settings by the engine's masks
+ * (RestedXP's own count), whatever the pickers show; null when the character plays another guide. */
+function liveStepSrc(): number | null {
+  const g = liveGame();
+  if (!g || !currentGuide || !isOpen(liveEntry())) return null;
+  const steps = currentGuide.steps;
+  if (!vis) return steps[Math.min(g.step!, steps.length) - 1]?.idx ?? null;
+  const s = liveSettings();
+  const player = vis.players.indexOf(`${liveRacePick(g.race, g.faction)}/${liveClassPick(g.class)}`);
+  const pos = liveStepPos(vis, steps.map((st) => st.vis), player, comboOf(s.ssf, s.groupQuests, s.hardcore), g.step!);
+  return pos == null ? null : steps[pos].idx;
+}
+
+/** The "Your step N" button in the timeline bar: hidden without the coach or a guide step; it opens the character's
+ * guide when another is open. */
+function renderLive(): void {
+  const btn = document.getElementById("rxpb-live") as HTMLButtonElement | null;
+  if (!btn) return;
+  const g = liveGame();
+  btn.hidden = !g;
+  if (!g) return;
+  const e = liveEntry();
+  btn.disabled = !e;
+  btn.innerHTML = e && !isOpen(e) ? `<i class="lv-mark"></i>Open <span class="lv-word">your guide</span>`
+    : `<i class="lv-mark"></i><span class="lv-word">Your step </span>${g.step}`;
+  btn.setAttribute("aria-label", e && !isOpen(e) ? "Open your guide" : `Your step ${g.step}`);
+  btn.title = !e ? `${g.guide} isn't among your guides here`
+    : isOpen(e) ? `Jump to where ${liveWho()} is in RestedXP (L)`
+      : `Open ${e.name} at ${liveWho()}'s step ${g.step} (L)`;
+}
+
+/** The pickers take the character's race, class and RestedXP settings. */
+function applyLiveFilters(): void {
+  const g = live.game;
+  if (!g) return;
+  liveApplied = true;
+  defaultsApplied = true;
+  const s = liveSettings();
+  filter.race = liveRacePick(g.race, g.faction);
+  filter.cls = liveClassPick(g.class);
+  filter.ssf = s.ssf;
+  filter.groupQuests = s.groupQuests;
+  filter.hardcore = s.hardcore;
+  $<HTMLSelectElement>("rxpb-race").value = filter.race;
+  $<HTMLSelectElement>("rxpb-class").value = filter.cls;
+  $<HTMLInputElement>("rxpb-ssf").checked = filter.ssf;
+  $<HTMLInputElement>("rxpb-grp").checked = filter.groupQuests;
+  $<HTMLInputElement>("rxpb-hc").checked = filter.hardcore;
+}
+
+/** Jump to the character's step: open their guide first when another is open; the first time (or when the pickers
+ * hide that step), the pickers take the character's values. */
+async function jumpToLive(): Promise<void> {
+  const e = liveEntry();
+  if (!e || !liveGame()) return;
+  stopPlay();
+  if (!isOpen(e)) await openGuide(e.packId, e.index);
+  if (!isOpen(e)) return;                     // another guide was opened meanwhile
+  liveSrc = liveStepSrc();
+  if (!liveApplied || (liveSrc != null && !posBySrc.has(liveSrc))) {
+    applyLiveFilters();
+    refilter();
+  }
+  renderLive();
+  if (liveSrc != null && posBySrc.has(liveSrc)) {
+    selectSrc(liveSrc, true);
+    const tgt = targetStop(visibleSteps[activeIdx]);
+    if (tgt && view.z > 1) centerOn(tgt.x, tgt.y);
+  }
+}
+
+let liveKey = "";
+
+/** The light stream brought a state (once a second) or the coach stopped: move the marker and the button when the
+ * character, guide or step changed. With the coach started after the page opened, the untouched pickers take the
+ * character's values once. */
+export function liveGameChanged(): void {
+  const g = liveGame();
+  const key = g ? JSON.stringify([g.name, g.class, g.race, g.faction, g.guide, g.guide_group, g.step, g.rxp_settings]) : "";
+  if (key === liveKey) return;
+  liveKey = key;
+  if (g && !liveApplied && !pickersTouched && currentGuide) {
+    applyLiveFilters();
+    refilter();
+  }
+  const was = liveSrc;
+  liveSrc = liveStepSrc();
+  renderLive();
+  if (was === liveSrc) return;
+  for (const src of [was, liveSrc]) {
+    const li = src != null ? document.getElementById(`rxpb-s-${src}`) : null;
+    const at = src != null ? posBySrc.get(src) : undefined;
+    if (li && at !== undefined) setItemState(li, at);
+  }
+  renderTimeline();
 }
 
 /** Open a guide on the Guides page (the Addon page's "Browse guides"). */
@@ -1397,7 +1536,8 @@ function wireMapView(): void {
 }
 
 
-/** On the Guides page, away from a text box: left/right step, Space walks the route or stops, +/- zoom, 0 whole zone. */
+/** On the Guides page, away from a text box: left/right step, Space walks the route or stops, +/- zoom, 0 whole zone,
+ * L the live character's step. */
 function wireKeys(): void {
   document.addEventListener("keydown", (e) => {
     if (currentPage() !== "guides" || e.ctrlKey || e.altKey || e.metaKey || !visibleSteps.length) return;
@@ -1424,6 +1564,9 @@ function wireKeys(): void {
       zoomAt(1 / 1.5);
     } else if (e.key === "0") {
       resetView();
+    } else if (e.key === "l" || e.key === "L") {
+      if (!liveEntry()) return;
+      jumpToLive();
     } else {
       return;
     }
@@ -1510,6 +1653,18 @@ function wireCharacter(): void {
   renderCharacter();
 }
 
+/** The race, class or a toggle changed: list the steps again, keeping the current one. */
+function refilter(): void {
+  rebuildVisibleSteps();
+  renderHeader();
+  renderCharacter();
+  renderTimeline();
+  renderStepList(true);
+  renderMap();
+  routesIdle = 0;
+  scheduleRoutes();
+}
+
 export function wireRxpBrowser(): void {
   wireMapView();
   wireKeys();
@@ -1538,21 +1693,11 @@ export function wireRxpBrowser(): void {
     filter.stepSearch = (e.target as HTMLInputElement).value;
     renderStepList(false);
   };
-  const refilter = () => {
-    rebuildVisibleSteps();
-    renderHeader();
-    renderCharacter();
-    renderTimeline();
-    renderStepList(true);
-    renderMap();
-    routesIdle = 0;
-    scheduleRoutes();
-  };
-  $("rxpb-race").onchange = (e) => { filter.race = (e.target as HTMLSelectElement).value; refilter(); };
-  $("rxpb-class").onchange = (e) => { filter.cls = (e.target as HTMLSelectElement).value; refilter(); };
-  $("rxpb-ssf").onchange = (e) => { defaultsApplied = true; filter.ssf = (e.target as HTMLInputElement).checked; refilter(); };
-  $("rxpb-grp").onchange = (e) => { defaultsApplied = true; filter.groupQuests = (e.target as HTMLInputElement).checked; refilter(); };
-  $("rxpb-hc").onchange = (e) => { defaultsApplied = true; filter.hardcore = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-race").onchange = (e) => { pickersTouched = true; filter.race = (e.target as HTMLSelectElement).value; refilter(); };
+  $("rxpb-class").onchange = (e) => { pickersTouched = true; filter.cls = (e.target as HTMLSelectElement).value; refilter(); };
+  $("rxpb-ssf").onchange = (e) => { pickersTouched = defaultsApplied = true; filter.ssf = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-grp").onchange = (e) => { pickersTouched = defaultsApplied = true; filter.groupQuests = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-hc").onchange = (e) => { pickersTouched = defaultsApplied = true; filter.hardcore = (e.target as HTMLInputElement).checked; refilter(); };
   $("rxpb-allcond").onchange = (e) => { filter.showAllCond = (e.target as HTMLInputElement).checked; refilter(); };
 
   $("rxpb-scrub").oninput = (e) => {
@@ -1562,6 +1707,7 @@ export function wireRxpBrowser(): void {
   $("rxpb-prev").onclick = () => { stopPlay(); selectStep(activeIdx - 1, true); };
   $("rxpb-next").onclick = () => { stopPlay(); selectStep(activeIdx + 1, true); };
   $("rxpb-play").onclick = togglePlay;
+  $("rxpb-live").onclick = () => { jumpToLive(); };
   // zone tabs (and the continent): open that map; a zone the current step isn't in starts at its first step
   const zonesEl = $("rxpb-zones");
   zonesEl.addEventListener("click", (e) => {

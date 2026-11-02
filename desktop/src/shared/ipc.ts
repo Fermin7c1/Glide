@@ -102,6 +102,8 @@ export interface RxpGuideSummary {
   defaultFor: string | null;
   version: number | null;
   steps: number;
+  rxp_name?: string;        // the name and group as the addon sends them (page G): RestedXP's zero-padded name, 40 bytes
+  rxp_group?: string;
 }
 export interface RxpGuideWaypoint {
   x: number;

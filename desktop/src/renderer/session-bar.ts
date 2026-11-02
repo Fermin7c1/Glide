@@ -4,6 +4,7 @@ import { taskBar } from "./activity.js";
 import { $, cap } from "./dom.js";
 import { renderReminders } from "./memory.js";
 import { currentPage } from "./nav.js";
+import { liveGameChanged } from "./rxp-browser.js";
 import { openSettingsTab } from "./settings/page.js";
 import { refreshWalkMapPanel } from "./settings/walk-map.js";
 import { wireSessionBarOrder } from "./session-bar-order.js";
@@ -18,6 +19,8 @@ export function sessionBar(d: LiteState | null): void {
     for (const id of ["sb-time", "sb-cost", "sb-calls", "sb-cache", "sb-fast", "sb-deep", "sb-listen", "sb-mode"]) $(id).textContent = "–";
     $("sb-mode").className = "";
     live.refresh = null;
+    live.game = null;
+    if (currentPage() === "guides") liveGameChanged();
     taskBar();
     return;
   }
@@ -27,6 +30,9 @@ export function sessionBar(d: LiteState | null): void {
   const prevRem = JSON.stringify(live.reminders);
   live.reminders = d.reminders || [];
   if (currentPage() === "memory" && JSON.stringify(live.reminders) !== prevRem) renderReminders();
+  live.game = d.class ? { name: d.name ?? null, class: d.class, race: d.race ?? null, faction: d.faction ?? null,
+    guide: d.guide ?? null, guide_group: d.guide_group ?? null, step: d.step ?? null, rxp_settings: d.rxp_settings ?? null } : null;
+  if (currentPage() === "guides") liveGameChanged();
   showUsage(d.session_minutes, d.coach || {});
   showModels(d.models || {});
   showMode(String((d.coach || {}).mode || ""));

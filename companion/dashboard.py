@@ -23,10 +23,11 @@ PING_S = 15                     # an idle event stream gets a comment line this 
 
 # The light stream (/events?lite=1) for the desktop app's overlay and session bar: its "state" events and init carry
 # only these keys (desktop/src/shared/engine.ts LiteState): the overlay's step line and waiting text, the footer's time,
-# cost, models and mode, the walking map and rebuild progress and the reminders. Everything else on that stream
-# ("message", "speak") is as on the full one.
+# cost, models and mode, the walking map and rebuild progress and the reminders, and who is playing which RestedXP
+# guide step (the Guides page's "Your step"). Everything else on that stream ("message", "speak") is as on the full one.
 LITE_KEYS = ("overlay_step", "frames", "level", "zone",
-             "session_minutes", "coach", "models", "refresh", "navbuild", "reminders")
+             "session_minutes", "coach", "models", "refresh", "navbuild", "reminders",
+             "name", "class", "race", "faction", "guide", "guide_group", "step", "rxp_settings")
 # State keys that change rarely and are large (the community notes are half the state): they go out on their own
 # event when they change, not with every state. A new client's init and /api/state still carry them in the state.
 SIDE_KINDS = ("community",)

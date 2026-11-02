@@ -654,3 +654,19 @@ they don't spell out.
   is a raster layer only while it moves (sharp at rest); Ctrl+wheel is left to the app's zoom. Timeline ticks share
   two rows and the least important give way in a crowded hub; the guide picker shows an opened guide's real step
   count (its #include steps expanded). No IPC, file or state change. Guides page plan, phase 1 items 1-7.
+- **Guides page follows the live character (contracts 3, 4 and 8).** The light stream (`/events?lite=1`, `LITE_KEYS`
+  and engine.ts `LiteState`) also carries `name`, `class`, `race`, `faction`, `guide`, `guide_group`, `step` and
+  `rxp_settings` (added keys, about 200 B a second); `EngineState.rxp_settings` is typed `{ssf, group_quests} | null`
+  and the renderer keeps them in `live.game` (session-bar.ts writes it, null while the coach is stopped). `rxp_import.py
+  status` items (`RxpGuideSummary`) gain `rxp_name` / `rxp_group`, the guide's name and group as the addon puts them on
+  page G (RestedXP's zero-padded name, `; = |` as ',', 40 bytes). The Guides page finds the character's guide by those
+  (its group first, then faction, a levelling guide before a dungeon one, the longer first), and the live step by the
+  engine's masks for the character's race, class and settings (the addon's SSF / group quests, hardcore from
+  config.json), whatever the pickers show. Player-visible: a "Your step N" button in the timeline bar (key L; "Open
+  your guide" when another is open; disabled with "<guide> isn't among your guides here" for a guide the page doesn't
+  have; hidden without the coach), a white notch over the slider and a white edge on the live step in the list
+  (`aria-current="location"`), and on the page's first show with the coach running the race / class / SSF / group /
+  hardcore pickers take the character's values and open their guide at their step. Below 960 px the timeline's
+  position text leaves the row (still read to screen readers) and the button shortens to its notch and number. No
+  new IPC channel; no golden probe records the light stream. Guides page plan, phase 2 (live-sync recommendations 1-3,
+  6, 7, 9-12; numbering through phase 0's masks instead of a new `number` command).

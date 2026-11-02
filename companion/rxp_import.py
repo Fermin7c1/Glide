@@ -214,7 +214,27 @@ def guide_summary(index, g):
         "defaultFor": default_for,
         "version": int(ver) if ver and ver.isdigit() else None,
         "steps": len(_STEP_LINE.findall(text)),
+        # the forms the addon puts on the strip (page G gn / gg), so the Guides page finds the guide the character plays
+        "rxp_name": page_text(affix_name(name)),
+        "rxp_group": page_text(group),
     }
+
+
+def affix_name(name):
+    """RestedXP's own name for a guide: '5-11 Dun Morogh' -> '05-11 Dun Morogh' (knowledge.rxp_parser.guide.affix_name)."""
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
+    from knowledge.rxp_parser.guide import affix_name as affix
+    return affix(name)
+
+
+def page_text(s):
+    """A text as the addon's clean() puts it on a page: ; = | and newlines -> ',' and cut to 40 bytes
+    (knowledge.sources.live_logs.page_text)."""
+    if ROOT not in sys.path:
+        sys.path.insert(0, ROOT)
+    from knowledge.sources.live_logs import page_text as page
+    return page(s)
 
 
 def free_guides(root, wow_dir):

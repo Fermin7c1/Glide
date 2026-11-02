@@ -509,7 +509,7 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
    3:2 size its column holds, a one-row timeline, and one scroller (the guide window's step list, where the current step
    opens). The page itself never scrolls, down to the 900 x 600 window: narrow pages narrow the guide window and the
    map, they don't stack. */
-#page-guides { overflow: hidden; container-type: inline-size; container-name: guides; }
+#page-guides { overflow: hidden; container-type: inline-size; container-name: guides; --you: #f4f7ff; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rxpb-empty-page[hidden] { display: none; }
 .rxpb-toolbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 24px; min-width: 0;
@@ -748,6 +748,18 @@ polyline.rxpb-loop { fill: none; }
 .tl-tick.tl-travel { color: #4fd8ff; }
 .tl-tick.tl-hearth { color: #d580ff; }
 .tl-tick.tl-death { color: #ff5722; }
+/* the live character's step (the light stream): a white notch over the slider, a white edge in the list */
+.tl-tick.tl-live, .tl-tick.tl-live:hover { top: 30px; width: 0; height: 0; margin-left: -6px; border-radius: 0; background: none; opacity: 1;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid var(--you); z-index: 2; }
+.rxpb-live { height: 32px; flex: none; padding: 0 12px; font-size: 13px; white-space: nowrap; border-color: var(--you); }
+.rxpb-live[hidden] { display: none; }
+.rxpb-live .lv-mark { display: inline-block; width: 0; height: 0; margin-right: 6px; vertical-align: 1px;
+  border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid var(--you); }
+@container guides (max-width: 1150px) { .rxpb-live { padding: 0 9px; } .rxpb-live .lv-word { display: none; } }
+/* a narrow window: the position leaves the row (the opened step says its number; screen readers still hear it) */
+@container guides (max-width: 960px) {
+  .rxpb-tl-pos { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); min-width: 0; }
+}
 .tl-zone { position: absolute; top: 0; height: 48px; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.35); pointer-events: none; }
 
 /* In-Game Style RestedXP Guide Window (RXP Blue theme: Themes.lua #0c0c1b / #121228 / #363e6d) */
@@ -806,7 +818,10 @@ polyline.rxpb-loop { fill: none; }
 .rxpb-sitem:hover { background: #191d38; }
 .rxpb-sitem.on { background: #151935; box-shadow: inset 3px 0 0 var(--gold-hi); cursor: default; scroll-margin: 8px; }
 .rxpb-sitem.on > .rxpb-sitem-top, .rxpb-sitem.on > .rxpb-sbadges { display: none; }
+.rxpb-sitem.live { box-shadow: inset 3px 0 0 var(--you); }
+.rxpb-sitem.live.on { box-shadow: inset 3px 0 0 var(--gold-hi), inset 6px 0 0 var(--you); }
 .rxpb-sitem.done { opacity: 0.62; }
+.rxpb-sitem.live.done { opacity: 0.8; }
 .rxpb-sitem.dimmed { opacity: 0.42; }
 .rxpb-sitem-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .rxpb-snum { min-width: 24px; font-weight: 700; font-size: 12.5px; color: var(--gold); font-variant-numeric: tabular-nums; }

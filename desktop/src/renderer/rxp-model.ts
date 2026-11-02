@@ -116,3 +116,73 @@ export class Visibility {
     return out;
   }
 }
+
+// ---- the live character (the light stream's name, class, race, faction, guide, guide_group, step) ----------------
+
+const PICK_RACES = ["Human", "Dwarf", "NightElf", "Gnome", "Orc", "Undead", "Tauren", "Troll"];
+const PICK_CLASSES = ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID"];
+
+/** The race picker's value for the game's race (UnitRace's file name: "Scourge", "NightElf", "Skyborne") and faction;
+ * "" for a race the picker doesn't have. */
+export function liveRacePick(race: string | null | undefined, faction: string | null | undefined): string {
+  const r = (race || "").replace(/\s+/g, "").toLowerCase();
+  if (!r) return "";
+  if (r === "scourge" || r === "undead") return "Undead";
+  if (r === "skyborne") return faction === "Alliance" || faction === "Horde" ? `Skyborne@${faction}` : "";
+  return PICK_RACES.find((p) => p.toLowerCase() === r) || "";
+}
+
+/** The class picker's value for the game's class ("MAGE"), "" for one it doesn't have. */
+export function liveClassPick(cls: string | null | undefined): string {
+  const c = (cls || "").trim().toUpperCase();
+  return PICK_CLASSES.includes(c) ? c : "";
+}
+
+/** A guide name for matching, as the engine's norm_guide_name: case, spacing and the level range's zero padding
+ * ignored ("05-11  Dun Morogh" == "5-11 dun morogh"); a character cut in half by the strip's 40 bytes is dropped. */
+export function normGuideName(s: string | null | undefined): string {
+  const t = (s || "").replace(/�+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
+  return t.replace(/^0*(\d+)\s*-\s*0*(\d+)/, "$1-$2");
+}
+
+/** A guide on the page, as far as finding the live one needs. */
+export interface GuideRef {
+  name: string;
+  group: string;
+  faction: "Alliance" | "Horde" | null;
+  steps: number;
+  rxp_name?: string;
+  rxp_group?: string;
+}
+
+/** The page's guide the character plays (the addon's guide name and group, RestedXP's forms cut to 40 bytes), or
+ * null: the same name, its group when one has it, then as the engine resolves a name (live_logs.Guides.resolve) the
+ * character's faction first, a levelling guide before a dungeon one, the longer first. */
+export function liveGuide<T extends GuideRef>(guides: T[], guide: string | null | undefined, group: string | null | undefined,
+  faction: string | null | undefined): T | null {
+  const want = normGuideName(guide);
+  if (!want) return null;
+  let found = guides.filter((c) => normGuideName(c.rxp_name ?? c.name) === want || normGuideName(c.name) === want);
+  const grp = normGuideName(group);
+  const inGroup = found.filter((c) => normGuideName(c.rxp_group ?? c.group) === grp);
+  if (grp && inGroup.length) found = inGroup;
+  const rank = (c: T) => [c.faction && faction && c.faction !== faction ? 1 : 0, /dungeon/i.test(c.group) ? 1 : 0, -c.steps];
+  let best: T | null = null;
+  for (const c of found) {
+    if (!best) { best = c; continue; }
+    const a = rank(c), b = rank(best);
+    const k = a.findIndex((v, i) => v !== b[i]);
+    if (k >= 0 && a[k] < b[k]) best = c;
+  }
+  return best;
+}
+
+/** The position in the guide's steps of RestedXP's step `n` for one character (its index in the masks' players) under
+ * a settings combination: the steps that character gets, counted as RestedXP counts them. A number past the end is
+ * the last step; null when the character gets no step or isn't among the players. */
+export function liveStepPos(v: Visibility, stepMasks: (number | undefined)[], player: number, combo: number, n: number): number | null {
+  if (player < 0 || player >= v.n || !(n >= 1)) return null;
+  const listed = v.list(stepMasks, combo, [player], false);
+  if (!listed.length) return null;
+  return listed[Math.min(n, listed.length) - 1].pos;
+}
