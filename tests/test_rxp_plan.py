@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Time, XP and hazards on the Guides page (desktop/src/renderer/rxp-plan.ts, compiled with the project's TypeScript
-into a temp folder and run under Node): the time and XP between two listed steps (either way), the next level-up
-("45 min to 23"), durations said roughly, the dangerous stretches of the guide (a hazard or the coach's risk, one safe
-step joining two runs, the hazards met most first), and a hazard said in a line with RestedXP's note (the engine's
-"elite / Patrols the road / hits hard").
+once for all the tests (desktop_ts.py) and run under Node): the time and XP between two listed steps (either way), the
+next level-up ("45 min to 23"), durations said roughly, the dangerous stretches of the guide (a hazard or the coach's
+risk, one safe step joining two runs, the hazards met most first), and a hazard said in a line with RestedXP's note (the
+engine's "elite / Patrols the road / hits hard").
 
 Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
@@ -13,13 +13,14 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESK = os.path.join(HERE, "..", "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-plan.ts")
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -60,21 +61,15 @@ CALLS = {
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-plan-")
 try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--rootDir", os.path.join(DESK, "src"), "--outDir", tmp], capture_output=True, text=True,
-                       encoding="utf-8", timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-plan.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    with open(os.path.join(tmp, "package.json"), "w") as fh:
-        fh.write('{"type": "module"}')
-    mod = os.path.join(tmp, "renderer", "rxp-plan.js")
+    mod = os.path.join(desktop_ts.renderer(), "renderer", "rxp-plan.js")     # (the tests' shared compile)
     body = "const order = %s, plan = %s, haz = %s, hogger = %s, target = %s, quest = %s;\nconst out = {};\n%s\n" \
            "console.log(JSON.stringify(out));" % (
                json.dumps(ORDER), json.dumps(PLAN), json.dumps(HAZ), json.dumps(HOGGER), json.dumps(TARGET),
                json.dumps(QUEST), "\n".join("out[%s] = %s;" % (json.dumps(k), v) for k, v in CALLS.items()))
-    script = os.path.join(tmp, "run.js")
-    with open(script, "w") as fh:
+    script = os.path.join(tmp, "run.mjs")
+    with open(script, "w", encoding="utf-8") as fh:
         fh.write("import { roughDur, span, spanText, nextDing, dingText, hazardLine, hazardWhere, isDangerous, "
-                 "dangerRuns } from %s;\n%s" % (json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
+                 "dangerRuns } from %s;\n%s" % (json.dumps(desktop_ts.url(mod)), body))
     r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, "running rxp-plan failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)

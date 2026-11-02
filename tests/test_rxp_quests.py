@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Quest chains on the Guides page (desktop/src/renderer/rxp-quests.ts, compiled with the project's TypeScript into a
-temp folder and run under Node): each quest's steps read from the guide (the same answer as the engine's
-knowledge/api/explorer.py quest_steps, so the page lights the right steps when the facts haven't come), the chain a
-quest belongs to through the knowledge base's follow-ups (back and forward, cycle-safe, only the guide's quests), the
-chain's steps in step order, where the chain crosses into another zone, and what a skip loses in the coach's words
-(nothing said without the knowledge base).
+"""Quest chains on the Guides page (desktop/src/renderer/rxp-quests.ts, compiled with the project's TypeScript once for
+all the tests (desktop_ts.py) and run under Node): each quest's steps read from the guide (the same answer as the
+engine's knowledge/api/explorer.py quest_steps, so the page lights the right steps when the facts haven't come), the
+chain a quest belongs to through the knowledge base's follow-ups (back and forward, cycle-safe, only the guide's
+quests), the chain's steps in step order, where the chain crosses into another zone, and what a skip loses in the
+coach's words (nothing said without the knowledge base).
 
 Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
@@ -14,17 +14,18 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 DESK = os.path.join(ROOT, "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-quests.ts")
 sys.path.insert(0, ROOT)
 for k in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENROUTER_API_KEY"):
     os.environ[k] = ""
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -104,19 +105,13 @@ CALLS = {
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-quests-")
 try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--rootDir", os.path.join(DESK, "src"), "--outDir", tmp], capture_output=True, text=True,
-                       encoding="utf-8", timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-quests.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    with open(os.path.join(tmp, "package.json"), "w") as fh:
-        fh.write('{"type": "module"}')
-    mod = os.path.join(tmp, "renderer", "rxp-quests.js")
+    mod = os.path.join(desktop_ts.renderer(), "renderer", "rxp-quests.js")     # (the tests' shared compile)
     body = "const steps = %s, quests = %s;\nconst out = {};\n%s\nconsole.log(JSON.stringify(out));" % (
         json.dumps(STEPS), json.dumps(QUESTS), "\n".join("out[%s] = %s;" % (json.dumps(k), v) for k, v in CALLS.items()))
-    script = os.path.join(tmp, "run.js")
-    with open(script, "w") as fh:
+    script = os.path.join(tmp, "run.mjs")
+    with open(script, "w", encoding="utf-8") as fh:
         fh.write("import { localQuests, questsOf, chainOf, continuesAfter, chainStops, chainCrossings, skipLine } "
-                 "from %s;\n%s" % (json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
+                 "from %s;\n%s" % (json.dumps(desktop_ts.url(mod)), body))
     r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, "running rxp-quests failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The narrator (desktop/src/renderer/narrator.ts), compiled with the project's TypeScript beside stand-ins for the
-bridge and the page, and run under Node with a stand-in speechSynthesis and Audio whose lines end after a set time.
+bridge and the page, and run under Node with a stand-in speechSynthesis and Audio whose lines end after a set time
+(on a virtual clock: no real time passes).
 
 The coach's lines behave as they always have: Windows voice lines go straight to speechSynthesis in order, an
 interrupting line cancels what's being said, muted says nothing, online voices fetch every line's audio at once and
@@ -16,13 +17,14 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESK = os.path.join(HERE, "..", "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "narrator.ts")
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -170,23 +172,16 @@ console.log(JSON.stringify(out));
 
 tmp = tempfile.mkdtemp(prefix="glide-narrator-")
 try:
-    src = os.path.join(tmp, "src")
-    os.makedirs(src)
-    shutil.copy(SRC, os.path.join(src, "narrator.ts"))
-    for name, text in STUBS.items():
-        with open(os.path.join(src, name), "w", encoding="utf-8") as fh:
-            fh.write(text)
-    out = os.path.join(tmp, "out")
-    r = subprocess.run([node, TSC, os.path.join(src, "narrator.ts"), "--target", "ES2023", "--module", "ES2022",
-                        "--moduleResolution", "bundler", "--lib", "ES2023,DOM", "--strict", "--skipLibCheck",
-                        "--outDir", out], capture_output=True, text=True, encoding="utf-8", timeout=120)
-    assert r.returncode == 0, "tsc failed on narrator.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    with open(os.path.join(out, "package.json"), "w", encoding="utf-8") as fh:
-        fh.write('{"type": "module"}')
-    run = os.path.join(out, "run.mjs")
+    with open(SRC, encoding="utf-8") as fh:
+        files = {"narrator.ts": fh.read(), **STUBS}
+    # narrator.ts beside its stand-ins, compiled once per content (the tests' shared compiles, desktop_ts.py)
+    out = desktop_ts.compiled("narrator", files, ["narrator.ts", "--target", "ES2023", "--module", "ES2022",
+                                                  "--moduleResolution", "bundler", "--lib", "ES2023,DOM", "--strict",
+                                                  "--skipLibCheck"])
+    run = os.path.join(tmp, "run.mjs")
     with open(run, "w", encoding="utf-8") as fh:
         fh.write(RUN)
-    mod = "file:///" + os.path.join(out, "narrator.js").replace("\\", "/").lstrip("/")
+    mod = desktop_ts.url(os.path.join(out, "narrator.js"))
     r = subprocess.run([node, run, mod], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, "running the narrator failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)

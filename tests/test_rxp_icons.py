@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Game icons on the Guides page (desktop/src/renderer/rxp-icons.ts, compiled with the project's TypeScript into a
-temp folder and run under Node): which client icon stands for a map target (a creature its family or type icon, an
-object the item it gives, a quest area none), a step badge (accept/turn-in marks, the item to collect or buy, the
-trained spell, the vendor, flight master, innkeeper and banker, the Hearthstone, a creature named by .target / .mob),
-a prep item and an elite or rare; and that every one falls back to the glyph (null) when the icon is unknown.
+"""Game icons on the Guides page (desktop/src/renderer/rxp-icons.ts, compiled with the project's TypeScript once for all
+the tests (desktop_ts.py) and run under Node): which client icon stands for a map target (a creature its family or type
+icon, an object the item it gives, a quest area none), a step badge (accept/turn-in marks, the item to collect or buy,
+the trained spell, the vendor, flight master, innkeeper and banker, the Hearthstone, a creature named by .target /
+.mob), a prep item and an elite or rare; and that every one falls back to the glyph (null) when the icon is unknown.
 
 Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
@@ -13,13 +13,14 @@ import subprocess
 import sys
 import tempfile
 
+import desktop_ts
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESK = os.path.join(HERE, "..", "desktop")
-TSC = os.path.join(DESK, "node_modules", "typescript", "bin", "tsc")
 SRC = os.path.join(DESK, "src", "renderer", "rxp-icons.ts")
 
-node = shutil.which("node")
-if not node or not os.path.exists(TSC):
+node = desktop_ts.node
+if not node or not desktop_ts.available():
     print("SKIP: needs node and desktop/node_modules (cd desktop && npm ci)")
     sys.exit(77)
 
@@ -66,20 +67,14 @@ CALLS.update({
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-icons-")
 try:
-    r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--rootDir", os.path.join(DESK, "src"), "--outDir", tmp], capture_output=True, text=True,
-                       encoding="utf-8", timeout=120)
-    assert r.returncode == 0, "tsc failed on rxp-icons.ts: %s" % (r.stdout + r.stderr)[-2000:]
-    with open(os.path.join(tmp, "package.json"), "w") as fh:
-        fh.write('{"type": "module"}')
-    mod = os.path.join(tmp, "renderer", "rxp-icons.js")
+    mod = os.path.join(desktop_ts.renderer(), "renderer", "rxp-icons.js")     # (the tests' shared compile)
     body = "const I = %s, T = %s, A = %s;\nconst out = {};\n%s\nconsole.log(JSON.stringify(out));" % (
         json.dumps(ICONS), json.dumps(T), json.dumps(A),
         "\n".join("out[%s] = %s;" % (json.dumps(k), v) for k, v in CALLS.items()))
-    script = os.path.join(tmp, "run.js")
-    with open(script, "w") as fh:
+    script = os.path.join(tmp, "run.mjs")
+    with open(script, "w", encoding="utf-8") as fh:
         fh.write("import { targetIcon, lootIcon, actionIcon, prepIcon, rankIcon, iconUrl, stepIcon } from %s;\n%s" % (
-            json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
+            json.dumps(desktop_ts.url(mod)), body))
     r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, "running rxp-icons failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)
