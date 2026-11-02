@@ -1,0 +1,93 @@
+diff --git a/knowledge/store.py b/knowledge/store.py
+index 304d987..ca0290b 100644
+--- a/knowledge/store.py
++++ b/knowledge/store.py
+@@ -247,12 +247,16 @@ def _remove_quiet(path):
+ 
+ 
+ def create_schema(conn):
++    """schema.sql's tables, in one transaction: one journal file and one sync to disk, not one per statement (on
++    Windows each is a file created, flushed and deleted)."""
+     with open(SCHEMA, encoding="utf-8") as fh:
+         script = fh.read()
+     try:
+-        conn.executescript(script)
++        conn.executescript("BEGIN;\n%s\nCOMMIT;" % script)
+         return
+     except sqlite3.OperationalError as e:
++        if conn.in_transaction:
++            conn.execute("ROLLBACK")
+         if "duplicate column" not in str(e):
+             raise
+     # schema applied to an existing database: run statement by statement, skipping columns that exist
+diff --git a/tests/kb/fixture.py b/tests/kb/fixture.py
+index 1c95045..a7bcf8f 100644
+--- a/tests/kb/fixture.py
++++ b/tests/kb/fixture.py
+@@ -258,7 +258,7 @@ def glide_db(path, run=None):
+     if os.path.exists(path):
+         os.remove(path)
+     c = sqlite3.connect(path)
+-    c.executescript(build_db.SCHEMA)
++    build_db.create_schema(c)
+     ins = lambda t, rows: rows and c.executemany(  # noqa: E731
+         "INSERT INTO %s VALUES(%s)" % (t, ",".join("?" * len(rows[0]))), rows)
+     ins("meta", [("built", "2026-10-05 12:00:00"), ("fixture", "tests/kb/fixture.py")])
+diff --git a/tests/kb/test_store.py b/tests/kb/test_store.py
+index 24b7f88..1ec6030 100644
+--- a/tests/kb/test_store.py
++++ b/tests/kb/test_store.py
+@@ -54,6 +54,20 @@ def test_coords():
+     check(store.map_size_yd(b) == (abs(b["wy1"] - b["wy0"]), abs(b["wx1"] - b["wx0"])), "map size")
+ 
+ 
++def test_schema_one_transaction():
++    """Both databases' tables are made in one transaction (regression: one per statement, each a journal file created,
++    flushed and deleted: 20 s of a test on a Windows runner, and on the player's PC at every glide.db build)."""
++    from tools import build_db
++    for make in (store.create_schema, build_db.create_schema):
++        conn = sqlite3.connect(":memory:")
++        seen = []
++        conn.set_trace_callback(seen.append)
++        make(conn)
++        check(len(seen) > 20 and seen[0].strip() == "BEGIN;" and seen[-1].strip() == "COMMIT;" and
++              not conn.in_transaction, "%s: %r ... %r" % (make.__module__, seen[:1], seen[-1:]))
++        conn.close()
++
++
+ def test_db2_import(kb_path, tmpdir):
+     """The optional DB2 importer on synthetic CSVs (in a scratch copy: never in the real KB)."""
+     from wowfiles import db2_import
+@@ -359,6 +373,7 @@ def test_kb_report(kb_path, counts):
+ def main():
+     test_lua_reader()
+     test_coords()
++    test_schema_one_transaction()
+     tmpdir = fixture.tmpdir("store-")
+     try:
+         test_staleness(tmpdir)
+diff --git a/tools/build_db.py b/tools/build_db.py
+index f3e5999..2bd5079 100644
+--- a/tools/build_db.py
++++ b/tools/build_db.py
+@@ -444,6 +444,11 @@ CREATE INDEX i_rs ON rxp_steps(quest_id); CREATE INDEX i_ent_name ON entities(na
+ """
+ 
+ 
++def create_schema(db):
++    """glide.db's tables in one transaction: one journal file and one sync to disk instead of one per statement."""
++    db.executescript("BEGIN;\n%s\nCOMMIT;" % SCHEMA)
++
++
+ def input_fingerprint(files, dirs=(), root=ROOT):
+     """sha1 over (path, size, mtime) of every input file (and every file under `dirs`) plus the content of this
+     builder's code (CODE, under `root`), so glide.db is only rebuilt when something it reads or runs changed."""
+@@ -754,7 +759,7 @@ def build(args):
+     if os.path.exists(tmp):
+         os.remove(tmp)
+     db = sqlite3.connect(tmp)
+-    db.executescript(SCHEMA)
++    create_schema(db)
+     n_quests = write_quests(db, book, seed)
+     write_entities(db, seed, w, sessions)
+     write_zones(db, seed)

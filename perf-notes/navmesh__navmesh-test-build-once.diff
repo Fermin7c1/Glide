@@ -1,0 +1,60 @@
+diff --git a/tests/test_navmesh.py b/tests/test_navmesh.py
+index 713c2c0..7d4c903 100644
+--- a/tests/test_navmesh.py
++++ b/tests/test_navmesh.py
+@@ -9,6 +9,7 @@ The movement rules come from recorded play: across 6,927 sustained 8-16 yd uphil
+ steepest was 47.5 degrees and none passed 50, while short steeper bits were crossed by hopping (scratch analysis
+ for the 0.3.28 walking map; see tools/navmesh.py).
+ """
++import hashlib
+ import math
+ import os
+ import sys
+@@ -42,8 +43,12 @@ def box(r0, r1, c0, c1, z0, z1):
+     return q
+ 
+ 
++_BUILT = {}
++
++
+ def build(tz, objects=(), water=None, tnz=None):
+-    """Synthetic domain -> (z, link, kind, cxy) coarse (L, CN, CN) like build_tile."""
++    """Synthetic domain -> (z, link, kind, cxy) coarse (L, CN, CN), by build_tile's own pipeline. A world built
++    before (same terrain, objects and water) is served again: the arrays are only read."""
+     tz = tz.astype(np.float32)
+     if tnz is None:
+         gr, gc = np.gradient(tz, F)
+@@ -51,11 +56,11 @@ def build(tz, objects=(), water=None, tnz=None):
+     th = np.zeros((DN, DN), bool)
+     wl = np.full((DN, DN), np.nan, np.float32) if water is None else water.astype(np.float32)
+     tri = np.array([t for o in objects for t in o], np.float64).reshape(-1, 3, 3)
+-    floors, solids = NM.rasterise(tri)
+-    zs, kind = NM.surfaces(tz, tnz.astype(np.float32), th, wl, floors, solids)
+-    tgt = NM.fine_edges(zs, kind, tz, (tnz >= NM.COS_WALK) & ~th)
+-    lab = NM.labels(zs, tgt, kind)
+-    return NM.condense(zs, kind, tgt, lab, NM.domain_reach(zs, tgt, kind))
++    tnz = tnz.astype(np.float32)
++    key = hashlib.sha1(b"".join(a.tobytes() for a in (tz, tnz, wl, tri))).hexdigest()
++    if key not in _BUILT:
++        _BUILT[key] = NM.build_domain(tz, tnz, th, wl, tri)
++    return _BUILT[key]
+ 
+ 
+ def graph(parts):
+diff --git a/tests/test_rxp_routes.py b/tests/test_rxp_routes.py
+index 76f6278..19835cf 100644
+--- a/tests/test_rxp_routes.py
++++ b/tests/test_rxp_routes.py
+@@ -55,11 +55,7 @@ def build(tz, objects=()):
+     th = np.zeros((DN, DN), bool)
+     wl = np.full((DN, DN), np.nan, np.float32)
+     tri = np.array([t for o in objects for t in o], np.float64).reshape(-1, 3, 3)
+-    floors, solids = NM.rasterise(tri)
+-    zs, kind = NM.surfaces(tz, tnz.astype(np.float32), th, wl, floors, solids)
+-    tgt = NM.fine_edges(zs, kind, tz, (tnz >= NM.COS_WALK) & ~th)
+-    lab = NM.labels(zs, tgt, kind)
+-    return NM.condense(zs, kind, tgt, lab, NM.domain_reach(zs, tgt, kind))
++    return NM.build_domain(tz, tnz.astype(np.float32), th, wl, tri)
+ 
+ 
+ def save_graph(parts, path):

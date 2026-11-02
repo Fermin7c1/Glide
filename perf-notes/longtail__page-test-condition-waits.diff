@@ -1,0 +1,74 @@
+diff --git a/tests/dashboard_page_cdp.mjs b/tests/dashboard_page_cdp.mjs
+--- a/tests/dashboard_page_cdp.mjs
++++ b/tests/dashboard_page_cdp.mjs
+@@ -1,7 +1,9 @@
+ // Each step prints "STEP <name> <json>" and waits for a line on stdin (the Python half publishes to the hub, then
+-// answers) before the next one.
++// answers) before the next one. Between steps it waits for what the step needs (the state shown, the layout saved,
++// the stream back) rather than a fixed time; a wait that runs out records what the page shows and the Python half's
++// checks say what's wrong.
+@@ -40,33 +42,49 @@ try {
+   const feed = () => js("document.querySelectorAll('#feed > *').length");
++  // until(): poll a page expression until it's true (false after `ms`); frames(): two frames drawn (layout done)
++  // (a window the system hides may not draw: 250 ms at most)
++  const frames = () => js("new Promise((r) => { requestAnimationFrame(() => requestAnimationFrame(() => r(true))); setTimeout(() => r(true), 250); })");
++  const until = async (expr, ms = 5000) => {
++    for (const t0 = Date.now(); Date.now() - t0 < ms; await sleep(20)) if (await js(expr)) return frames();
++    return false;
++  };
++  // the page's requests in flight and its event-stream inits, counted (an init's listener added after the page's)
++  const watch = `(() => { window.__inFlight = 0; window.__inits = 0;
++    const f = window.fetch; window.fetch = (...a) => { __inFlight++; return f(...a).finally(() => __inFlight--); };
++    const ES = window.EventSource; window.EventSource = function (...a) { const es = new ES(...a);
++      queueMicrotask(() => es.addEventListener("init", () => __inits++)); return es; }; })();`;
++  const settled = () => until("__inFlight === 0");
+   await send("Page.enable"); await send("Runtime.enable");
+   await send("Page.addScriptToEvaluateOnNewDocument", { source: "try{localStorage.clear()}catch(e){}" });
++  await send("Page.addScriptToEvaluateOnNewDocument", { source: watch });
+   await size(2560, 1440);
+   await send("Page.navigate", { url });
+-  await sleep(2500);
++  await until("document.readyState === 'complete' && __inits > 0 && document.querySelectorAll('#wing section').length > 0", 15000);
++  await settled();
+   await step("loaded", ...);
+   await step("ready-steps");
+-  await sleep(800);
++  await until("onStep.n === 76");
+   await step("played-76");
+-  await sleep(800);
++  await until("onStep.n === 77");
+   ...requestSubmit()...
+-  await sleep(800);
++  await until("[...document.querySelectorAll('#feed .msg.question')].some((m) => m.textContent.includes('which way?'))");
++  await settled();
+   await size(1150, 800);
+-  await sleep(500);
++  await until("innerWidth === 1150");
+   ...Alt+Right...
+-  await sleep(300);
++  await until("document.getElementById('arrange_live').textContent !== ''");
+@@ mouseDrag
+     await mouse("mouseReleased", to, 0);
+-    await sleep(400);
++    await settled();
+   await size(2560, 1440);
+-  await sleep(500);
++  await until("innerWidth === 2560");
+   await mouseDrag(await centre("#feed"), await centre("#mapsec"));
++  await sleep(400);                                         // nothing to wait for when nothing should move: dwell
+   const feedDrag = ...
+   await step("drop", before);
+-  await sleep(6000);
++  await until("__inits > 1", 15000);                       // the browser's own retry delay (about 3 s) sets the pace
+   await step("reconnected", await feed());
+-  await sleep(800);
++  await until("document.getElementById('feed').textContent.includes('after the reconnect')");
+   await step("after-message", await feed());
+   await size(2560, 1440);
+-  await sleep(600);
++  await until("innerWidth === 2560");
+   await step("wide", ...);
+-  await sleep(800);
++  await until("document.body.classList.contains('waiting')");
+   await step("waiting", ...);
+(full diff: /tmp/claude-0/-home-user-Glide/4ddc3f14-3355-571d-9bad-778daa3d02a0/scratchpad/perf/lt_tools/diffs/p2_page.diff)

@@ -1,0 +1,33 @@
+diff --git a/tests/desktop_logfile_check.cjs b/tests/desktop_logfile_check.cjs
+index c9d8152..129b707 100644
+--- a/tests/desktop_logfile_check.cjs
++++ b/tests/desktop_logfile_check.cjs
+@@ -78,7 +78,9 @@ const logs = () => fs.readdirSync(dir).filter((f) => f.endsWith(".log")).sort();
+     // the batching timer writes without anyone flushing
+     const k = new LogFile(path.join(userData, "timer"), { now: () => now });
+     k.write("[app] by itself");
+-    await new Promise((r) => setTimeout(r, 700));
++    const written = () => fs.existsSync(k.fileFor("20261009")) && /by itself/.test(fs.readFileSync(k.fileFor("20261009"), "utf8"));
++    // within the same 700 ms as before (the timer is 250 ms), but done as soon as it is written
++    for (const t0 = Date.now(); !written() && Date.now() - t0 < 700;) await new Promise((r) => setTimeout(r, 20));
+     assert.match(fs.readFileSync(k.fileFor("20261009"), "utf8"), /by itself/);
+     console.log("ok");
+   } finally {
+diff --git a/tests/desktop_main_check.cjs b/tests/desktop_main_check.cjs
+index 744cc86..bf2862f 100644
+--- a/tests/desktop_main_check.cjs
++++ b/tests/desktop_main_check.cjs
+@@ -46,7 +46,12 @@ const until = async (what, fn, ms = 5000) => {
+     await new Promise((r) => setTimeout(r, 20));
+   }
+ };
+-const within = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms))]);
++// the time limit is cleared once p settles: a pending one would keep Node running (6 s after the last check)
++const within = (p, ms, what) => {
++  let timer;
++  const limit = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms); });
++  return Promise.race([p, limit]).finally(() => clearTimeout(timer));
++};
+ 
+ function syncChecks() {
+   // an empty folder gets the shipped code and a stamp

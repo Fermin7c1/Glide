@@ -1,0 +1,92 @@
+(full diff: /tmp/claude-0/-home-user-Glide/4ddc3f14-3355-571d-9bad-778daa3d02a0/scratchpad/perf/lt_tools/diffs/p5_events.diff; key parts)
+--- a/tests/test_dashboard_http.py
++++ b/tests/test_dashboard_http.py
++def settle(before):
++    """Wait for every thread started since `before` (the hooks' timers, and anything they start) to finish: the
++    checks below then see all a connect() set off, without sleeping a fixed time."""
++    while True:
++        new = [t for t in threading.enumerate() if t not in before and t is not threading.current_thread()]
++        if not new:
++            return
++        for t in new:
++            t.join(10)
++            assert not t.is_alive(), "a thread the connect started is still running: %r" % t
++        before = before | set(new)
++before = set(threading.enumerate())
+ q, _ = h.connect()
+ q2, _ = h.connect()
+-time.sleep(0.5)
++settle(before)
+ (same for q3 and q4, replacing time.sleep(0.3))
+--- a/tests/test_narrator.py
++++ b/tests/test_narrator.py
+ RUN = r"""
++const realImmediate = setImmediate;
++let vnow = Date.now(), vseq = 0, pumping = false;
++const vtimers = new Map();
++const pump = () => { if (!pumping) { pumping = true; realImmediate(fire); } };
++function fire() {
++  pumping = false;
++  let next = null;
++  for (const t of vtimers.values()) if (!next || t.at < next.at || (t.at === next.at && t.id < next.id)) next = t;
++  if (!next) return;
++  vtimers.delete(next.id);
++  vnow = Math.max(vnow, next.at);
++  if (next.every !== undefined) vtimers.set(next.id, { ...next, at: vnow + next.every });
++  next.fn(...next.args);
++  pump();
++}
++const addTimer = (fn, ms, args, every) => {
++  const id = ++vseq, d = Math.max(0, Number(ms) || 0);
++  vtimers.set(id, { id, at: vnow + d, fn, args, every: every ? Math.max(1, d) : undefined });
++  pump();
++  return id;
++};
++globalThis.setTimeout = (fn, ms, ...args) => addTimer(fn, ms, args, false);
++globalThis.setInterval = (fn, ms, ...args) => addTimer(fn, ms, args, true);
++globalThis.clearTimeout = globalThis.clearInterval = (id) => { vtimers.delete(id); };
++Date.now = () => vnow;
+--- a/tests/test_child_stdin.py
++++ b/tests/test_child_stdin.py
++reading = threading.Event()
+ def job():
+     import time
+-    time.sleep(1.0)
++    reading.wait(30)
++    time.sleep(0.25)              # the main thread is at its read: let it be pending first, as it is under the app
+ ...
+ t.start()
++reading.set()
+ sys.stdin.readline()
+ ... (reader thread sets `reported` on the RESULT line; reported.wait(30) replaces the 0.5 s poll loop)
+--- a/tests/test_ptt.py
++++ b/tests/test_ptt.py
++def until(what, cond, timeout=10):
++    end = time.time() + timeout
++    while not cond():
++        assert time.time() < end, "timed out waiting for " + what
++        time.sleep(0.005)
+-p.user32.down = True; time.sleep(0.1); p.user32.down = False; time.sleep(0.2)     # tap: ignored
+-assert not got, got
+-p.user32.down = True; time.sleep(0.5); p.user32.down = False; time.sleep(0.3)     # hold: asks
++p.user32.down = True; until("listening", lambda: states == ["listening"]); p.user32.down = False
++until("the tap's end", lambda: len(states) >= 2)
++assert states == ["listening", "idle"] and not got, (states, got)
++p.user32.down = True; until("listening again", lambda: len(states) == 3); time.sleep(0.25); p.user32.down = False
++until("the question", lambda: got and states[-1:] == ["idle"])
+ (the two `for _ in range(50): ... sleep(0.1)` loops become until(...))
+--- a/tests/test_refresh_staging.py
++++ b/tests/test_refresh_staging.py
+-time.sleep(1.1)                                  # build names carry the time to the second
++class ClockAhead:
++    """kb_refresh's clock a few seconds on: build names carry the time to the second, so the second build gets a later
++    name without the test sleeping a second (the files' times stay real)."""
++    def __getattr__(self, name):
++        return getattr(time, name)
++
++    def strftime(self, fmt, t=None):
++        return time.strftime(fmt, time.localtime(time.time() + 2) if t is None else t)
++
++
++kb_refresh.time = ClockAhead()
++time.sleep(0.05)                                 # the second build's files are newer than the first's

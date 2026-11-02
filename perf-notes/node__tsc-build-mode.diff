@@ -1,0 +1,37 @@
+diff --git a/.gitignore b/.gitignore
+index 4c010de..d49e14b 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -10,6 +10,8 @@ dist/
+ out/
+ release/
+ desktop/build/
++# tsc -b's record of what it built (npm run build compiles only what changed)
++*.tsbuildinfo
+ *.log
+ 
+ # Local and generated data (game client data, recordings, databases, logs)
+diff --git a/desktop/package.json b/desktop/package.json
+index e077cf5..dc6f156 100644
+--- a/desktop/package.json
++++ b/desktop/package.json
+@@ -9,7 +9,7 @@
+   "main": "dist/main/main.js",
+   "type": "commonjs",
+   "scripts": {
+-    "build": "node scripts/gen-settings.js && tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.dashboard.json && node scripts/copy-static.js",
++    "build": "node scripts/gen-settings.js && tsc -b --builders 1 tsconfig.main.json tsconfig.renderer.json tsconfig.dashboard.json && node scripts/copy-static.js",
+     "start": "npm run build && electron .",
+     "sim": "npm run build && electron . --sim",
+     "python": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-python.ps1",
+diff --git a/tests/test_engine_contract.py b/tests/test_engine_contract.py
+index 8926c44..926594b 100644
+--- a/tests/test_engine_contract.py
++++ b/tests/test_engine_contract.py
+@@ -40,5 +40,5 @@ assert set(re.findall(r'"(\w+)":', speak)) == set(declared("SpeakEvent")), speak
+ 
+ # the dashboard stays checked: @ts-check in the page, and the build runs its check
+ assert "// @ts-check" in read("companion", "static", "dashboard.js")
+-assert "tsc -p tsconfig.dashboard.json" in json.loads(read("desktop", "package.json"))["scripts"]["build"]
++assert re.search(r"\btsc -b [^&]*\btsconfig\.dashboard\.json\b", json.loads(read("desktop", "package.json"))["scripts"]["build"])
+ print("ok")

@@ -1,0 +1,354 @@
+diff --git a/tests/run_all.py b/tests/run_all.py
+index 596eb12..571707e 100644
+--- a/tests/run_all.py
++++ b/tests/run_all.py
+@@ -2,8 +2,11 @@
+ """Run every test (tests/**/test_*.py, each in its own process, in parallel) and print a summary; exit 1 if any failed.
+ 
+     py -3 tests/run_all.py            all of them (in parallel across worker processes)
+-    py -3 tests/run_all.py -j 4       run up to 4 tests at a time (-j 1 for one by one)
++    py -3 tests/run_all.py -j 4       keep about 4 cores busy (-j 1: one test at a time, in order)
+     py -3 tests/run_all.py trash kb   only the ones whose path contains one of the words
++    py -3 tests/run_all.py --changed  only the tests the changes since origin/main can affect (tests/affected.py):
++                                      the fast loop while iterating; --changed=REF for changes since REF. The full
++                                      run stays the check before a commit
+     py -3 tests/run_all.py --smoke    the report-only checks on the player's real data instead (tests/**/smoke_*.py,
+                                       see tests/kb/smoke.py): they print findings and never fail the run
+ 
+@@ -11,9 +14,15 @@ A test passes with exit code 0. One that cannot run here (no data/kb.db, no node
+ "SKIP: <reason>" and exits with SKIP_EXIT (77): the summary lists it apart from the passes and the failures.
+ tests/golden holds the golden-master probes, run by tests/test_golden.py and golden.py (no test_*.py there).
+ 
++In parallel the longest tests start first, by how long each took in this machine's last run (tests/.timings.json, not
++committed; without it the hand-kept _HEAVY list), and a test that mostly waits (on a server, a browser, a timer)
++counts for the cores it really uses, so another test can start beside it: -j N keeps about N cores busy, with at
++most 2*N tests at once.
++
+ Needs the packages in requirements-dev.txt (lupa for the addon tests): py -3 -m pip install -r requirements-dev.txt"""
+-from concurrent.futures import ThreadPoolExecutor, as_completed
++from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+ import glob
++import json
+ import os
+ import subprocess
+ import sys
+@@ -21,9 +30,11 @@ import time
+ 
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ SKIP_EXIT = 77
+-# Longest-running tests start first when running in parallel so none is left alone at the tail of the run.
+-_HEAVY = ("test_golden.py", "test_dashboard_page.py", "test_navmesh.py", "kb/test_rxp_updates.py",
+-          "test_desktop_main.py", "test_models.py", "test_types.py")
++TIMINGS = os.path.join(HERE, ".timings.json")   # this machine's last wall and CPU time per test (gitignored)
++# Without timings (a fresh checkout, a CI runner without its cache): the longest-running tests, longest first, so
++# none is left alone at the tail of the run.
++_HEAVY = ("test_golden.py", "test_navmesh.py", "test_rxp_facts.py", "test_rxp_explorer.py", "test_dashboard_page.py",
++          "kb/test_rxp_updates.py", "test_rxp_routes.py", "test_types.py", "test_desktop_main.py", "test_models.py")
+ 
+ 
+ def collect(pattern):
+@@ -44,11 +55,14 @@ def _parse_args(argv):
+     smoke = False
+     jobs = min(8, os.cpu_count() or 4)
+     words = []
++    changed = None
+     i = 0
+     while i < len(argv):
+         a = argv[i]
+         if a == "--smoke":
+             smoke = True
++        elif a == "--changed" or a.startswith("--changed="):
++            changed = a.partition("=")[2] or "origin/main"
+         elif a in ("-j", "--jobs") and i + 1 < len(argv):
+             jobs = max(1, int(argv[i + 1]))
+             i += 1
+@@ -59,15 +73,139 @@ def _parse_args(argv):
+         else:
+             words.append(a.lower())
+         i += 1
+-    return smoke, jobs, words
++    return smoke, jobs, words, changed
++
++
++def _name(t):
++    return os.path.relpath(t, HERE).replace(os.sep, "/")
++
++
++def _load_timings():
++    try:
++        with open(TIMINGS, encoding="utf-8") as f:
++            d = json.load(f)
++        return {k: v for k, v in d["tests"].items() if isinstance(v, dict) and v.get("wall", 0) > 0}
++    except (OSError, ValueError, KeyError, TypeError, AttributeError):
++        return {}
++
++
++def _save_timings(old, ran, existing):
++    """Keep the times of the tests that passed or skipped in this run, the older ones of the rest (of tests that still
++    exist). A time only rises a quarter per run: a run slowed by other work on the machine (or a busier -j) doesn't
++    make a test look longer, or idler, than it is. Best effort: another run may hold the file."""
++    keep = {k: v for k, v in old.items() if k in existing}
++    for name, new in ran.items():
++        was = keep.get(name) or {}
++        keep[name] = {k: round(min(v, was[k] * 1.25) if was.get(k) else v, 2) for k, v in new.items()}
++    tmp = "%s.%d.tmp" % (TIMINGS, os.getpid())
++    try:
++        with open(tmp, "w", encoding="utf-8") as f:
++            json.dump({"tests": keep}, f, indent=0, sort_keys=True)
++        os.replace(tmp, TIMINGS)
++    except OSError:
++        try:
++            os.remove(tmp)
++        except OSError:
++            pass
++
++
++def _order(tests, timings):
++    """Longest first (by the last run's wall time; a test without one first of all, its length unknown); the
++    hand-kept _HEAVY order when less than half the tests have a time."""
++    names = [_name(t) for t in tests]
++    if 2 * sum(n in timings for n in names) < len(names):
++        heavy = {h: i for i, h in enumerate(_HEAVY)}
++        return sorted(tests, key=lambda t: heavy.get(_name(t), len(heavy)))
++    return sorted(tests, key=lambda t: -timings[_name(t)]["wall"] if _name(t) in timings else -1e9)
++
+ 
++def _critical(tests, timings, jobs):
++    """The tests the run's length hangs on: at least half as long as the run can be at best (the longest test, or all
++    the CPU time over the cores). They run at normal priority, the rest a step below, so the tests squeezed in beside
++    them never slow them down."""
++    t = [timings.get(_name(x)) for x in tests]
++    if jobs == 1 or 2 * sum(1 for x in t if x) < len(t):
++        return set()
++    best = max(max(x["wall"] for x in t if x), sum(x.get("cpu", x["wall"]) for x in t if x) / jobs)
++    return {x for x, r in zip(tests, t) if r and r["wall"] >= best / 2}
+ 
+-def _run_one(t):
+-    name = os.path.relpath(t, HERE).replace(os.sep, "/")
++
++def _cores(name, timings, jobs):
++    """Cores a test keeps busy while it runs: its CPU time over its wall time (1 when unknown)."""
++    t = timings.get(name) or {}
++    if not t.get("cpu"):
++        return 1.0
++    return min(max(t["cpu"] / t["wall"], 0.05), float(jobs))
++
++
++def _job_cpu_meter(pid):
++    """Windows: put the test's process in a job object, so the CPU time of everything it starts (node, pyright, Edge)
++    adds up; returns a function giving that CPU time in seconds, or None when it can't."""
++    try:
++        import ctypes
++        from ctypes import wintypes
++        k = ctypes.WinDLL("kernel32", use_last_error=True)
++        k.CreateJobObjectW.restype = wintypes.HANDLE
++        k.CreateJobObjectW.argtypes = (wintypes.LPVOID, wintypes.LPCWSTR)
++        k.OpenProcess.restype = wintypes.HANDLE
++        k.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
++        k.AssignProcessToJobObject.restype = wintypes.BOOL
++        k.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
++        k.QueryInformationJobObject.restype = wintypes.BOOL
++        k.QueryInformationJobObject.argtypes = (wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD,
++                                                wintypes.LPDWORD)
++        k.CloseHandle.argtypes = (wintypes.HANDLE,)
++
++        class Acct(ctypes.Structure):   # JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
++            _fields_ = [("user", ctypes.c_int64), ("kernel", ctypes.c_int64), ("period_user", ctypes.c_int64),
++                        ("period_kernel", ctypes.c_int64), ("faults", wintypes.DWORD), ("procs", wintypes.DWORD),
++                        ("active", wintypes.DWORD), ("terminated", wintypes.DWORD)]
++
++        job = k.CreateJobObjectW(None, None)
++        if not job:
++            return None
++        proc = k.OpenProcess(0x0100 | 0x0001, False, pid)   # PROCESS_SET_QUOTA | PROCESS_TERMINATE
++        ok = bool(proc) and k.AssignProcessToJobObject(job, proc)
++        if proc:
++            k.CloseHandle(proc)
++        if not ok:
++            k.CloseHandle(job)
++            return None
++
++        def read():
++            a = Acct()
++            got = k.QueryInformationJobObject(job, 1, ctypes.byref(a), ctypes.sizeof(a), None)
++            k.CloseHandle(job)
++            return (a.user + a.kernel) / 1e7 if got else None
++        return read
++    except Exception:   # noqa: BLE001 - CPU time is only a scheduling hint
++        return None
++
++
++def _run_one(t, low=False):
++    """-> name, exit code, output, wall seconds, CPU seconds of the test and what it started (None if unknown).
++    low: below normal priority (what it starts inherits it)."""
+     s = time.time()
+-    r = subprocess.run([sys.executable, t], cwd=os.path.dirname(HERE), stdin=subprocess.DEVNULL,
+-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+-    return name, r.returncode, r.stdout, time.time() - s
++    p = subprocess.Popen([sys.executable, t], cwd=os.path.dirname(HERE), stdin=subprocess.DEVNULL,
++                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
++                         errors="replace", creationflags=subprocess.BELOW_NORMAL_PRIORITY_CLASS
++                         if low and os.name == "nt" else 0)
++    if low and hasattr(os, "setpriority"):
++        try:
++            os.setpriority(os.PRIO_PROCESS, p.pid, 10)
++        except OSError:
++            pass
++    if hasattr(os, "wait4"):
++        with p.stdout:
++            out = p.stdout.read()
++        _, status, ru = os.wait4(p.pid, 0)
++        p.returncode = os.waitstatus_to_exitcode(status)
++        cpu = ru.ru_utime + ru.ru_stime
++    else:
++        meter = _job_cpu_meter(p.pid)
++        out, _ = p.communicate()
++        cpu = meter() if meter else None
++    return _name(t), p.returncode, out, time.time() - s, cpu
+ 
+ 
+ def main():
+@@ -76,40 +214,59 @@ def main():
+     except ImportError:
+         print("lupa is missing (the addon tests need it): py -3 -m pip install -r requirements-dev.txt")
+         return 1
+-    smoke, jobs, words = _parse_args(sys.argv[1:])
++    smoke, jobs, words, changed = _parse_args(sys.argv[1:])
+     tests = collect("smoke_*.py" if smoke else "test_*.py")
+     if words:
+         tests = [t for t in tests if any(w in os.path.relpath(t, HERE).lower() for w in words)]
++    if changed and not smoke:
++        import affected
++        files = affected.changed_files(changed)
++        pick = set(affected.affected(files)[0])
++        print("fast loop: %d of %d tests for %d files changed since %s (the full run is the check before a commit)"
++              % (sum(os.path.relpath(t, os.path.dirname(HERE)).replace(os.sep, "/") in pick for t in tests),
++                 len(tests), len(files), changed), flush=True)
++        tests = [t for t in tests if os.path.relpath(t, os.path.dirname(HERE)).replace(os.sep, "/") in pick]
+     failed, skipped = [], []
+     t0 = time.time()
+     if smoke:
+         for t in tests:
+-            name, _, stdout, dt = _run_one(t)
++            name, _, stdout, dt, _ = _run_one(t)
+             print("%s  %5.1fs" % (name, dt))
+             print("\n".join("  " + line for line in stdout.rstrip().splitlines()))
+         print("\n%d smoke files run (report only: findings never fail the run), %.0fs" % (len(tests), time.time() - t0))
+         return 0
+ 
+-    if jobs > 1 and len(tests) > 1:
+-        heavy = {h: i for i, h in enumerate(_HEAVY)}
+-        ordered = sorted(tests, key=lambda t: (heavy.get(os.path.relpath(t, HERE).replace(os.sep, "/"), 999),
+-                                               tests.index(t)))
+-    else:
+-        ordered = tests
+-    pool = ThreadPoolExecutor(max_workers=min(jobs, max(1, len(ordered))))
++    timings = _load_timings()
++    queue = _order(tests, timings) if jobs > 1 else list(tests)
++    cores = {t: _cores(_name(t), timings, jobs) for t in queue}
++    critical = _critical(queue, timings, jobs)
++    most = 1 if jobs == 1 else 2 * jobs
++    pool = ThreadPoolExecutor(max_workers=max(1, min(most, len(queue))))
++    running = {}
++    ran = {}
+     reported = 0
+     try:
+-        futs = [pool.submit(_run_one, t) for t in ordered]
+-        for fut in (as_completed(futs) if jobs > 1 else futs):
+-            name, code, stdout, dt = fut.result()
+-            reported += 1
+-            status = "ok  " if code == 0 else "SKIP" if code == SKIP_EXIT else "FAIL"
+-            print("%-38s %s  %5.1fs" % (name, status, dt), flush=True)
+-            if code == SKIP_EXIT:
+-                skipped.append((name, skip_reason(stdout)))
+-            elif code != 0:
+-                failed.append(name)
+-                print("    " + "\n    ".join(stdout.strip().splitlines()[-6:]), flush=True)
++        while queue or running:
++            # the next test starts while the running ones leave a core for it (the first one always does)
++            while queue and (not running or (len(running) < most and sum(cores[t] for t in running.values())
++                                             + min(cores[queue[0]], 1.0) <= jobs + 1e-6)):
++                t = queue.pop(0)
++                running[pool.submit(_run_one, t, bool(critical) and t not in critical)] = t
++            # a timeout, so Ctrl+C gets through on Windows too
++            done, _ = wait(running, timeout=0.5, return_when=FIRST_COMPLETED)
++            for fut in done:
++                del running[fut]
++                name, code, stdout, dt, cpu = fut.result()
++                reported += 1
++                status = "ok  " if code == 0 else "SKIP" if code == SKIP_EXIT else "FAIL"
++                print("%-38s %s  %5.1fs" % (name, status, dt), flush=True)
++                if code in (0, SKIP_EXIT):
++                    ran[name] = {"wall": round(dt, 2)} if cpu is None else {"wall": round(dt, 2), "cpu": round(cpu, 2)}
++                if code == SKIP_EXIT:
++                    skipped.append((name, skip_reason(stdout)))
++                elif code != 0:
++                    failed.append(name)
++                    print("    " + "\n    ".join(stdout.strip().splitlines()[-6:]), flush=True)
+     except KeyboardInterrupt:
+         # Ctrl+C: the running tests got it too (same console); the queued ones never start
+         pool.shutdown(wait=False, cancel_futures=True)
+@@ -117,6 +274,7 @@ def main():
+             reported, len(tests), ", ".join(sorted(failed)) or "none"), flush=True)
+         return 130
+     pool.shutdown()
++    _save_timings(timings, ran, {_name(t) for t in collect("test_*.py")})
+     print("\n%d tests: %d ok, %d skipped, %d failed, %.0fs" % (
+         len(tests), len(tests) - len(failed) - len(skipped), len(skipped), len(failed), time.time() - t0))
+     if skipped:
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 996026c..dc9623c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -81,6 +81,15 @@ jobs:
+         working-directory: desktop
+         run: npm run build
+ 
++      # tests/.timings.json: the last run's time per test on a runner, so run_all.py starts the longest first (without
++      # it, its hand-kept list). A new entry per run (the newest restores), each a few KB.
++      - name: Test timings
++        uses: actions/cache@PIN-TO-A-RELEASE-SHA  # v4 or newer, pinned by commit SHA like the other actions
++        with:
++          path: tests/.timings.json
++          key: test-timings-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
++          restore-keys: test-timings-${{ runner.os }}-
++
+       - name: Tests
+         run: python tests/run_all.py
+ 
+diff --git a/.gitignore b/.gitignore
+index 4c010de..41c742c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,5 +1,9 @@
+ # Python
+ __pycache__/
++# tests/run_all.py: this machine's last time per test (it starts the longest first)
++tests/.timings.json
++# tests/affected.py: each file's dependencies, by its size and time
++tests/.affected-cache.json
+ *.py[cod]
+ .venv/
+ venv/
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index d3b402b..83499d5 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -38,11 +38,16 @@ player's install. Stop what you started by its process id, never by name.
+ 
+ ```
+ py -3 tests/run_all.py              every test, each in its own process (several at once), with a summary
+-py -3 tests/run_all.py -j 1         one at a time (-j N: up to N at once); Ctrl+C stops the run at once
++py -3 tests/run_all.py -j 1         one at a time (-j N: keep about N cores busy); Ctrl+C stops the run at once
+ py -3 tests/run_all.py trash kb     only the tests whose path contains one of the words
++py -3 tests/run_all.py --changed    only the tests your changes since origin/main can reach (the fast loop while
++                                    iterating; tests/affected.py --why FILE says which and why)
+ py -3 tests/run_all.py --smoke      the report-only checks against your own data (never fail)
+ ```
+ 
++The runner starts the longest tests first, by this machine's last run (`tests/.timings.json`, not committed). The
++fast loop is for iterating; the full run stays the check before a commit.
++
+ A test that can't run on this machine (no `data/kb.db`, no game data, no node, no Edge, no linter) prints
+ `SKIP: <reason>` and exits with 77; the summary lists it apart from passes and failures. A new test that needs data
+ not in the repository does the same, and tests the rest of what it can. Tests never read this machine's

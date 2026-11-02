@@ -1,0 +1,1096 @@
+{
+ "jobs": 4,
+ "total": 67.9,
+ "tests": [
+  {
+   "name": "test_navmesh.py",
+   "wall": 62.71,
+   "cpu": 59.85,
+   "user": 52.32,
+   "rss_mb": 266,
+   "code": 0,
+   "start": 0.0,
+   "end": 62.71
+  },
+  {
+   "name": "test_rxp_explorer.py",
+   "wall": 45.91,
+   "cpu": 44.95,
+   "user": 43.21,
+   "rss_mb": 173,
+   "code": 0,
+   "start": 22.0,
+   "end": 67.9
+  },
+  {
+   "name": "test_types.py",
+   "wall": 17.71,
+   "cpu": 26.88,
+   "user": 25.97,
+   "rss_mb": 437,
+   "code": 1,
+   "start": 2.34,
+   "end": 20.06
+  },
+  {
+   "name": "test_desktop_main.py",
+   "wall": 7.03,
+   "cpu": 1.31,
+   "user": 1.03,
+   "rss_mb": 94,
+   "code": 0,
+   "start": 0.02,
+   "end": 7.06
+  },
+  {
+   "name": "test_rxp_routes.py",
+   "wall": 5.67,
+   "cpu": 5.55,
+   "user": 4.5,
+   "rss_mb": 236,
+   "code": 0,
+   "start": 27.38,
+   "end": 33.05
+  },
+  {
+   "name": "test_link.py",
+   "wall": 5.37,
+   "cpu": 4.68,
+   "user": 4.64,
+   "rss_mb": 28,
+   "code": 0,
+   "start": 13.12,
+   "end": 18.49
+  },
+  {
+   "name": "test_run_all_interrupt.py",
+   "wall": 3.42,
+   "cpu": 3.89,
+   "user": 3.13,
+   "rss_mb": 195,
+   "code": 0,
+   "start": 21.49,
+   "end": 24.91
+  },
+  {
+   "name": "kb/test_rxp_updates.py",
+   "wall": 2.92,
+   "cpu": 2.49,
+   "user": 2.15,
+   "rss_mb": 68,
+   "code": 0,
+   "start": 0.01,
+   "end": 2.92
+  },
+  {
+   "name": "test_dashboard_http.py",
+   "wall": 2.59,
+   "cpu": 0.34,
+   "user": 0.27,
+   "rss_mb": 33,
+   "code": 0,
+   "start": 8.31,
+   "end": 10.91
+  },
+  {
+   "name": "test_rxp_conditions.py",
+   "wall": 2.53,
+   "cpu": 2.44,
+   "user": 2.19,
+   "rss_mb": 67,
+   "code": 0,
+   "start": 21.5,
+   "end": 24.02
+  },
+  {
+   "name": "test_models.py",
+   "wall": 2.13,
+   "cpu": 0.64,
+   "user": 0.5,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 0.21,
+   "end": 2.34
+  },
+  {
+   "name": "test_narrator.py",
+   "wall": 1.95,
+   "cpu": 0.43,
+   "user": 0.34,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 18.49,
+   "end": 20.44
+  },
+  {
+   "name": "test_knowledge_seam.py",
+   "wall": 1.64,
+   "cpu": 1.2,
+   "user": 1.09,
+   "rss_mb": 40,
+   "code": 77,
+   "start": 13.08,
+   "end": 14.72
+  },
+  {
+   "name": "test_desktop_logfile.py",
+   "wall": 1.62,
+   "cpu": 1.17,
+   "user": 0.82,
+   "rss_mb": 98,
+   "code": 0,
+   "start": 9.66,
+   "end": 11.28
+  },
+  {
+   "name": "test_child_stdin.py",
+   "wall": 1.6,
+   "cpu": 0.13,
+   "user": 0.1,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 5.08,
+   "end": 6.68
+  },
+  {
+   "name": "test_rxp_facts.py",
+   "wall": 1.6,
+   "cpu": 0.67,
+   "user": 0.3,
+   "rss_mb": 26,
+   "code": 0,
+   "start": 24.2,
+   "end": 25.8
+  },
+  {
+   "name": "test_ptt.py",
+   "wall": 1.53,
+   "cpu": 0.25,
+   "user": 0.22,
+   "rss_mb": 28,
+   "code": 0,
+   "start": 19.97,
+   "end": 21.5
+  },
+  {
+   "name": "test_lint.py",
+   "wall": 1.34,
+   "cpu": 1.17,
+   "user": 1.11,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 15.05,
+   "end": 16.39
+  },
+  {
+   "name": "test_refresh_staging.py",
+   "wall": 1.32,
+   "cpu": 0.07,
+   "user": 0.05,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 20.49,
+   "end": 21.81
+  },
+  {
+   "name": "test_conversation.py",
+   "wall": 1.24,
+   "cpu": 0.6,
+   "user": 0.48,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 7.66,
+   "end": 8.9
+  },
+  {
+   "name": "test_strip_spec.py",
+   "wall": 1.18,
+   "cpu": 1.16,
+   "user": 1.12,
+   "rss_mb": 27,
+   "code": 0,
+   "start": 30.08,
+   "end": 31.26
+  },
+  {
+   "name": "test_rxp_live.py",
+   "wall": 1.1,
+   "cpu": 1.04,
+   "user": 0.87,
+   "rss_mb": 62,
+   "code": 0,
+   "start": 25.74,
+   "end": 26.84
+  },
+  {
+   "name": "test_endpoints.py",
+   "wall": 0.98,
+   "cpu": 0.22,
+   "user": 0.19,
+   "rss_mb": 28,
+   "code": 0,
+   "start": 11.28,
+   "end": 12.26
+  },
+  {
+   "name": "test_community_feed.py",
+   "wall": 0.96,
+   "cpu": 0.87,
+   "user": 0.63,
+   "rss_mb": 151,
+   "code": 0,
+   "start": 7.35,
+   "end": 8.31
+  },
+  {
+   "name": "test_tuning.py",
+   "wall": 0.96,
+   "cpu": 0.49,
+   "user": 0.37,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 31.66,
+   "end": 32.62
+  },
+  {
+   "name": "kb/test_store.py",
+   "wall": 0.95,
+   "cpu": 0.88,
+   "user": 0.78,
+   "rss_mb": 32,
+   "code": 0,
+   "start": 35.2,
+   "end": 36.15
+  },
+  {
+   "name": "test_desktop_stores.py",
+   "wall": 0.91,
+   "cpu": 1.12,
+   "user": 0.83,
+   "rss_mb": 94,
+   "code": 0,
+   "start": 10.91,
+   "end": 11.82
+  },
+  {
+   "name": "kb/test_analyzer.py",
+   "wall": 0.84,
+   "cpu": 0.69,
+   "user": 0.63,
+   "rss_mb": 32,
+   "code": 0,
+   "start": 33.05,
+   "end": 33.89
+  },
+  {
+   "name": "kb/test_mechanics.py",
+   "wall": 0.83,
+   "cpu": 0.8,
+   "user": 0.74,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 34.37,
+   "end": 35.2
+  },
+  {
+   "name": "test_state_stream.py",
+   "wall": 0.74,
+   "cpu": 0.2,
+   "user": 0.16,
+   "rss_mb": 30,
+   "code": 0,
+   "start": 29.34,
+   "end": 30.08
+  },
+  {
+   "name": "kb/test_community.py",
+   "wall": 0.74,
+   "cpu": 0.61,
+   "user": 0.54,
+   "rss_mb": 35,
+   "code": 0,
+   "start": 33.44,
+   "end": 34.17
+  },
+  {
+   "name": "test_dashboard_layout.py",
+   "wall": 0.71,
+   "cpu": 0.16,
+   "user": 0.14,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 8.9,
+   "end": 9.61
+  },
+  {
+   "name": "test_ptt_online.py",
+   "wall": 0.71,
+   "cpu": 0.21,
+   "user": 0.17,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 20.06,
+   "end": 20.77
+  },
+  {
+   "name": "kb/test_live_logs.py",
+   "wall": 0.7,
+   "cpu": 0.55,
+   "user": 0.5,
+   "rss_mb": 32,
+   "code": 0,
+   "start": 34.17,
+   "end": 34.88
+  },
+  {
+   "name": "test_node_output_encoding.py",
+   "wall": 0.61,
+   "cpu": 0.58,
+   "user": 0.55,
+   "rss_mb": 17,
+   "code": 0,
+   "start": 18.85,
+   "end": 19.47
+  },
+  {
+   "name": "test_rxp_visibility.py",
+   "wall": 0.58,
+   "cpu": 0.53,
+   "user": 0.49,
+   "rss_mb": 31,
+   "code": 77,
+   "start": 27.75,
+   "end": 28.33
+  },
+  {
+   "name": "test_rxp_quests.py",
+   "wall": 0.54,
+   "cpu": 0.51,
+   "user": 0.41,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 26.84,
+   "end": 27.38
+  },
+  {
+   "name": "test_page_sizes.py",
+   "wall": 0.5,
+   "cpu": 0.5,
+   "user": 0.48,
+   "rss_mb": 26,
+   "code": 0,
+   "start": 19.47,
+   "end": 19.97
+  },
+  {
+   "name": "test_release_notes.py",
+   "wall": 0.49,
+   "cpu": 0.45,
+   "user": 0.28,
+   "rss_mb": 47,
+   "code": 0,
+   "start": 20.77,
+   "end": 21.26
+  },
+  {
+   "name": "test_rxp_prep.py",
+   "wall": 0.46,
+   "cpu": 0.47,
+   "user": 0.33,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 26.57,
+   "end": 27.03
+  },
+  {
+   "name": "test_rxp_route.py",
+   "wall": 0.45,
+   "cpu": 0.47,
+   "user": 0.36,
+   "rss_mb": 47,
+   "code": 0,
+   "start": 27.03,
+   "end": 27.49
+  },
+  {
+   "name": "test_log.py",
+   "wall": 0.44,
+   "cpu": 0.4,
+   "user": 0.35,
+   "rss_mb": 20,
+   "code": 0,
+   "start": 16.66,
+   "end": 17.1
+  },
+  {
+   "name": "test_coach_api.py",
+   "wall": 0.42,
+   "cpu": 0.21,
+   "user": 0.17,
+   "rss_mb": 29,
+   "code": 77,
+   "start": 6.68,
+   "end": 7.1
+  },
+  {
+   "name": "test_loops.py",
+   "wall": 0.41,
+   "cpu": 0.37,
+   "user": 0.34,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 17.1,
+   "end": 17.51
+  },
+  {
+   "name": "test_rxp_geometry.py",
+   "wall": 0.41,
+   "cpu": 0.48,
+   "user": 0.39,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 24.91,
+   "end": 25.33
+  },
+  {
+   "name": "test_rxp_import.py",
+   "wall": 0.41,
+   "cpu": 0.39,
+   "user": 0.32,
+   "rss_mb": 56,
+   "code": 0,
+   "start": 25.33,
+   "end": 25.74
+  },
+  {
+   "name": "test_rxp_narration.py",
+   "wall": 0.39,
+   "cpu": 0.44,
+   "user": 0.34,
+   "rss_mb": 52,
+   "code": 0,
+   "start": 25.8,
+   "end": 26.19
+  },
+  {
+   "name": "test_rxp_plan.py",
+   "wall": 0.38,
+   "cpu": 0.38,
+   "user": 0.31,
+   "rss_mb": 46,
+   "code": 0,
+   "start": 26.19,
+   "end": 26.57
+  },
+  {
+   "name": "test_mute.py",
+   "wall": 0.37,
+   "cpu": 0.15,
+   "user": 0.12,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 18.48,
+   "end": 18.85
+  },
+  {
+   "name": "test_coach_start.py",
+   "wall": 0.35,
+   "cpu": 0.2,
+   "user": 0.19,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 7.1,
+   "end": 7.46
+  },
+  {
+   "name": "test_kb_build_guard.py",
+   "wall": 0.35,
+   "cpu": 0.26,
+   "user": 0.24,
+   "rss_mb": 23,
+   "code": 0,
+   "start": 12.77,
+   "end": 13.12
+  },
+  {
+   "name": "test_maps.py",
+   "wall": 0.35,
+   "cpu": 0.35,
+   "user": 0.34,
+   "rss_mb": 36,
+   "code": 77,
+   "start": 17.76,
+   "end": 18.11
+  },
+  {
+   "name": "test_settings_manifest.py",
+   "wall": 0.35,
+   "cpu": 0.3,
+   "user": 0.2,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 28.44,
+   "end": 28.8
+  },
+  {
+   "name": "test_buffs.py",
+   "wall": 0.33,
+   "cpu": 0.2,
+   "user": 0.18,
+   "rss_mb": 28,
+   "code": 0,
+   "start": 3.86,
+   "end": 4.2
+  },
+  {
+   "name": "test_link_restart.py",
+   "wall": 0.33,
+   "cpu": 0.3,
+   "user": 0.26,
+   "rss_mb": 33,
+   "code": 0,
+   "start": 14.72,
+   "end": 15.05
+  },
+  {
+   "name": "kb/test_heuristics.py",
+   "wall": 0.33,
+   "cpu": 0.3,
+   "user": 0.26,
+   "rss_mb": 21,
+   "code": 0,
+   "start": 33.89,
+   "end": 34.23
+  },
+  {
+   "name": "test_glideconfig.py",
+   "wall": 0.32,
+   "cpu": 0.22,
+   "user": 0.18,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 12.18,
+   "end": 12.51
+  },
+  {
+   "name": "test_strip_version.py",
+   "wall": 0.32,
+   "cpu": 0.31,
+   "user": 0.28,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 31.26,
+   "end": 31.58
+  },
+  {
+   "name": "test_calibrate.py",
+   "wall": 0.3,
+   "cpu": 0.26,
+   "user": 0.24,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 4.43,
+   "end": 4.72
+  },
+  {
+   "name": "test_billing.py",
+   "wall": 0.29,
+   "cpu": 0.21,
+   "user": 0.19,
+   "rss_mb": 28,
+   "code": 0,
+   "start": 3.4,
+   "end": 3.69
+  },
+  {
+   "name": "test_coach_said.py",
+   "wall": 0.29,
+   "cpu": 0.26,
+   "user": 0.22,
+   "rss_mb": 26,
+   "code": 0,
+   "start": 7.06,
+   "end": 7.35
+  },
+  {
+   "name": "test_memory.py",
+   "wall": 0.29,
+   "cpu": 0.18,
+   "user": 0.15,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 18.11,
+   "end": 18.4
+  },
+  {
+   "name": "kb/test_rxp_parser.py",
+   "wall": 0.29,
+   "cpu": 0.23,
+   "user": 0.21,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 35.11,
+   "end": 35.4
+  },
+  {
+   "name": "test_capture_fit.py",
+   "wall": 0.28,
+   "cpu": 0.28,
+   "user": 0.25,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 4.72,
+   "end": 5.01
+  },
+  {
+   "name": "test_xph_history.py",
+   "wall": 0.28,
+   "cpu": 0.18,
+   "user": 0.15,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 32.9,
+   "end": 33.18
+  },
+  {
+   "name": "test_llm_efficiency.py",
+   "wall": 0.27,
+   "cpu": 0.2,
+   "user": 0.18,
+   "rss_mb": 25,
+   "code": 77,
+   "start": 16.39,
+   "end": 16.66
+  },
+  {
+   "name": "test_rxp_settings_cache.py",
+   "wall": 0.26,
+   "cpu": 0.22,
+   "user": 0.2,
+   "rss_mb": 25,
+   "code": 77,
+   "start": 27.49,
+   "end": 27.75
+  },
+  {
+   "name": "kb/test_api.py",
+   "wall": 0.26,
+   "cpu": 0.16,
+   "user": 0.15,
+   "rss_mb": 21,
+   "code": 77,
+   "start": 33.18,
+   "end": 33.44
+  },
+  {
+   "name": "test_health_kb.py",
+   "wall": 0.25,
+   "cpu": 0.16,
+   "user": 0.14,
+   "rss_mb": 23,
+   "code": 0,
+   "start": 12.43,
+   "end": 12.68
+  },
+  {
+   "name": "test_helpers.py",
+   "wall": 0.24,
+   "cpu": 0.24,
+   "user": 0.21,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 12.56,
+   "end": 12.8
+  },
+  {
+   "name": "kb/test_params_registry.py",
+   "wall": 0.24,
+   "cpu": 0.23,
+   "user": 0.19,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 34.88,
+   "end": 35.11
+  },
+  {
+   "name": "test_build_install.py",
+   "wall": 0.23,
+   "cpu": 0.2,
+   "user": 0.15,
+   "rss_mb": 17,
+   "code": 0,
+   "start": 4.2,
+   "end": 4.43
+  },
+  {
+   "name": "test_gear.py",
+   "wall": 0.23,
+   "cpu": 0.19,
+   "user": 0.15,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 11.95,
+   "end": 12.18
+  },
+  {
+   "name": "test_settings_save.py",
+   "wall": 0.23,
+   "cpu": 0.21,
+   "user": 0.18,
+   "rss_mb": 25,
+   "code": 0,
+   "start": 28.8,
+   "end": 29.02
+  },
+  {
+   "name": "test_dashboard_page.py",
+   "wall": 0.21,
+   "cpu": 0.12,
+   "user": 0.1,
+   "rss_mb": 21,
+   "code": 77,
+   "start": 0.0,
+   "end": 0.21
+  },
+  {
+   "name": "test_config_load.py",
+   "wall": 0.21,
+   "cpu": 0.2,
+   "user": 0.15,
+   "rss_mb": 24,
+   "code": 0,
+   "start": 7.46,
+   "end": 7.66
+  },
+  {
+   "name": "test_lua_strings.py",
+   "wall": 0.21,
+   "cpu": 0.18,
+   "user": 0.18,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 17.56,
+   "end": 17.76
+  },
+  {
+   "name": "test_settings_schema.py",
+   "wall": 0.21,
+   "cpu": 0.2,
+   "user": 0.18,
+   "rss_mb": 43,
+   "code": 0,
+   "start": 29.02,
+   "end": 29.23
+  },
+  {
+   "name": "test_away.py",
+   "wall": 0.18,
+   "cpu": 0.18,
+   "user": 0.16,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 3.22,
+   "end": 3.4
+  },
+  {
+   "name": "test_rxp_dungeons_switch.py",
+   "wall": 0.18,
+   "cpu": 0.1,
+   "user": 0.09,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 21.81,
+   "end": 21.99
+  },
+  {
+   "name": "test_rxp_extras.py",
+   "wall": 0.18,
+   "cpu": 0.18,
+   "user": 0.15,
+   "rss_mb": 27,
+   "code": 0,
+   "start": 24.02,
+   "end": 24.2
+  },
+  {
+   "name": "test_briefing.py",
+   "wall": 0.17,
+   "cpu": 0.12,
+   "user": 0.11,
+   "rss_mb": 21,
+   "code": 77,
+   "start": 3.69,
+   "end": 3.86
+  },
+  {
+   "name": "test_haiku_tuning.py",
+   "wall": 0.17,
+   "cpu": 0.11,
+   "user": 0.1,
+   "rss_mb": 19,
+   "code": 0,
+   "start": 12.26,
+   "end": 12.43
+  },
+  {
+   "name": "test_kb_refresh.py",
+   "wall": 0.16,
+   "cpu": 0.13,
+   "user": 0.08,
+   "rss_mb": 16,
+   "code": 0,
+   "start": 12.8,
+   "end": 12.96
+  },
+  {
+   "name": "test_versions.py",
+   "wall": 0.14,
+   "cpu": 0.13,
+   "user": 0.12,
+   "rss_mb": 22,
+   "code": 0,
+   "start": 32.62,
+   "end": 32.75
+  },
+  {
+   "name": "test_websearch.py",
+   "wall": 0.14,
+   "cpu": 0.14,
+   "user": 0.12,
+   "rss_mb": 23,
+   "code": 77,
+   "start": 32.75,
+   "end": 32.9
+  },
+  {
+   "name": "kb/test_map_bounds.py",
+   "wall": 0.14,
+   "cpu": 0.13,
+   "user": 0.12,
+   "rss_mb": 19,
+   "code": 0,
+   "start": 34.23,
+   "end": 34.37
+  },
+  {
+   "name": "test_reminders.py",
+   "wall": 0.13,
+   "cpu": 0.12,
+   "user": 0.1,
+   "rss_mb": 20,
+   "code": 77,
+   "start": 21.26,
+   "end": 21.38
+  },
+  {
+   "name": "test_addon.py",
+   "wall": 0.12,
+   "cpu": 0.11,
+   "user": 0.09,
+   "rss_mb": 19,
+   "code": 0,
+   "start": 2.92,
+   "end": 3.04
+  },
+  {
+   "name": "test_saved_variables.py",
+   "wall": 0.12,
+   "cpu": 0.11,
+   "user": 0.07,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 28.33,
+   "end": 28.44
+  },
+  {
+   "name": "test_kb_stale_hash.py",
+   "wall": 0.11,
+   "cpu": 0.08,
+   "user": 0.06,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 12.96,
+   "end": 13.08
+  },
+  {
+   "name": "test_extras.py",
+   "wall": 0.1,
+   "cpu": 0.1,
+   "user": 0.09,
+   "rss_mb": 21,
+   "code": 77,
+   "start": 11.85,
+   "end": 11.95
+  },
+  {
+   "name": "test_addon_panel.py",
+   "wall": 0.09,
+   "cpu": 0.08,
+   "user": 0.07,
+   "rss_mb": 19,
+   "code": 0,
+   "start": 3.04,
+   "end": 3.13
+  },
+  {
+   "name": "test_addon_training.py",
+   "wall": 0.09,
+   "cpu": 0.09,
+   "user": 0.07,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 3.13,
+   "end": 3.22
+  },
+  {
+   "name": "test_ipc_contract.py",
+   "wall": 0.09,
+   "cpu": 0.05,
+   "user": 0.05,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 12.68,
+   "end": 12.77
+  },
+  {
+   "name": "test_memory_gate.py",
+   "wall": 0.08,
+   "cpu": 0.07,
+   "user": 0.06,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 18.4,
+   "end": 18.48
+  },
+  {
+   "name": "test_changelog.py",
+   "wall": 0.07,
+   "cpu": 0.04,
+   "user": 0.04,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 5.01,
+   "end": 5.08
+  },
+  {
+   "name": "test_requirements.py",
+   "wall": 0.07,
+   "cpu": 0.07,
+   "user": 0.06,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 21.43,
+   "end": 21.49
+  },
+  {
+   "name": "test_state_addon.py",
+   "wall": 0.07,
+   "cpu": 0.07,
+   "user": 0.06,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 29.27,
+   "end": 29.34
+  },
+  {
+   "name": "test_recorder_taxi.py",
+   "wall": 0.06,
+   "cpu": 0.06,
+   "user": 0.05,
+   "rss_mb": 18,
+   "code": 0,
+   "start": 20.44,
+   "end": 20.49
+  },
+  {
+   "name": "test_dbd_fallback.py",
+   "wall": 0.05,
+   "cpu": 0.04,
+   "user": 0.04,
+   "rss_mb": 15,
+   "code": 77,
+   "start": 9.61,
+   "end": 9.66
+  },
+  {
+   "name": "test_health_owner.py",
+   "wall": 0.05,
+   "cpu": 0.05,
+   "user": 0.04,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 12.51,
+   "end": 12.56
+  },
+  {
+   "name": "test_engine_contract.py",
+   "wall": 0.04,
+   "cpu": 0.03,
+   "user": 0.03,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 11.82,
+   "end": 11.85
+  },
+  {
+   "name": "test_lua_sandbox.py",
+   "wall": 0.04,
+   "cpu": 0.04,
+   "user": 0.03,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 17.51,
+   "end": 17.56
+  },
+  {
+   "name": "test_repair.py",
+   "wall": 0.04,
+   "cpu": 0.04,
+   "user": 0.03,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 21.38,
+   "end": 21.43
+  },
+  {
+   "name": "test_spell_icons.py",
+   "wall": 0.04,
+   "cpu": 0.03,
+   "user": 0.03,
+   "rss_mb": 15,
+   "code": 77,
+   "start": 29.23,
+   "end": 29.27
+  },
+  {
+   "name": "test_sv_field.py",
+   "wall": 0.04,
+   "cpu": 0.04,
+   "user": 0.03,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 31.58,
+   "end": 31.61
+  },
+  {
+   "name": "test_trash.py",
+   "wall": 0.04,
+   "cpu": 0.04,
+   "user": 0.04,
+   "rss_mb": 15,
+   "code": 0,
+   "start": 31.61,
+   "end": 31.66
+  },
+  {
+   "name": "test_golden.py",
+   "wall": 0.02,
+   "cpu": 0.02,
+   "user": 0.01,
+   "rss_mb": 15,
+   "code": 77,
+   "start": 0.0,
+   "end": 0.02
+  }
+ ]
+}

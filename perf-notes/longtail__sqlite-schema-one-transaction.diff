@@ -1,0 +1,69 @@
+diff --git a/knowledge/store.py b/knowledge/store.py
+--- a/knowledge/store.py
++++ b/knowledge/store.py
+@@ -250,9 +250,12 @@ def create_schema(conn):
+     with open(SCHEMA, encoding="utf-8") as fh:
+         script = fh.read()
+     try:
+-        conn.executescript(script)
++        # one transaction: run bare, each of the ~85 statements commits (a journal file and its syncs) on its own
++        conn.executescript("BEGIN;\n%s\nCOMMIT;" % script)
+         return
+     except sqlite3.OperationalError as e:
++        if conn.in_transaction:
++            conn.rollback()
+         if "duplicate column" not in str(e):
+             raise
+     # schema applied to an existing database: run statement by statement, skipping columns that exist
+diff --git a/tests/kb/fixture.py b/tests/kb/fixture.py
+--- a/tests/kb/fixture.py
++++ b/tests/kb/fixture.py
+@@ -258,7 +258,7 @@ def glide_db(path, run=None):
+     if os.path.exists(path):
+         os.remove(path)
+     c = sqlite3.connect(path)
+-    c.executescript(build_db.SCHEMA)
++    build_db.create_schema(c)
+     ins = lambda t, rows: rows and c.executemany(  # noqa: E731
+diff --git a/tests/kb/test_store.py b/tests/kb/test_store.py
+--- a/tests/kb/test_store.py
++++ b/tests/kb/test_store.py
+@@ -45,6 +45,23 @@
++def test_schema_one_transaction(tmpdir):
++    """Both schemas go in as one transaction even on a plain connection: run bare, each CREATE commits (a journal file
++    and its syncs) on its own, 85 of them per kb.db, which made every fixture database cost seconds on Windows."""
++    import build_db
++    for name, create in (("kb", store.create_schema), ("glide", build_db.create_schema)):
++        c = sqlite3.connect(os.path.join(tmpdir, "schema-%s.db" % name))
++        said = []
++        c.set_trace_callback(said.append)
++        create(c)
++        c.set_trace_callback(None)
++        words = [s.split(None, 1)[0].rstrip(";").upper() for s in said if s.strip()]
++        ends = [w for w in words if w in ("BEGIN", "COMMIT")]
++        check(ends == ["BEGIN", "COMMIT"] and not c.in_transaction, "%s schema: %s" % (name, ends))
++        check(c.execute("SELECT count(*) FROM sqlite_master WHERE type = 'table'").fetchone()[0] > 10, name)
++        c.close()
++
++
+ def test_coords():
+@@ -361,6 +378,7 @@ def main():
+     tmpdir = fixture.tmpdir("store-")
+     try:
++        test_schema_one_transaction(tmpdir)
+         test_staleness(tmpdir)
+diff --git a/tools/build_db.py b/tools/build_db.py
+--- a/tools/build_db.py
++++ b/tools/build_db.py
+@@ -404,6 +404,11 @@ def parse_goto(args):
++def create_schema(db):
++    """SCHEMA in one transaction (statement by statement, each would commit and sync on its own)."""
++    db.executescript("BEGIN;\n%s\nCOMMIT;" % SCHEMA)
++
++
+ SCHEMA = """
+@@ -754,7 +759,7 @@ def build(args):
+     db = sqlite3.connect(tmp)
+-    db.executescript(SCHEMA)
++    create_schema(db)
+     n_quests = write_quests(db, book, seed)

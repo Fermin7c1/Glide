@@ -1,0 +1,42 @@
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index b54437f..5547869 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -98,10 +98,36 @@ jobs:
+         if: steps.ver.outputs.exists == 'false'
+         run: npm ci
+ 
+-      - name: Bundled Python
++      # fetch-python.ps1's output depends only on the script (its pinned, hash-checked downloads) and the runner
++      # image (the Visual C++ runtime DLLs it copies from System32): cached under both, it is rebuilt when either
++      # changes. A cache is only saved by a job that succeeded, and only main's runs reach this environment.
++      - name: Runner image
++        id: img
++        if: steps.ver.outputs.exists == 'false'
++        run: '"image=${env:ImageOS}-${env:ImageVersion}" >> $env:GITHUB_OUTPUT'
++
++      - name: Bundled Python (cache)
++        id: pycache
+         if: steps.ver.outputs.exists == 'false'
++        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
++        with:
++          path: desktop/build/python
++          key: bundled-python-${{ steps.img.outputs.image }}-${{ hashFiles('desktop/scripts/fetch-python.ps1') }}
++
++      - name: Bundled Python
++        if: steps.ver.outputs.exists == 'false' && steps.pycache.outputs.cache-hit != 'true'
+         run: npm run python
+ 
++      # the script's own smoke test, on the cached runtime
++      - name: Bundled Python works
++        if: steps.ver.outputs.exists == 'false' && steps.pycache.outputs.cache-hit == 'true'
++        env:
++          PYTHONDONTWRITEBYTECODE: "1"
++          PYTHONNOUSERSITE: "1"
++        run: |
++          build\python\python.exe -c "import sys, sqlite3, ctypes, winsound, json, zlib, numpy; print('python', sys.version.split()[0], 'numpy', numpy.__version__)"
++          if ($LASTEXITCODE -ne 0) { Write-Host "::error::the cached bundled Python doesn't run"; exit 1 }
++
+       # electron-builder uploads the installer and its blockmap in parallel, and each upload creates the release if
+       # it can't find one; two creates race and the loser fails the build. A draft made up front is found by both.
+       - name: Draft the release

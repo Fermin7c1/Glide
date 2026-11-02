@@ -1,0 +1,17 @@
+diff --git a/tests/test_types.py b/tests/test_types.py
+index e32d7eb..33c4601 100644
+--- a/tests/test_types.py
++++ b/tests/test_types.py
+@@ -22,8 +22,10 @@ exe = shutil.which("pyright")
+ if not exe:
+     print("SKIP: pyright not installed")
+     raise SystemExit(77)
+-r = subprocess.run([exe, "--outputjson", "companion"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+-                   errors="replace")
++# as the engine runs: the bundled Python 3.12 on Windows (desktop/scripts/fetch-python.ps1), on any machine; checked
++# under this machine's Python and OS instead, the Windows-only modules (capture, overlay, ptt) gain errors elsewhere
++r = subprocess.run([exe, "--outputjson", "--pythonplatform", "Windows", "--pythonversion", "3.12", "companion"],
++                   cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+ try:
+     out = json.loads(r.stdout)
+ except ValueError:

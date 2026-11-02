@@ -1,0 +1,24 @@
+diff --git a/tests/test_release_notes.py b/tests/test_release_notes.py
+--- a/tests/test_release_notes.py
++++ b/tests/test_release_notes.py
+@@ -28,19 +28,22 @@
+ def git(*args):
+     # a repo-local identity for the scratch commits (never the global config)
++    # (no automatic maintenance: each commit would otherwise start another git process or two)
+     r = subprocess.run([git_exe, "-c", "user.name=Glide test", "-c", "user.email=test@example.invalid",
+-                        "-c", "commit.gpgsign=false", *args], cwd=tmp, capture_output=True, text=True,
++                        "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0", *args],
++                       cwd=tmp, capture_output=True, text=True,
+                        encoding="utf-8")
+-def commit(subject):
++def commit(subject, sha=False):
++    """Commit everything with this subject; sha=True returns the commit's id (one git process fewer otherwise)."""
+     ...
+-    return git("rev-parse", "HEAD")
++    return git("rev-parse", "HEAD") if sha else None
+-    c2 = commit("Docs: the plan")
++    c2 = commit("Docs: the plan", sha=True)
+-    c3 = commit("CI: faster checks")
++    c3 = commit("CI: faster checks", sha=True)
+-    c4 = commit("Knowledge refresh 2026-11-01")
++    c4 = commit("Knowledge refresh 2026-11-01", sha=True)

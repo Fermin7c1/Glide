@@ -1,0 +1,26 @@
+(full file: /tmp/claude-0/-home-user-Glide/4ddc3f14-3355-571d-9bad-778daa3d02a0/scratchpad/perf/lt_tools/diffs/p7_interrupt.diff)
++tmp = tempfile.mkdtemp(prefix="glide-run-all-interrupt-")
++try:
++    tests = os.path.join(tmp, "tests")
++    os.makedirs(tests)
++    shutil.copy(os.path.join(ROOT, "tests", "run_all.py"), tests)
++    marks = os.path.join(tmp, "started")
++    os.makedirs(marks)
++    long_test = ("import os, sys, time\nopen(os.path.join(%r, os.path.basename(sys.argv[0])), 'w').close()\n"
++                 "time.sleep(120)\n" % marks)
++    for i in range(6):                                    # two run at a time; four wait in the queue
++        with open(os.path.join(tests, "test_long_%d.py" % i), "w", encoding="utf-8") as fh:
++            fh.write(long_test)
++    p = subprocess.Popen([sys.executable, os.path.join(tests, "run_all.py"), "-j", "2"], cwd=tmp, ..., start_new_session=True, env=env)
++    deadline = time.time() + 30
++    while len(os.listdir(marks)) < 2 and p.poll() is None:
++        assert time.time() < deadline, "the runner never started two tests"
++        time.sleep(0.02)
++    time.sleep(0.2)
++    t0 = time.time()
++    os.killpg(p.pid, signal.SIGINT)
++    ... (same communicate/timeout and the same three asserts as before)
++    time.sleep(0.3)                                       # a queued test started after Ctrl+C would have marked by now
++    assert sorted(os.listdir(marks)) == ["test_long_0.py", "test_long_1.py"], os.listdir(marks)
++finally:
++    shutil.rmtree(tmp, ignore_errors=True)

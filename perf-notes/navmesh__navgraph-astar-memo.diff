@@ -1,0 +1,134 @@
+diff --git a/knowledge/mechanics/nav.py b/knowledge/mechanics/nav.py
+index 6188fdd..88ef2c8 100644
+--- a/knowledge/mechanics/nav.py
++++ b/knowledge/mechanics/nav.py
+@@ -237,6 +237,9 @@ class NavGraph:
+             self.tarea = z["tarea"]
+             self.nz, self.nlink, self.nkind = z["nz"], z["nlink"], z["nkind"]
+             self.ncxy, self.nreach = z["ncxy"], z["nreach"]
++        # index() runs for every node the planner looks at: the small tables as lists, the per-cell ones flat
++        self._tidx, self._tbase = self.tidx.tolist(), self.tbase.tolist()
++        self._tcnt, self._tcum = self.tcnt.reshape(-1), self.tcum.reshape(-1)
+         self.L = LAYERS
+         self.H, self.W = self.tidx.shape[0] * 64, self.tidx.shape[1] * 64
+         self.fine = self.cell / 8.0
+@@ -252,13 +255,13 @@ class NavGraph:
+         l, r, c = n
+         if r < 0 or c < 0 or r >= self.H or c >= self.W:
+             return -1
+-        s = int(self.tidx[r >> 6, c >> 6])
++        s = self._tidx[r >> 6][c >> 6]
+         if s < 0:
+             return -1
+-        lr, lc = r & 63, c & 63
+-        if l >= int(self.tcnt[s, lr, lc]):
++        k = (s << 12) | ((r & 63) << 6) | (c & 63)           # [s, r & 63, c & 63] of the (S, 64, 64) tables
++        if l >= self._tcnt.item(k):
+             return -1
+-        return int(self.tbase[s]) + int(self.tcum[s, lr, lc]) + l
++        return self._tbase[s] + self._tcum.item(k) + l
+ 
+     def nbytes(self):
+         return sum(a.nbytes for a in (self.tidx, self.tcnt, self.tcum, self.tbase, self.tarea, self.nz, self.nlink,
+@@ -382,25 +385,28 @@ class NavGraph:
+         r1 = min(self.H, max(a[1], b[1]) + margin + 1)
+         c0 = max(0, min(a[2], b[2]) - margin)
+         c1 = min(self.W, max(a[2], b[2]) + margin + 1)
+-        wb = self.world_of(b)
+-        kind, link, zarr = self.kind, self.link, self.z
+-        cache = {}
+-
+-        def pos(n):
+-            p = cache.get(n)
+-            if p is None:
+-                p = cache[n] = self.world_of(n)
+-            return p
+-
+-        def heur(n):
+-            p = pos(n)
+-            return math.hypot(p[0] - wb[0], p[1] - wb[1])
++        index, nz, nkind, nlink, ncxy, fine = self.index, self.nz, self.nkind, self.nlink, self.ncxy, self.fine
++        ox, oy = (32.0 - self.ty0) * TILE, (32.0 - self.tx0) * TILE
++        seen = {}
++
++        def info(n):
++            """(z, kind, link, world X, world Y) of node n, read once per search (NONE, 0, 0 without a node)."""
++            v = seen.get(n)
++            if v is None:
++                i = index(n)
++                z, k, m, cxy = (nz.item(i), nkind.item(i), nlink.item(i), ncxy.item(i)) if i >= 0 else (NONE, 0, 0, 0)
++                v = seen[n] = (z, k, m, ox - (n[1] * 8 + ((cxy >> 4) + 0.5)) * fine,
++                               oy - (n[2] * 8 + ((cxy & 15) + 0.5)) * fine)
++            return v
++        wbx, wby = info(b)[3:]
+         best = {a: 0.0}
+         prev = {}
+-        pq = [(heur(a), 0.0, a)]
++        pa = info(a)
++        pq = [(math.hypot(pa[3] - wbx, pa[4] - wby), 0.0, a)]
+         expanded = 0
+         links = links or {}
+         goal_cell = (b[1], b[2])
++        hypot, push = math.hypot, heapq.heappush
+         while pq:
+             _f, d, n = heapq.heappop(pq)
+             if n == b or (any_floor and (n[1], n[2]) == goal_cell):
+@@ -412,9 +418,7 @@ class NavGraph:
+             if expanded > max_expand:
+                 return None, None, expanded
+             l, r, c = n
+-            m = int(link[l, r, c])
+-            zn, kn = int(zarr[n]), int(kind[n])
+-            pa = pos(n)
++            zn, kn, m, pax, pay = info(n)
+             if m & 0xFF:
+                 for dd in range(8):
+                     if not (m >> dd) & 1:
+@@ -424,38 +428,36 @@ class NavGraph:
+                     if rr < r0 or rr >= r1 or cc < c0 or cc >= c1:
+                         continue
+                     j = ((m >> (8 + 2 * dd)) & 3, rr, cc)
+-                    zj = int(zarr[j])
++                    zj, k, _m, pbx, pby = info(j)
+                     if zj == NONE:
+                         continue
+-                    k = int(kind[j])
+                     if (k == 3 or kn == 3) and zj - zn > CLIMB_HALF:
+                         continue                   # never up a slope too steep to walk, beyond a hop
+-                    pb = pos(j)
+-                    nd = d + math.hypot(pb[0] - pa[0], pb[1] - pa[1]) * (1.5 if k == 2 else 1.15 if k == 3 else 1.0)
++                    nd = d + hypot(pbx - pax, pby - pay) * (1.5 if k == 2 else 1.15 if k == 3 else 1.0)
+                     if nd < best.get(j, 1e18):
+                         best[j] = nd
+                         prev[j] = n
+-                        heapq.heappush(pq, (nd + heur(j), nd, j))
++                        push(pq, (nd + hypot(pbx - wbx, pby - wby), nd, j))
+             if m >> 24:
+                 for lj in range(4):                # steps to another floor of the same cell
+                     if not (m >> (24 + lj)) & 1:
+                         continue
+                     j = (lj, r, c)
+-                    zj = int(zarr[j])
+-                    if zj == NONE or ((int(kind[j]) == 3 or kn == 3) and zj - zn > CLIMB_HALF):
++                    zj, k, _m, pbx, pby = info(j)
++                    if zj == NONE or ((k == 3 or kn == 3) and zj - zn > CLIMB_HALF):
+                         continue
+-                    pb = pos(j)
+-                    nd = d + max(1.0, math.hypot(pb[0] - pa[0], pb[1] - pa[1]))
++                    nd = d + max(1.0, hypot(pbx - pax, pby - pay))
+                     if nd < best.get(j, 1e18):
+                         best[j] = nd
+                         prev[j] = n
+-                        heapq.heappush(pq, (nd + heur(j), nd, j))
++                        push(pq, (nd + hypot(pbx - wbx, pby - wby), nd, j))
+             for j, cost in links.get(n, ()):
+                 nd = d + cost
+                 if nd < best.get(j, 1e18):
+                     best[j] = nd
+                     prev[j] = n
+-                    heapq.heappush(pq, (nd + heur(j), nd, j))
++                    pj = info(j)
++                    push(pq, (nd + hypot(pj[3] - wbx, pj[4] - wby), nd, j))
+         if b not in best:
+             return None, None, expanded
+         path = [b]

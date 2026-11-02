@@ -1,0 +1,79 @@
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index b54437f..f491f53 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -1,5 +1,6 @@
+ # Builds the Windows installer and publishes it to the public Fermin7c1/Glide-releases repo on every push to main
+-# that changes what players get (the paths below: what the installer ships), after the CI checks (ci.yml) pass.
++# that changes what players get (the paths below: what the installer ships), once the CI checks (ci.yml) pass: the
++# build and its upload to a draft release run alongside the checks, and only publishing the draft waits for them.
+ # Installed apps check that repo and update themselves. The version is the next patch after the last release, or
+ # desktop/package.json's version when it was raised by hand (scripts/next-release.js); it is never committed back.
+ #
+@@ -31,15 +32,20 @@ concurrency:
+   cancel-in-progress: false
+ 
+ jobs:
+-  # the same checks as every push (ci.yml: tests, portable golden masters, linters, desktop build); a release is
+-  # built only when they pass
++  # the same checks as every push (ci.yml: tests, portable golden masters, linters, desktop build); they run while
++  # the installer builds, and the release is published only when they pass (publish, below)
+   test:
+     uses: ./.github/workflows/ci.yml
+ 
+-  release:
+-    needs: test
++  # builds the installer and uploads it to a draft release alongside the tests. A draft is invisible to installed
++  # apps (they only see published releases), so nothing reaches a player before publish has seen the tests pass; a
++  # draft whose tests failed is taken over by the next run (same version: only a published release moves it on)
++  build:
+     runs-on: windows-latest
+     environment: release
++    outputs:
++      version: ${{ steps.ver.outputs.version }}
++      exists: ${{ steps.ver.outputs.exists }}
+     defaults:
+       run:
+         shell: pwsh
+@@ -130,10 +136,37 @@ jobs:
+           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+         run: npm run release
+ 
+-      # installed apps only see published releases, so this goes last: a failed upload never reaches them
++  # installed apps only see published releases, so this goes last and waits for both: a failed test, build or upload
++  # never reaches them (needs: a job that failed, or was cancelled or skipped, skips this one)
++  publish:
++    needs: [test, build]
++    if: needs.build.outputs.exists == 'false'
++    runs-on: ubuntu-latest
++    environment: release
++    steps:
++      # only the draft this run built: a re-run of an old run's failed jobs must not publish a draft a newer run has
++      # taken over (its notes name that run's commit) or mark an old version latest again
+       - name: Publish the release
+-        if: steps.ver.outputs.exists == 'false'
+         env:
+           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+-          VER: ${{ steps.ver.outputs.version }}
+-        run: gh release edit "v$env:VER" --repo Fermin7c1/Glide-releases --draft=false --latest
++          VER: ${{ needs.build.outputs.version }}
++          REPO: Fermin7c1/Glide-releases
++        run: |
++          set -euo pipefail
++          info=$(gh release view "v$VER" --repo "$REPO" --json isDraft,body,assets)
++          src=$(jq -r .body <<<"$info" | sed -n 's/.*source: \([0-9a-f]\{40\}\).*/\1/p' | head -n 1)
++          if [ "$src" != "$GITHUB_SHA" ]; then
++            echo "::error::v$VER was built from ${src:-an unknown commit}, not $GITHUB_SHA: not publishing it"
++            exit 1
++          fi
++          if [ "$(jq -r .isDraft <<<"$info")" != "true" ]; then
++            echo "v$VER is published already"
++            exit 0
++          fi
++          for f in latest.yml "Glide-to-60-Setup-$VER.exe" "Glide-to-60-Setup-$VER.exe.blockmap"; do
++            if ! jq -e --arg f "$f" '[.assets[].name] | index($f) != null' <<<"$info" >/dev/null; then
++              echo "::error::the v$VER draft has no $f: not publishing it"
++              exit 1
++            fi
++          done
++          gh release edit "v$VER" --repo "$REPO" --draft=false --latest

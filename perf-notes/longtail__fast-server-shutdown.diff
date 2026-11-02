@@ -1,0 +1,19 @@
+diff --git a/companion/dashboard.py b/companion/dashboard.py
+--- a/companion/dashboard.py
++++ b/companion/dashboard.py
+@@ -19,6 +19,7 @@ import jsonfile
+ FIRST_CLIENT_DELAY_S = 1.5
+ PING_S = 15                     # an idle event stream gets a comment line this often (and notices it was dropped)
++SHUTDOWN_POLL_S = 0.5           # how soon the server notices shutdown() (the engine never calls it; tests lower it)
+@@ -397,7 +398,7 @@ def serve(hub, port, routes=None, layout_path=None, token=None):
+     srv = ThreadingHTTPServer(("127.0.0.1", port), H)
+     srv.daemon_threads = True
+-    threading.Thread(target=srv.serve_forever, daemon=True).start()
++    threading.Thread(target=srv.serve_forever, args=(SHUTDOWN_POLL_S,), daemon=True).start()
+     return srv
+(and in each test listed:)
+-threading.Thread(target=srv.serve_forever, daemon=True).start()
++threading.Thread(target=srv.serve_forever, args=(0.02,), daemon=True).start()   # a quick shutdown()
+(and after `import dashboard`:)
++dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
+(full diff: /tmp/claude-0/-home-user-Glide/4ddc3f14-3355-571d-9bad-778daa3d02a0/scratchpad/perf/lt_tools/diffs/p4_shutdown.diff)

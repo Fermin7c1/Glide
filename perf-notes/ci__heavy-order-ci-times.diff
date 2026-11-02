@@ -1,0 +1,20 @@
+diff --git a/tests/run_all.py b/tests/run_all.py
+index 596eb12..415347e 100644
+--- a/tests/run_all.py
++++ b/tests/run_all.py
+@@ -21,9 +21,12 @@ import time
+ 
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ SKIP_EXIT = 77
+-# Longest-running tests start first when running in parallel so none is left alone at the tail of the run.
+-_HEAVY = ("test_golden.py", "test_dashboard_page.py", "test_navmesh.py", "kb/test_rxp_updates.py",
+-          "test_desktop_main.py", "test_models.py", "test_types.py")
++# Longest-running tests start first when running in parallel so none is left alone at the tail of the run: longest
++# first by their times on the Windows CI runner (where file and process costs make some far slower than on Linux),
++# test_golden.py ahead of them all (it runs every probe on a machine with data; with none, as on CI, it skips at once)
++_HEAVY = ("test_golden.py", "test_navmesh.py", "test_rxp_explorer.py", "test_rxp_facts.py", "test_dashboard_page.py",
++          "test_rxp_routes.py", "kb/test_rxp_updates.py", "test_types.py", "test_desktop_main.py", "test_link.py",
++          "test_models.py")
+ 
+ 
+ def collect(pattern):

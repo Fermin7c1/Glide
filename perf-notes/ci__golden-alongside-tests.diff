@@ -1,0 +1,30 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 996026c..77fdddd 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -81,9 +81,19 @@ jobs:
+         working-directory: desktop
+         run: npm run build
+ 
+-      - name: Tests
+-        run: python tests/run_all.py
+-
+-      # needs node (desktop probe) and Edge (dashboard probe; windows-latest ships it in Program Files (x86))
+-      - name: Golden masters (portable tier)
+-        run: python tests/golden/golden.py check --portable
++      # The portable golden masters run alongside the tests (as a background job: the tests' tail leaves cores idle);
++      # they need node (desktop probe) and Edge (dashboard probe; windows-latest ships it in Program Files (x86)).
++      # Their output follows the tests'; either failing fails the step. Safe to overlap: the probes read only the
++      # repository and desktop/dist, which no test writes (Desktop build, above, already generated what the desktop
++      # probe's rebuild would).
++      - name: Tests and golden masters (portable tier)
++        run: |
++          $golden = Start-Job -WorkingDirectory $PWD {
++            python tests/golden/golden.py check --portable 2>&1 | ForEach-Object { "$_" }
++            if ($LASTEXITCODE) { throw "golden masters (portable tier) changed or failed (exit $LASTEXITCODE)" }
++          }
++          python tests/run_all.py
++          $tests = $LASTEXITCODE
++          Write-Host "`nGolden masters (portable tier):"
++          Receive-Job $golden -Wait -AutoRemoveJob
++          exit $tests

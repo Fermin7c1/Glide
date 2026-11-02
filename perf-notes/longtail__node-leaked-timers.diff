@@ -1,0 +1,21 @@
+diff --git a/tests/desktop_main_check.cjs b/tests/desktop_main_check.cjs
+--- a/tests/desktop_main_check.cjs
++++ b/tests/desktop_main_check.cjs
+@@ -46,7 +46,12 @@ const until = async (what, fn, ms = 5000) => {
+-const within = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms))]);
++// the timer is cleared once p settles: a pending one kept Node (and the test) alive for its full 6 s after "ok"
++const within = (p, ms, what) => {
++  let timer;
++  const late = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms); });
++  return Promise.race([p, late]).finally(() => clearTimeout(timer));
++};
+diff --git a/tests/desktop_logfile_check.cjs b/tests/desktop_logfile_check.cjs
+--- a/tests/desktop_logfile_check.cjs
++++ b/tests/desktop_logfile_check.cjs
+@@ -78,7 +78,9 @@
+     k.write("[app] by itself");
+-    await new Promise((r) => setTimeout(r, 700));
++    // (on disk within 700 ms, as before, but checked as it goes instead of after the whole 700 ms)
++    const has = () => { try { return /by itself/.test(fs.readFileSync(k.fileFor("20261009"), "utf8")); } catch { return false; } };
++    for (const t0 = Date.now(); !has() && Date.now() - t0 < 700; ) await new Promise((r) => setTimeout(r, 10));
+     assert.match(fs.readFileSync(k.fileFor("20261009"), "utf8"), /by itself/);

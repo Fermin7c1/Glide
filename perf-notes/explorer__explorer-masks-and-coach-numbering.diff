@@ -1,0 +1,513 @@
+diff --git a/companion/rxp_explorer.py b/companion/rxp_explorer.py
+index 99f8163..c612714 100644
+--- a/companion/rxp_explorer.py
++++ b/companion/rxp_explorer.py
+@@ -179,35 +179,66 @@ def visibility(guide, options=None):
+     combos = setting_combos(rxp_options(options))
+     steps = guide.get("steps") or ()
+     who = [{"cls": cls, "race": race, "faction": faction} for _pick, cls, race, faction in pl]
++    everyone = (1 << n) - 1
++    cond_masks = {}
++
++    def applies_to(c):
++        """The players a `<<` condition applies to, as a bit mask: each distinct condition is evaluated once per
++        player, not once per step (None / no text: everyone)."""
++        raw = c.get("raw") if isinstance(c, dict) else c
++        if raw is None:
++            return everyone
++        m = cond_masks.get(raw)
++        if m is None:
++            m = 0
++            for p, player in enumerate(who):
++                if cond_applies(c, **player):
++                    m |= 1 << p
++            cond_masks[raw] = m
++        return m
++
++    def ok_for(p):
++        return lambda c: bool(applies_to(c) >> p & 1)
++    # the guide's own dungeon rules per player, grouped: they read only the header and the `.enabledungeon` steps
++    dsteps = [st for st in steps if any(a.get("verb") == "enabledungeon" for a in st.get("actions") or ())]
++    dguide = {"text": guide.get("text"), "steps": dsteps}
++    gd_players = {}
++    for p, player in enumerate(who):
++        gd = guide_dungeons(dguide, applies=ok_for(p), **player)
++        gd_players[gd] = gd_players.get(gd, 0) | 1 << p
+     bits = [[0] * 8 for _ in steps]
+     act_bits = {}
+-    for p, player in enumerate(who):
+-        memo = {}
+-
+-        def ok(c, player=player, memo=memo):
+-            raw = c.get("raw") if isinstance(c, dict) else c
+-            if raw is None:
+-                return True
+-            if raw not in memo:
+-                memo[raw] = cond_applies(c, **player)
+-            return memo[raw]
+-        gd = guide_dungeons(guide, applies=ok, **player)
+-        shown_memo = {}
+-        for i, st in enumerate(steps):
+-            cond = st.get("cond")
+-            for ai, a in enumerate(st.get("actions") or ()):
+-                if (a.get("cond") or {}).get("raw"):
+-                    act_bits[(i, ai)] = act_bits.get((i, ai), 0) | (int(ok(a["cond"])) << p)
+-            if (cond and cond.get("never")) or not ok(cond):
+-                continue
+-            fl = st.get("flags") or {}
+-            flags = step_flags(st, **player) if fl.get("cond_flags") else fl
++    shown_memo = {}
++
++    def shown_for(flags, key, gd):
++        k = (key, gd)
++        if k not in shown_memo:
++            shown_memo[k] = [step_shown(flags, s, gd) for s in combos]
++        return shown_memo[k]
++    for i, st in enumerate(steps):
++        cond = st.get("cond")
++        for ai, a in enumerate(st.get("actions") or ()):
++            if (a.get("cond") or {}).get("raw"):
++                act_bits[(i, ai)] = applies_to(a["cond"])
++        if cond and cond.get("never"):
++            continue
++        parsed_for = applies_to(cond)               # RestedXP parses the step only for these players
++        if not parsed_for:
++            continue
++        fl = st.get("flags") or {}
++        if fl.get("cond_flags"):                    # tags with their own condition: the flags differ per player
++            per = [(p, step_flags(st, **who[p])) for p in range(n) if parsed_for >> p & 1]
++        else:
++            per = [(None, fl)]
++        row = bits[i]
++        for p, flags in per:
+             key = repr(sorted(flags.items(), key=lambda kv: kv[0]))
+-            if key not in shown_memo:
+-                shown_memo[key] = [step_shown(flags, s, gd) for s in combos]
+-            for s, shown in enumerate(shown_memo[key]):
+-                if shown:
+-                    bits[i][s] |= 1 << p
++            mine = parsed_for if p is None else 1 << p
++            for gd, group in gd_players.items():
++                if mine & group:
++                    for s, shown in enumerate(shown_for(flags, key, gd)):
++                        if shown:
++                            row[s] |= mine & group
+     masks, index, step_masks = [], {}, []
+     for b in bits:
+         m = "".join(_hex(x, n) for x in b)
+@@ -239,10 +270,10 @@ def numbering(vis, player, combo):
+     (index into vis["players"]) and settings combination: what the page shows, for the parity test."""
+     n = len(vis["players"])
+     w = (n + 3) // 4
++    gets = [int(m[combo * w:(combo + 1) * w], 16) >> player & 1 for m in vis["masks"]]     # once per distinct mask
+     out, k = {}, 0
+     for i, m in enumerate(vis["steps"]):
+-        chunk = int(vis["masks"][m][combo * w:(combo + 1) * w], 16)
+-        if chunk >> player & 1:
++        if gets[m]:
+             k += 1
+             out[k] = i
+     return out
+diff --git a/companion/rxp_import.py b/companion/rxp_import.py
+index cfec6fb..0b75ac7 100644
+--- a/companion/rxp_import.py
++++ b/companion/rxp_import.py
+@@ -237,6 +237,42 @@ def page_text(s):
+     return page(s)
+ 
+ 
++_SEED_GUIDES = {}       # seed path -> ((mtime_ns, size), files?, guides): the seed is a few MB of JSON to parse
++
++
++def _seed_free_guides(seed):
++    """(any guide files?, guides) of the seed snapshot's free guides, read once per process while the file is
++    unchanged; the guides are copies (callers may change them)."""
++    st = os.stat(seed)
++    sig = (st.st_mtime_ns, st.st_size)
++    hit = _SEED_GUIDES.get(seed)
++    if hit is None or hit[0] != sig:
++        import gzip
++        with gzip.open(seed, "rt", encoding="utf-8") as fh:
++            files = sorted(((json.load(fh).get("sources") or {}).get("rxp_free") or {}).items())
++        hit = _SEED_GUIDES[seed] = (sig, bool(files), _split_guides(files))
++    return hit[1], [dict(g, groups=list(g["groups"])) for g in hit[2]]
++
++
++def _split_guides(files):
++    """[{"groups", "name", "text", "file"}] of the guides RXPGuides.RegisterGuide registers in [(file, text)]."""
++    out = []
++    for rel, text in files:
++        for chunk in _REGISTER.split(text)[1:]:
++            body = chunk.split("]])", 1)[0]
++            m_step = _STEP_LINE.search(body)
++            hdr = body[:m_step.start()] if m_step else body
++            groups = []
++            for g in _GROUP_LINE.findall(hdr):
++                g = g.split("--")[0].split("<<")[0].strip()
++                if g and g not in groups:
++                    groups.append(g)
++            name = guide_meta(body)[1]
++            if name and groups:
++                out.append({"groups": groups, "name": name, "text": body, "file": rel})
++    return out
++
++
+ def free_guides(root, wow_dir):
+     """(source, [{"groups", "name", "text", "file"}]): RestedXP's free Forever guides, which come with the RestedXP
+     addon instead of in a bought string (the starter zones to about level 20, Zephras Isle, the Mage AoE routes and
+@@ -258,30 +294,16 @@ def free_guides(root, wow_dir):
+                 except OSError as e:
+                     log_once("rxp_import.free_guides", e)
+         source = "RestedXP %s" % (kstore.rxp_version(rxp_dir) or "addon") if files else None
++    if files:
++        return source, _split_guides(files)
+     seed = os.path.join(root, "data", "seed", "seed.json.gz")
+-    if not files and os.path.exists(seed):
++    if os.path.exists(seed):
+         try:
+-            import gzip
+-            with gzip.open(seed, "rt", encoding="utf-8") as fh:
+-                files = sorted(((json.load(fh).get("sources") or {}).get("rxp_free") or {}).items())
+-            source = "Glide's copy" if files else None
++            any_files, out = _seed_free_guides(seed)
++            return ("Glide's copy" if any_files else None), out
+         except (OSError, ValueError) as e:
+             log_once("rxp_import.free_seed", e)
+-    out = []
+-    for rel, text in files:
+-        for chunk in _REGISTER.split(text)[1:]:
+-            body = chunk.split("]])", 1)[0]
+-            m_step = _STEP_LINE.search(body)
+-            hdr = body[:m_step.start()] if m_step else body
+-            groups = []
+-            for g in _GROUP_LINE.findall(hdr):
+-                g = g.split("--")[0].split("<<")[0].strip()
+-                if g and g not in groups:
+-                    groups.append(g)
+-            name = guide_meta(body)[1]
+-            if name and groups:
+-                out.append({"groups": groups, "name": name, "text": body, "file": rel})
+-    return source, out
++    return source, []
+ 
+ 
+ def free_catalog(root, wow_dir, taken=()):
+diff --git a/knowledge/rxp_parser/conditions.py b/knowledge/rxp_parser/conditions.py
+index fc3c6a0..0a0638c 100644
+--- a/knowledge/rxp_parser/conditions.py
++++ b/knowledge/rxp_parser/conditions.py
+@@ -1,5 +1,6 @@
+ """`<<` conditions: RXP's applies() for a player, and the flat class / race / faction form the knowledge base
+ stores (with the full expression kept when the flat form is not exact)."""
++import functools
+ import re
+ 
+ from knowledge.rxp_parser.text import SPACE, WS, lua_num
+@@ -14,6 +15,7 @@ _RACES = ("Human", "Dwarf", "NightElf", "Gnome", "Orc", "Undead", "Scourge", "Ta
+           "BloodElf", "Draenei", "Goblin", "Worgen", "Pandaren", "Nightborne", "HighmountainTauren", "VoidElf",
+           "LightforgedDraenei", "ZandalariTroll", "KulTiran", "DarkIronDwarf", "Vulpera", "MagharOrc",
+           "Mechagnome", "Dracthyr", "EarthenDwarf", "Haranir", "Harronir")
++_RACE_CASE = {r.lower(): r for r in reversed(_RACES)}        # any spelling's case -> RXP's (the first one wins)
+ _FACTIONS = ("Alliance", "Horde")
+ _UNIV_CLASSES = _CLASSES[:9]
+ _UNIV_RACES = ("Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll", "Skyborne")
+@@ -25,10 +27,7 @@ def _race_token(race):
+     if not race:
+         return None
+     r = str(race).replace(" ", "")
+-    for known in _RACES:
+-        if known.lower() == r.lower():
+-            r = known
+-            break
++    r = _RACE_CASE.get(r.lower(), r)
+     return {"Undead": "Scourge", "Haranir": "Harronir"}.get(r, r)
+ 
+ 
+@@ -55,8 +54,17 @@ class _Player:
+         self.custom = custom
+ 
+ 
++@functools.lru_cache(maxsize=1024, typed=True)
++def _player(*args):
++    """A _Player per distinct argument list (never changed after it is made): a guide asks thousands of times for the
++    same few characters."""
++    return _Player(*args)
++
++
++@functools.lru_cache(maxsize=16384)
+ def _lit_true(entry, p):
+-    """One RXP literal (without '!'), exactly as applies() evaluates it."""
++    """One RXP literal (without '!'), exactly as applies() evaluates it. Cached per (literal, player): a player is
++    a _Player nobody changes, and _player() hands out the same one for the same character."""
+     if entry == _TRUE:
+         return True
+     if entry == _FALSE:
+@@ -114,7 +122,11 @@ def cond_applies(cond, cls=None, race=None, faction=None, level=None, game="FORE
+     raw = cond.get("raw") if isinstance(cond, dict) else cond
+     if raw is None:
+         return True
+-    return _applies_raw(raw, _Player(cls, race, faction, level, game, season, sex, locale))
++    try:
++        p = _player(cls, race, faction, level, game, season, sex, locale)
++    except TypeError:                       # an unhashable argument: not cached
++        p = _Player(cls, race, faction, level, game, season, sex, locale)
++    return _applies_raw(raw, p)
+ 
+ 
+ def _classify(tok):
+@@ -175,7 +187,7 @@ def _build_cond(raw):
+     for cl in classes:
+         for rc in races:
+             for fa in _FACTIONS:
+-                p = _Player(cl, rc, fa)
++                p = _player(cl, rc, fa, None, "FOREVER", 0, None, "enUS")
+                 real = _applies_raw(raw, p)
+                 any_true = any_true or real
+                 flat = ((not pc or cl in pc) and cl not in nc and (not pr or rc in pr) and rc not in nr
+diff --git a/knowledge/rxp_parser/includes.py b/knowledge/rxp_parser/includes.py
+index b45c666..19580b3 100644
+--- a/knowledge/rxp_parser/includes.py
++++ b/knowledge/rxp_parser/includes.py
+@@ -6,6 +6,22 @@ from knowledge.rxp_parser.conditions import and_cond
+ from knowledge.rxp_parser.text import WS
+ 
+ 
++_ATOMS = (str, int, float, bool, type(None))
++
++
++def _copy(v):
++    """copy.deepcopy for a parsed step (dicts, lists and scalars, nothing shared inside one step), several times faster;
++    anything else goes through copy.deepcopy."""
++    t = type(v)
++    if t is dict:
++        return {k: _copy(x) for k, x in v.items()}
++    if t is list:
++        return [_copy(x) for x in v]
++    if t in _ATOMS:
++        return v
++    return copy.deepcopy(v)
++
++
+ def _norm_group(g):
+     g = re.sub(r"\((A|H)\)", "", g or "")
+     g = re.sub(r"\b(Alliance|Horde)\b", "", g)
+@@ -111,7 +127,7 @@ def expand_includes(guides):
+             if tkey is not None:
+                 sub, err = _slice(full(tkey), start, end)
+             if sub is None:
+-                bad = copy.deepcopy(st)
++                bad = _copy(st)
+                 bad["flags"]["include_unresolved"] = err
+                 stats["unresolved"].append({"guide": key, "include": inc, "reason": err})
+                 out.append(bad)
+@@ -119,12 +135,12 @@ def expand_includes(guides):
+             if note:
+                 stats["notes"].append({"guide": key, "include": inc, "note": note})
+             if st["actions"] or st["text"]:
+-                keep = copy.deepcopy(st)
++                keep = _copy(st)
+                 keep["flags"].pop("include", None)
+                 out.append(keep)
+             cond = and_cond(st.get("cond"), inc_cond) if inc_cond else st.get("cond")
+             for s in sub:
+-                c = copy.deepcopy(s)
++                c = _copy(s)
+                 if "included_from" not in c["flags"]:
+                     c["flags"]["included_from"] = tkey
+                     c["flags"]["included_idx"] = s["idx"]
+diff --git a/knowledge/rxp_parser/views.py b/knowledge/rxp_parser/views.py
+index 0050846..ce074ae 100644
+--- a/knowledge/rxp_parser/views.py
++++ b/knowledge/rxp_parser/views.py
+@@ -178,6 +178,10 @@ def _given(v):
+     return v is not None and v is not True and v != ""
+ 
+ 
++# every tag step_shown() reads: a step with none of them is shown under any settings
++_SHOWN_TAGS = frozenset(("softcoreserver", "hardcoreserver", "softcore", "hardcore", "ssf", "ah", "group", "solo", "era",
++                         "som", "era/som", "season", "xprate", "phase", "disabled", "dungeon", "dungeonskip", "beta",
++                         "questguide"))
+ _RE_XPRATE = re.compile(r"^([<>]?)\s*(\d+\.?\d*)-?(\d*\.?\d*)")
+ _RE_RANGE = re.compile(r"(\d+)-(\d+)")
+ 
+@@ -188,6 +192,8 @@ def step_shown(flags, settings=None, dungeons=None):
+     guide's GuideDungeons. RestedXP Forever leaves the steps it hides out of the guide: they take no number."""
+     f = flags or {}
+     s = settings if isinstance(settings, RxpSettings) else RxpSettings.from_options(settings)
++    if f.keys().isdisjoint(_SHOWN_TAGS):             # most steps carry none of the tags below: shown
++        return True
+     gd = dungeons or NO_GUIDE_DUNGEONS
+     if (_on(f.get("softcoreserver")) and s.hardcore_server) or \
+             (_on(f.get("hardcoreserver")) and not s.hardcore_server):
+@@ -236,29 +242,48 @@ def step_shown(flags, settings=None, dungeons=None):
+     return True
+ 
+ 
+-def visible_steps(guide, settings=None, applies=None, **player):
+-    """[(step, effective flags, shown)] for every step whose `step << cond` applies to the player (RestedXP
+-    parses only those), in guide order; `shown` per step_shown under the settings and the guide's own dungeon
+-    rules. guide: {"text", "steps": [{"idx", "cond", "flags"[, "actions"]}]}. applies: an optional (cached)
+-    cond -> bool for this player; the default evaluates cond_applies."""
++class _GuideDungeonsWhenAsked:
++    """guide_dungeons() for one player, worked out the first time a step asks about a dungeon: it reads every action
++    of the guide, and most guides have no dungeon step at all."""
++    __slots__ = ("_args", "_gd")
++
++    def __init__(self, guide, applies, player):
++        self._args, self._gd = (guide, applies, player), None
++
++    def enabled(self, tag, settings):
++        if self._gd is None:
++            guide, applies, player = self._args
++            self._gd = guide_dungeons(guide, applies=applies, **player)
++        return self._gd.enabled(tag, settings)
++
++
++def _walk(guide, settings, applies, player, copy_flags):
++    """(step, effective flags, shown) for every step whose `step << cond` applies, in guide order (copy_flags: a step's
++    own flags dict copied, not handed out)."""
+     ok = applies or (lambda c: cond_applies(c, **player))
+     s = settings if isinstance(settings, RxpSettings) else RxpSettings.from_options(settings)
+-    gd = guide_dungeons(guide, applies=ok, **player)
+-    out = []
++    gd = _GuideDungeonsWhenAsked(guide, ok, player)
+     for st in guide["steps"]:
+         cond = st.get("cond")
+         if (cond and cond.get("never")) or not ok(cond):
+             continue
+         fl = st.get("flags") or {}
+-        flags = step_flags(st, **player) if fl.get("cond_flags") else dict(fl)
+-        out.append((st, flags, step_shown(flags, s, gd)))
+-    return out
++        flags = step_flags(st, **player) if fl.get("cond_flags") else dict(fl) if copy_flags else fl
++        yield st, flags, step_shown(flags, s, gd)
++
++
++def visible_steps(guide, settings=None, applies=None, **player):
++    """[(step, effective flags, shown)] for every step whose `step << cond` applies to the player (RestedXP
++    parses only those), in guide order; `shown` per step_shown under the settings and the guide's own dungeon
++    rules. guide: {"text", "steps": [{"idx", "cond", "flags"[, "actions"]}]}. applies: an optional (cached)
++    cond -> bool for this player; the default evaluates cond_applies."""
++    return list(_walk(guide, settings, applies, player, True))
+ 
+ 
+ def rxp_numbering(guide, settings=None, applies=None, **player):
+     """RestedXP's live step number -> idx for a player under their RestedXP settings: {n: idx}."""
+     out, n = {}, 0
+-    for st, _flags, shown in visible_steps(guide, settings, applies=applies, **player):
++    for st, _flags, shown in _walk(guide, settings, applies, player, False):
+         if shown:
+             n += 1
+             out[n] = st["idx"]
+diff --git a/tests/kb/test_rxp_parser.py b/tests/kb/test_rxp_parser.py
+index dfe4248..4370067 100644
+--- a/tests/kb/test_rxp_parser.py
++++ b/tests/kb/test_rxp_parser.py
+@@ -256,6 +256,11 @@ def test_includes(guides):
+     check(len(d) == len(src), (len(d), len(src)))
+     check(all(a["flags"]["included_from"] == DM and a["flags"]["included_idx"] == b["idx"] and a["text"] == b["text"]
+               and len(a["actions"]) == len(b["actions"]) for a, b in zip(d, src)), "copied steps")
++    # deep copies: placing an included step's points (the Guides page, the build's finalize) leaves its guide's own alone
++    own = gs[DM]["steps"]
++    check(all(a is not b and a["actions"] is not b["actions"] and a["flags"] is not b["flags"]
++              and all(x is not y and x["args"] is not y["args"] for x, y in zip(a["actions"], b["actions"]))
++              for a, b in zip(d, own)), "included steps share nothing with their guide's")
+     check(guides[fixture.DDM]["steps"][0]["flags"]["include"] == fixture.GROUP + "\\5-8 Dun Morogh",
+           "parse_guide keeps the include flag")
+     # label range NormalRouteStart-NormalRouteEnd inside `step << Dwarf/Gnome`, then the dungeon guide's own steps
+diff --git a/tests/test_rxp_explorer.py b/tests/test_rxp_explorer.py
+index d2a2118..c0fcd97 100644
+--- a/tests/test_rxp_explorer.py
++++ b/tests/test_rxp_explorer.py
+@@ -40,11 +40,11 @@ try:
+     texts = [g["text"] for g in free]
+ 
+     # ---- #include, as the knowledge build expands it ---------------------------------------------------------
+-    corpus = {}
++    corpus, parsed = {}, []
+     for t in texts:
+         p = parse_guide(t)
+-        corpus.setdefault(p["key"], p)
+-    expand_includes(corpus)
++        parsed.append(corpus.setdefault(p["key"], p))
++    expand_includes(corpus)                 # parsed[i]: free guide i as the build has it, its #includes expanded
+ 
+     def at(name, group):
+         return next(i for i, g in enumerate(free) if g["name"] == name and g["groups"][0] == group)
+@@ -71,16 +71,24 @@ try:
+     assert ("Skyborne@Alliance", "PALADIN", "Skyborne", "Alliance") in pl and \
+         ("Skyborne@Horde", "PALADIN", "Skyborne", "Horde") not in pl and ("Dwarf", "SHAMAN", "Dwarf", "Alliance") not in pl
+     combos = (0, 3, 7)            # all off, the coach's default (SSF + group quests), all on
+-    t0, wrong, guides = time.time(), [], 0
++    t0, wrong, guides, details = time.time(), [], 0, {}
++    memos = [{} for _ in pl]          # a condition's answer for a character is the same in every guide
++    options = {}
++    for c in combos:
++        options[c] = X.rxp_options(None)
++        options[c].update({k: bool(c & (1 << b)) for b, k in enumerate(X.TOGGLES)})
+     for i, g in enumerate(free):
+-        d = R.guide_detail(home, R.FREE_ID, i)
++        d = details[i] = R.guide_detail(home, R.FREE_ID, i)
+         guides += 1
+         assert d["players"] == ["%s/%s" % p[:2] for p in pl] and len(d["settings"]) == 8
+         assert d["defaults"] == {"ssf": True, "group_quests": True, "hardcore": False}, d["defaults"]
+-        guide = {"text": g["text"], "steps": X.include_expanded(g["text"], texts)["steps"]}
++        # the coach's side reads the guide as the knowledge build expands it (the whole corpus at once), not through
++        # the page's own include_expanded: the page's steps must be the build's, step for step
++        guide = {"text": g["text"], "steps": parsed[i]["steps"]}
++        assert [s["text"] for s in d["steps"]] == [s["text"] for s in guide["steps"]], g["name"]
+         vis = {"players": d["players"], "masks": d["vis_masks"], "steps": [s["vis"] for s in d["steps"]]}
+         for p, (_pick, cls, race, faction) in enumerate(pl):
+-            memo = {}
++            memo = memos[p]
+ 
+             def ok(c, cls=cls, race=race, faction=faction, memo=memo):
+                 raw = c.get("raw") if isinstance(c, dict) else c
+@@ -88,9 +96,7 @@ try:
+                     memo[raw] = cond_applies(c, cls=cls, race=race, faction=faction)
+                 return memo[raw]
+             for c in combos:
+-                o = X.rxp_options(None)
+-                o.update({k: bool(c & (1 << b)) for b, k in enumerate(X.TOGGLES)})
+-                want = rxp_numbering(guide, o, applies=ok, cls=cls, race=race, faction=faction)
++                want = rxp_numbering(guide, options[c], applies=ok, cls=cls, race=race, faction=faction)
+                 got = {n: d["steps"][k]["idx"] for n, k in X.numbering(vis, p, c).items()}
+                 if want != got:
+                     wrong.append((g["name"], d["players"][p], c))
+@@ -98,7 +104,7 @@ try:
+     print("masks match the coach's numbering: %d guides x %d characters x %d settings in %.1f s"
+           % (guides, len(pl), len(combos), time.time() - t0))
+     # Regression: `step << skip` (RestedXP never loads it) is shown to nobody
+-    darkshore = R.guide_detail(home, R.FREE_ID, at("14-16 Darkshore", "RestedXP Forever Guide (A)"))
++    darkshore = details[at("14-16 Darkshore", "RestedXP Forever Guide (A)")]
+     width = (len(pl) + 3) // 4
+     skip = [s for s in darkshore["steps"] if (s["cond"] or "").strip() == "skip"]
+     assert skip and all(set(darkshore["vis_masks"][s["vis"]]) == {"0"} for s in skip), len(skip)
+@@ -156,8 +162,7 @@ try:
+     m = R.guide_detail(home, R.FREE_ID, at("1-6 Durotar", "RestedXP Forever Guide (H)"))["maps"]["1411"]
+     assert (m["w_yd"], m["h_yd"]) == (5000.0, 3333.3), m
+     # #next carries who it's for
+-    nl = [n for g in (R.guide_detail(home, R.FREE_ID, i) for i in range(len(free)) if "Zephras" in free[i]["name"])
+-          for n in g["next_list"] if n["cond"]]
++    nl = [n for i in range(len(free)) if "Zephras" in free[i]["name"] for n in details[i]["next_list"] if n["cond"]]
+     assert nl and all(n["vis"] and len(n["vis"]) == width for n in nl), nl[:3]
+     alliance = next(n for n in nl if n["cond"] == "Alliance")
+     assert int(alliance["vis"], 16) >> d["players"].index("Human/MAGE") & 1
+diff --git a/tests/test_rxp_visibility.py b/tests/test_rxp_visibility.py
+index 246c093..504680d 100644
+--- a/tests/test_rxp_visibility.py
++++ b/tests/test_rxp_visibility.py
+@@ -139,6 +139,13 @@ for flags, s, gd, want in TABLE:
+         assert S.step_shown(flags, p, gd) == want, ("route", flags, s)
+     assert LL.step_shown(flags, pr, gd) == want, ("live_logs", flags, s)
+ 
++# step_shown's shortcut (a step carrying none of the tags it reads is shown) knows every tag it reads
++import inspect  # noqa: E402
++import re  # noqa: E402
++from knowledge.rxp_parser import views as V  # noqa: E402
++read = set(re.findall(r'f(?:\.get\(|\[)"([^"]+)"', inspect.getsource(P.step_shown)))
++assert len(read) >= 19 and read <= V._SHOWN_TAGS, sorted(read - V._SHOWN_TAGS)     # noqa: SLF001
++
+ # the guide's rules from its text and steps, the new parse and an older kb.db's unknown-verb rows alike
+ GTEXT = "#name 1-2 X\n#group G\n#disabledungeons\nstep\n    .enabledungeon RFC\nstep << Horde\n    .enabledungeon BFD\n"
+ pg = P.parse_guide(GTEXT)
