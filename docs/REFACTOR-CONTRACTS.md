@@ -606,3 +606,11 @@ they don't spell out.
   the picked pin, ticked objectives and waypoint letters are kept by guide step number, so a filter change keeps the
   step. The arrow's "~N yd" uses the zone's real size (none shown without a knowledge base) and its bearing is in
   yards. Guides page plan, phase 0 (docs/plans/guides-explorer.md); the player asked (2026-11-02).
+- **Follow-up, contract 4 (what a field holds): Guides map images by URL.** `RxpGuideDetail.mapImages` now holds
+  `glide://map/<uiMapID>.png` URLs (for the guide's zones and their continents that have an image) instead of base64
+  data URIs read and sent over IPC on every guide open. The main process registers the privileged `glide` scheme and
+  serves `glide://map/<id>.png` from the engine home's `data/gamedata/maps` (read-only, contract 5), else the
+  development checkout's; the renderer's CSP allows `img-src glide:`. The page prefers these URLs over the engine's
+  `/map/<id>.png`, so maps show with the coach stopped and one decoded image serves every guide. The map image is
+  stretched to the map (`object-fit: fill`, as on the coach screen) instead of cropped. Guides page plan, phase 0
+  item 5 (map-imagery recommendation 1-2, 2026-11-02).
