@@ -307,6 +307,14 @@ class KB:
             self._local.c = c
         return c
 
+    def close(self):
+        """Close this thread's connection (opened again on the next query). On Windows an open connection keeps the
+        file from being replaced or deleted, so a short-lived reader closes what it opened."""
+        c = getattr(self._local, "c", None)
+        if c is not None:
+            self._local.c = None
+            c.close()
+
     def q(self, sql, *args):
         c = self.conn()
         if not c:

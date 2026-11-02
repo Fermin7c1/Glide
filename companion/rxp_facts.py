@@ -65,7 +65,11 @@ def facts(root, iid, index, cls=None, race=None, wow_dir=None):
     race = None if race in (None, "", "-") else str(race)
     guide = parsed_guide(root, iid, index, wow_dir)
     kb, reason = newest_kb(root)
-    out = explorer.guide_facts(kb, guide, cls, race, faction_of(race, guide.get("faction")))
+    try:
+        out = explorer.guide_facts(kb, guide, cls, race, faction_of(race, guide.get("faction")))
+    finally:
+        if kb is not None:
+            kb.close()
     if kb is None and reason:
         out["kb"]["reason"] = reason
     return out

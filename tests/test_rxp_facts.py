@@ -71,11 +71,31 @@ step
 """
 
 
+def assert_closed(path):
+    """Regression (the Windows release build): a kb file still open in this process can't be replaced or deleted
+    there ("being used by another process"), while Linux allows it, so this checks /proc for an open handle."""
+    fd_dir = "/proc/self/fd"
+    if not os.path.isdir(fd_dir):
+        return
+    want = os.path.realpath(path)
+    for fd in os.listdir(fd_dir):
+        try:
+            target = os.readlink(os.path.join(fd_dir, fd))
+        except OSError:
+            continue
+        assert target != want, "%s is still open (Windows could not replace or delete it)" % path
+
+
+def remove_kb(path):
+    assert_closed(path)
+    os.remove(path)
+
+
 def make_kb(path, guide_text, extra_step=False, schema=store.SCHEMA_VERSION, built="2026-11-01"):
     """A kb.db with the real schema and the few rows the facts read. extra_step: kb holds another version of the
     guide, with one more step after the first (so kb idx = guide idx + 1 from step 2 on)."""
     if os.path.exists(path):
-        os.remove(path)
+        remove_kb(path)
     c = sqlite3.connect(path)
     store.create_schema(c)
     c.execute("INSERT INTO meta VALUES ('schema_version', ?)", (str(schema),))
@@ -228,19 +248,23 @@ try:
     make_kb(os.path.join(data, "kb.db"), GUIDE, built="old")
     got, reason = rxp_facts.newest_kb(home)
     assert got is not None and got.meta("built") == "old" and reason is None, reason
+    got.close()
     staged = os.path.join(data, "kb.next-1790000000.db")
     make_kb(staged, GUIDE, built="staged")
     os.utime(staged, (time.time() + 60, time.time() + 60))
     got, _ = rxp_facts.newest_kb(home)
     assert got.meta("built") == "staged", got.path
+    got.close()
     make_kb(staged, GUIDE, built="future", schema=store.SCHEMA_VERSION + 1)
     os.utime(staged, (time.time() + 60, time.time() + 60))
     got, _ = rxp_facts.newest_kb(home)
     assert got.meta("built") == "old", got.path           # the newer one has a schema this version can't read
-    os.remove(os.path.join(data, "kb.db"))
+    assert_closed(staged)                                 # ...and isn't kept open (newest_kb closes what it refuses)
+    got.close()
+    remove_kb(os.path.join(data, "kb.db"))
     got, reason = rxp_facts.newest_kb(home)
     assert got is None and "schema" in reason, reason
-    os.remove(staged)
+    remove_kb(staged)
     assert rxp_facts.newest_kb(home) == (None, "no knowledge base yet")
 
     # ---- the command: an added guide in a temp home, with and without kb ----
@@ -254,6 +278,7 @@ try:
     out = rxp_facts.facts(home, "abc", 0, "mage", "Human")
     assert out["match"] == "exact" and out["plan"]["class"] == "MAGE" and out["errors"] == [], out["errors"]
     assert out["targets"]["2"] and out["quests"]["100"]["lost_if_skipped"], out["quests"]["100"]
+    assert_closed(os.path.join(data, "kb.db"))
     try:
         rxp_facts.facts(home, "abc", 3)
         raise AssertionError("an index past the import's guides opened something")
@@ -270,6 +295,7 @@ try:
     names = R._entity_names(home, {100, 999}, {501}, {159})     # noqa: SLF001
     assert names["quests"] == {100: "Wolves", 999: "Only in glide.db"}, names
     assert names["npcs"] == {501: "Ragefang"} and names["items"] == {159: "Refreshing Spring Water"}, names
+    assert_closed(os.path.join(data, "kb.db"))
     # facts never raises: a broken guide still answers
     junk = X.guide_facts(kb, {"steps": [{"idx": 1, "actions": [{"verb": "complete", "args": None}]}]}, "MAGE")
     assert isinstance(junk, dict) and junk["match"] == "none", junk

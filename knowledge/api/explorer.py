@@ -111,7 +111,7 @@ def _jl(text, default=None):
 def newest_kb(paths):
     """The newest readable kb.db of `paths` (data/kb.db and the refresh's staged data/kb.next-*.db, which becomes
     kb.db only at the next engine start) as a store.KB, or (None, reason). A kb built with another schema version
-    is refused: its columns may mean other things."""
+    is refused: its columns may mean other things. The caller closes the KB it gets (KB.close)."""
     cands = []
     for p in paths or ():
         try:
@@ -127,9 +127,11 @@ def newest_kb(paths):
             v = store.schema_version(kb)
         except Exception as e:  # noqa: BLE001 - a damaged file: try the next one
             reason = "knowledge base unreadable (%s)" % type(e).__name__
+            kb.close()
             continue
         if v != store.SCHEMA_VERSION:
             reason = "knowledge base has schema %s, this version reads %s" % (v, store.SCHEMA_VERSION)
+            kb.close()                      # refused: don't keep the file open (Windows can't replace it then)
             continue
         return kb, None
     return None, reason

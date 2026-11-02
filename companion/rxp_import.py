@@ -294,7 +294,10 @@ def _entity_names(root, qids, npcs, items, objects=()):
         from knowledge.api import explorer
         kb, _ = rxp_facts.newest_kb(root)
         if kb is not None:
-            got = explorer.entity_names(kb, qids, npcs, items, objects)
+            try:
+                got = explorer.entity_names(kb, qids, npcs, items, objects)
+            finally:
+                kb.close()
             for k in out:
                 out[k].update(got.get(k) or {})
     except Exception as e:  # noqa: BLE001 - names are a nicety: glide.db below still answers
