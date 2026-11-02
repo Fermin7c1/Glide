@@ -118,6 +118,18 @@ predates the guide); hazards from the brief's risks, elite/rare kill targets and
 time and XP between steps and marks dangerous stretches on the timeline; a hazard shows at its leg on the map. Moments
 in play, not metrics: "elite patrol on this road", "45 min to 23", not a table.
 
+### Narrated walk (added by the player, runs alongside phase 1)
+
+The player's words: "Narrate the steps using the text to voice service as the guide plays along and wait until
+narration is complete to move to the next step. Transition between steps should also be narrated when it makes sense."
+A Narrate toggle in the toolbar row. With it on, Walk speaks the step (its instruction without RestedXP markup, names
+instead of ids), then the way to the next one when there is real travel (a walk past ~50 yd, a flight, hearth,
+deathskip, boat or zone change; directions, yards and landmarks from the computed route, else a straight bearing), waits
+for both to finish, then moves on. Off or muted, Walk keeps its timer. Pause, a step pick, a guide change or leaving the
+page cancels only the Guides lines, never the coach's. An awaitable line on the narrator (`narrator.ts`), the
+words in a DOM-free `rxp-narration.ts`. In `rxp-browser.ts` only the Walk loop and the toggle change, so it runs
+beside phase 1's drawing work. Session: branch `guides-narration`.
+
 ## Rules every phase session follows
 
 These come on top of CLAUDE.md (loaded automatically) and CONTRIBUTING.md.
