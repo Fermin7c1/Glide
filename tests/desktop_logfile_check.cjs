@@ -78,7 +78,9 @@ const logs = () => fs.readdirSync(dir).filter((f) => f.endsWith(".log")).sort();
     // the batching timer writes without anyone flushing
     const k = new LogFile(path.join(userData, "timer"), { now: () => now });
     k.write("[app] by itself");
-    await new Promise((r) => setTimeout(r, 700));
+    const written = () => fs.existsSync(k.fileFor("20261009")) && /by itself/.test(fs.readFileSync(k.fileFor("20261009"), "utf8"));
+    // within the same 700 ms as before (the timer is 250 ms), but done as soon as it is written
+    for (const t0 = Date.now(); !written() && Date.now() - t0 < 700;) await new Promise((r) => setTimeout(r, 20));
     assert.match(fs.readFileSync(k.fileFor("20261009"), "utf8"), /by itself/);
     console.log("ok");
   } finally {

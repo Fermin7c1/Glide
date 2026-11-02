@@ -46,7 +46,12 @@ const until = async (what, fn, ms = 5000) => {
     await new Promise((r) => setTimeout(r, 20));
   }
 };
-const within = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms))]);
+// the time limit is cleared once p settles: a pending one would keep Node running (6 s after the last check)
+const within = (p, ms, what) => {
+  let timer;
+  const limit = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`${what} took over ${ms} ms`)), ms); });
+  return Promise.race([p, limit]).finally(() => clearTimeout(timer));
+};
 
 function syncChecks() {
   // an empty folder gets the shipped code and a stamp
