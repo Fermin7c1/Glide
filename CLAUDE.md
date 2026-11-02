@@ -31,9 +31,12 @@ TypeScript) and the knowledge layer and tools (`knowledge/`, `tools/`, `wowfiles
   engine's HTTP, the dashboard state, the desktop IPC, files on the player's disk, the databases, command lines,
   player-visible text). An approved change to one is recorded there under "Recorded changes" (one bullet: what,
   why, which recommendation), and a golden probe it changes is re-recorded alone (`golden.py record <probe>`).
-- **Keep the checks green**: `tests/run_all.py` and `tests/golden/golden.py check` (through the test lock on the
-  development PC), `ruff check .`, `luacheck addon/Glide`, `npm run build` in `desktop/`. A bug fix comes with a
-  regression test; a test that needs data not in the repository skips with exit 77.
+- **Keep the checks green**: `tests/run_all.py` (through the test lock on the development PC, where its
+  `test_golden`, `test_lint` and `test_types` run every golden probe, ruff, luacheck, pyright and the desktop build:
+  that one run is the check); elsewhere also `tests/golden/golden.py check --portable` and, for what skipped,
+  `ruff check .`, `luacheck addon/Glide`, `npm run build` in `desktop/`. `run_all.py --changed` is the fast loop
+  while iterating, never the check. A bug fix comes with a regression test; a test that needs data not in the
+  repository skips with exit 77.
 - **An addon change bumps the addon version** once in `addon/Glide/Glide.toc`.
 - **Settings** go through `companion/settings_manifest.json` (read with `companion/settings.py`), never an inline
   default; strip keys through `companion/strip_spec.py`; engine state and IPC types through

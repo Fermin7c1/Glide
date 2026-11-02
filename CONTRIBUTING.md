@@ -38,10 +38,23 @@ player's install. Stop what you started by its process id, never by name.
 
 ```
 py -3 tests/run_all.py              every test, each in its own process (several at once), with a summary
-py -3 tests/run_all.py -j 1         one at a time (-j N: up to N at once); Ctrl+C stops the run at once
+py -3 tests/run_all.py -j 1         one at a time, in order (-j N: N cores' worth); Ctrl+C stops the run at once
 py -3 tests/run_all.py trash kb     only the tests whose path contains one of the words
+py -3 tests/run_all.py --changed    the fast loop: only the tests your changes since origin/main can reach
+                                    (--changed HEAD~3 for another base; tests/affected.py --why FILE says why)
+py -3 tests/run_all.py --list       which tests would run, in the order they start (runs none)
 py -3 tests/run_all.py --smoke      the report-only checks against your own data (never fail)
 ```
+
+The runner starts the longest tests first, by this machine's earlier runs (`tests/.timings.json`, not committed; a
+fresh checkout uses the list in `run_all.py`). The ones the run's length hangs on keep normal priority and up to
+twice -j tests run at once, the rest a step below, so short tests fill the cores the long ones leave idle (WoW and
+the app at normal priority stay ahead of them too). `--changed` finds each test's dependencies statically
+(`tests/affected.py`: imports, the files and folders the code names, what a command line runs) and runs a test only
+when one of them changed; a change to the runner, the requirements or the linters' or TypeScript's settings, or to
+code no test reaches, runs everything. In it `test_types` checks only the engine files the change can reach. It is
+for iterating: the full run is the check before a commit, and CI always runs everything. After a big change to the
+tests, `python3 tests/affected.py --trace` (Linux, strace) checks the map against every file each test really opens.
 
 A test that can't run on this machine (no `data/kb.db`, no game data, no node, no Edge, no linter) prints
 `SKIP: <reason>` and exits with 77; the summary lists it apart from passes and failures. A new test that needs data
@@ -71,11 +84,19 @@ app. A difference is either a bug (fix it) or an intended change: record it in `
 "Recorded changes" (what, why, which recommendation), then re-record only that probe:
 `py -3 tests/golden/golden.py record <probe>`. Never re-record to make an unexplained difference go away.
 
+On the development PC (it has the data), `tests/test_golden.py` inside `run_all` runs `golden.py check` over every
+probe, so a green `run_all` with `test_golden.py ok` is the golden check: don't run it a second time. `golden.py`
+stays for `record`, a single probe and `--portable` on a machine without the data.
+
 ## Linters and builds
 
 - `ruff check .` (settings in `pyproject.toml`), `luacheck addon/Glide` (`.luacheckrc`).
 - `cd desktop` then `npm run build` (generates the Settings schema from `companion/settings_manifest.json`, then
   compiles).
+- On the development PC, `run_all` covers these too when `test_lint.py`, `test_types.py` and `test_golden.py` pass
+  (not SKIP): `test_lint` runs ruff and luacheck, and the golden desktop probe runs `npm run build`. The routine check
+  is then one command: `run_all` through the test lock. Elsewhere add what skipped (`golden.py check --portable`,
+  the linters you have, `npm run build`).
 - CI (`.github/workflows/ci.yml`, on every push and pull request) runs all of these, `tests/run_all.py` and the
   portable golden masters on a Windows runner with no game data.
 
