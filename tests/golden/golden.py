@@ -71,10 +71,15 @@ def main(argv):
     names = [a for a in argv[1:] if a != "--portable"] or (PORTABLE if "--portable" in argv else PROBES)
     os.makedirs(SNAP, exist_ok=True)
     bad = 0
-    with ThreadPoolExecutor(max_workers=min(len(names), 6) or 1) as pool:
-        results = dict(zip(names, pool.map(run_probe, names)))
+    if mode == "record":
+        # one at a time, in order, each snapshot written before the next probe runs: the engine probe replays the
+        # addon snapshot, so recording both must not read the old one
+        results = None
+    else:
+        with ThreadPoolExecutor(max_workers=min(len(names), 6) or 1) as pool:
+            results = dict(zip(names, pool.map(run_probe, names)))
     for name in names:
-        got = results[name]
+        got = run_probe(name) if results is None else results[name]
         path = os.path.join(SNAP, name + ".json")
         if mode == "record":
             with open(path, "w", encoding="utf-8", newline="\n") as fh:

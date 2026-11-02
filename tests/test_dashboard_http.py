@@ -156,9 +156,14 @@ assert got.startswith(b"HTTP/1.0 200"), got[:80]
 
 # a client that falls behind (its queue full) is dropped, and its stream ends so it reconnects
 dashboard.PING_S = 0.2
-for i in range(250):
-    hub.publish("speak", {"text": "x" * 20000, "interrupt": False})     # more than the socket and the queue hold
-assert not hub.clients, "the slow client was dropped"
+# The client never reads: once the socket's buffers are full the server's writer blocks and the queue fills. How many
+# messages that takes depends on the OS's buffers and on how fast the writer drains them (a busy machine, a parallel
+# test run), so publish until the client is dropped, within a bound, rather than a fixed count that sits at the edge.
+deadline, sent = time.time() + 20, 0
+while hub.clients and time.time() < deadline and sent < 20000:
+    hub.publish("speak", {"text": "x" * 20000, "interrupt": False})
+    sent += 1
+assert not hub.clients, "the slow client was dropped (after %d messages)" % sent
 s.settimeout(0.5)
 deadline, closed = time.time() + 10, False
 while time.time() < deadline and not closed:

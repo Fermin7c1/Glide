@@ -37,7 +37,8 @@ player's install. Stop what you started by its process id, never by name.
 ## Tests
 
 ```
-py -3 tests/run_all.py              every test, each in its own process, with a summary
+py -3 tests/run_all.py              every test, each in its own process (several at once), with a summary
+py -3 tests/run_all.py -j 1         one at a time (-j N: up to N at once); Ctrl+C stops the run at once
 py -3 tests/run_all.py trash kb     only the tests whose path contains one of the words
 py -3 tests/run_all.py --smoke      the report-only checks against your own data (never fail)
 ```

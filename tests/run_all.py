@@ -96,10 +96,13 @@ def main():
                                                tests.index(t)))
     else:
         ordered = tests
-    with ThreadPoolExecutor(max_workers=min(jobs, max(1, len(ordered)))) as pool:
+    pool = ThreadPoolExecutor(max_workers=min(jobs, max(1, len(ordered))))
+    reported = 0
+    try:
         futs = [pool.submit(_run_one, t) for t in ordered]
         for fut in (as_completed(futs) if jobs > 1 else futs):
             name, code, stdout, dt = fut.result()
+            reported += 1
             status = "ok  " if code == 0 else "SKIP" if code == SKIP_EXIT else "FAIL"
             print("%-38s %s  %5.1fs" % (name, status, dt), flush=True)
             if code == SKIP_EXIT:
@@ -107,6 +110,13 @@ def main():
             elif code != 0:
                 failed.append(name)
                 print("    " + "\n    ".join(stdout.strip().splitlines()[-6:]), flush=True)
+    except KeyboardInterrupt:
+        # Ctrl+C: the running tests got it too (same console); the queued ones never start
+        pool.shutdown(wait=False, cancel_futures=True)
+        print("\ninterrupted: %d of %d tests reported, %s failed so far" % (
+            reported, len(tests), ", ".join(sorted(failed)) or "none"), flush=True)
+        return 130
+    pool.shutdown()
     print("\n%d tests: %d ok, %d skipped, %d failed, %.0fs" % (
         len(tests), len(tests) - len(failed) - len(skipped), len(skipped), len(failed), time.time() - t0))
     if skipped:
