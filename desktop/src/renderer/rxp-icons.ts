@@ -111,3 +111,27 @@ export function actionIcon(a: RxpGuideAction, icons: IconMap | null | undefined,
 export function prepIcon(p: RxpFactsPrep, icons: IconMap | null | undefined): GameIcon | null {
   return itemIcon(icons, p.item_id, p.name);
 }
+
+/** A step pin's icon, by the step's kind (the pin's glyph): the game's quest marks on accept and turn-in pins, the
+ * flight master on travel, the Hearthstone or the innkeeper on hearth pins, a fight's first creature, a plain step's
+ * vendor, trainer, banker or stable master; a deathskip and anything else keep the glyph. */
+export function stepIcon(kind: string, actions: RxpGuideAction[], targets: RxpFactsTarget[] | undefined,
+  icons: IconMap | null | undefined): GameIcon | null {
+  if (!icons) return null;
+  const first = (verbs: string[]) => {
+    for (const a of actions) if (verbs.includes(a.verb)) { const gi = actionIcon(a, icons, targets); if (gi) return gi; }
+    return null;
+  };
+  switch (kind) {
+    case "accept": return roleIcon(icons, "quest_available");
+    case "turnin": return roleIcon(icons, "quest_turnin");
+    case "travel": return roleIcon(icons, "flight");
+    case "hearth": return first(["hs", "home"]);
+    case "combat": {
+      const t = (targets || []).find((x) => x.kind === "npc" && (x.role === "kill" || x.role === "loot") && icons[`npc:${x.id}`]);
+      return t ? npcIcon(icons, t.id, t.name) : first(["mob", "kill", "target"]);
+    }
+    case "step": return first(["vendor", "trainer", "train", "bankdeposit", "bankwithdraw", "stable"]);
+    default: return null;
+  }
+}

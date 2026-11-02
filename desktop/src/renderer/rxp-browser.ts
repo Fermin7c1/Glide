@@ -15,6 +15,7 @@ import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick,
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
 import { dangerRuns, dingText, hazardLine, hazardWhere, nextDing, type PlanSteps, roughDur, span, spanText } from "./rxp-plan.js";
 import { PREP_GLYPH, prepLabel, prepNeed, prepShown, prepTitle } from "./rxp-prep.js";
+import { actionIcon, type GameIcon, lootIcon, prepIcon, rankIcon, stepIcon, targetIcon } from "./rxp-icons.js";
 import { chainCrossings, chainOf, chainStops, continuesAfter, questsOf, type QuestRole, skipLine } from "./rxp-quests.js";
 import { aheadOpacity, durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt,
   type Stop, stopsOf } from "./rxp-route.js";
@@ -224,22 +225,51 @@ const questName = (a: RxpGuideAction) => a.quest_name || (a.quest_id != null ? f
 const itemName = (id: number | null) => (id != null ? facts?.prep?.find((p) => p.item_id === id && p.name)?.name : null) || null;
 const QUEST_BADGE = new Set(["accept", "turnin", "complete", "collect"]);
 
-interface Badge { cls: string; sym: string; label: string; quest?: number }
+interface Badge { cls: string; sym: string; label: string; quest?: number; gi?: GameIcon | null }
+
+/** A glyph that gives way to the game's own icon once its image has loaded (glide://icon, rxp-icons.ts); an image
+ * that fails to load leaves the glyph (watchGameIcons). */
+function giHtml(sym: string, gi: GameIcon | null | undefined): string {
+  if (!gi) return `<b>${esc(sym)}</b>`;
+  return `<b class="rxpb-gw"><span>${esc(sym)}</span><img class="rxpb-gi" src="${esc(gi.url)}" alt="${esc(gi.what)}" draggable="false"></b>`;
+}
+
+/** The same in the map's SVG: the icon over its glyph or shape, shown once loaded; size in map units. */
+function giSvg(gi: GameIcon | null | undefined, size: number): string {
+  return gi ? `<image class="rxpb-gi" href="${esc(gi.url)}" x="${-size / 2}" y="${-size / 2}" width="${size}" height="${size}"/>` : "";
+}
+
+/** An image of a game icon loaded: its glyph steps aside; failed (no client, not decoded): the image goes. */
+function watchGameIcons(root: HTMLElement): void {
+  root.addEventListener("load", (e) => {
+    const t = e.target as Element;
+    if (t.classList?.contains("rxpb-gi")) t.parentElement?.classList.add("gi-on");
+  }, true);
+  root.addEventListener("error", (e) => {
+    const t = e.target as Element;
+    if (t.classList?.contains("rxpb-gi")) { t.parentElement?.classList.remove("gi-on"); t.remove(); }
+  }, true);
+}
 
 /** An action's badge as HTML: a quest's badge is a button that lights the quest's chain. */
 function badgeHtml(b: Badge, mini = false): string {
   const cls = `rxpb-badge${mini ? " mini" : ""} ${b.cls}`;
-  if (b.quest == null) return `<span class="${cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`;
+  if (b.quest == null) return `<span class="${cls}">${giHtml(b.sym, b.gi)} ${esc(b.label)}</span>`;
   const on = b.quest === focusQuest;
   return `<button type="button" tabindex="-1" class="${cls} rxpb-qb${on ? " on" : ""}" data-quest="${b.quest}" aria-pressed="${on}"
-    title="${on ? "Stop showing this quest's chain (Esc)" : "Show this quest's chain on the map, the timeline and the list"}"><b>${esc(b.sym)}</b> ${esc(b.label)}</button>`;
+    title="${on ? "Stop showing this quest's chain (Esc)" : "Show this quest's chain on the map, the timeline and the list"}">${giHtml(b.sym, b.gi)} ${esc(b.label)}</button>`;
 }
 
-function actionBadge(a: RxpGuideAction): Badge | null {
+/** An action's badge; with its step, the game's icon for it (the step's targets name the creatures). */
+function actionBadge(a: RxpGuideAction, st?: RxpGuideStep): Badge | null {
   const b = actionBadgeOf(a);
   if (b && a.quest_id && QUEST_BADGE.has(a.verb)) b.quest = a.quest_id;
+  if (b && st) b.gi = actionIcon(a, facts?.icons, facts?.targets?.[String(st.idx)]);
   return b;
 }
+
+/** A step's badges, with their icons. */
+const stepBadges = (st: RxpGuideStep) => (st.actions || []).map((a) => actionBadge(a, st)).filter(Boolean) as Badge[];
 
 function actionBadgeOf(a: RxpGuideAction): Badge | null {
   const qn = questName(a);
@@ -433,7 +463,13 @@ const ROLE_NAME: Record<string, string> = { kill: "Kill", loot: "Loot", use: "Us
 const RANK_NAME: Record<number, string> = { 1: "Elite", 2: "Rare elite", 3: "Boss", 4: "Rare" };
 
 /** The shape of one objective point: a kill target a dot (gold-rimmed when elite), an object a diamond, a quest
- * area a ring. */
+ * area a ring. With the game's icon for the target (its beast family or creature type, the item an object gives),
+ * the icon in a frame of the role's colour takes the shape's place once it has loaded. */
+function objMarker(t: RxpFactsTarget, gi: GameIcon | null): string {
+  if (!gi) return objShape(t);
+  return `<g class="rxpb-sh">${objShape(t)}</g><rect class="rxpb-gf" x="-7.5" y="-7.5" width="15" height="15" rx="2.5"/>${giSvg(gi, 13)}`;
+}
+
 function objShape(t: RxpFactsTarget): string {
   if (t.kind === "object") return `<rect x="-3.6" y="-3.6" width="7.2" height="7.2" transform="rotate(45)"/>`;
   if (t.kind === "poi") return `<circle class="ring" r="5"/>`;
@@ -498,8 +534,11 @@ function buildLayers(mapId: number | null, imgUrl: string | null): void {
           }
           for (const { t, ti } of ts) {
             const shape = objShape(t);
+            // the game's icon once per cluster of spawns (its first point), so a camp reads as one boar, not twenty
+            const gi = targetIcon(t, facts?.icons);
+            const lead = new Set((t.groups?.length ? t.groups : [t.points]).map((grp) => grp[0] && `${grp[0][0]},${grp[0][1]}`));
             parts.push(`<g class="rxpb-obj r-${t.role} k-${t.kind}${(t.rank || 0) >= 1 ? " elite" : ""}" data-kind="obj" data-src="${vs.src}" data-sub="${ti}">`
-              + t.points.map(([x, y]) => `<g transform="translate(${mapX(x)},${mapY(y)})"><g class="rxpb-body">${shape}</g></g>`).join("") + `</g>`);
+              + t.points.map(([x, y]) => `<g transform="translate(${mapX(x)},${mapY(y)})"><g class="rxpb-body">${gi && lead.has(`${x},${y}`) ? objMarker(t, gi) : shape}</g></g>`).join("") + `</g>`);
           }
           objs.push(`<g class="rxpb-sobjs" data-src="${vs.src}">${parts.join("")}</g>`);
         }
@@ -511,7 +550,7 @@ function buildLayers(mapId: number | null, imgUrl: string | null): void {
         : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : stepNum(vs);
       pins.push(`<g class="rxpb-pin k-${vs.kind}${parentView ? " small" : ""}" data-kind="step" data-src="${vs.src}" data-pos="${posBySrc.get(vs.src)}"
         transform="translate(${mapX(at.x)},${mapY(at.y)})" tabindex="0" role="button" aria-label="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}">
-        <g class="rxpb-body"><circle class="rxpb-pin-pulse" r="22"/><circle class="rxpb-pin-dot" r="10.5"/><text dy="0.35em">${esc(sym)}</text></g></g>`);
+        <g class="rxpb-body"><circle class="rxpb-pin-pulse" r="22"/><circle class="rxpb-pin-dot" r="10.5"/><text dy="0.35em">${esc(sym)}</text>${giSvg(parentView ? null : stepIcon(vs.kind, vs.step.actions || [], facts?.targets?.[String(vs.src)], facts?.icons), 15)}</g></g>`);
     }
   }
   const zoneSteps = visibleSteps.some((vs) => vs.ui_map === mapId && vs.step.x != null);
@@ -878,7 +917,7 @@ function renderPrep(): void {
       + `<div class="rxpb-prep-items">${items.map((p) => {
         const need = prepNeed(p, num);
         return `<button type="button" class="rxpb-pc k-${p.kind}" data-src="${p.idx}" title="${esc(prepTitle(p, num, qname))}">`
-          + `<b>${PREP_GLYPH[p.kind]}</b> ${esc(prepLabel(p))}${need ? ` <em>${esc(need)}</em>` : ""}</button>`;
+          + `${giHtml(PREP_GLYPH[p.kind], prepIcon(p, facts?.icons))} ${esc(prepLabel(p))}${need ? ` <em>${esc(need)}</em>` : ""}</button>`;
       }).join("")}</div><button type="button" class="rxpb-prep-more" id="rxpb-prep-more" hidden></button>`;
     fitPrep();
   }
@@ -1007,12 +1046,12 @@ function elementCard(kind: string, src: number, sub: number | null, legK: string
   if (kind === "step" && vs) {
     const st = vs.step;
     const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
-    const badges = (st.actions || []).map(actionBadge).filter(Boolean) as Badge[];
+    const badges = stepBadges(st);
     const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
     return {
       head: `<b>Step ${stepNum(vs)}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}`,
       body: `<div class="rxpb-hc-text">${text ? formatRxpText(text) : esc(stepHeadline(st))}</div>`
-        + (badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""),
+        + (badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}">${giHtml(b.sym, b.gi)} ${esc(b.label)}</span>`).join("")}</div>` : ""),
     };
   }
   if (kind === "wp" && vs && sub != null) {
@@ -1066,11 +1105,15 @@ function elementCard(kind: string, src: number, sub: number | null, legK: string
     const t = facts?.targets?.[String(src)]?.[sub];
     if (!t) return null;
     const quest = (vs.step.actions || []).find((x) => x.quest_id != null && x.quest_id === t.quest);
-    const item = t.role === "loot" ? (vs.step.actions || []).find((x) => x.verb === "collect" && (!t.quest || x.quest_id === t.quest))?.entity_name : null;
+    const item = t.role === "loot" ? (vs.step.actions || []).find((x) => x.verb === "collect" && (!t.quest || x.quest_id === t.quest))?.entity_name
+      || itemName(t.item ?? null) : null;
     const bits = [t.level ? `level ${t.level}` : "", t.rank ? RANK_NAME[t.rank] || "" : ""].filter(Boolean);
+    // the game's icons: the creature (its family or type), the elite or rare mark, the item to loot
+    const gi = targetIcon(t, facts?.icons), rk = rankIcon(t.rank, facts?.icons), loot = lootIcon(t, facts?.icons);
+    const lootHtml = loot && (item || t.kind !== "object") ? giHtml("◆", loot) + " " : "";
     return {
-      head: `<b>${esc(`${ROLE_NAME[t.role] || ""} ${t.name || (t.kind === "poi" ? "the quest area" : `#${t.id}`)}`.trim())}</b>${bits.length ? `<span class="${(t.rank || 0) >= 1 ? "warn" : ""}">${esc(bits.join(" · "))}</span>` : ""}`,
-      body: (item ? `<div class="rxpb-hc-line">For ${esc(item)}</div>` : "")
+      head: `${gi ? giHtml("", gi) : ""}<b>${esc(`${ROLE_NAME[t.role] || ""} ${t.name || (t.kind === "poi" ? "the quest area" : `#${t.id}`)}`.trim())}</b>${bits.length ? `<span class="${(t.rank || 0) >= 1 ? "warn" : ""}">${rk ? giHtml("", rk) : ""}${esc(bits.join(" · "))}</span>` : ""}`,
+      body: (item ? `<div class="rxpb-hc-line">${lootHtml}For ${esc(item)}</div>` : "")
         + (quest ? `<div class="rxpb-hc-line">${esc(questName(quest) || `Quest #${quest.quest_id}`)}</div>` : "")
         + `<div class="rxpb-hc-line dim">${t.points.length > 1 ? `${t.points.length} places near the step` : "Near the step"}</div>`,
     };
@@ -1252,7 +1295,7 @@ function activeStepHtml(vs: VisibleStep): string {
   if (st.cond) flagPills.push(`<span class="rxpb-cond-pill">&lt;&lt; ${esc(st.cond)}</span>`);
   const rows: string[] = [];
   for (const a of (st.actions || []).filter((x) => filter.showAllCond || actionApplies(x))) {
-    const b = actionBadge(a);
+    const b = actionBadge(a, st);
     const hasText = !!(a.raw_text || a.text);
     if (!b && !hasText && a.verb !== "goto" && a.verb !== "link") continue;
     if (a.verb === "goto" && !hasText) continue;    // pure coordinate lines are the waypoint pills below
@@ -1298,7 +1341,7 @@ function hazardRows(src: number): string {
 function stepItemHtml(vs: VisibleStep, i: number): string {
   const st = vs.step;
   const on = i === activeIdx;
-  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as Badge[];
+  const badges = stepBadges(st);
   const summaryText = st.text || badges.map((b) => b.label).join(" · ") || stepHeadline(st);
   const coord = st.x != null && st.y != null ? `${st.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
   return `<div class="rxpb-sitem-top">
@@ -1336,7 +1379,7 @@ function renderStepList(scrollActive = false): void {
     visibleSteps.forEach((vs, i) => {
       if (q) {
         const st = vs.step;
-        const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { label: string }[];
+        const badges = (st.actions || []).map((a) => actionBadge(a)).filter(Boolean) as { label: string }[];
         const hay = `${stepNum(vs)} ${st.text || ""} ${stepHeadline(st)} ${st.zone || ""} ${st.comments || ""} ${badges.map((b) => b.label).join(" ")}`.toLowerCase();
         if (!hay.includes(q) && i !== activeIdx) return;
       }
@@ -2197,6 +2240,7 @@ function refilter(): void {
 }
 
 export function wireRxpBrowser(): void {
+  watchGameIcons(document.body);       // the page, its cards and its popovers
   wireMapView();
   wireKeys();
   $("rxpb-to-addon").onclick = () => show("addon");

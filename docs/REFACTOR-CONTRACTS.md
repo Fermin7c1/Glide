@@ -747,3 +747,9 @@ they don't spell out.
   stopped; an icon that can't be had answers 404 and the page keeps its glyph. The renderer's mapping is
   `desktop/src/renderer/rxp-icons.ts` (`tests/test_rxp_icons.py`; also `tests/test_target_icons.py`,
   `tests/test_game_icons.py`). Nothing from the client is shipped.
+- **Follow-up, what the player sees: the Guides page draws the game's icons.** Map objectives show their target's
+  icon (a creature's beast family or type, the item an object gives) once per cluster of spawns, in a frame of the
+  role's colour (gold for an elite), the other spawns staying dots; step pins show the game's quest marks, the flight
+  master, the Hearthstone or innkeeper, a fight's creature, a vendor's or trainer's mark; step badges, the hover card
+  and inspector, and the "Before you start" row show the item, spell, creature or role icon. Each icon replaces its
+  glyph only once its image has loaded; with no client data, or an image that fails, the glyph stays.

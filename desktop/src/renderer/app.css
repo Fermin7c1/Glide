@@ -662,6 +662,29 @@ polyline.rxpb-loop { fill: none; }
 .rxpb-obj circle.ring { fill: none !important; stroke: #fcdc00; stroke-width: 2.2; }
 .rxpb-obj.elite circle { stroke: var(--gold-hi); stroke-width: 2; }
 .rxpb-obj:hover circle, .rxpb-obj:hover rect, .rxpb-obj.is-sel circle, .rxpb-obj.is-sel rect { stroke: #fff; stroke-width: 2.2; }
+/* the game's own icons (rxp-icons.ts, glide://icon): the glyph or shape stays until the image has loaded, and stays
+   for good when it fails; on the map an icon sits in a frame of its role's colour (gold for an elite) */
+.rxpb-gw { display: inline-flex; align-items: center; justify-content: center; align-self: center; }
+.rxpb-gw > .rxpb-gi { display: none; width: 18px; height: 18px; border-radius: 3px; object-fit: contain; }
+.rxpb-gw.gi-on > span { display: none; }
+.rxpb-gw.gi-on > .rxpb-gi { display: block; }
+.rxpb-badge.mini .rxpb-gw > .rxpb-gi { width: 16px; height: 16px; }
+.rxpb-hc-head .rxpb-gw > .rxpb-gi, .rxpb-ins-head .rxpb-gw > .rxpb-gi { width: 24px; height: 24px; }
+.rxpb-hc-head span .rxpb-gw, .rxpb-ins-head span .rxpb-gw { margin-right: 4px; vertical-align: middle; }
+.rxpb-hc-head span .rxpb-gw > .rxpb-gi, .rxpb-ins-head span .rxpb-gw > .rxpb-gi { width: 16px; height: 16px; }
+.rxpb-hc-line .rxpb-gw { vertical-align: middle; margin-right: 2px; }
+.rxpb-hc-line .rxpb-gw > .rxpb-gi { width: 18px; height: 18px; }
+image.rxpb-gi { opacity: 0; pointer-events: none; }
+.rxpb-obj .rxpb-gf { display: none; stroke: rgba(0, 0, 0, 0.85); stroke-width: 1.4; }
+.rxpb-obj .gi-on > .rxpb-sh { display: none; }
+.rxpb-obj .gi-on > .rxpb-gf { display: inline; }
+.rxpb-obj.elite .gi-on > .rxpb-gf { stroke: var(--gold-hi); stroke-width: 2; }
+.rxpb-obj:hover .gi-on > .rxpb-gf, .rxpb-obj.is-sel .gi-on > .rxpb-gf { stroke: #fff; stroke-width: 2.2; }
+.gi-on > image.rxpb-gi { opacity: 1; }
+.rxpb-pin image.rxpb-gi { clip-path: circle(47%); transform-box: fill-box; transform-origin: center; }
+.rxpb-pin .gi-on > text { display: none; }
+.rxpb-pin.is-cur image.rxpb-gi { transform: scale(1.35); }
+.rxpb-pin.is-pinned image.rxpb-gi { transform: scale(1.2); }
 .rxpb-ohull { stroke-width: calc(1.4px * var(--inv, 1)); stroke-dasharray: calc(3px * var(--inv, 1)) calc(3px * var(--inv, 1)); cursor: pointer; }
 .rxpb-ohull.r-kill { fill: rgba(255, 98, 87, 0.1); stroke: rgba(255, 98, 87, 0.75); }
 .rxpb-ohull.r-loot { fill: rgba(0, 188, 212, 0.1); stroke: rgba(0, 188, 212, 0.75); }

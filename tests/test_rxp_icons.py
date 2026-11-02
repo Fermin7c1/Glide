@@ -58,6 +58,10 @@ CALLS.update({
     "prep": "prepIcon({item_id: 2589, name: 'Linen Cloth'}, I)",
     "ranks": "[0, 1, 2, 3, 4, null].map((r) => rankIcon(r, I))",
     "url": "iconUrl(134414)",
+    "steps": "[['accept', []], ['turnin', []], ['travel', []], ['hearth', [A.hs]], ['hearth', [A.home]], "
+             "['combat', [A.mobNotFound]], ['combat', [A.complete, A.targetById]], ['step', [A.complete, A.vendor]], "
+             "['step', [A.complete]], ['death', [A.deathskip]]].map(([k, acts]) => stepIcon(k, acts, [T.unknown, T.boar], I))",
+    "stepsNone": "stepIcon('accept', [], [], null)",
 })
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-icons-")
@@ -74,7 +78,7 @@ try:
         "\n".join("out[%s] = %s;" % (json.dumps(k), v) for k, v in CALLS.items()))
     script = os.path.join(tmp, "run.js")
     with open(script, "w") as fh:
-        fh.write("import { targetIcon, lootIcon, actionIcon, prepIcon, rankIcon, iconUrl } from %s;\n%s" % (
+        fh.write("import { targetIcon, lootIcon, actionIcon, prepIcon, rankIcon, iconUrl, stepIcon } from %s;\n%s" % (
             json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
     r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert r.returncode == 0, "running rxp-icons failed: %s" % r.stderr[-2000:]
@@ -112,4 +116,10 @@ assert u(got["prep"]) == url("item:2589")
 assert [u(x) for x in got["ranks"]] == [None, url("role:elite"), url("role:rare"), url("role:elite"), url("role:rare"),
                                          None], got["ranks"]
 assert got["url"] == "glide://icon/134414.png"
+# step pins: the quest marks, the flight master, the Hearthstone / innkeeper, a fight's first known creature (the boar,
+# though the unknown one comes first), a plain step's vendor; a step with nothing to show and a deathskip keep the glyph
+assert [u(x) for x in got["steps"]] == [url("role:quest_available"), url("role:quest_turnin"), url("role:flight"),
+                                        url("item:6948"), url("role:innkeeper"), url("npc:3098"), url("npc:3098"),
+                                        url("role:vendor"), None, None], got["steps"]
+assert got["stepsNone"] is None
 print("OK")
