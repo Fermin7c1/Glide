@@ -670,3 +670,13 @@ they don't spell out.
   position text leaves the row (still read to screen readers) and the button shortens to its notch and number. No
   new IPC channel; no golden probe records the light stream. Guides page plan, phase 2 (live-sync recommendations 1-3,
   6, 7, 9-12; numbering through phase 0's masks instead of a new `number` command).
+- **Guides page: Narrate** (no golden probe changes): a "Narrate" toggle beside Follow step and Done steps
+  (`rxpb-narrate`, kept for the session like the other toggles, off at start; no setting). With it on and the voice
+  heard, Walk speaks each step's instruction (RestedXP's markup removed, names never ids) and, when there's a real way
+  to go, the way to the next step ("Head north-east about 300 yards, past Razor Hill, to Kaltunk", "Take the flight
+  to Orgrimmar", "Hearth to Razor Hill", "Die and run back from the graveyard"), waits for the voice, then moves on;
+  muted or Narrate off, Walk keeps its timer. Pause, picking a step, changing guide or leaving the page cut the
+  narration. The way between steps uses the map's legs from `addon:rxpRoutes` as far as they've come back (no
+  request of its own), else a straight line. The player-visible words are built in `desktop/src/renderer/rxp-narration.ts`. The narrator gains
+  `speakAndWait(text, tag)`, `cancel(tag)` and `canSpeak()`; the coach's lines are unchanged (tests/test_narrator.py).
+  `nav.ts` gains `whenLeft(page, fn)`. No IPC, file or state change. Player request (Guides narration, 2026-11-02).

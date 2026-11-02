@@ -2,6 +2,7 @@
 
 let page = "coach";
 const onShown = new Map<string, () => void>();
+const onLeft = new Map<string, () => void>();
 
 export const currentPage = () => page;
 
@@ -10,8 +11,15 @@ export function whenShown(p: string, fn: () => void): void {
   onShown.set(p, fn);
 }
 
+/** Run `fn` whenever page `p` is left for another. */
+export function whenLeft(p: string, fn: () => void): void {
+  onLeft.set(p, fn);
+}
+
 export function show(p: string): void {
+  const was = page;
   page = p;
+  if (was !== p) onLeft.get(was)?.();
   document.querySelectorAll<HTMLButtonElement>("#rail>button[data-page]").forEach((b) => {
     b.classList.toggle("on", b.dataset.page === p);
     if (b.dataset.page === p) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
