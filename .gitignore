@@ -10,6 +10,8 @@ dist/
 out/
 release/
 desktop/build/
+# tsc -b's record of what it built (npm run build compiles only what changed)
+*.tsbuildinfo
 *.log
 
 # Local and generated data (game client data, recordings, databases, logs)

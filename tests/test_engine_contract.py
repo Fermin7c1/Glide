@@ -40,5 +40,5 @@ assert set(re.findall(r'"(\w+)":', speak)) == set(declared("SpeakEvent")), speak
 
 # the dashboard stays checked: @ts-check in the page, and the build runs its check
 assert "// @ts-check" in read("companion", "static", "dashboard.js")
-assert "tsc -p tsconfig.dashboard.json" in json.loads(read("desktop", "package.json"))["scripts"]["build"]
+assert re.search(r"\btsc -b [^&]*\btsconfig\.dashboard\.json\b", json.loads(read("desktop", "package.json"))["scripts"]["build"])
 print("ok")
