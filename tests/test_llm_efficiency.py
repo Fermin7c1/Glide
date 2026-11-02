@@ -191,7 +191,7 @@ class A(http.server.BaseHTTPRequestHandler):
 
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), A)
 port = srv.server_address[1]
-threading.Thread(target=srv.serve_forever, daemon=True).start()
+threading.Thread(target=srv.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
 os.environ["ANTHROPIC_API_KEY"] = "test"
 msgs, spoken = [], []
 c = Coach({"api_url": "http://127.0.0.1:%d/v1/messages" % port, "fast_model": "claude-sonnet-5-5",

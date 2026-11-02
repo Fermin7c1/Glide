@@ -17,6 +17,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 sys.path.insert(0, os.path.join(ROOT, "companion"))
 import app as glide_app  # noqa: E402
 import dashboard  # noqa: E402
+dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
 import tuning  # noqa: E402
 
 read = lambda *p: open(os.path.join(ROOT, *p), encoding="utf-8").read()  # noqa: E731

@@ -57,7 +57,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
 port = srv.server_address[1]
-threading.Thread(target=srv.serve_forever, daemon=True).start()
+threading.Thread(target=srv.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
 
 # the catalog lists the endpoint's models
 tmp = tempfile.mkdtemp()
