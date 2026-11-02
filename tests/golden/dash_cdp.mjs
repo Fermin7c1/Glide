@@ -13,8 +13,8 @@ const p = spawn(edge, ["--headless", "--disable-gpu", "--no-first-run", "--hide-
   `--user-data-dir=${prof}`, "--remote-debugging-port=0", "about:blank"], { stdio: "ignore" });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let ws;
-for (let i = 0; i < 160 && !ws; i++) {
-  await sleep(250);
+for (let i = 0; i < 800 && !ws; i++) {
+  await sleep(50);
   try {
     const port = fs.readFileSync(path.join(prof, "DevToolsActivePort"), "utf8").split("\n")[0].trim();
     const t = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).find((x) => x.type === "page");
@@ -31,9 +31,15 @@ const js = async (e) => (await send("Runtime.evaluate", { expression: e, returnB
 await send("Page.enable"); await send("Runtime.enable");
 // times are printed in local time: pin the zone the snapshot was recorded in, so CI (UTC) reads the same
 await send("Emulation.setTimezoneOverride", { timezoneId: "America/New_York" });
+// and count the engine's "init" events the page has rendered (window.__inits), so the reading waits for the first
+// state on screen instead of a fixed time
 await send("Page.addScriptToEvaluateOnNewDocument", { source: `(()=>{const T=${FROZEN};const D=Date;
   class F extends D{constructor(...a){super(...(a.length?a:[T]))} static now(){return T}}
-  window.Date=F;try{localStorage.clear()}catch(e){}})();` });
+  window.Date=F;try{localStorage.clear()}catch(e){}
+  window.__inits=0;const add=EventSource.prototype.addEventListener;
+  EventSource.prototype.addEventListener=function(type,fn,...rest){
+    if(type!=='init')return add.call(this,type,fn,...rest);
+    return add.call(this,type,function(...a){try{return fn.apply(this,a)}finally{window.__inits++}},...rest)};})();` });
 const result = {};
 const READ = `(() => {
   const txt = (el) => el ? el.innerText.replace(/\\s+/g, " ").trim() : null;
@@ -53,17 +59,18 @@ const READ = `(() => {
     feed: [...document.querySelectorAll("#feed > *")].length,
   };
 })()`;
-// what the page shows once it has settled: loaded, the first state rendered, and the same reading twice in a row
-// half a second apart (a fixed wait was too short on a busy machine). Gives up after 20 s and keeps the last reading.
+// what the page shows once it has settled: loaded, the engine's first state rendered (the init event's handler has
+// run: window.__inits), and then the same reading twice in a row 100 ms apart. It used to wait a fixed 1.5 s and
+// compare readings half a second apart, about 2 s a size whatever the machine. Gives up after 20 s and keeps the last
+// reading.
 const settled = async () => {
-  await sleep(1500);
   let last = null;
-  for (let i = 0; i < 40; i++) {
-    const ready = await js("document.readyState === 'complete' && !!document.body && document.body.innerText.length > 0");
+  for (let i = 0; i < 200; i++) {
+    const ready = await js("document.readyState === 'complete' && window.__inits > 0 && document.body.innerText.length > 0");
     const now = ready ? JSON.stringify(await js(READ)) : null;
     if (now && now === last) break;
     last = now;
-    await sleep(500);
+    await sleep(100);
   }
   return last ? JSON.parse(last) : await js(READ);
 };

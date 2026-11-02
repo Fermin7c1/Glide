@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SNAP = os.path.join(HERE, "snapshots")
@@ -35,11 +36,16 @@ ENV = dict(os.environ, ANTHROPIC_API_KEY="", GEMINI_API_KEY="", GOOGLE_API_KEY="
            PYTHONHASHSEED="0", PYTHONIOENCODING="utf-8")
 
 
+TIMES = {}                              # probe -> seconds its last run took (printed by check: the slowest sets the pace)
+
+
 def run_probe(name):
     """-> the probe's output (parsed JSON), or raises with its stderr."""
+    t0 = time.perf_counter()
     out = os.path.join(tempfile.mkdtemp(), name + ".json")
     r = subprocess.run([sys.executable, os.path.join(HERE, "probe_%s.py" % name), out], env=ENV,
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    TIMES[name] = time.perf_counter() - t0
     if r.returncode or not os.path.exists(out):
         raise RuntimeError("probe %s failed:\n%s" % (name, (r.stderr or r.stdout)[-3000:]))
     return json.load(open(out, encoding="utf-8"))
@@ -90,7 +96,7 @@ def main(argv):
         want = json.load(open(path, encoding="utf-8"))
         got = json.loads(json.dumps(got, sort_keys=True))
         diff = first_difference(want, got)
-        print("%-10s %s" % (name, "same" if not diff else "CHANGED  " + diff))
+        print("%-10s %5.1fs  %s" % (name, TIMES.get(name, 0.0), "same" if not diff else "CHANGED  " + diff))
         bad += bool(diff)
     return 1 if bad else 0
 
