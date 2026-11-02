@@ -27,10 +27,19 @@ p.cfg = {"key": "F8", "beep": False, "min_seconds": 0.2}
 p.keys = ptt.parse_key("F8"); p.user32 = FakeUser32(); p.rec = FakeRec(); p.stt = FakeSTT()
 p.on_question = got.append; p.on_status = status.append; p.prompt_fn = lambda: "Names: Wolf Den"; p.focus_check = None
 states = []; p.on_state = states.append
+def until(what, cond, timeout=5):
+    end = time.time() + timeout
+    while not cond():
+        assert time.time() < end, "timed out waiting for " + what
+        time.sleep(0.005)
 threading.Thread(target=p._loop, daemon=True).start()
-p.user32.down = True; time.sleep(0.1); p.user32.down = False; time.sleep(0.2)     # tap: ignored
-assert not got, got
-p.user32.down = True; time.sleep(0.5); p.user32.down = False; time.sleep(0.3)     # hold: asks
+# tap: ignored (let go as soon as the loop has seen the key, well under min_seconds)
+p.user32.down = True; until("listening", lambda: states == ["listening"]); p.user32.down = False
+until("the tap's end", lambda: len(states) >= 2)
+assert states == ["listening", "idle"] and not got, (states, got)
+# hold: asks (held 0.25 s after the loop saw the key, so over min_seconds 0.2 however the loop is scheduled)
+p.user32.down = True; until("listening again", lambda: len(states) >= 3); time.sleep(0.25); p.user32.down = False
+until("the question", lambda: got and len(states) >= 5)
 assert got == ["should I skip the wolf quest"], got
 assert p.stt.prompt == "Names: Wolf Den" and status[0]["kind"] == "question", status
 # the indicator, as it happens: a tap listens and goes idle; a hold listens, transcribes, then goes idle
@@ -58,17 +67,13 @@ c = Coach({"api_url": "http://127.0.0.1:%d/v1/messages" % port, "fast_model": "F
 c.state = GameState()
 c.start()
 c.ask("should I skip the wolf quest", voice=True)
-for _ in range(50):
-    if msgs: break
-    time.sleep(0.1)
+until("the answer", lambda: msgs, 5)
 assert H.last["model"] == "FAST" and H.last["max_tokens"] == 600, (H.last["model"], H.last["max_tokens"])
 _c = H.last["messages"][0]["content"]
 assert "push-to-talk" in (_c if isinstance(_c, str) else "".join(b["text"] for b in _c))
 assert msgs[0]["urgent"] and msgs[0]["speak"] and msgs[0]["kind"] == "answer", msgs
 c.ask("typed question")
-for _ in range(50):
-    if len(msgs) > 1: break
-    time.sleep(0.1)
+until("the second answer", lambda: len(msgs) > 1, 5)
 assert H.last["model"] == "DEEP" and not msgs[1]["urgent"], (H.last["model"], msgs[1])
 print("coach voice path OK")
 print("OK")

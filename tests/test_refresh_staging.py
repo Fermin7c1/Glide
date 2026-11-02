@@ -60,7 +60,20 @@ for c in held:
     c.execute("select * from t").fetchall()
 live.update(glide=g1, kb=k1)
 
-time.sleep(1.1)                                  # build names carry the time to the second
+
+class ClockAhead:
+    """kb_refresh's clock a few seconds on: build names carry the time to the second, so the second build gets a later
+    name without the test sleeping a second (file times stay real)."""
+
+    def __getattr__(self, name):
+        return getattr(time, name)
+
+    def strftime(self, fmt, t=None):
+        return time.strftime(fmt, time.localtime(time.time() + 2) if t is None else t)
+
+
+kb_refresh.time = ClockAhead()
+time.sleep(0.05)                                 # the second build's files are newer than the first's
 calls.clear()
 r2 = kb_refresh.Refresher(tmp, on_ready=lambda g, k: got.append((g, k)), log=lambda m: None, delay_s=0,
                           runner=runner, live=live, force=True)
