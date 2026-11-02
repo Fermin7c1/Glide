@@ -218,10 +218,12 @@
             <option value="450">4×</option>
           </select>
           <div class="rxpb-scrub-wrap">
-            <div class="rxpb-tl-ticks" id="rxpb-tl-ticks" aria-label="Accepts, turn-ins, objectives, flights, hearths, deathskips and zone changes along the route"></div>
+            <div class="rxpb-tl-ticks" id="rxpb-tl-ticks" aria-label="Accepts, turn-ins, objectives, flights, hearths, deathskips, zone changes and dangerous stretches along the route"></div>
+            <div class="rxpb-tl-bubble" id="rxpb-tl-bubble" aria-live="polite" hidden></div>
             <input type="range" id="rxpb-scrub" min="0" max="0" value="0" aria-label="Step timeline">
           </div>
           <span class="rxpb-tl-pos" id="rxpb-tl-pos" aria-live="polite">Step 1</span>
+          <span class="rxpb-tl-eta" id="rxpb-tl-eta" hidden></span>
           <button type="button" id="rxpb-live" class="btn rxpb-live" hidden></button>
         </div>
       </div>
