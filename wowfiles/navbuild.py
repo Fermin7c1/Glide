@@ -279,54 +279,61 @@ def surfaces(tz, tnz, thole, wl, floors, solids):
 
 def fine_edges(zs, kind, tz, twalk):
     """Directed edges between the fine surfaces -> tgt (8, LF, DN, DN) int8: the target layer in the neighbour cell
-    for direction d, -1 = none; jumps over short steep terrain and drops off ledges included."""
+    for direction d, -1 = none; jumps over short steep terrain and drops off ledges included.
+    Each surface is paired only with the surfaces its neighbour has (a cell's layers are filled from 0 up, mostly
+    just the ground), not with every layer of every cell."""
     tgt = np.full((8, LF, DN, DN), -1, np.int8)
-    has = np.isfinite(zs)
+    has = np.isfinite(zs).reshape(LF, DN * DN)
+    zf = zs.reshape(LF, DN * DN)
+    kf = kind.reshape(LF, DN * DN)
+    used = np.flatnonzero(has.any(1))
+    nl = int(used[-1]) + 1 if len(used) else 0        # layers 0..nl-1 hold every surface
+    cells = [np.flatnonzero(has[la]) for la in range(nl)]
+    rc = [np.divmod(a, DN) for a in cells]
     for d, (dr, dc) in enumerate(DIRS):
         dist = F * (1.4142 if dr and dc else 1.0)
-        up = dist * TAN_WALK + 0.25
-        nb = np.full((LF, DN, DN), np.nan, np.float32)
-        nk = np.zeros((LF, DN, DN), np.uint8)
-        rs = slice(max(0, -dr), DN - max(0, dr))
-        cs = slice(max(0, -dc), DN - max(0, dc))
-        rt = slice(max(0, dr), DN - max(0, -dr))
-        ct = slice(max(0, dc), DN - max(0, -dc))
-        nb[:, rs, cs] = zs[:, rt, ct]
-        nk[:, rs, cs] = kind[:, rt, ct]
-        best = np.full((LF, DN, DN), -1, np.int8)
-        bestz = np.full((LF, DN, DN), -np.inf, np.float32)
-        for la in range(LF):
-            za = zs[la]
-            ka = kind[la]
-            for lb in range(LF):
-                zb = nb[lb]
-                dz = zb - za
-                kb = nk[lb]
+        up = max(dist * TAN_WALK + 0.25, JUMP)
+        down_steep = -min(SAFE_DROP, dist * 2.75)
+        tf = tgt[d].reshape(LF, DN * DN)
+        for la in range(nl):
+            r, c = rc[la][0] + dr, rc[la][1] + dc
+            a = cells[la][(r >= 0) & (r < DN) & (c >= 0) & (c < DN)]  # the neighbour is in the domain
+            if not len(a):
+                continue
+            b = a + (dr * DN + dc)
+            za, ka = zf[la, a], kf[la, a]
+            best = np.full(len(a), -1, np.int8)
+            bestz = np.full(len(a), -np.inf, np.float32)
+            for lb in range(nl):
+                hb = has[lb, b]
+                if hb.all():                                   # every neighbour has this layer (mostly the ground)
+                    sub, zb, kb, zai, kai, bz = None, zf[lb, b], kf[lb, b], za, ka, bestz
+                else:
+                    sub = np.flatnonzero(hb)
+                    if not len(sub):
+                        continue
+                    zb, kb, zai, kai, bz = zf[lb, b[sub]], kf[lb, b[sub]], za[sub], ka[sub], bestz[sub]
+                dz = zb - zai
                 # walk: up a walkable slope or a hop of JUMP; onto steep ground only by a hop; from steep ground
                 # (sliding) or water only level or down, or a hop out of the water; down at most SAFE_DROP, and
                 # off steep ground no steeper than 70 degrees a step (beyond that it's a fall)
-                lim_up = np.where(ka == 3, 0.25, np.where((ka == 2) | (kb == 3) | (kb == 2), JUMP,
-                                                          max(up, JUMP)))
-                lim_dn = np.where(ka == 3, -min(SAFE_DROP, dist * 2.75), -SAFE_DROP)
-                ok = has[la] & np.isfinite(zb) & (dz <= lim_up) & (dz >= lim_dn)
+                lim_up = np.where(kai == 3, 0.25, np.where((kai == 2) | (kb == 3) | (kb == 2), JUMP, up))
+                lim_dn = np.where(kai == 3, down_steep, -SAFE_DROP)
                 # out of water you can only climb a little; into water from any safe height
-                take = ok & (zb > bestz[la])
-                best[la] = np.where(take, lb, best[la])
-                bestz[la] = np.where(take, zb, bestz[la])
-            tgt[d, la] = best[la]
-        if dr and dc:
-            # no corner cutting: both side cells must have a surface the move could pass at
-            for la in range(LF):
-                za = zs[la]
-                side_ok = np.zeros((DN, DN), bool)
+                take = (dz <= lim_up) & (dz >= lim_dn) & (zb > bz)
+                hit = np.flatnonzero(take) if sub is None else sub[take]
+                best[hit] = lb
+                bestz[hit] = zb[take]
+            if dr and dc:
+                # no corner cutting: both side cells must have a surface the move could pass at
+                e = np.flatnonzero(best >= 0)
                 for sr, sc in ((dr, 0), (0, dc)):
-                    s = np.full((LF, DN, DN), np.nan, np.float32)
-                    r1 = slice(max(0, -sr), DN - max(0, sr)); c1 = slice(max(0, -sc), DN - max(0, sc))
-                    r2 = slice(max(0, sr), DN - max(0, -sr)); c2 = slice(max(0, sc), DN - max(0, -sc))
-                    s[:, r1, c1] = zs[:, r2, c2]
-                    near = np.any(np.isfinite(s) & (np.abs(s - za[None]) <= JUMP + 0.5), axis=0)
-                    side_ok = side_ok | near if sr == dr and sc == 0 else side_ok & near
-                tgt[d, la] = np.where(side_ok, tgt[d, la], -1)
+                    side, zae = a[e] + (sr * DN + sc), za[e]
+                    near = np.zeros(len(e), bool)
+                    for ls in range(nl):
+                        near |= has[ls, side] & (np.abs(zf[ls, side] - zae) <= JUMP + 0.5)
+                    best[e[~near]] = -1
+            tf[la, a] = best
     return tgt
 
 
@@ -335,74 +342,96 @@ def joins(zs, tgt, kind):
     both ways (so a bridge and the river under it, linked only by the drop, stay apart), or between two steep
     surfaces either way (a slope is only ever gone down, so it would otherwise fall apart into single cells; the
     route planner never lets a step out of or into a steep patch climb more than a hop)."""
-    n = LF * DN * DN
     kf = kind.ravel()
-    rr, cc = np.meshgrid(np.arange(DN), np.arange(DN), indexing="ij")
+    rr, cc = np.divmod(np.arange(DN * DN), DN)
+    tf = tgt.reshape(8, LF, DN * DN)
     src_all, dst_all = [], []
     for d, (dr, dc) in enumerate(DIRS):
-        r2, c2 = rr + dr, cc + dc
-        inside = (r2 >= 0) & (r2 < DN) & (c2 >= 0) & (c2 < DN)
+        inside = (rr + dr >= 0) & (rr + dr < DN) & (cc + dc >= 0) & (cc + dc < DN)
         for la in range(LF):
-            lb = tgt[d, la]
-            ok = inside & (lb >= 0)
-            if not ok.any():
+            lb = tf[d, la]
+            i = np.flatnonzero(inside & (lb >= 0))
+            if not len(i):
                 continue
-            src_all.append(la * DN * DN + rr[ok] * DN + cc[ok])
-            dst_all.append(lb[ok].astype(np.int64) * DN * DN + r2[ok] * DN + c2[ok])
+            lbo = lb[i].astype(np.int64)
+            tcell = i + (dr * DN + dc)
+            s, t = la * DN * DN + i, lbo * DN * DN + tcell
+            mutual = tf[(d + 4) % 8, lbo, tcell] == la        # the edge back from t lands on s
+            keep = (mutual & (s < t)) | (~mutual & (kf[s] == 3) & (kf[t] == 3))    # a two-way pair once
+            src_all.append(s[keep])
+            dst_all.append(t[keep])
     if not src_all:
         e = np.zeros(0, np.int64)
         return e, e
-    s = np.concatenate(src_all)
-    t = np.concatenate(dst_all)
-    key = np.sort(s * n + t)
-    back = t * n + s
-    pos = np.minimum(np.searchsorted(key, back), len(key) - 1)
-    mutual = key[pos] == back
-    keep = (mutual & (s < t)) | (~mutual & (kf[s] == 3) & (kf[t] == 3))    # a two-way pair once
-    return s[keep], t[keep]
+    return np.concatenate(src_all), np.concatenate(dst_all)
 
 
 def _union(n, s, t):
     """Connected components of n items joined by pairs (s, t) -> the smallest index of each item's component.
-    Each round hooks every pair's larger root under the smaller one, then flattens the trees: about log(n) rounds."""
+    Each round hooks every pair's larger root under the smaller one, then flattens the trees: about log(n) rounds.
+    Only the items in a pair take part (the others are their own component); numbering them in order keeps the
+    smallest index the root."""
     parent = np.arange(n, dtype=np.int64)
+    if not len(s):
+        return parent
+    inpair = np.zeros(n, bool)
+    inpair[s] = True
+    inpair[t] = True
+    items = np.flatnonzero(inpair)
+    idx = np.cumsum(inpair) - 1
+    s, t = idx[s], idx[t]
+    p = np.arange(len(items), dtype=np.int64)
     for _ in range(64):
-        ps, pt = parent[s], parent[t]
+        ps, pt = p[s], p[t]
         hi, lo = np.maximum(ps, pt), np.minimum(ps, pt)
         diff = hi != lo
         if not diff.any():
             break
-        np.minimum.at(parent, hi[diff], lo[diff])
+        np.minimum.at(p, hi[diff], lo[diff])
         for _k in range(64):
-            pp = parent[parent]
-            if np.array_equal(pp, parent):
+            pp = p[p]
+            if np.array_equal(pp, p):
                 break
-            parent = pp
+            p = pp
+    parent[items] = items[p]
     return parent
+
+
+_BLOCK_OF = ((np.arange(DN) // BLOCK)[:, None] * DN + np.arange(DN) // BLOCK).ravel()   # fine cell -> its block
 
 
 def labels(zs, tgt, kind, pairs=None):
     """Connected patches inside each BLOCK x BLOCK cell (joins() inside one block) -> lab (LF, DN, DN) int64,
     -1 = none."""
     s, t = pairs if pairs is not None else joins(zs, tgt, kind)
-    rs, cs = (s % (DN * DN)) // DN, s % DN
-    rt, ct = (t % (DN * DN)) // DN, t % DN
-    same = (rs // BLOCK == rt // BLOCK) & (cs // BLOCK == ct // BLOCK)
-    lab = _union(LF * DN * DN, s[same], t[same])
+    blk = _BLOCK_OF[s % (DN * DN)] == _BLOCK_OF[t % (DN * DN)]
+    lab = _union(LF * DN * DN, s[blk], t[blk])
     return np.where(np.isfinite(zs).ravel(), lab, -1).reshape(LF, DN, DN)
 
 
-def domain_reach(zs, tgt, kind, pairs=None):
+def domain_reach(zs, tgt, kind, pairs=None, patches=None):
     """Size of the connected walkable area (joins() across the whole domain) of every fine surface ->
-    (LF, DN, DN) int64, 0 = none."""
+    (LF, DN, DN) int64, 0 = none. patches: labels() of the same pairs, when there: the patches are joined to each
+    other instead of every surface (the same areas, from the few pairs that cross between patches)."""
     n = LF * DN * DN
     has = np.isfinite(zs).ravel()
     s, t = pairs if pairs is not None else joins(zs, tgt, kind)
-    lab = _union(n, s, t)
+    if patches is None:
+        lab = _union(n, s, t)
+    else:
+        pl = patches.ravel()
+        ps, pt = pl[s], pl[t]
+        x = ps != pt
+        lab = _union(n, ps[x], pt[x])[np.maximum(pl, 0)]   # each surface's patch's (smallest) surface
     size = np.bincount(lab[has], minlength=n)
     out = np.zeros(n, np.int64)
     out[has] = size[lab[has]]
     return out.reshape(LF, DN, DN)
+
+
+_DIR_OF = np.full((3, 3), -1, np.int64)           # (dr + 1, dc + 1) -> its index in DIRS
+for _d, (_dr, _dc) in enumerate(DIRS):
+    _DIR_OF[_dr + 1, _dc + 1] = _d
 
 
 def condense(zs, kind, tgt, lab, comp=None):
@@ -464,36 +493,36 @@ def condense(zs, kind, tgt, lab, comp=None):
     # coarse edges from fine edges that cross into a neighbouring block (counted per target layer)
     link = np.zeros((L, CD, CD), np.uint32)
     within = np.zeros((L, CD, CD), np.uint32)
-    votes = np.zeros((L, CD, CD, 8, L), np.int32)
+    vote = []                                          # flat indices into votes (L, CD, CD, 8, L), one per fine edge
     for d, (dr, dc) in enumerate(DIRS):
         rs = slice(max(0, -dr), DN - max(0, dr)); cs = slice(max(0, -dc), DN - max(0, dc))
         rt = slice(max(0, dr), DN - max(0, -dr)); ct = slice(max(0, dc), DN - max(0, -dc))
-        rr = np.arange(DN)[rs][:, None]; cc = np.arange(DN)[cs][None, :]
+        R, C = np.arange(DN)[rs], np.arange(DN)[cs]
+        # the fine cells whose step in direction d leaves their block
+        leave = ((R // BLOCK) != ((R + dr) // BLOCK))[:, None] | ((C // BLOCK) != ((C + dc) // BLOCK))[None, :]
+        nlt = node_layer[:, rt, ct]
         for la in range(LF):
             lb = tgt[d, la, rs, cs]
             src = node_layer[la, rs, cs]
-            okb = (lb >= 0) & (src >= 0)
-            lbc = np.where(lb >= 0, lb, 0)
-            dst = node_layer[lbc, np.arange(DN)[rt][:, None], np.arange(DN)[ct][None, :]]
-            ok = okb & (dst >= 0)
-            sbr, sbc = rr // BLOCK, cc // BLOCK
-            tbr, tbc = (rr + dr) // BLOCK, (cc + dc) // BLOCK
-            # a step between two patches of the same cell (the rim of a plateau down onto the slope below it)
-            same = ok & (sbr == tbr) & (sbc == tbc) & (src != dst)
-            if same.any():
-                ii, jj = np.nonzero(same)
-                np.bitwise_or.at(within, (src[ii, jj].astype(int), rr[ii, 0] // BLOCK, cc[0, jj] // BLOCK),
-                                 (np.uint32(1) << (24 + dst[ii, jj].astype(np.uint32))))
-            cross = ok & ((sbr != tbr) | (sbc != tbc))
-            if not cross.any():
+            ok = (lb >= 0) & (src >= 0)
+            if not ok.any():
                 continue
-            ii, jj = np.nonzero(cross)
-            R, C = rr[ii, 0], cc[0, jj]
-            s_r, s_c = R // BLOCK, C // BLOCK
-            t_r, t_c = (R + dr) // BLOCK, (C + dc) // BLOCK
-            ddr, ddc = t_r - s_r, t_c - s_c
-            cd = np.array([DIRS.index((int(a), int(b))) for a, b in zip(ddr, ddc)], np.int64) if len(ddr) else ddr
-            np.add.at(votes, (src[ii, jj].astype(int), s_r, s_c, cd, dst[ii, jj].astype(int)), 1)
+            dst = nlt[0] if lb.max() == 0 else np.take_along_axis(nlt, np.maximum(lb, 0).astype(np.intp)[None], 0)[0]
+            ok &= dst >= 0
+            # a step between two patches of the same cell (the rim of a plateau down onto the slope below it)
+            ii, jj = np.nonzero(ok & ~leave & (src != dst))
+            if len(ii):
+                np.bitwise_or.at(within, (src[ii, jj].astype(int), R[ii] // BLOCK, C[jj] // BLOCK),
+                                 (np.uint32(1) << (24 + dst[ii, jj].astype(np.uint32))))
+            ii, jj = np.nonzero(ok & leave)
+            if not len(ii):
+                continue
+            s_r, s_c = R[ii] // BLOCK, C[jj] // BLOCK
+            cd = _DIR_OF[(R[ii] + dr) // BLOCK - s_r + 1, (C[jj] + dc) // BLOCK - s_c + 1]
+            vote.append((((src[ii, jj].astype(np.int64) * CD + s_r) * CD + s_c) * 8 + cd) * L + dst[ii, jj])
+    nv = L * CD * CD * 8 * L
+    votes = (np.bincount(np.concatenate(vote), minlength=nv) if vote else np.zeros(nv, np.int64)).reshape(
+        L, CD, CD, 8, L)
     best = votes.argmax(4)
     anyv = votes.max(4) > 0
     for d in range(8):
@@ -501,6 +530,19 @@ def condense(zs, kind, tgt, lab, comp=None):
     link |= within
     core = slice(1, CD - 1)
     return cz[:, core, core], link[:, core, core], ck[:, core, core], cxy[:, core, core]
+
+
+def build_domain(tz, tnz, th, wl, tri_rc):
+    """One tile's domain -> coarse z, link, kind, cxy (L, CN, CN). tz, tnz, th, wl (DN, DN): the terrain's height,
+    |normal z| and holes and the water level (nan = none); tri_rc (k, 3, 3): the objects' triangles in fine-cell
+    space (row, col, z). The whole pipeline of build_tile once the terrain and objects are read (the tests build
+    synthetic worlds with it)."""
+    floors, solids = rasterise(tri_rc)
+    zs, kind = surfaces(tz, tnz, th, wl, floors, solids)
+    tgt = fine_edges(zs, kind, tz, (tnz >= COS_WALK) & ~th)
+    pairs = joins(zs, tgt, kind)
+    lab = labels(zs, tgt, kind, pairs)
+    return condense(zs, kind, tgt, lab, domain_reach(zs, tgt, kind, pairs, lab))
 
 
 class TileSource:
@@ -571,14 +613,7 @@ def build_tile(src, ty, tx):
     rc[:, :, 0] = (top_x - tri[:, :, 0]) / F
     rc[:, :, 1] = (left_y - tri[:, :, 1]) / F
     rc[:, :, 2] = tri[:, :, 2]
-    floors, solids = rasterise(rc)
-    zs, kind = surfaces(tz, tnz, th, wl, floors, solids)
-    twalk = (tnz >= COS_WALK) & ~th
-    tgt = fine_edges(zs, kind, tz, twalk)
-    pairs = joins(zs, tgt, kind)
-    lab = labels(zs, tgt, kind, pairs)
-    comp = domain_reach(zs, tgt, kind, pairs)
-    z, link, k, cxy = condense(zs, kind, tgt, lab, comp)
+    z, link, k, cxy = build_domain(tz, tnz, th, wl, rc)
     area = np.repeat(np.repeat(me["area"], 4, 0), 4, 1)
     return {"z": z, "link": link, "kind": k, "cxy": cxy, "area": area, "objects": len(tri)}
 

@@ -3,12 +3,15 @@
 walls block and low ledges are hopped, a slope over 50 degrees can't be climbed but can be gone down, a bridge over
 a river is two floors (crossing on it and swimming under it), a wall with a doorway lets you through only the
 doorway, the floor a player is on is followed along their movement, routes are string-pulled, and the flight
-network routes and names flights. Needs numpy.
+network routes and names flights. Cell by cell: no corner is cut, steep ground is left only level or down, a cell
+with more patches than nodes keeps the ones joined to the most ground, and the planner's climb and swim rules and
+costs hold on hand-made maps. Needs numpy.
 
 The movement rules come from recorded play: across 6,927 sustained 8-16 yd uphill stretches of real runs the
 steepest was 47.5 degrees and none passed 50, while short steeper bits were crossed by hopping (scratch analysis
 for the 0.3.28 walking map; see tools/navmesh.py).
 """
+import hashlib
 import math
 import os
 import sys
@@ -42,20 +45,28 @@ def box(r0, r1, c0, c1, z0, z1):
     return q
 
 
+_BUILT = {}
+_RULES = repr(sorted((k, v) for k, v in vars(NM).items() if k.isupper() and isinstance(v, (int, float))))
+
+
 def build(tz, objects=(), water=None, tnz=None):
-    """Synthetic domain -> (z, link, kind, cxy) coarse (L, CN, CN) like build_tile."""
+    """Synthetic domain -> (z, link, kind, cxy) coarse (L, CN, CN) by build_tile's own pipeline (build_domain). A
+    world built before (same terrain, objects, water and builder constants) is served again, read-only."""
     tz = tz.astype(np.float32)
     if tnz is None:
         gr, gc = np.gradient(tz, F)
         tnz = 1.0 / np.sqrt(1 + gr ** 2 + gc ** 2)
+    tnz = tnz.astype(np.float32)
     th = np.zeros((DN, DN), bool)
     wl = np.full((DN, DN), np.nan, np.float32) if water is None else water.astype(np.float32)
     tri = np.array([t for o in objects for t in o], np.float64).reshape(-1, 3, 3)
-    floors, solids = NM.rasterise(tri)
-    zs, kind = NM.surfaces(tz, tnz.astype(np.float32), th, wl, floors, solids)
-    tgt = NM.fine_edges(zs, kind, tz, (tnz >= NM.COS_WALK) & ~th)
-    lab = NM.labels(zs, tgt, kind)
-    return NM.condense(zs, kind, tgt, lab, NM.domain_reach(zs, tgt, kind))
+    key = hashlib.sha1(b"".join(a.tobytes() for a in (tz, tnz, wl, tri)) + _RULES.encode()).hexdigest()
+    if key not in _BUILT:
+        parts = NM.build_domain(tz, tnz, th, wl, tri)
+        for a in parts:
+            a.setflags(write=False)
+        _BUILT[key] = parts
+    return _BUILT[key]
 
 
 def graph(parts):
@@ -157,6 +168,24 @@ assert abs(g.height(m0) - 100.0) < 1.0, g.height(m0)
 e1 = g.world_of(node(g, 30, 33, prefer=100.0))
 m1 = g.track(m0, e1[0], e1[1], 25.0)
 assert abs(g.height(m1) - 100.0) < 1.0, ("and on the deck you stay on it", g.height(m1))
+
+
+def recost(g, p):
+    """A route's cost from its nodes' world_of() positions, by the planner's rules: a step into water costs 1.5x,
+    onto steep ground 1.15x, to another floor of the same cell at least 1 yd."""
+    t = 0.0
+    for a, b in zip(p, p[1:]):
+        (ax, ay), (bx, by) = g.world_of(a), g.world_of(b)
+        d = math.hypot(bx - ax, by - ay)
+        k = int(g.kind[b])
+        t += max(1.0, d) if a[1:] == b[1:] else d * (1.5 if k == 2 else 1.15 if k == 3 else 1.0)
+    return t
+
+
+# ---- the planner's costs come from the same positions world_of() gives: over the deck, swum under it, down into it
+for a, b in ((west, east), (node(g, 10, 32, prefer=95.0), node(g, 54, 32, prefer=95.0)), (m0, under)):
+    p, cost, _ = g.find(a, b, margin=64)
+    assert p is not None and abs(recost(g, p) - cost) < 1e-6, (a, b, cost, p and recost(g, p))
 
 # ---- string-pulling: an open field gives a straight line, around the wall's end it bends once
 g = graph(build(flat))
@@ -275,6 +304,118 @@ try:
         assert q["run_s"] == run_s and q["faster_by_flight"] == p["faster"], q
 finally:
     NAV.load_graph, NAV.load, NV._walk, TX.load, NV.get_data = saved
+
+# ---- fine edges, cell by cell (fine_edges on hand-made surfaces): no cutting corners, hops and steep ground
+zs = np.full((NM.LF, DN, DN), np.nan, np.float32)
+kd = np.zeros((NM.LF, DN, DN), np.uint8)
+
+
+def put(l, r0, c0, n, z, k=1, gap=()):
+    """An n x n square of surfaces on layer l at height z, without the cells in gap (offsets from r0, c0)."""
+    for i in range(n):
+        for j in range(n):
+            if (i, j) not in gap:
+                zs[l, r0 + i, c0 + j], kd[l, r0 + i, c0 + j] = z, k
+
+
+put(0, 20, 20, 3, 0.0)                                         # open ground
+put(0, 20, 40, 2, 0.0, gap=((1, 0), (0, 1)))                   # two cells between two posts
+put(0, 20, 60, 3, 0.0, gap=((1, 0),))                          # a post on one side of the diagonal
+put(0, 20, 80, 3, 0.0)
+put(1, 20, 80, 3, 20.0)                                        # a deck 20 yd over the ground
+put(0, 20, 100, 3, 0.0)
+put(1, 20, 100, 3, 20.0, gap=((1, 0),))                        # the deck with a hole beside the diagonal
+for i, (k0, dz, k1) in enumerate(((1, 1.2, 1), (1, 1.6, 1), (3, 0.2, 1), (3, 1.0, 1), (3, -2.5, 1), (3, -3.5, 1),
+                                  (1, -3.5, 1), (1, -8.5, 1))):
+    put(0, 40, 20 + 10 * i, 1, 0.0, k0)                        # a step east from ground (1) or steep ground (3)
+    put(0, 40, 21 + 10 * i, 1, dz, k1)
+tgt = NM.fine_edges(zs, kd, np.zeros((DN, DN), np.float32), np.ones((DN, DN), bool))
+SE, E = NF.DIRS.index((1, 1)), NF.DIRS.index((0, 1))
+assert tgt[SE, 0, 20, 20] == 0, "open ground: the diagonal is walked"
+assert tgt[SE, 0, 20, 40] == -1, "no squeezing between two posts"
+assert tgt[SE, 0, 20, 60] == -1, "no cutting a post's corner"
+assert (tgt[SE, 0, 21, 61], tgt[SE, 0, 20, 61]) == (0, 0), "but around it"
+assert (tgt[SE, 0, 20, 80], tgt[SE, 1, 20, 80]) == (0, 1), "the diagonal on the ground and on the deck over it"
+assert (tgt[SE, 0, 20, 100], tgt[SE, 1, 20, 100]) == (0, -1), "no cutting the deck's corner over thin air"
+steps = [int(tgt[E, 0, 40, 20 + 10 * i]) for i in range(8)]
+assert steps == [0, -1, 0, -1, 0, -1, 0, -1], ("hop 1.2 yd not 1.6; off steep ground only level (no hop out), "
+                                               "down 2.5 yd not 3.5; off ground down 3.5 yd, not 8.5", steps)
+# components join at their smallest member
+assert list(NM._union(6, np.array([4, 1]), np.array([2, 5]))) == [0, 1, 2, 3, 2, 1]
+
+# ---- reach decides which patches a crowded cell keeps: under four rooftops stacked over one cell (the cell half
+# missing on the ground), the street joined to the whole map is kept, not the biggest patches
+tz, tnz = np.full((DN, DN), 100.0, np.float32), np.ones((DN, DN), np.float32)
+th = np.zeros((DN, DN), bool)
+B0 = A + 32 * NM.BLOCK                                         # coarse cell (32, 32)
+th[B0:B0 + 4, B0:B0 + 8] = True
+roofs = []
+b0, b1 = B0 + 0.01, B0 + 7.99                                 # just inside the cell's 8 x 8 fine cells
+for zr in (110.0, 115.0, 120.0, 125.0):
+    roofs += [[(b0, b0, zr), (b0, b1, zr), (b1, b1, zr)], [(b0, b0, zr), (b1, b1, zr), (b1, b0, zr)]]
+roofs, wl = np.array(roofs, np.float64), np.full((DN, DN), np.nan, np.float32)
+floors, solids = NM.rasterise(roofs)
+zs, kd = NM.surfaces(tz, tnz, th, wl, floors, solids)
+tgt = NM.fine_edges(zs, kd, tz, ~th)
+pairs = NM.joins(zs, tgt, kd)
+lab = NM.labels(zs, tgt, kd, pairs)
+reach = NM.domain_reach(zs, tgt, kd, pairs, lab)
+assert np.array_equal(reach, NM.domain_reach(zs, tgt, kd, pairs)), "joining patches = joining every surface"
+cell = reach[:, B0 + 6, B0 + 3]
+assert list(cell[:5]) == [DN * DN - 32] + [64] * 4, cell
+kept = NM.build_domain(tz, tnz, th, wl, roofs)[0][:, 32, 32]                     # build_tile's own pipeline
+assert kept[0] == 200 and NAV.NONE not in kept, ("the street and three roofs", kept)
+assert 200 not in NM.condense(zs, kd, tgt, lab)[0][:, 32, 32], "without reach the biggest patches would win"
+
+# ---- the planner's own rules on a hand-made map: a step into or out of a steep patch climbs at most a hop,
+# swimming costs 1.5x (so a short walk around beats a swim), and every node has its own index
+L_, CN_ = NF.LAYERS, NF.CELLS
+
+
+def hand(nodes, edges, cxy=lambda n: 0x44):
+    """nodes {(l, r, c): (height yd, kind)}, edges [(node, node)] both ways -> NavGraph. cxy(node): where in its
+    cell the node's patch is."""
+    z = np.full((L_, CN_, CN_), NAV.NONE, np.int16)
+    k, lk = np.zeros((L_, CN_, CN_), np.uint8), np.zeros((L_, CN_, CN_), np.uint32)
+    xy = np.zeros((L_, CN_, CN_), np.uint8)
+    for n, (h, kn) in nodes.items():
+        z[n], k[n], xy[n] = round(h * 2), kn, cxy(n)
+    for a, b in edges:
+        for u, v in ((a, b), (b, a)):
+            if u[1:] == v[1:]:
+                lk[u] |= 1 << (24 + v[0])
+            else:
+                d = NF.DIRS.index((v[1] - u[1], v[2] - u[2]))
+                lk[u] |= (1 << d) | (v[0] << (8 + 2 * d))
+    return graph((z, lk, k, xy))
+
+
+def corridor(kinds, heights):
+    ns = {(0, 10, 10 + i): (h, kn) for i, (kn, h) in enumerate(zip(kinds, heights))}
+    ks = sorted(ns)
+    return hand(ns, list(zip(ks, ks[1:]))), ks[0], ks[-1]
+
+
+g, lo, hi = corridor((1, 3, 3, 1), (100, 101, 104, 104))
+assert g.find(lo, hi)[0] is None and g.find(hi, lo)[0] is not None, "no climbing 3 yd up a steep patch"
+g, lo, hi = corridor((1, 1, 1, 1), (100, 101, 104, 104))
+assert g.find(lo, hi)[0] is not None, "(the climb rule is the steep ground's)"
+wet = {(0, 20, c): (100, 2) for c in (11, 12, 13)}
+dry = {(0, 21, c): (100, 1) for c in (11, 12, 13)}
+ends = {(0, 20, 10): (100, 1), (0, 20, 14): (100, 1)}
+ks = [(0, 20, c) for c in range(10, 15)]
+g = hand({**wet, **dry, **ends}, list(zip(ks, ks[1:])) + [((0, 20, 10), (0, 21, 11)), ((0, 21, 11), (0, 21, 12)),
+                                                            ((0, 21, 12), (0, 21, 13)), ((0, 21, 13), (0, 20, 14))])
+p, cost, _ = g.find((0, 20, 10), (0, 20, 14))
+assert [n[1] for n in p] == [20, 21, 21, 21, 20] and abs(recost(g, p) - cost) < 1e-6, ("walk round, not swim", p)
+ns = {(0, 30, 10): (100, 1), (1, 30, 10): (110, 1), (0, 31, 11): (100, 1), (0, 31, 12): (100, 1)}
+g = hand(ns, [((0, 30, 10), (1, 30, 10)), ((0, 30, 10), (0, 31, 11)), ((0, 31, 11), (0, 31, 12))], 
+         cxy=lambda n: (n[0] * 5 + n[1]) % 8 << 4 | n[2] * 3 % 8)   # off the cells' centres, rows != cols
+p, cost, _ = g.find((1, 30, 10), (0, 31, 12))
+assert p == [(1, 30, 10), (0, 30, 10), (0, 31, 11), (0, 31, 12)] and abs(recost(g, p) - cost) < 1e-6, (p, cost)
+order = sorted(ns, key=lambda n: (n[1], n[2], n[0]))
+assert [g.index(n) for n in order] == list(range(len(order))), "nodes indexed cell by cell, bottom up"
+assert [g.index(n) for n in ((2, 30, 10), (1, 31, 11), (0, 30, 11), (0, g.H, 0), (0, 0, g.W), (0, -1, 0))] == [-1] * 6
 
 # ---- flights: names, multi-hop routes along the flown curves (from the client's taxi tables when extracted)
 net = TX.load(ROOT)

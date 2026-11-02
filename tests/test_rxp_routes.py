@@ -55,11 +55,7 @@ def build(tz, objects=()):
     th = np.zeros((DN, DN), bool)
     wl = np.full((DN, DN), np.nan, np.float32)
     tri = np.array([t for o in objects for t in o], np.float64).reshape(-1, 3, 3)
-    floors, solids = NM.rasterise(tri)
-    zs, kind = NM.surfaces(tz, tnz.astype(np.float32), th, wl, floors, solids)
-    tgt = NM.fine_edges(zs, kind, tz, (tnz >= NM.COS_WALK) & ~th)
-    lab = NM.labels(zs, tgt, kind)
-    return NM.condense(zs, kind, tgt, lab, NM.domain_reach(zs, tgt, kind))
+    return NM.build_domain(tz, tnz.astype(np.float32), th, wl, tri)
 
 
 def save_graph(parts, path):
@@ -70,12 +66,35 @@ def save_graph(parts, path):
              build=np.array("test"), nav_version=np.int32(NF.NAV_VERSION), tiles=np.array([0], np.int32), **sp)
 
 
+def built_once(path, make):
+    """The walking map `make` saves to `path`, built once per change of what builds it (the walking-map builder, this
+    test, numpy) and kept in the temp folder between runs: the same file a build writes, without the 4 s build."""
+    import hashlib
+    h = hashlib.sha1(np.__version__.encode())
+    for f in ("navbuild.py", "navformat.py", "adt.py", "worldobjects.py"):
+        with open(os.path.join(ROOT, "wowfiles", f), "rb") as fh:
+            h.update(fh.read())
+    with open(os.path.abspath(__file__), "rb") as fh:
+        h.update(fh.read())
+    cache = os.path.join(tempfile.gettempdir(), "glide-test-cache", "rxp_routes-%s.npz" % h.hexdigest()[:20])
+    if not os.path.exists(cache):
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        part = "%s.%d.tmp.npz" % (cache[:-4], os.getpid())
+        make(part)
+        try:
+            os.replace(part, cache)
+        except OSError:                    # Windows: another run built it first and is copying it right now
+            os.remove(part)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    shutil.copyfile(cache, path)
+
+
 home = tempfile.mkdtemp()
 try:
     # ---- the world: one tile on continent 0 with a wall across most of it (open at the east end) ----------------
     row = A + 256
-    save_graph(build(np.full((DN, DN), 100.0), [box(row, row + 1, 0, A + 300, 100, 103)]),
-               os.path.join(home, "data", "gamedata", "nav", "0.npz"))
+    built_once(os.path.join(home, "data", "gamedata", "nav", "0.npz"),
+               lambda p: save_graph(build(np.full((DN, DN), 100.0), [box(row, row + 1, 0, A + 300, 100, 103)]), p))
     g = NAV.load_graph(home, 0)
     assert g is not None
     cell = g.cell
