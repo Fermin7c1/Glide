@@ -179,35 +179,66 @@ def visibility(guide, options=None):
     combos = setting_combos(rxp_options(options))
     steps = guide.get("steps") or ()
     who = [{"cls": cls, "race": race, "faction": faction} for _pick, cls, race, faction in pl]
+    everyone = (1 << n) - 1
+    cond_masks = {}
+
+    def applies_to(c):
+        """The players a `<<` condition applies to, as a bit mask: each distinct condition is evaluated once per
+        player, not once per step (None / no text: everyone)."""
+        raw = c.get("raw") if isinstance(c, dict) else c
+        if raw is None:
+            return everyone
+        m = cond_masks.get(raw)
+        if m is None:
+            m = 0
+            for p, player in enumerate(who):
+                if cond_applies(c, **player):
+                    m |= 1 << p
+            cond_masks[raw] = m
+        return m
+
+    def ok_for(p):
+        return lambda c: bool(applies_to(c) >> p & 1)
+    # the guide's own dungeon rules per player, grouped: they read only the header and the `.enabledungeon` steps
+    dsteps = [st for st in steps if any(a.get("verb") == "enabledungeon" for a in st.get("actions") or ())]
+    dguide = {"text": guide.get("text"), "steps": dsteps}
+    gd_players = {}
+    for p, player in enumerate(who):
+        gd = guide_dungeons(dguide, applies=ok_for(p), **player)
+        gd_players[gd] = gd_players.get(gd, 0) | 1 << p
     bits = [[0] * 8 for _ in steps]
     act_bits = {}
-    for p, player in enumerate(who):
-        memo = {}
+    shown_memo = {}
 
-        def ok(c, player=player, memo=memo):
-            raw = c.get("raw") if isinstance(c, dict) else c
-            if raw is None:
-                return True
-            if raw not in memo:
-                memo[raw] = cond_applies(c, **player)
-            return memo[raw]
-        gd = guide_dungeons(guide, applies=ok, **player)
-        shown_memo = {}
-        for i, st in enumerate(steps):
-            cond = st.get("cond")
-            for ai, a in enumerate(st.get("actions") or ()):
-                if (a.get("cond") or {}).get("raw"):
-                    act_bits[(i, ai)] = act_bits.get((i, ai), 0) | (int(ok(a["cond"])) << p)
-            if (cond and cond.get("never")) or not ok(cond):
-                continue
-            fl = st.get("flags") or {}
-            flags = step_flags(st, **player) if fl.get("cond_flags") else fl
+    def shown_for(flags, key, gd):
+        k = (key, gd)
+        if k not in shown_memo:
+            shown_memo[k] = [step_shown(flags, s, gd) for s in combos]
+        return shown_memo[k]
+    for i, st in enumerate(steps):
+        cond = st.get("cond")
+        for ai, a in enumerate(st.get("actions") or ()):
+            if (a.get("cond") or {}).get("raw"):
+                act_bits[(i, ai)] = applies_to(a["cond"])
+        if cond and cond.get("never"):
+            continue
+        parsed_for = applies_to(cond)               # RestedXP parses the step only for these players
+        if not parsed_for:
+            continue
+        fl = st.get("flags") or {}
+        if fl.get("cond_flags"):                    # tags with their own condition: the flags differ per player
+            per = [(p, step_flags(st, **who[p])) for p in range(n) if parsed_for >> p & 1]
+        else:
+            per = [(None, fl)]
+        row = bits[i]
+        for p, flags in per:
             key = repr(sorted(flags.items(), key=lambda kv: kv[0]))
-            if key not in shown_memo:
-                shown_memo[key] = [step_shown(flags, s, gd) for s in combos]
-            for s, shown in enumerate(shown_memo[key]):
-                if shown:
-                    bits[i][s] |= 1 << p
+            mine = parsed_for if p is None else 1 << p
+            for gd, group in gd_players.items():
+                if mine & group:
+                    for s, shown in enumerate(shown_for(flags, key, gd)):
+                        if shown:
+                            row[s] |= mine & group
     masks, index, step_masks = [], {}, []
     for b in bits:
         m = "".join(_hex(x, n) for x in b)
@@ -239,10 +270,10 @@ def numbering(vis, player, combo):
     (index into vis["players"]) and settings combination: what the page shows, for the parity test."""
     n = len(vis["players"])
     w = (n + 3) // 4
+    gets = [int(m[combo * w:(combo + 1) * w], 16) >> player & 1 for m in vis["masks"]]     # once per distinct mask
     out, k = {}, 0
     for i, m in enumerate(vis["steps"]):
-        chunk = int(vis["masks"][m][combo * w:(combo + 1) * w], 16)
-        if chunk >> player & 1:
+        if gets[m]:
             k += 1
             out[k] = i
     return out

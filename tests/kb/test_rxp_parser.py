@@ -256,6 +256,11 @@ def test_includes(guides):
     check(len(d) == len(src), (len(d), len(src)))
     check(all(a["flags"]["included_from"] == DM and a["flags"]["included_idx"] == b["idx"] and a["text"] == b["text"]
               and len(a["actions"]) == len(b["actions"]) for a, b in zip(d, src)), "copied steps")
+    # deep copies: placing an included step's points (the Guides page, the build's finalize) leaves its guide's own alone
+    own = gs[DM]["steps"]
+    check(all(a is not b and a["actions"] is not b["actions"] and a["flags"] is not b["flags"]
+              and all(x is not y and x["args"] is not y["args"] for x, y in zip(a["actions"], b["actions"]))
+              for a, b in zip(d, own)), "included steps share nothing with their guide's")
     check(guides[fixture.DDM]["steps"][0]["flags"]["include"] == fixture.GROUP + "\\5-8 Dun Morogh",
           "parse_guide keeps the include flag")
     # label range NormalRouteStart-NormalRouteEnd inside `step << Dwarf/Gnome`, then the dungeon guide's own steps

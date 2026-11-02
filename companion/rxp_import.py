@@ -237,6 +237,42 @@ def page_text(s):
     return page(s)
 
 
+_SEED_GUIDES = {}       # seed path -> ((mtime_ns, size), files?, guides): the seed is a few MB of JSON to parse
+
+
+def _seed_free_guides(seed):
+    """(any guide files?, guides) of the seed snapshot's free guides, read once per process while the file is
+    unchanged; the guides are copies (callers may change them)."""
+    st = os.stat(seed)
+    sig = (st.st_mtime_ns, st.st_size)
+    hit = _SEED_GUIDES.get(seed)
+    if hit is None or hit[0] != sig:
+        import gzip
+        with gzip.open(seed, "rt", encoding="utf-8") as fh:
+            files = sorted(((json.load(fh).get("sources") or {}).get("rxp_free") or {}).items())
+        hit = _SEED_GUIDES[seed] = (sig, bool(files), _split_guides(files))
+    return hit[1], [dict(g, groups=list(g["groups"])) for g in hit[2]]
+
+
+def _split_guides(files):
+    """[{"groups", "name", "text", "file"}] of the guides RXPGuides.RegisterGuide registers in [(file, text)]."""
+    out = []
+    for rel, text in files:
+        for chunk in _REGISTER.split(text)[1:]:
+            body = chunk.split("]])", 1)[0]
+            m_step = _STEP_LINE.search(body)
+            hdr = body[:m_step.start()] if m_step else body
+            groups = []
+            for g in _GROUP_LINE.findall(hdr):
+                g = g.split("--")[0].split("<<")[0].strip()
+                if g and g not in groups:
+                    groups.append(g)
+            name = guide_meta(body)[1]
+            if name and groups:
+                out.append({"groups": groups, "name": name, "text": body, "file": rel})
+    return out
+
+
 def free_guides(root, wow_dir):
     """(source, [{"groups", "name", "text", "file"}]): RestedXP's free Forever guides, which come with the RestedXP
     addon instead of in a bought string (the starter zones to about level 20, Zephras Isle, the Mage AoE routes and
@@ -258,30 +294,16 @@ def free_guides(root, wow_dir):
                 except OSError as e:
                     log_once("rxp_import.free_guides", e)
         source = "RestedXP %s" % (kstore.rxp_version(rxp_dir) or "addon") if files else None
+    if files:
+        return source, _split_guides(files)
     seed = os.path.join(root, "data", "seed", "seed.json.gz")
-    if not files and os.path.exists(seed):
+    if os.path.exists(seed):
         try:
-            import gzip
-            with gzip.open(seed, "rt", encoding="utf-8") as fh:
-                files = sorted(((json.load(fh).get("sources") or {}).get("rxp_free") or {}).items())
-            source = "Glide's copy" if files else None
+            any_files, out = _seed_free_guides(seed)
+            return ("Glide's copy" if any_files else None), out
         except (OSError, ValueError) as e:
             log_once("rxp_import.free_seed", e)
-    out = []
-    for rel, text in files:
-        for chunk in _REGISTER.split(text)[1:]:
-            body = chunk.split("]])", 1)[0]
-            m_step = _STEP_LINE.search(body)
-            hdr = body[:m_step.start()] if m_step else body
-            groups = []
-            for g in _GROUP_LINE.findall(hdr):
-                g = g.split("--")[0].split("<<")[0].strip()
-                if g and g not in groups:
-                    groups.append(g)
-            name = guide_meta(body)[1]
-            if name and groups:
-                out.append({"groups": groups, "name": name, "text": body, "file": rel})
-    return source, out
+    return source, []
 
 
 def free_catalog(root, wow_dir, taken=()):

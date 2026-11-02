@@ -6,6 +6,22 @@ from knowledge.rxp_parser.conditions import and_cond
 from knowledge.rxp_parser.text import WS
 
 
+_ATOMS = (str, int, float, bool, type(None))
+
+
+def _copy(v):
+    """copy.deepcopy for a parsed step (dicts, lists and scalars, nothing shared inside one step), several times faster;
+    anything else goes through copy.deepcopy."""
+    t = type(v)
+    if t is dict:
+        return {k: _copy(x) for k, x in v.items()}
+    if t is list:
+        return [_copy(x) for x in v]
+    if t in _ATOMS:
+        return v
+    return copy.deepcopy(v)
+
+
 def _norm_group(g):
     g = re.sub(r"\((A|H)\)", "", g or "")
     g = re.sub(r"\b(Alliance|Horde)\b", "", g)
@@ -111,7 +127,7 @@ def expand_includes(guides):
             if tkey is not None:
                 sub, err = _slice(full(tkey), start, end)
             if sub is None:
-                bad = copy.deepcopy(st)
+                bad = _copy(st)
                 bad["flags"]["include_unresolved"] = err
                 stats["unresolved"].append({"guide": key, "include": inc, "reason": err})
                 out.append(bad)
@@ -119,12 +135,12 @@ def expand_includes(guides):
             if note:
                 stats["notes"].append({"guide": key, "include": inc, "note": note})
             if st["actions"] or st["text"]:
-                keep = copy.deepcopy(st)
+                keep = _copy(st)
                 keep["flags"].pop("include", None)
                 out.append(keep)
             cond = and_cond(st.get("cond"), inc_cond) if inc_cond else st.get("cond")
             for s in sub:
-                c = copy.deepcopy(s)
+                c = _copy(s)
                 if "included_from" not in c["flags"]:
                     c["flags"]["included_from"] = tkey
                     c["flags"]["included_idx"] = s["idx"]

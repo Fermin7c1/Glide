@@ -139,6 +139,24 @@ for flags, s, gd, want in TABLE:
         assert S.step_shown(flags, p, gd) == want, ("route", flags, s)
     assert LL.step_shown(flags, pr, gd) == want, ("live_logs", flags, s)
 
+# step_shown's shortcut (a step carrying none of the tags it reads is shown) knows every tag it reads
+import inspect  # noqa: E402
+import re  # noqa: E402
+from knowledge.rxp_parser import views as V  # noqa: E402
+read = set(re.findall(r"""f(?:\.get\(|\[)["']([^"']+)["']""", inspect.getsource(P.step_shown)))
+assert len(read) >= 19 and read <= V._SHOWN_TAGS, sorted(read - V._SHOWN_TAGS)     # noqa: SLF001
+# and no rule hides a step without one of those tags on: past the shortcut, a step whose tags are all off (None) is
+# shown under every settings combination and dungeon rule
+grid = [P.RxpSettings(ssf=a, group_quests=b, hardcore=c, season=se, phase=ph, xprate=xr, dungeons=du, beta=be,
+                      hardcore_server=hs)
+        for a in (False, True) for b in (False, True) for c in (False, True) for se in (0.0, 1.0, 2.0)
+        for ph in (1.0, 3.0, 6.0) for xr in (0.5, 1.0, 1.5) for du in (frozenset(), "all") for be in (False, True)
+        for hs in (False, True)]
+for tag in sorted(V._SHOWN_TAGS):                                                   # noqa: SLF001
+    for gd in (None, P.GuideDungeons(True, ()), P.GuideDungeons(False, (("RFC", False),))):
+        hidden = [s for s in grid if not P.step_shown({tag: None}, s, gd)]
+        assert not hidden, (tag, gd, hidden[:1])
+
 # the guide's rules from its text and steps, the new parse and an older kb.db's unknown-verb rows alike
 GTEXT = "#name 1-2 X\n#group G\n#disabledungeons\nstep\n    .enabledungeon RFC\nstep << Horde\n    .enabledungeon BFD\n"
 pg = P.parse_guide(GTEXT)

@@ -178,6 +178,10 @@ def _given(v):
     return v is not None and v is not True and v != ""
 
 
+# every tag step_shown() reads: a step with none of them is shown under any settings
+_SHOWN_TAGS = frozenset(("softcoreserver", "hardcoreserver", "softcore", "hardcore", "ssf", "ah", "group", "solo", "era",
+                         "som", "era/som", "season", "xprate", "phase", "disabled", "dungeon", "dungeonskip", "beta",
+                         "questguide"))
 _RE_XPRATE = re.compile(r"^([<>]?)\s*(\d+\.?\d*)-?(\d*\.?\d*)")
 _RE_RANGE = re.compile(r"(\d+)-(\d+)")
 
@@ -188,6 +192,8 @@ def step_shown(flags, settings=None, dungeons=None):
     guide's GuideDungeons. RestedXP Forever leaves the steps it hides out of the guide: they take no number."""
     f = flags or {}
     s = settings if isinstance(settings, RxpSettings) else RxpSettings.from_options(settings)
+    if f.keys().isdisjoint(_SHOWN_TAGS):             # most steps carry none of the tags below: shown
+        return True
     gd = dungeons or NO_GUIDE_DUNGEONS
     if (_on(f.get("softcoreserver")) and s.hardcore_server) or \
             (_on(f.get("hardcoreserver")) and not s.hardcore_server):
@@ -236,29 +242,48 @@ def step_shown(flags, settings=None, dungeons=None):
     return True
 
 
-def visible_steps(guide, settings=None, applies=None, **player):
-    """[(step, effective flags, shown)] for every step whose `step << cond` applies to the player (RestedXP
-    parses only those), in guide order; `shown` per step_shown under the settings and the guide's own dungeon
-    rules. guide: {"text", "steps": [{"idx", "cond", "flags"[, "actions"]}]}. applies: an optional (cached)
-    cond -> bool for this player; the default evaluates cond_applies."""
+class _GuideDungeonsWhenAsked:
+    """guide_dungeons() for one player, worked out the first time a step asks about a dungeon: it reads every action
+    of the guide, and most guides have no dungeon step at all."""
+    __slots__ = ("_args", "_gd")
+
+    def __init__(self, guide, applies, player):
+        self._args, self._gd = (guide, applies, player), None
+
+    def enabled(self, tag, settings):
+        if self._gd is None:
+            guide, applies, player = self._args
+            self._gd = guide_dungeons(guide, applies=applies, **player)
+        return self._gd.enabled(tag, settings)
+
+
+def _walk(guide, settings, applies, player, copy_flags):
+    """(step, effective flags, shown) for every step whose `step << cond` applies, in guide order (copy_flags: a step's
+    own flags dict copied, not handed out)."""
     ok = applies or (lambda c: cond_applies(c, **player))
     s = settings if isinstance(settings, RxpSettings) else RxpSettings.from_options(settings)
-    gd = guide_dungeons(guide, applies=ok, **player)
-    out = []
+    gd = _GuideDungeonsWhenAsked(guide, ok, player)
     for st in guide["steps"]:
         cond = st.get("cond")
         if (cond and cond.get("never")) or not ok(cond):
             continue
         fl = st.get("flags") or {}
-        flags = step_flags(st, **player) if fl.get("cond_flags") else dict(fl)
-        out.append((st, flags, step_shown(flags, s, gd)))
-    return out
+        flags = step_flags(st, **player) if fl.get("cond_flags") else dict(fl) if copy_flags else fl
+        yield st, flags, step_shown(flags, s, gd)
+
+
+def visible_steps(guide, settings=None, applies=None, **player):
+    """[(step, effective flags, shown)] for every step whose `step << cond` applies to the player (RestedXP
+    parses only those), in guide order; `shown` per step_shown under the settings and the guide's own dungeon
+    rules. guide: {"text", "steps": [{"idx", "cond", "flags"[, "actions"]}]}. applies: an optional (cached)
+    cond -> bool for this player; the default evaluates cond_applies."""
+    return list(_walk(guide, settings, applies, player, True))
 
 
 def rxp_numbering(guide, settings=None, applies=None, **player):
     """RestedXP's live step number -> idx for a player under their RestedXP settings: {n: idx}."""
     out, n = {}, 0
-    for st, _flags, shown in visible_steps(guide, settings, applies=applies, **player):
+    for st, _flags, shown in _walk(guide, settings, applies, player, False):
         if shown:
             n += 1
             out[n] = st["idx"]

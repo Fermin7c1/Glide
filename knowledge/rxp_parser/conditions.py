@@ -1,5 +1,6 @@
 """`<<` conditions: RXP's applies() for a player, and the flat class / race / faction form the knowledge base
 stores (with the full expression kept when the flat form is not exact)."""
+import functools
 import re
 
 from knowledge.rxp_parser.text import SPACE, WS, lua_num
@@ -14,6 +15,7 @@ _RACES = ("Human", "Dwarf", "NightElf", "Gnome", "Orc", "Undead", "Scourge", "Ta
           "BloodElf", "Draenei", "Goblin", "Worgen", "Pandaren", "Nightborne", "HighmountainTauren", "VoidElf",
           "LightforgedDraenei", "ZandalariTroll", "KulTiran", "DarkIronDwarf", "Vulpera", "MagharOrc",
           "Mechagnome", "Dracthyr", "EarthenDwarf", "Haranir", "Harronir")
+_RACE_CASE = {r.lower(): r for r in reversed(_RACES)}        # any spelling's case -> RXP's (the first one wins)
 _FACTIONS = ("Alliance", "Horde")
 _UNIV_CLASSES = _CLASSES[:9]
 _UNIV_RACES = ("Human", "Dwarf", "NightElf", "Gnome", "Orc", "Scourge", "Tauren", "Troll", "Skyborne")
@@ -25,10 +27,7 @@ def _race_token(race):
     if not race:
         return None
     r = str(race).replace(" ", "")
-    for known in _RACES:
-        if known.lower() == r.lower():
-            r = known
-            break
+    r = _RACE_CASE.get(r.lower(), r)
     return {"Undead": "Scourge", "Haranir": "Harronir"}.get(r, r)
 
 
@@ -55,8 +54,17 @@ class _Player:
         self.custom = custom
 
 
+@functools.lru_cache(maxsize=1024, typed=True)
+def _player(*args):
+    """A _Player per distinct argument list (never changed after it is made): a guide asks thousands of times for the
+    same few characters."""
+    return _Player(*args)
+
+
+@functools.lru_cache(maxsize=16384)
 def _lit_true(entry, p):
-    """One RXP literal (without '!'), exactly as applies() evaluates it."""
+    """One RXP literal (without '!'), exactly as applies() evaluates it. Cached per (literal, player): a player is
+    a _Player nobody changes, and _player() hands out the same one for the same character."""
     if entry == _TRUE:
         return True
     if entry == _FALSE:
@@ -114,7 +122,11 @@ def cond_applies(cond, cls=None, race=None, faction=None, level=None, game="FORE
     raw = cond.get("raw") if isinstance(cond, dict) else cond
     if raw is None:
         return True
-    return _applies_raw(raw, _Player(cls, race, faction, level, game, season, sex, locale))
+    try:
+        p = _player(cls, race, faction, level, game, season, sex, locale)
+    except TypeError:                       # an unhashable argument: not cached
+        p = _Player(cls, race, faction, level, game, season, sex, locale)
+    return _applies_raw(raw, p)
 
 
 def _classify(tok):
@@ -175,7 +187,7 @@ def _build_cond(raw):
     for cl in classes:
         for rc in races:
             for fa in _FACTIONS:
-                p = _Player(cl, rc, fa)
+                p = _player(cl, rc, fa, None, "FOREVER", 0, None, "enUS")
                 real = _applies_raw(raw, p)
                 any_true = any_true or real
                 flat = ((not pc or cl in pc) and cl not in nc and (not pr or rc in pr) and rc not in nr
