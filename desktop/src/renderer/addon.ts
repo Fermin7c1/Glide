@@ -3,7 +3,7 @@
 import type { RxpImport } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc, icon, toast } from "./dom.js";
-import { openGuide, updateRxpBrowser, wireRxpBrowser } from "./rxp-browser.js";
+import { browseGuide, wireRxpBrowser } from "./rxp-browser.js";
 import { enginePost, live } from "./state.js";
 import { refreshStatus } from "./status.js";
 
@@ -58,12 +58,8 @@ async function refreshRxp(): Promise<void> {
     return `<li><div class="row"><b>${esc(packName(r.guides))}</b>${when ? ` <span class="dim">added ${esc(when)}</span>` : ""}<span class="grow"></span><button type="button" class="btn rxp-browse-pack" data-pack="${esc(r.id)}">Browse guides</button></div><span>${rxpState(r)}</span></li>`;
   }).join("");
   $("rxp-list").querySelectorAll<HTMLButtonElement>(".rxp-browse-pack").forEach((b) => {
-    b.onclick = () => {
-      openGuide(b.dataset.pack!, 0);
-      $("rxpb-block").scrollIntoView({ behavior: "smooth", block: "start" });
-    };
+    b.onclick = () => browseGuide(b.dataset.pack!, 0);
   });
-  await updateRxpBrowser(list);
 }
 
 /** Add a guide string: the pasted one, or `text` read from the file `from`. */

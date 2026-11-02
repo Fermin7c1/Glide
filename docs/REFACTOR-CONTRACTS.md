@@ -555,3 +555,12 @@ they don't spell out.
   (`debugprofilestop`; one guide a tick without it, as RestedXP's own importer), counting a guide only once RestedXP
   took it, instead of 15 at a time (Hardcore aborts a script after 200 ms). The engine leaves the file alone while
   the installed addon is older than 0.17.2 (it reads encrypted strings).
+- **Follow-up, what the player sees: the Explorer is its own page, "Guides".** The RestedXP Guide & Route Explorer moves
+  off the Addon page (where it sat at the bottom, scrolled with the page and scrolled again inside its step list) to
+  its own page in the rail, under Coach. The page is fitted to the window like the Coach page: the map keeps its shape
+  at the largest size its column holds, the guide window fills the height, and only the step list scrolls (a long
+  current step gets a capped box of its own); below 900 px wide the two columns stack and the page scrolls. The
+  Addon page keeps adding guides, and its "Browse guides" opens the guide on the new page. No IPC, file or state
+  change. Also from the review: walking the route stops when the player leaves the page and scrolls only the step
+  list, the latest guide picked wins over a slower earlier one, a guide that fails to open says so, and a guide filed
+  under both factions keeps the group it was picked from. The player asked (2026-11-02).

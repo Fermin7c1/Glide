@@ -505,9 +505,13 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .su-head h1, .su-choices, .su-panel, .su-leaf { animation: none; } }
 
 /* ---- RestedXP Guide & Route Explorer (rxp-browser.ts) ----------------------------------------------------- */
-.rxpb-block[hidden] { display: none; }
-.rxpb-block { padding: 22px 24px; gap: 18px; }
-.rxpb-top { display: flex; flex-direction: column; gap: 14px; }
+/* The Guides page: fitted to the window like the Coach page. The page never scrolls; the step list does, and a long
+   current step gets a capped box of its own. */
+#page-guides { overflow: hidden; }
+.rxpb-head { gap: 12px 24px; }
+.rxpb-titles { flex: none; }
+.rxpb-head .rxpb-filters { flex: 1; justify-content: flex-end; }
+.rxpb-empty-page[hidden] { display: none; }
 .rxpb-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .rxpb-filters select, .rxpb-filters input[type="search"] { height: 34px; font-size: 13.5px; }
 #rxpb-group { min-width: 240px; }
@@ -518,10 +522,16 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-chk-pill:has(input:checked) { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-wash); }
 .rxpb-chk-pill input { accent-color: var(--gold); margin: 0; }
 
-.rxpb-workspace { display: grid; grid-template-columns: minmax(480px, 1.35fr) minmax(380px, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 1180px) { .rxpb-workspace { grid-template-columns: 1fr; } }
+.rxpb-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
+  gap: 18px; padding: 16px 24px; }
+.rxpb-workspace[hidden] { display: none; }
+/* a very narrow window stacks the guide window under the map, and only then does the page scroll */
+@media (max-width: 900px) { .rxpb-workspace { grid-template-columns: 1fr; } #page-guides { overflow: auto; }
+  .rxpb-map-box { flex: none; container-type: normal; } .rxpb-map-stage { width: 100%; } }
 
-.rxpb-map-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.rxpb-map-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+/* the map keeps its 1002 x 668 shape and takes the largest size the column's free space holds */
+.rxpb-map-box { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
 .rxpb-zones { display: flex; gap: 6px; flex-wrap: wrap; }
 .rxpb-ztab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--radius-s);
   background: var(--night-deep); border: 1px solid var(--edge-soft); color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; }
@@ -529,7 +539,8 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-ztab:hover { color: var(--ink); border-color: var(--edge); }
 .rxpb-ztab.on { color: var(--gold); background: var(--gold-wash); border-color: var(--gold-dim); font-weight: 600; }
 
-.rxpb-map-stage { position: relative; aspect-ratio: 1002 / 668; width: 100%; border-radius: var(--radius-m); overflow: hidden;
+.rxpb-map-stage { position: relative; aspect-ratio: 1002 / 668; width: min(100cqw, calc(100cqh * 1002 / 668));
+  border-radius: var(--radius-m); overflow: hidden;
   background: radial-gradient(110% 90% at 50% 45%, #1d2230, #0c0e15); box-shadow: 0 0 0 1px var(--edge), 0 14px 32px rgba(0, 0, 0, 0.55); user-select: none; }
 #rxpb-map-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 #rxpb-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -620,7 +631,8 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 
 /* In-Game Style RestedXP Guide Window (RXP Blue theme: Themes.lua #0c0c1b / #121228 / #363e6d) */
 .rxpb-window { display: flex; flex-direction: column; border-radius: var(--radius-m); overflow: hidden;
-  background: #0c0c1b; box-shadow: 0 0 0 1px #363e6d, 0 0 0 3px #090914, 0 16px 36px rgba(0,0,0,0.6); max-height: 760px; }
+  background: #0c0c1b; box-shadow: 0 0 0 1px #363e6d, 0 0 0 3px #090914, 0 16px 36px rgba(0,0,0,0.6); min-height: 0; }
+.rxpb-win-hdr, .rxpb-list-hdr { flex: none; }
 .rxpb-win-hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px;
   background: linear-gradient(180deg, #1f2447, #12152b); border-bottom: 1px solid #363e6d; }
 .rxpb-win-titles { display: flex; flex-direction: column; min-width: 0; }
@@ -630,7 +642,8 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-next-guide:hover { background: #363e6d; }
 
 /* Active Step Frame (CurrentStepFrame) */
-.rxpb-active-step { padding: 14px 15px; background: #121228; border-bottom: 2px solid #363e6d; display: flex; flex-direction: column; gap: 9px; }
+.rxpb-active-step { padding: 14px 15px; background: #121228; border-bottom: 2px solid #363e6d; display: flex; flex-direction: column; gap: 9px;
+  flex: none; max-height: 42%; overflow: auto; }
 .rxpb-cs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .rxpb-cs-num { font-size: 13px; font-weight: 700; color: var(--gold-hi); text-transform: uppercase; letter-spacing: 0.05em; }
 .rxpb-cs-flags { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -668,7 +681,7 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 /* Step List (BottomFrame) */
 .rxpb-list-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: #0f1123; border-bottom: 1px solid #25294a; font-size: 12px; color: #9aa4d6; }
 #rxpb-step-search { height: 28px; font-size: 12.5px; width: 210px; }
-.rxpb-step-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; max-height: 410px; }
+.rxpb-step-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 0; }
 .rxpb-sitem { display: flex; flex-direction: column; gap: 5px; padding: 9px 13px; border-bottom: 1px solid rgba(54, 62, 109, 0.35); cursor: pointer; transition: background 0.12s; }
 .rxpb-sitem:hover { background: #191d38; }
 .rxpb-sitem.on { background: #262e5c; box-shadow: inset 3px 0 0 var(--gold-hi); }

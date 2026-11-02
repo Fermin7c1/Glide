@@ -5,6 +5,7 @@
 // custom panels, and the start sequence below reads what the main process knows.
 import { wireActivity } from "./activity.js";
 import { refreshAddon, wireAddon } from "./addon.js";
+import { refreshGuides } from "./rxp-browser.js";
 import { applyAppSettings, wireAppSettings } from "./app-settings.js";
 import { call } from "./bridge.js";
 import { onEngine, wireCoach } from "./coach.js";
@@ -47,6 +48,7 @@ registerPanels({
 
 wireNav();
 whenShown("addon", refreshAddon);
+whenShown("guides", refreshGuides);
 whenShown("logs", () => renderLog(true));
 whenShown("status", refreshStatus);
 whenShown("memory", refreshMemory);

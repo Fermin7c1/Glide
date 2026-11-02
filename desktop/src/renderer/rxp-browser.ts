@@ -2,8 +2,9 @@
 // in-game, scrub through a visual step timeline, and walk the route over the zone map with clickable waypoints,
 // directional arrows, objectives, and guide commentary.
 import type { RxpGuideAction, RxpGuideDetail, RxpGuideStep, RxpGuideSummary, RxpImport } from "../shared/ipc.js";
-import { call } from "./bridge.js";
+import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
+import { currentPage, show } from "./nav.js";
 import { live } from "./state.js";
 import { conditionApplies } from "./rxp-conditions.js";
 
@@ -601,8 +602,13 @@ function renderStepList(scrollActive = false): void {
     li.onclick = () => selectStep(Number(li.dataset.idx), false);
   });
   if (scrollActive) {
+    // scroll the list itself (scrollIntoView would also scroll the page around it)
     const activeLi = listEl.querySelector<HTMLElement>(".rxpb-sitem.on");
-    activeLi?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (activeLi) {
+      const top = activeLi.offsetTop - listEl.offsetTop, bottom = top + activeLi.offsetHeight;
+      if (top < listEl.scrollTop) listEl.scrollTo({ top, behavior: "smooth" });
+      else if (bottom > listEl.scrollTop + listEl.clientHeight) listEl.scrollTo({ top: bottom - listEl.clientHeight, behavior: "smooth" });
+    }
   }
 }
 
@@ -635,6 +641,7 @@ function togglePlay(): void {
   if (activeIdx >= visibleSteps.length - 1) activeIdx = 0;
   selectStep(activeIdx, true);
   playTimer = window.setInterval(() => {
+    if (currentPage() !== "guides") { stopPlay(); return; }
     if (activeIdx < visibleSteps.length - 1) {
       selectStep(activeIdx + 1, true);
     } else {
@@ -644,9 +651,13 @@ function togglePlay(): void {
   renderTimeline();
 }
 
+let openSeq = 0;            // the latest openGuide call: an older one that answers later is dropped
+let wantGuide: { packId: string; index: number } | null = null;   // browseGuide's pick, opened once the list loads
+
 export async function openGuide(packId: string, index: number): Promise<void> {
   stopPlay();
   pinnedStepIdx = null;
+  const seq = ++openSeq;
   const key = `${packId}:${index}`;
   let g = cache.get(key) || null;
   if (!g) {
@@ -654,19 +665,27 @@ export async function openGuide(packId: string, index: number): Promise<void> {
     g = (await call("addon:rxpImports", packId, index)) as RxpGuideDetail | null;
     if (g) cache.set(key, g);
   }
-  if (!g) return;
+  if (seq !== openSeq) return;
+  if (!g) {
+    $("rxpb-win-title").textContent = "Couldn't open that guide";
+    $("rxpb-win-sub").textContent = "Try another, or restart the coach and try again";
+    return;
+  }
   currentGuide = g;
   activeIdx = 0;
   activeWpIdx = 0;
   activeMapId = g.zones?.[0]?.ui_map ?? null;
 
-  // Sync the group & guide dropdowns
+  // Sync the group & guide dropdowns: the group picker moves only when the guide isn't in the group shown (a guide
+  // RestedXP files under both factions, such as Zephras Isle, stays in the one the player picked it from)
   const grpSel = $<HTMLSelectElement>("rxpb-group");
-  if (grpSel.value !== g.group && Array.from(grpSel.options).some((o) => o.value === g.group)) {
-    grpSel.value = g.group;
-    filter.group = g.group;
-    populateGuideSelect();
+  const inGroup = (grp: string) => catalog.some((c) => c.packId === packId && c.index === index && c.group === grp);
+  if (filter.group && !inGroup(filter.group)) {
+    const entry = catalog.find((c) => c.packId === packId && c.index === index);
+    filter.group = entry ? entry.group : "";
+    grpSel.value = filter.group;
   }
+  populateGuideSelect();
   $<HTMLSelectElement>("rxpb-guide").value = key;
 
   rebuildVisibleSteps();
@@ -728,6 +747,7 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
     .map((e, i) => ({ e, i }))
     .sort((a, b) => groupOrder.get(a.e.group)! - groupOrder.get(b.e.group)! || startLevel(a.e.name) - startLevel(b.e.name) || a.i - b.i)
     .map((x) => x.e);
+  $("rxpb-empty").hidden = catalog.length > 0;
   if (!catalog.length) {
     sec.hidden = true;
     return;
@@ -740,14 +760,30 @@ export async function updateRxpBrowser(imports: RxpImport[]): Promise<void> {
   if (filter.group && !groups.includes(filter.group)) filter.group = "";
   populateGuideSelect();
 
-  if (!currentGuide || !catalog.some((c) => c.packId === currentGuide!.id && c.index === currentGuide!.index)) {
+  const want = wantGuide;
+  wantGuide = null;
+  if (want && catalog.some((c) => c.packId === want.packId && c.index === want.index)) {
+    await openGuide(want.packId, want.index);
+  } else if (!currentGuide || !catalog.some((c) => c.packId === currentGuide!.id && c.index === currentGuide!.index)) {
     // Prefer a starter 1-6 / 1-10 / 1-11 guide by default if present, else the first guide
     const starter = catalog.find((c) => /^0?1-\d+/.test(c.name)) || catalog[0];
     if (starter) await openGuide(starter.packId, starter.index);
   }
 }
 
+/** The Guides page was shown: the guides added in the app and RestedXP's free ones, read fresh. */
+export async function refreshGuides(): Promise<void> {
+  await updateRxpBrowser(((await quiet("addon:rxpImports")) as RxpImport[]) || []);
+}
+
+/** Open a guide on the Guides page (the Addon page's "Browse guides"). */
+export function browseGuide(packId: string, index: number): void {
+  wantGuide = { packId, index };
+  show("guides");               // the page loads its list (refreshGuides), then opens this guide
+}
+
 export function wireRxpBrowser(): void {
+  $("rxpb-to-addon").onclick = () => show("addon");
   $("rxpb-group").onchange = (e) => {
     filter.group = (e.target as HTMLSelectElement).value;
     populateGuideSelect();
