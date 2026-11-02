@@ -282,11 +282,28 @@ def free_catalog(root, wow_dir, taken=()):
             "guides": [it["name"] for it in items], "items": items, "rxp": "done", "found": None, "error": None}
 
 
-def _entity_names(root, qids, npcs, items):
-    """Best-effort {quests: {id: name}, npcs: {id: name}, items: {id: name}} from data/glide.db when present."""
-    out = {"quests": {}, "npcs": {}, "items": {}}
+def _entity_names(root, qids, npcs, items, objects=()):
+    """Best-effort {quests: {id: name}, npcs: {id: name}, items: {id: name}, objects: {id: name}}: from the newest
+    knowledge base first (kb.db quest, creature, item and gameobject names, through knowledge.api), then
+    data/glide.db for what it lacks."""
+    out = {"quests": {}, "npcs": {}, "items": {}, "objects": {}}
+    if not (qids or npcs or items or objects):
+        return out
+    try:
+        import rxp_facts
+        from knowledge.api import explorer
+        kb, _ = rxp_facts.newest_kb(root)
+        if kb is not None:
+            got = explorer.entity_names(kb, qids, npcs, items, objects)
+            for k in out:
+                out[k].update(got.get(k) or {})
+    except Exception as e:  # noqa: BLE001 - names are a nicety: glide.db below still answers
+        log_once("rxp_import.entity_names", e)
     db_path = os.path.join(root, "data", "glide.db")
-    if not os.path.exists(db_path) or not (qids or npcs or items):
+    want = {"quests": [i for i in qids if int(i) not in out["quests"]],
+            "npcs": [i for i in npcs if int(i) not in out["npcs"]],
+            "items": [i for i in items if int(i) not in out["items"]]}
+    if not os.path.exists(db_path) or not any(want.values()):
         return out
     import sqlite3
     try:
@@ -294,12 +311,13 @@ def _entity_names(root, qids, npcs, items):
     except sqlite3.Error:
         return out
     try:
-        if qids:
-            ph = ",".join("?" * len(qids))
+        if want["quests"]:
+            ph = ",".join("?" * len(want["quests"]))
             for qid, name in conn.execute("SELECT id, name FROM quests WHERE id IN (%s) AND name IS NOT NULL" % ph,
-                                          tuple(qids)):
+                                          tuple(want["quests"])):
                 out["quests"][int(qid)] = name
-        for kind, ids, bucket in (("npc", npcs, "npcs"), ("item", items, "items")):
+        for kind, bucket in (("npc", "npcs"), ("item", "items")):
+            ids = want[bucket]
             if ids:
                 ph = ",".join("?" * len(ids))
                 for eid, name in conn.execute(
@@ -768,7 +786,8 @@ def add(root, wow_dir, text, now=None):
 
 
 def main(argv=None):
-    """add (the string on stdin) | status | sync, for the desktop app: one JSON object on stdout."""
+    """add (the string on stdin) | status | sync | guide <id> <index> | facts <id> <index> [CLASS|-] [RACE|-], for the
+    desktop app: one JSON object on stdout."""
     argv = sys.argv[1:] if argv is None else argv
     cmd = argv[0] if argv else ""
     import glideconfig
@@ -782,8 +801,12 @@ def main(argv=None):
             out = {"ok": True, "handoff": bool(sync(ROOT, wow_dir))}
         elif cmd == "guide" and len(argv) >= 3:
             out = {"ok": True, "guide": guide_detail(ROOT, argv[1], int(argv[2]), wow_dir)}
+        elif cmd == "facts" and len(argv) >= 3:
+            import rxp_facts
+            more = list(argv[3:5]) + [None] * (2 - len(argv[3:5]))
+            out = {"ok": True, "facts": rxp_facts.facts(ROOT, argv[1], int(argv[2]), more[0], more[1], wow_dir)}
         else:
-            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide"}
+            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide|facts"}
     except ImportProblem as e:
         out = {"ok": False, "error": str(e)}
     except Exception as e:  # noqa: BLE001 - the app shows the reason, whatever it is

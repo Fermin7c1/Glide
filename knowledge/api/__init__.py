@@ -36,8 +36,8 @@ poi:<kind>:<id> g:<glossary term>. verify_facts() accepts one only when the row 
 
 Modules: pack (KnowledgePack, a facade over resolve, lookup, panel, extras and facts), context (Ctx), guides
 (guide and player resolution), results (budgets, trimming, fact ids), reasons (why codes in words), community
-(community notes), navigation (walking and flying routes), tools (the Claude tools and dispatch), values (small
-shared helpers), _layer (the defensive imports).
+(community notes), navigation (walking and flying routes), explorer (per-guide facts for the Guides page), tools
+(the Claude tools and dispatch), values (small shared helpers), _layer (the defensive imports).
 """
 from knowledge.api._layer import IMPORT_ERROR
 from knowledge.api.community import NOTE_SKIP, community_notes

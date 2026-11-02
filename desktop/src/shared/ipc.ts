@@ -180,6 +180,98 @@ export interface RxpGuideDetail {
   world_only?: number;               // steps RestedXP placed only in world coordinates
   placed?: number;                   // of those, the positions put on their maps (needs the knowledge base's map bounds)
 }
+/** What the knowledge base knows about one guide on the Guides page (companion/rxp_import.py facts, built by
+ * knowledge/api/explorer.py guide_facts; its docstring is the full contract). Step and quest keys are strings of the
+ * guide's own step numbers (`idx`) and quest ids. Without a knowledge base only `quests[*].steps` and `prep` are
+ * filled, and `kb.reason` says why. */
+export interface RxpFactsQuest {
+  steps: { accept: number[]; objective: number[]; turnin: number[]; gate: number[] };
+  name?: string | null;
+  level?: number | null;
+  min_level?: number | null;
+  xp?: number | null;
+  type?: string | null;              // normal | elite | group | dungeon | escort | timed | ...
+  suggested_group?: number | null;
+  removed?: boolean;
+  hidden?: boolean;
+  next?: number | null;              // the chain's next quest
+  prev?: number[];
+  requires?: number[];               // every one of these first
+  requires_one_of?: number[];
+  breadcrumbs?: number[];            // quests leading to this one (skipping them blocks nothing)
+  exclusive?: number[];              // can't do both
+  unlocks?: number[];
+  chain?: { id: number; pos: number; n: number };
+  decay_at_level?: number | null;    // first level giving reduced XP
+  lost_if_skipped?: { id: number; name: string | null; accept: number | null; next_guide: boolean }[];
+}
+export interface RxpFactsTarget {
+  kind: "npc" | "object" | "poi";
+  id: number;
+  name: string | null;
+  level: number | null;
+  rank: number | null;               // 0 normal, 1 elite, 2 rare elite, 3 boss, 4 rare
+  role: "kill" | "loot" | "use" | "talk" | "area";
+  quest: number | null;
+  obj: number | null;
+  ui_map: number;
+  points: [number, number][];        // map percent, near the step
+  groups: [number, number][][];      // the points in groups close together
+}
+export interface RxpFactsPrep {
+  kind: "buy" | "ah" | "bank_out" | "bank_in";
+  item_id: number;
+  name: string | null;
+  qty: number | null;
+  idx: number;                       // the step that gets it
+  quest_id: number | null;
+  cond: [string | null, string | null];  // the step's and the action's << condition
+  for_idx: number | null;            // the step that needs it, when the guide says
+  for_guide: string | null;          // or the guide (kb key) that turns its quest in
+  price: number | null;              // copper
+  vendors: { id: number; name: string | null; subname: string | null; price: number | null; ui_map: number; x: number | null; y: number | null }[];
+}
+export interface RxpFactsPlanStep {
+  n: number | null;                  // RestedXP's step number for the class (and race)
+  t0: number | null;                 // seconds from the guide's start
+  time_s: number | null;
+  travel_s: number | null;
+  kill_s: number | null;
+  xp_now: number | null;
+  xp_unlocked: number | null;
+  lvl0: number | null;
+  lvl1: number | null;
+  kind: string | null;
+  risk: number | null;               // 0..1
+  skip: string | null;
+  why: string[];
+  leg: { mode: string; dist_yd: number | null; from_idx: number | null; observed: boolean } | null;
+  quests_xp: Record<string, number>;
+}
+export interface RxpFactsHazard {
+  name: string | null;
+  creature_id: number | null;
+  quest_id?: number;
+  level: number | null;
+  note: string | null;
+  elite: boolean;
+  dist_yd: number | null;
+  why: "risk" | "kill" | "near" | "quest";
+}
+export interface RxpGuideFacts {
+  kb: { ok: boolean; reason: string | null; built: string | null; schema: number | null };
+  match: "exact" | "aligned" | "none";
+  key: string | null;
+  by: "key" | "text" | "name" | null;
+  idx_map: Record<string, number>;   // guide idx -> kb idx
+  briefs: { class: string; race: string | null; start_level: number | null; end_level: number | null; time_s: number | null; xp_total: number | null }[];
+  quests: Record<string, RxpFactsQuest>;
+  targets: Record<string, RxpFactsTarget[]>;
+  prep: RxpFactsPrep[];
+  plan: { class: string; race: string | null; approx: boolean; steps: Record<string, RxpFactsPlanStep> } | null;
+  hazards: Record<string, RxpFactsHazard[]>;
+  errors: string[];
+}
 /** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it
  * yet; the Glide addon hands it to RestedXP's importer at the next login ("waiting"), then notes "done" or "failed". */
 export interface RxpImport {
@@ -256,6 +348,7 @@ export interface InvokeMap {
   "addon:install": () => { done: string[]; status: AddonStatus };
   "addon:rxpImport": (text: string) => RxpImportResult;   // add a RestedXP guide string (companion/rxp_import.py)
   "addon:rxpImports": (id?: string, index?: number) => RxpImport[] | RxpGuideDetail | null; // list or one parsed guide
+  "addon:rxpFacts": (id: string, index: number, cls?: string, race?: string) => RxpGuideFacts | null; // what kb knows of a guide
   "dialog:folder": (title: string, defaultPath?: string) => string | null;
   "data:import": (from: string) => boolean;
   "shell:open": (target: string) => string | void;

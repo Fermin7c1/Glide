@@ -38,6 +38,7 @@
   "invoke": [
    "addon:detect",
    "addon:install",
+   "addon:rxpFacts",
    "addon:rxpImport",
    "addon:rxpImports",
    "addon:status",

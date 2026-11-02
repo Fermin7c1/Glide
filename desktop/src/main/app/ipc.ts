@@ -9,7 +9,7 @@ import { defaultHome, isCheckout, isDev, logsDir, pythonCommand, whisperDirs } f
 import { ResourceSampler } from "../resources";
 import { keyStatus, KNOWN_KEYS, setKey } from "../secrets";
 import { listWhisperModels, Speech } from "../speech";
-import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpImport, RxpImportResult } from "../../shared/ipc";
+import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpGuideFacts, RxpImport, RxpImportResult } from "../../shared/ipc";
 import { appSettingsProblem, Obj } from "../store";
 import { synth, TTS_KEYS, voices as ttsVoices } from "../tts";
 import { Updater } from "../updater";
@@ -262,6 +262,13 @@ function addonChannels({ engine }: IpcDeps): void {
       return g;
     }
     return ((await rxpTool(engine, "status")).imports || []) as RxpImport[];
+  });
+  // what the knowledge base knows about one guide (quest chains, map targets, prep, plan, hazards); slower than the
+  // guide itself, so the page asks after drawing it. "-" leaves the class or race unpicked.
+  handle("addon:rxpFacts", async (id: string, index: number, cls?: string, race?: string) => {
+    const r = await engine.pythonJson([path.join("companion", "rxp_import.py"), "facts", String(id), String(index),
+      String(cls || "-"), String(race || "-")], "", engineOptions());
+    return (r.facts || null) as RxpGuideFacts | null;
   });
 }
 
