@@ -98,14 +98,15 @@ stays for `record`, a single probe and `--portable` on a machine without the dat
   is then one command: `run_all` through the test lock. Elsewhere add what skipped (`golden.py check --portable`,
   the linters you have, `npm run build`).
 - CI (`.github/workflows/ci.yml`, on every push and pull request) runs all of these, `tests/run_all.py` and the
-  portable golden masters on a Windows runner with no game data.
+  portable golden masters (alongside the tests) on a Windows runner with no game data.
 
 ## Releases
 
 Every push to `main` that changes what the installer ships (the engine, knowledge, tools, `wowfiles/`, the addon,
-`data/seed/`, `requirements.txt` or `desktop/`) is a release: `.github/workflows/release.yml` runs the CI checks,
-builds the installer as the next patch version and publishes it to `Fermin7c1/Glide-releases`, and installed apps
-update from there. The version is never committed back; `desktop/scripts/next-release.js` picks it. Raise `version`
+`data/seed/`, `requirements.txt` or `desktop/`) is a release: `.github/workflows/release.yml` runs the CI checks
+and, alongside them, builds the installer as the next patch version and uploads it to a draft release on
+`Fermin7c1/Glide-releases`; once the checks pass it publishes that draft (only if its notes name this run's commit),
+and installed apps update from there. The version is never committed back; `desktop/scripts/next-release.js` picks it. Raise `version`
 in `desktop/package.json` by hand only for a new minor or major version. What's new gets an entry from the commit
 subjects since the last release unless `desktop/changelog.json` already has one for that version, so write commit
 subjects a player can read. Those entries aren't committed back either: each build also fills in every published
