@@ -2,9 +2,10 @@
 """The Guide & Route Explorer's race picker and RestedXP's `<<` step conditions (desktop/src/renderer/rxp-conditions.ts,
 compiled with the project's TypeScript into a temp folder and run under Node).
 
-Regression: Skyborne (WoW Forever) joins either faction, but the picker listed it only under Horde and read every
+Regressions: Skyborne (WoW Forever) joins either faction, but the picker listed it only under Horde and read every
 Skyborne as Horde, so an Alliance Skyborne's steps (`<< Alliance`, `<< Skyborne Alliance`) were hidden and the Horde
-ones shown. The picker now offers Skyborne under both factions, and the pick carries the faction.
+ones shown. The picker now offers Skyborne under both factions, and the pick carries the faction. And with only a
+race or only a class picked, a negated condition ("<< !Warlock") hid the step as if the unpicked side matched it.
 
 Needs node and desktop/node_modules (skips with 77 without them)."""
 import json
@@ -63,6 +64,19 @@ CASES = [
     ("Warrior/Rogue", "Human", "ROGUE", True),
     ("!(Warrior/Rogue)", "Human", "ROGUE", False),
     ("", "Skyborne@Horde", "MAGE", True),            # no condition: always
+    # Regression (review): with only a race picked, "<< !Warlock" was hidden as if the class were Warlock; a step
+    # shows when a character the pick allows would see it (a Human Warrior sees it, a Human Warlock sees "<< Warlock")
+    ("!Warlock", "Human", "", True),
+    ("Warlock", "Human", "", True),
+    ("Druid", "Gnome", "", False),                   # no Gnome plays a Druid
+    ("!Undead", "", "MAGE", True),                   # only a class picked: a Gnome Mage sees it
+    ("Undead", "", "MAGE", True),
+    ("Undead", "", "DRUID", False),                  # no Undead Druid
+    ("Shaman", "Skyborne@Alliance", "", False),      # the Alliance has no Shamans, Skyborne or not
+    ("Paladin", "Skyborne@Horde", "", False),
+    ("Shaman", "Skyborne@Horde", "", True),
+    ("!Alliance", "", "PALADIN", False),             # every Paladin is Alliance
+    ("Orc Warlock/Human Paladin", "Orc", "", True),
 ]
 
 tmp = tempfile.mkdtemp(prefix="glide-rxp-conditions-")

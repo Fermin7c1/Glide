@@ -570,3 +570,9 @@ they don't spell out.
   pins of the steps before the current one are hidden unless "Done steps" is on. On the Guides page, away from a text
   box, Left/Right step through the route and Space walks it or stops. Arrowheads are drawn as their own shapes
   instead of line markers (markers grow with zoom). The player asked (2026-11-02).
+- **Follow-up, what the player sees: one-sided filters and "Next guide" (review findings).** With only a race or only a
+  class picked, a step now shows when a character that pick allows would see it (`rxp-conditions.ts`, Glide's
+  race-class table from `knowledge/vocab.py`), so "<< !Warlock" no longer hides for "Human, all classes" and a Gnome
+  never sees Druid steps. "Next guide" looks in the group RestedXP names, else the group being browsed, before any
+  other group, so a Dungeon guide's next is the Dungeon guide. The player asked for the Explorer's review fixes
+  (2026-11-02).

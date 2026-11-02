@@ -13,6 +13,34 @@ const RACE_FACTION: Record<string, Faction> = {
 const EITHER_FACTION = new Set(["Skyborne"]);
 const CLASSES = ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID", "DEATHKNIGHT"];
 
+// The classes each race plays (knowledge/vocab.py RACE_CLASSES), and each faction's (FACTION_CLASSES): with only a
+// race or only a class picked, a step shows when one of the characters the pick allows would see it
+const RACE_CLASSES: Record<string, string[]> = {
+  Human: ["WARRIOR", "PALADIN", "ROGUE", "PRIEST", "MAGE", "WARLOCK"],
+  Dwarf: ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN"],
+  NightElf: ["WARRIOR", "HUNTER", "ROGUE", "PRIEST", "DRUID"],
+  Gnome: ["WARRIOR", "ROGUE", "MAGE", "WARLOCK"],
+  Orc: ["WARRIOR", "HUNTER", "ROGUE", "SHAMAN", "WARLOCK"],
+  Undead: ["WARRIOR", "ROGUE", "PRIEST", "MAGE", "WARLOCK"],
+  Tauren: ["WARRIOR", "HUNTER", "SHAMAN", "DRUID"],
+  Troll: ["WARRIOR", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE"],
+  Skyborne: ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID"],
+};
+const FACTION_CLASSES: Record<Faction, string[]> = {
+  Alliance: ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "MAGE", "WARLOCK", "DRUID"],
+  Horde: ["WARRIOR", "HUNTER", "ROGUE", "PRIEST", "MAGE", "WARLOCK", "DRUID", "SHAMAN"],
+};
+/** Every race picker value (racePick), Skyborne once per faction. */
+const RACE_PICKS = ["Human", "Dwarf", "NightElf", "Gnome", "Skyborne@Alliance", "Orc", "Undead", "Tauren", "Troll", "Skyborne@Horde"];
+
+/** The classes a race picker value can play ("Skyborne@Horde": Skyborne's, less the classes the Horde lacks). */
+function classesOf(raceValue: string): string[] {
+  const [name] = raceValue.split("@");
+  const { faction } = racePick(raceValue);
+  const own = RACE_CLASSES[name] || CLASSES;
+  return faction ? own.filter((c) => FACTION_CLASSES[faction].includes(c)) : own;
+}
+
 /** A race picker value ("Human", "Skyborne@Alliance", or "" for every race) -> the race token RestedXP's conditions
  * use ("Undead" is "Scourge" there) and the faction it plays. */
 export function racePick(value: string): { race: string; faction: Faction | "" } {
@@ -23,12 +51,22 @@ export function racePick(value: string): { race: string; faction: Faction | "" }
   return { race: name === "Undead" ? "Scourge" : name, faction };
 }
 
-/** Whether a step with this `<<` condition shows for the picked race (racePick's value) and class ("" for all). */
+/** Whether a step with this `<<` condition shows for the picked race (racePick's value) and class ("" for all).
+ * With both picked, as RestedXP decides for that character. With one left at "all", whether any character the other
+ * pick allows would see it: "<< !Warlock" shows for a Human with every class (a Human Warrior sees it), as does
+ * "<< Warlock" (a Human Warlock does); with neither picked, every step shows. */
 export function conditionApplies(raw: string | null | undefined, raceValue: string, clsValue: string): boolean {
   if (!raw || !raw.trim()) return true;
-  const { race, faction } = racePick(raceValue);
   const cls = (clsValue || "").toUpperCase();
-  if (!race && !cls) return true;   // "All Races" + "All Classes": show everything
+  if (!raceValue && !cls) return true;   // "All Races" + "All Classes": show everything
+  if (raceValue && cls) return appliesTo(raw, raceValue, cls);
+  if (raceValue) return classesOf(raceValue).some((c) => appliesTo(raw, raceValue, c));
+  return RACE_PICKS.filter((r) => classesOf(r).includes(cls)).some((r) => appliesTo(raw, r, cls));
+}
+
+/** RestedXP's applies() for one character: this race picker value and this class. */
+function appliesTo(raw: string, raceValue: string, cls: string): boolean {
+  const { race, faction } = racePick(raceValue);
 
   const evalLit = (lit: string): boolean => {
     if (lit === "TRUE") return true;

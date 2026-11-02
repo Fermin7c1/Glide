@@ -559,9 +559,16 @@ function renderActiveStep(): void {
   const nextBtn = $<HTMLButtonElement>("rxpb-next-guide");
   const nextEntry = (currentGuide.next_list || []).find((n) => n.name && condApplies(n.cond));
   if (nextEntry && nextEntry.name) {
-    const targetName = nextEntry.name.trim();
-    const match = catalog.find((c) => c.name.toLowerCase() === targetName.toLowerCase()
-      || c.name.toLowerCase().endsWith(targetName.toLowerCase()));
+    // the group RestedXP names (#next Group\Name), else the group being browsed: a Dungeon guide's next is the
+    // Dungeon guide of that name, not the Speedrun one; only then any group
+    const target = nextEntry.name.trim().toLowerCase();
+    const cg = currentGuide;
+    const group = nextEntry.group || catalog.find((c) => c.packId === cg.id && c.index === cg.index
+      && (!filter.group || c.group === filter.group))?.group || cg.group;
+    const named = (c: CatalogEntry) => c.name.toLowerCase() === target;
+    const endsAs = (c: CatalogEntry) => c.name.toLowerCase().endsWith(target);
+    const match = catalog.find((c) => c.group === group && named(c)) || catalog.find((c) => c.group === group && endsAs(c))
+      || catalog.find(named) || catalog.find(endsAs);
     if (match) {
       nextBtn.hidden = false;
       nextBtn.textContent = `Next: ${match.name} →`;
