@@ -64,9 +64,11 @@ def facts(root, iid, index, cls=None, race=None, wow_dir=None):
     cls = None if cls in (None, "", "-") else str(cls).upper()
     race = None if race in (None, "", "-") else str(race)
     guide = parsed_guide(root, iid, index, wow_dir)
+    from wowfiles.target_icons import IconBook
+    book = IconBook.load(os.path.join(root, "data", "gamedata"))      # the game icons, when the refresh read them
     kb, reason = newest_kb(root)
     try:
-        out = explorer.guide_facts(kb, guide, cls, race, faction_of(race, guide.get("faction")))
+        out = explorer.guide_facts(kb, guide, cls, race, faction_of(race, guide.get("faction")), book)
     finally:
         if kb is not None:
             kb.close()

@@ -288,6 +288,7 @@ export interface RxpFactsTarget {
   role: "kill" | "loot" | "use" | "talk" | "area";
   quest: number | null;
   obj: number | null;
+  item?: number | null;              // the item looted from it (a loot target or an object), when kb knows it
   ui_map: number;
   points: [number, number][];        // map percent, near the step
   groups: [number, number][][];      // the points in groups close together
@@ -344,6 +345,9 @@ export interface RxpGuideFacts {
   prep: RxpFactsPrep[];
   plan: { class: string; race: string | null; approx: boolean; steps: Record<string, RxpFactsPlanStep> } | null;
   hazards: Record<string, RxpFactsHazard[]>;
+  // the game icons the player's client has for what the guide names: "item:<id>" | "spell:<id>" | "npc:<id>" |
+  // "role:<name>" -> FileDataID, shown as glide://icon/<id>.png (rxp-icons.ts); absent or {} before the refresh read them
+  icons?: Record<string, number>;
   errors: string[];
 }
 /** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it

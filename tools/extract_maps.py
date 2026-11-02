@@ -2,7 +2,7 @@
 """Extract the game's map data from the local client (read-only) into data/gamedata/ and data/db2/.
 
     python tools/extract_maps.py [--wow "D:\\Blizzard\\World of Warcraft"] [--product wow_classic_beta]
-                                 [--only db2,images,areas,terrain] [--force]
+                                 [--only db2,images,areas,terrain,spells,icons] [--force]
 
 Stages (each skipped when its output is already from this client build, unless --force):
   db2      the map tables (AreaTable, Map, UiMap, UiMapAssignment, TaxiNodes/Path/PathNode, AreaPOI, world map
@@ -18,6 +18,11 @@ Stages (each skipped when its output is already from this client build, unless -
            icons (companion/icons.py, which decodes each icon on first use into data/gamedata/icons/). Read with
            the .dbd that knows the client's layout (see dbd_text: bundled, else fetched from WoWDBDefs); failing
            that, the table is read unnamed and the columns are found from long-standing buffs whose icons never change
+  icons    what the Guides page shows for a target (wowfiles/target_icons.py): each item's icon, each beast family's,
+           one per creature type, the NPC role and quest marks -> data/gamedata/target_icons.json; each creature's
+           type, family and rank -> data/db2/Creature.csv (the knowledge build's kb creature.type / family); the
+           family, type and role icons decoded into data/gamedata/icons/ (item and spell icons are decoded when a
+           guide first shows them). A table that doesn't check out against known creatures and icons is left out
 
 Writes data/gamedata/manifest.json (client version, stages done, counts). Some Forever content is encrypted
 with keys the client gets from the server; those rows/tiles are reported and left out.
@@ -33,7 +38,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
-from wowfiles import casc  # noqa: E402
+from wowfiles import casc, target_icons  # noqa: E402
 from wowfiles.db2 import read_db2  # noqa: E402
 from wowfiles.dbdefs import dbd_text  # noqa: E402
 from wowfiles.spells import SPELL_ICON_ANCHORS, SPELLMISC_FDID, spell_icons  # noqa: E402
@@ -134,6 +139,40 @@ class Extractor:
         shutil.rmtree(os.path.join(OUT, "icons"), ignore_errors=True)
         log("spells: %d spell icons (%s, %d of %d known buffs check out)" % (len(icons), how, hit, len(SPELL_ICON_ANCHORS)))
         self.mark("spells", {"spells": len(icons), "how": how, "anchors": hit})
+
+    # ---- icons ------------------------------------------------------------------------------------
+    def stage_icons(self):
+        """The Guides page's target icons (run after "spells": a new client build clears data/gamedata/icons)."""
+        keep = {}
+        book, cre = target_icons.build(self.c, log, keep)
+        os.makedirs(os.path.join(OUT, "db2"), exist_ok=True)
+        for name, data in keep.items():
+            with open(os.path.join(OUT, "db2", name + ".db2"), "wb") as fh:
+                fh.write(data)
+        if cre:
+            os.makedirs(os.path.join(ROOT, "data", "db2"), exist_ok=True)
+            target_icons.write_creature_csv(os.path.join(ROOT, "data", "db2", "Creature.csv"), cre)
+        tmp = os.path.join(OUT, "target_icons.json.tmp")
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(book, fh, separators=(",", ":"))
+        os.replace(tmp, os.path.join(OUT, "target_icons.json"))
+        raw, made, failed = set(book["raw"]), 0, []
+        for fid in target_icons.fixed_icons(book):
+            p = os.path.join(OUT, "icons", "%d.png" % fid)
+            if os.path.exists(p):
+                continue
+            try:
+                target_icons.write_icon_png(self.c, fid, p, trim=fid not in raw)
+                made += 1
+            except Exception as e:  # noqa: BLE001 - encrypted or not a texture: that target keeps its glyph
+                failed.append("%s (%s)" % (fid, e))
+        info = {"items": len(book["items"]), "families": len(book["families"]), "types": len(book["types"]),
+                "named": len(book["named"]), "creatures": len(cre), "decoded": made, "failed": len(failed),
+                "problems": book["problems"]}
+        log("icons: %d items, %d families, %d creature types, %d role marks, %d creatures typed; %d icons decoded%s"
+            % (info["items"], info["families"], info["types"], info["named"], info["creatures"], made,
+               "; failed: " + ", ".join(failed[:5]) if failed else ""))
+        self.mark("icons", info)
 
     # ---- db2 --------------------------------------------------------------------------------------
     def stage_db2(self):
@@ -279,7 +318,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--wow", default=None)
     ap.add_argument("--product", default=None, help="default: from the flavour folder, else wow_classic_beta")
-    ap.add_argument("--only", default="db2,images,areas,terrain,spells")
+    ap.add_argument("--only", default="db2,images,areas,terrain,spells,icons")
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args(argv)
     wow, product = wow_dir_default()
@@ -310,6 +349,11 @@ def main(argv=None):
             ex.stage_spells()
         except Exception as e:  # noqa: BLE001 - the buff icons fall back to letters; the Status page says so
             log("spells: the spell table couldn't be read (%s); buff icons show letters" % e)
+    if "icons" in only and not ex.done("icons"):
+        try:
+            ex.stage_icons()
+        except Exception as e:  # noqa: BLE001 - the Guides page keeps its glyphs
+            log("icons: the target icons couldn't be read (%s); the Guides page keeps its glyphs" % e)
     log("done in %.0fs (client %s)" % (time.time() - t0, ex.c.version))
     return 0
 

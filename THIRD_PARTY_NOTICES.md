@@ -4,7 +4,7 @@ Glide's own code is licensed under the GNU General Public License v3.0 or later 
 material below is not Glide's own: each part keeps its own license, listed here with its source and what Glide
 does with it. World of Warcraft and Blizzard Entertainment are trademarks of Blizzard Entertainment, Inc.; Glide is
 not affiliated with or endorsed by Blizzard. No Blizzard game files ship with Glide: the game data it uses (maps,
-terrain, buff icons, the level-up sound, the game's tables) is read at runtime from the player's own installation.
+terrain, buff and target icons, the level-up sound, the game's tables) is read at runtime from the player's own installation.
 
 ## Game data from community projects
 
@@ -15,6 +15,7 @@ terrain, buff icons, the level-up sound, the game's tables) is read at runtime f
 | `data/seed/seed.json.gz` (source `rxp`), `companion/data/stat_weights.json` | [RestedXP/RXPGuides](https://github.com/RestedXP/RXPGuides) | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) | The free Forever guides and the stat weights; Glide is free and non-commercial, and these files stay under CC BY-NC-SA 4.0 |
 | `addon/Glide/Data/VendorTreasures.lua` | [Cpt. Stadics' Map of Vendor Treasures](https://www.curseforge.com/wow/addons/cpt-stadics-map-of-vendor-treasures), via RestedXP | [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/) | Vendors with limited-stock gear and potions |
 | `tools/dbd/*.dbd` | [wowdev/WoWDBDefs](https://github.com/wowdev/WoWDBDefs) | Data: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | Layouts of the game's table files, to read them from the player's client |
+| `wowfiles/target_icons.py` (`TABLES`, `TYPE_ICONS`, `NAMED`) | [wowdev/wow-listfile](https://github.com/wowdev/wow-listfile) | No license published | About forty FileDataID numbers of client files (tables, icons), looked up there, to find those files in the player's client; nothing else is taken |
 | `knowledge/community/` | The community scan's own notes; each note cites its sources | Glide's notes: GPL-3.0; quoted facts belong to their sources | Short factual claims with links to the original posts and articles |
 
 Glide used data from [alcaras/forever-ref](https://github.com/alcaras/forever-ref) (a QuestieDB copy, in-game

@@ -1,6 +1,8 @@
 """Spell icons for the dashboard's buffs, read from the local game client (read-only) on first use.
 
     icon_png(spell_id) -> PNG bytes, or None (no client, unknown spell, encrypted file)
+    ensure(fdids)      -> {fdid: path or None}: icons by FileDataID decoded into the cache (the Guides page's
+                          glide://icon/<fdid>.png, through `rxp_import.py icons`)
 
 The spell -> icon FileDataID map is data/gamedata/spell_icons.json, written by the game-file refresh
 (tools/extract_maps.py, stage "spells", with wowfiles/spells.py) like the map data: re-read whenever the client build changes, and readable
@@ -22,7 +24,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "gamedata")
 ICON_DIR = os.path.join(OUT, "icons")
 MAP_PATH = os.path.join(OUT, "spell_icons.json")
-TRIM = 4                               # px of the 64 px icon's border; the game shows the inner 56 px
+MAX_ENSURE = 400                       # icons decoded per ensure() call (one Guides page batch)
 IDLE_CLOSE_S = 60                      # the client index stays open this long after the last icon read
 
 _lock = threading.Lock()
@@ -98,16 +100,49 @@ def icon_png(spell_id):
         p = os.path.join(ICON_DIR, "%d.png" % fd)
         if not os.path.exists(p):
             try:
-                from wowfiles.blp import decode_blp, write_png     # numpy, loaded on the first icon
-                rgba = decode_blp(_client().read_fdid(fd))
-                if rgba.shape[0] > 2 * TRIM and rgba.shape[1] > 2 * TRIM:
-                    rgba = rgba[TRIM:-TRIM, TRIM:-TRIM]
-                os.makedirs(ICON_DIR, exist_ok=True)
-                write_png(p + ".tmp", rgba)
-                os.replace(p + ".tmp", p)
+                from wowfiles.target_icons import write_icon_png
+                write_icon_png(_client(), fd, p)
             except Exception as e:  # noqa: BLE001 - encrypted or missing file: remember, fall back
                 log("icons", "icon %s for spell %s: %s" % (fd, key, e))
                 _failed.add(fd)
                 return None
         with open(p, "rb") as fh:
             return fh.read()
+
+
+def _raw_icons():
+    """FileDataIDs shown whole, without the icon border trim (UI textures: target_icons.json "raw")."""
+    try:
+        with open(os.path.join(OUT, "target_icons.json"), encoding="utf-8") as fh:
+            return set(json.load(fh).get("raw") or ())
+    except (OSError, ValueError, AttributeError):
+        return set()
+
+
+def ensure(fdids, limit=MAX_ENSURE):
+    """Decode these icons (FileDataIDs) into data/gamedata/icons/<fdid>.png unless already there -> {fdid: path or
+    None}. The client index opens only when one is missing; a file that can't be decoded answers None."""
+    want = [int(f) for f in fdids if str(f).isdigit() and 0 < int(f) < 1 << 31][:limit]
+    out, missing = {}, []
+    for fd in want:
+        p = os.path.join(ICON_DIR, "%d.png" % fd)
+        out[fd] = p if os.path.exists(p) else None
+        if out[fd] is None:
+            missing.append(fd)
+    if not missing:
+        return out
+    raw = _raw_icons()
+    from wowfiles.target_icons import write_icon_png
+    failed = []
+    with _lock:
+        c = _client()
+        for fd in missing:
+            p = os.path.join(ICON_DIR, "%d.png" % fd)
+            try:
+                write_icon_png(c, fd, p, trim=fd not in raw)
+                out[fd] = p
+            except Exception as e:  # noqa: BLE001 - encrypted, missing, not a texture: the page keeps its glyph
+                failed.append("%s (%s)" % (fd, e))
+    if failed:
+        log("icons", "%d of %d icons couldn't be decoded: %s" % (len(failed), len(want), "; ".join(failed[:3])))
+    return out

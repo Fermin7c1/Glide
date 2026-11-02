@@ -42,7 +42,7 @@ they don't spell out.
 5. **Files on the player's disk**, read across versions: `config.json` (engine settings; keys as in
    `companion/app.py` `DEFAULTS` and `desktop/src/renderer/settings-schema.ts`), `app-settings.json` (desktop),
    `secrets.json` (DPAPI-encrypted keys), `data/live/*` (logs, layout, reminders, memory, xph history),
-   `data/gamedata/*` (manifest, maps, spell_icons.json, icons/), `GlideLinkDB` and `GlideRecorderDB`
+   `data/gamedata/*` (manifest, maps, spell_icons.json, target_icons.json, icons/), `GlideLinkDB` and `GlideRecorderDB`
    (addon SavedVariables). New fields are fine; existing ones keep their meaning, and old files must still load.
    **Who writes `config.json`** (R20): the engine owns it. In Python it is read and written only through
    `companion/glideconfig.py` (the engine, `knowledge/store.py`, `knowledge/eval/run_eval.py` and the tools
@@ -723,3 +723,27 @@ they don't spell out.
   The Character popover adds "Pick a class to see how long to each level at the coach's pace." when the knowledge base
   has plans and no class is picked. Without a knowledge base none of this shows. No IPC, file or state change.
   DOM-free logic in `rxp-plan.ts` (`tests/test_rxp_plan.py`). Guides page plan, phase 5.
+- **Follow-up, contracts 3, 4, 5, 6 and the knowledge base (all additive): game icons for the Guides page's targets.**
+  The player asked for images from the WoW client in place of the target glyphs (2026-11-02); the client has no
+  creature portraits (they are drawn live from 3D models), so a target shows what the client does have
+  (`wowfiles/target_icons.py`). The game-file refresh gains a stage `icons` (`tools/extract_maps.py --only icons`,
+  in the default list after `spells`): it reads Creature, CreatureFamily and Item (new vendored `tools/dbd/Creature.dbd`,
+  `CreatureFamily.dbd`, `Item.dbd` from WoWDBDefs, which knows WoW Forever's 1.60.1 layouts), checks them (twelve
+  starting-zone creatures with known type and family, the Hearthstone's and the boar and wolf families' icons, icons
+  that are real files) and leaves out any table that doesn't check out. It writes `data/gamedata/target_icons.json`
+  (`{version, items {itemID: fdid}, families {familyID: fdid}, types {"Beast"|...: fdid}, named {vendor, repair,
+  trainer, profession, flight, innkeeper, banker, stable, mailbox, auctioneer, quest_available, quest_turnin, elite,
+  rare: fdid}, raw [fdid shown untrimmed], how, problems}`), `data/db2/Creature.csv` (`ID, CreatureType,
+  CreatureFamily, Classification`) and copies of the three tables in `data/gamedata/db2/`, and decodes the family,
+  type and role icons into `data/gamedata/icons/<fdid>.png` (the same cache as the buff icons). The knowledge build's
+  DB2 import reads `Creature.csv` and fills `creature.type` ("Beast", "Humanoid", ...: the coach's `target_type`
+  rules start to apply), `creature.family` ("Boar", ...) and `creature.rank` where kb had none. A new
+  `rxp_import.py icons` subcommand (`{"fdids": [...]}` on stdin) decodes icons into the cache and answers
+  `{"ok": true, "ready": [...], "failed": [...]}`. Guide facts gain `icons` (`"item:<id>" | "spell:<id>" | "npc:<id>"
+  | "role:<name>"` -> fdid, `{}` before the refresh read the client) and each target an `item` (what it is looted
+  for); `RxpGuideFacts.icons` and `RxpFactsTarget.item` are optional in `desktop/src/shared/ipc.ts`. The main process
+  serves `glide://icon/<fdid>.png` from the engine home's (else the checkout's) `data/gamedata/icons`; a miss is
+  decoded by one batched `rxp_import.py icons` run (`desktop/src/main/game-icons.ts`), so icons show with the coach
+  stopped; an icon that can't be had answers 404 and the page keeps its glyph. The renderer's mapping is
+  `desktop/src/renderer/rxp-icons.ts` (`tests/test_rxp_icons.py`; also `tests/test_target_icons.py`,
+  `tests/test_game_icons.py`). Nothing from the client is shipped.

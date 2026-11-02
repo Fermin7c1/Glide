@@ -33,6 +33,9 @@ imported, nothing is ever estimated without its data. Array columns may be writt
   UiMapAssignment.csv    UiMapID, MapID, OrderIndex, UiMin_0, UiMin_1, UiMax_0, UiMax_1, Region_0..Region_5
                          (minX, minY, minZ, maxX, maxY, maxZ) -> map_bounds (src db2, conf 1) for the
                             assignment covering the largest part of each map
+  Creature.csv           ID, CreatureType, CreatureFamily, Classification (tools/extract_maps.py, stage "icons")
+                         -> creature.type ("Beast", "Humanoid", ...), creature.family ("Boar", ...) and creature.rank
+                            where kb has none, for creatures already in the KB
 
     python tools/db2_import.py [--db2 data/db2]               # report what the folder contains
     python tools/db2_import.py --kb data/kb.db [--db2 ...]    # import into an existing KB file
@@ -52,7 +55,7 @@ from knowledge.vocab import BIT_CLASSES, BIT_RACES
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILL_KIND = {6: "weapon", 7: "class", 9: "profession", 11: "profession"}
 TABLES = ("AreaPOI", "QuestXP", "TaxiNodes", "TaxiPath", "TaxiPathNode", "SkillLine", "SkillLineAbility", "SkillRaceClassInfo",
-          "SpellName", "Spell", "SpellLevels", "AreaTable", "UiMap", "UiMapAssignment")
+          "SpellName", "Spell", "SpellLevels", "AreaTable", "UiMap", "UiMapAssignment", "Creature")
 
 
 def _norm(h):
@@ -120,7 +123,26 @@ def import_dir(conn, folder, log=print):
         res["map_bounds"] = assignments(conn, data["UiMapAssignment"])
     if "AreaPOI" in data:
         res["landmarks"] = area_pois(conn, data["AreaPOI"])
+    if "Creature" in data:
+        res["creature_types"] = creature_types(conn, data["Creature"])
     return res
+
+
+def creature_types(conn, rows):
+    """kb creature.type / family (and rank where kb has none) from the client's Creature table."""
+    from wowfiles.target_icons import family_name, type_name
+    vals = []
+    for r in rows:
+        cid = inum(r.get("ID"))
+        if not cid:
+            continue
+        rank = inum(r.get("Classification"))
+        vals.append((type_name(inum(r.get("CreatureType"))), family_name(inum(r.get("CreatureFamily"))),
+                     rank if rank is not None and 0 <= rank <= 4 else None, cid))
+    before = conn.total_changes
+    conn.executemany("UPDATE creature SET type=COALESCE(?, type), family=COALESCE(?, family), "
+                     "rank=COALESCE(rank, ?) WHERE id=?", vals)
+    return conn.total_changes - before
 
 
 def area_pois(conn, rows):

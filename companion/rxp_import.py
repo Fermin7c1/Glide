@@ -852,8 +852,8 @@ def add(root, wow_dir, text, now=None):
 
 
 def main(argv=None):
-    """add (the string on stdin) | status | sync | guide <id> <index> | facts <id> <index> [CLASS|-] [RACE|-], for the
-    desktop app: one JSON object on stdout."""
+    """add (the string on stdin) | status | sync | guide <id> <index> | facts <id> <index> [CLASS|-] [RACE|-] | icons
+    (FileDataIDs on stdin, {"fdids": [...]}), for the desktop app: one JSON object on stdout."""
     argv = sys.argv[1:] if argv is None else argv
     cmd = argv[0] if argv else ""
     if cmd == "routes" and len(argv) >= 3:      # walking routes between the steps (rxp_routes.py; JSON on stdin)
@@ -873,8 +873,14 @@ def main(argv=None):
             import rxp_facts
             more = list(argv[3:5]) + [None] * (2 - len(argv[3:5]))
             out = {"ok": True, "facts": rxp_facts.facts(ROOT, argv[1], int(argv[2]), more[0], more[1], wow_dir)}
+        elif cmd == "icons":                # the Guides page's game icons, decoded from the client into the cache
+            import icons
+            want = (json.loads(sys.stdin.read() or "{}") or {}).get("fdids") or []
+            got = icons.ensure(want)
+            out = {"ok": True, "ready": sorted(f for f, p in got.items() if p),
+                   "failed": sorted(f for f, p in got.items() if not p)}
         else:
-            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide|facts"}
+            out = {"ok": False, "error": "usage: rxp_import.py add|status|sync|guide|facts|icons"}
     except ImportProblem as e:
         out = {"ok": False, "error": str(e)}
     except Exception as e:  # noqa: BLE001 - the app shows the reason, whatever it is

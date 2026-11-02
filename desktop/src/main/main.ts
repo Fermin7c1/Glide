@@ -10,6 +10,7 @@ import { pathToFileURL } from "url";
 import type { EventChannel, EventMap } from "../shared/ipc";
 import * as addon from "./addon";
 import { Engine } from "./engine";
+import { GameIcons, iconId } from "./game-icons";
 import { LogFile } from "./logfile";
 import { isDev, logsDir, syncEngine } from "./paths";
 import { ResourceSampler } from "./resources";
@@ -27,16 +28,32 @@ import { settings } from "./app/settings";
 import { AppTray, MUTE_SHORTCUT, OVERLAY_SHORTCUT } from "./app/tray";
 
 // glide://map/<uiMapID>.png: the zone images the engine extracted from the player's own client
-// (data/gamedata/maps), loaded by URL so a guide doesn't ship them over IPC; registered before the app is ready
+// (data/gamedata/maps), loaded by URL so a guide doesn't ship them over IPC; registered before the app is ready.
+// glide://icon/<fileDataID>.png: the Guides page's game icons (data/gamedata/icons, decoded on a miss: game-icons.ts)
 protocol.registerSchemesAsPrivileged([{ scheme: "glide", privileges: { standard: true, secure: true } }]);
 
-/** Answer glide://map/<id>.png from the engine home's map images (else the development checkout's). */
+const gameDirs = () => [engineHome(), path.join(__dirname, "..", "..", "..")];
+const gameIcons = new GameIcons(gameDirs, async (fdids) => {
+  const r = await engine.pythonJson([path.join("companion", "rxp_import.py"), "icons"], JSON.stringify({ fdids }), engineOptions());
+  if (!r.ok) throw new Error(String(r.error || "no answer"));
+  return (r.ready || []) as number[];
+});
+
+/** Answer glide://map/<id>.png from the engine home's map images (else the development checkout's), and
+ * glide://icon/<id>.png from the decoded game icons. */
 function serveGlideScheme(): void {
-  protocol.handle("glide", (req) => {
+  protocol.handle("glide", async (req) => {
     const u = new URL(req.url);
+    const icon = iconId(u.host, u.pathname);
+    if (icon != null) {
+      const p = await gameIcons.get(icon);
+      if (!p) return new Response("no icon", { status: 404 });
+      const r = await net.fetch(pathToFileURL(p).href);
+      return new Response(r.body, { headers: { "content-type": "image/png", "cache-control": "max-age=31536000, immutable" } });
+    }
     const m = u.host === "map" ? /^\/(\d{1,6})\.png$/.exec(u.pathname) : null;
     if (!m) return new Response("not found", { status: 404 });
-    for (const dir of [engineHome(), path.join(__dirname, "..", "..", "..")]) {
+    for (const dir of gameDirs()) {
       const p = path.join(dir, "data", "gamedata", "maps", `${m[1]}.png`);
       if (fs.existsSync(p)) return net.fetch(pathToFileURL(p).href);
     }

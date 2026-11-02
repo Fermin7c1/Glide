@@ -1,7 +1,7 @@
 """Per-guide facts for the Guides page: what the knowledge base knows about one RestedXP guide, read-only.
 
   newest_kb(paths)                              -> (store.KB or None, reason or None)
-  guide_facts(kb, guide, cls=None, race=None, faction=None) -> dict
+  guide_facts(kb, guide, cls=None, race=None, faction=None, icons=None) -> dict
   entity_names(kb, quests=(), npcs=(), items=(), objects=()) -> {"quests", "npcs", "items", "objects"}
 
 guide is a parsed guide (knowledge.rxp_parser.parse_guide, after include expansion when the caller did it; a "text" key
@@ -19,14 +19,19 @@ The answer (every step number is the guide's own idx, the one the Guides page sh
   quests   {qid: {"steps": {"accept", "objective", "turnin", "gate": [idx]}, and with kb: name, level, min_level,
            xp, type, suggested_group, removed, hidden, next, prev, requires, requires_one_of, breadcrumbs, exclusive,
            chain {id, pos, n}, decay_at_level, lost_if_skipped [{id, name, accept (idx or None), next_guide}]}}
-  targets  {idx: [{kind npc|object|poi, id, name, level, rank, role kill|loot|use|talk|area, quest, obj, ui_map,
-           points [[x, y]], groups [[[x, y]]]}]} for steps with objective work (map percent; near the step)
+  targets  {idx: [{kind npc|object|poi, id, name, level, rank, role kill|loot|use|talk|area, quest, obj, item (the
+           item looted from it, or None), ui_map, points [[x, y]], groups [[[x, y]]]}]} for steps with objective work
+           (map percent; near the step)
   prep     [{kind buy|ah|bank_out|bank_in, item_id, name, qty, idx, quest_id, cond [step, action], for_idx,
            for_guide, price, vendors [{id, name, subname, price, ui_map, x, y}]}] in step order
   plan     {"class", "race", "approx", "steps": {idx: {n, t0, time_s, travel_s, kill_s, xp_now, xp_unlocked, lvl0,
            lvl1, kind, risk, skip, why [text], leg {mode, dist_yd, from_idx, observed}, quests_xp {qid: xp}}}}
            (None without a class or a kb match); n is RestedXP's step number for that class (and race when given)
   hazards  {idx: [{name, creature_id, level, note, elite, dist_yd, why risk|kill|near|quest}]}
+  icons    {"item:<id>" | "spell:<id>" | "npc:<id>" | "role:<name>": FileDataID} of the game icons the player's
+           client has for what the guide names (icons: a wowfiles.target_icons.IconBook; {} without one): an item's
+           own icon, a trained spell's, a creature's family or type icon (kb creature.type / family), and the role
+           and quest marks (role:vendor, trainer, flight, innkeeper, quest_available, quest_turnin, elite, ...)
   errors   [text] of the parts that could not be read
 """
 import difflib
@@ -423,9 +428,9 @@ def _targets(kb, guide, errors):
         um0 = anchors[0][0] if anchors else st.get("ui_map")
         lst = []
 
-        def add(kind, eid, role, q=None, o=None, lst=lst):
+        def add(kind, eid, role, q=None, o=None, item=None, lst=lst):
             if eid and not any(w[0] == kind and w[1] == eid for w in lst):
-                lst.append((kind, eid, role, q, o))
+                lst.append((kind, eid, role, q, o, item))
         for a in st.get("actions") or ():
             v, args = a.get("verb"), a.get("args") or {}
             if v == "complete" and a.get("quest_id") and args.get("obj"):
@@ -441,7 +446,7 @@ def _targets(kb, guide, errors):
                     _obj_targets(o, a["quest_id"], o["idx"], drops, add)
                 else:
                     for kind, eid in drops.get(args["item_id"], ())[:3]:
-                        add(kind, eid, "loot", a["quest_id"])
+                        add(kind, eid, "loot", a["quest_id"], item=args["item_id"])
             elif v in UNIT_VERBS:
                 for u in args.get("units") or ():
                     cid = u.get("id")
@@ -472,7 +477,7 @@ def _targets(kb, guide, errors):
     out = {}
     for idx, (anchors, lst) in wants.items():
         res = []
-        for kind, eid, role, q, o in lst:
+        for kind, eid, role, q, o, item in lst:
             if kind == "npc":
                 raw = cspawn.get(eid, ())
                 c = cre.get(eid) or {}
@@ -489,7 +494,7 @@ def _targets(kb, guide, errors):
             um, pts = _place(raw, anchors, sizes)
             if not pts:
                 continue
-            rec.update(role=role, quest=q, obj=o, ui_map=um, points=[list(p) for p in pts],
+            rec.update(role=role, quest=q, obj=o, item=item, ui_map=um, points=[list(p) for p in pts],
                        groups=_groups(pts, sizes.get(um)))
             res.append(rec)
         if res:
@@ -505,10 +510,10 @@ def _obj_targets(o, q, obj, drops, add):
         add("object", tid, "use", q, obj)
     elif tk == "item":
         if o["drop_from_kind"] in ("npc", "object") and o["drop_from_id"]:
-            add(o["drop_from_kind"], o["drop_from_id"], "loot", q, obj)
+            add(o["drop_from_kind"], o["drop_from_id"], "loot", q, obj, tid)
         else:
             for kind, eid in drops.get(tid, ())[:3]:
-                add(kind, eid, "loot", q, obj)
+                add(kind, eid, "loot", q, obj, tid)
     add("poi", q, "area", q, obj)
 
 
@@ -756,14 +761,14 @@ def _briefs(kb, key):
 
 
 # --------------------------------------------------------------------------------------------------- the answer
-def guide_facts(kb, guide, cls=None, race=None, faction=None):
+def guide_facts(kb, guide, cls=None, race=None, faction=None, icons=None):
     """Everything kb knows about this parsed guide that changes the next minutes of play (module docstring)."""
     errors = []
     guide = guide if isinstance(guide, dict) else {}
     faction = faction or guide.get("faction")
     out = {"kb": {"ok": False, "reason": None, "built": None, "schema": None}, "match": "none", "key": None,
            "by": None, "idx_map": {}, "briefs": [], "quests": {}, "targets": {}, "prep": [], "plan": None,
-           "hazards": {}, "errors": errors}
+           "hazards": {}, "icons": {}, "errors": errors}
 
     def part(name, fn, *args):
         try:
@@ -775,6 +780,7 @@ def guide_facts(kb, guide, cls=None, race=None, faction=None):
     out["prep"] = part("prep", prep_list, guide) or []
     if kb is None or not getattr(kb, "ok", False):
         out["kb"]["reason"] = "no knowledge base yet"
+        out["icons"] = part("icons", guide_icons, None, guide, out, icons) or {}
         return _json_keys(out)
     out["kb"].update(ok=True, built=part("kb", kb.meta, "built"), schema=part("kb", store.schema_version, kb))
     m = part("match", match_guide, kb, guide)
@@ -797,7 +803,52 @@ def guide_facts(kb, guide, cls=None, race=None, faction=None):
         if plan:
             out["plan"], just = plan
     out["hazards"] = part("hazards", _hazards, kb, guide, out["targets"], just, out["quests"], faction, errors) or {}
+    out["icons"] = part("icons", guide_icons, kb, guide, out, icons) or {}
     return _json_keys(out)
+
+
+HEARTHSTONE = 6948
+
+
+def guide_icons(kb, guide, facts, book):
+    """The icons the Guides page can show for this guide (the module docstring's "icons"), from an IconBook."""
+    if not book:
+        return {}
+    items, spells, npcs = {HEARTHSTONE}, set(), set()
+    for st in guide.get("steps") or ():
+        for a in st.get("actions") or ():
+            kind, eid, args = a.get("entity_kind"), a.get("entity_id"), a.get("args") or {}
+            if isinstance(eid, int) and eid > 0:
+                {"item": items, "spell": spells, "npc": npcs}.get(kind, set()).add(eid)
+            for k in ("item_id", "item_ids", "items"):
+                v = args.get(k)
+                for i in (v if isinstance(v, list) else [v]):
+                    i = i.get("id") if isinstance(i, dict) else i
+                    if isinstance(i, int) and i > 0:
+                        items.add(i)
+    for lst in facts.get("targets", {}).values():
+        for t in lst:
+            if t.get("item"):
+                items.add(t["item"])
+            if t.get("kind") == "npc":
+                npcs.add(t["id"])
+    for p in facts.get("prep") or ():
+        items.add(p["item_id"])
+        npcs.update(v["id"] for v in p.get("vendors") or ())
+    out = {}
+    for i in sorted(items):
+        if book.item(i):
+            out["item:%d" % i] = book.item(i)
+    for sp in sorted(spells):
+        if book.spell(sp):
+            out["spell:%d" % sp] = book.spell(sp)
+    for r in _q(kb, "SELECT id, type, family FROM creature WHERE id IN ({in})", sorted(npcs)) if kb is not None else ():
+        fid = book.creature(r["type"], r["family"])
+        if fid:
+            out["npc:%d" % r["id"]] = fid
+    for key in book.book.get("named", {}):
+        out["role:%s" % key] = book.named(key)
+    return out
 
 
 def _json_keys(out):

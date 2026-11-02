@@ -151,6 +151,11 @@
  "main/engine.js": [
   "Engine:function"
  ],
+ "main/game-icons.js": [
+  "GameIcons:function",
+  "ICON_BATCH:number",
+  "iconId:function"
+ ],
  "main/keys.js": [
   "VK:object",
   "dragVk:function",
