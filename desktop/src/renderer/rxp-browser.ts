@@ -7,7 +7,9 @@ import type { RxpFactsTarget, RxpGuideAction, RxpGuideDetail, RxpGuideFacts, Rxp
   RxpImport, RxpRouteLeg, RxpRoutes } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
-import { currentPage, show } from "./nav.js";
+import { currentPage, show, whenLeft } from "./nav.js";
+import { speech } from "./narrator.js";
+import { NarrationStop, stepLine, stepVia, stepWho, transitionLine } from "./rxp-narration.js";
 import { live } from "./state.js";
 import { comboOf, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
@@ -89,6 +91,7 @@ const filter = {
   showAllCond: false,
   showDone: false,          // the pins of the steps before the current one ("Done steps")
   follow: false,            // keep the current step in the middle of the map ("Follow step")
+  narrate: false,           // Walk speaks each step and the way to the next, and waits for the voice ("Narrate")
 };
 
 // ---- the map's zoom and pan: the layer holding the image and the drawing, scaled and moved together -------------
@@ -809,7 +812,7 @@ function renderTimeline(): void {
   $("rxpb-tl-pos").title = cur ? `${cur.zone || ""}${cur.step.x != null ? ` (${cur.step.x.toFixed(1)}, ${cur.step.y!.toFixed(1)})` : ""}` : "";
   $<HTMLButtonElement>("rxpb-prev").disabled = activeIdx <= 0;
   $<HTMLButtonElement>("rxpb-next").disabled = activeIdx >= n - 1;
-  $<HTMLButtonElement>("rxpb-play").textContent = playTimer ? "⏸ Pause" : "▶ Walk";
+  $<HTMLButtonElement>("rxpb-play").textContent = walking ? "⏸ Pause" : "▶ Walk";
 
   const ticks: string[] = [];
   if (n > 1) {
@@ -988,6 +991,7 @@ function renderActiveStep(): void {
 /** Make the step at this place in the list the current one. */
 function selectStep(idx: number, scrollList = true): void {
   if (!visibleSteps.length) return;
+  const before = activeSrc;
   activeIdx = Math.max(0, Math.min(visibleSteps.length - 1, idx));
   activeSrc = visibleSteps[activeIdx].src;
   const vs = visibleSteps[activeIdx];
@@ -1003,6 +1007,8 @@ function selectStep(idx: number, scrollList = true): void {
   renderMap();
   followStep();
   scheduleRoutes();
+  // the player picked another step while the walk goes on (a pin, a zone tab): it goes on from there, said afresh
+  if (walking && !stepByWalk && activeSrc !== before) walkOn();
 }
 
 // ---- the walking routes: asked of the engine nearest the current step first, again while legs are pending ------
@@ -1072,31 +1078,130 @@ function selectSrc(src: number, scrollList = true): void {
   if (at !== undefined) selectStep(at, scrollList);
 }
 
+// ---- walking the route: on a timer, or with Narrate on, each step said aloud and the walk waiting for the voice ----
+const NARRATION_TAG = "guides";
+const NARRATION_BEAT_MS = 700;      // the pause after a step's lines before the next step
+let walking = false;
+let walkRun = 0;                    // bumped whenever the walk stops or starts over: an older loop sees it and ends
+let stepByWalk = false;             // the walk itself is moving to the next step (not the player's pick)
+const saidVia = new Set<number>();  // steps whose own line was said in this walk (their .fly / .hs isn't said twice)
+
+/** Narrate is on and the voice would be heard: muted, the walk keeps its timer and never waits on silence. */
+const narrating = () => filter.narrate && speech.canSpeak();
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+
 function stopPlay(): void {
+  walking = false;
+  walkRun++;
   if (playTimer !== null) {
     window.clearInterval(playTimer);
     playTimer = null;
   }
+  speech.cancel(NARRATION_TAG);
   const btn = document.getElementById("rxpb-play");
   if (btn) btn.innerHTML = "▶ Walk route";
 }
 
 function togglePlay(): void {
-  if (playTimer !== null) {
+  if (walking) {
     stopPlay();
     return;
   }
   if (activeIdx >= visibleSteps.length - 1) activeIdx = 0;
   selectStep(activeIdx, true);
+  walking = true;
+  saidVia.clear();
+  walkOn();
+  renderTimeline();
+}
+
+/** The walk goes on from the current step: said aloud with Narrate on and the voice heard, else on the timer. */
+function walkOn(): void {
+  const run = ++walkRun;
+  if (playTimer !== null) { window.clearInterval(playTimer); playTimer = null; }
+  speech.cancel(NARRATION_TAG);
+  if (narrating()) { narrateWalk(run); return; }
   playTimer = window.setInterval(() => {
     if (currentPage() !== "guides") { stopPlay(); return; }
+    if (narrating()) { walkOn(); return; }          // the voice came back or Narrate was ticked: speak from here
     if (activeIdx < visibleSteps.length - 1) {
-      selectStep(activeIdx + 1, true);
+      walkStep();
     } else {
       stopPlay();
     }
   }, playMs);
-  renderTimeline();
+}
+
+function walkStep(): void {
+  stepByWalk = true;
+  try { selectStep(activeIdx + 1, true); } finally { stepByWalk = false; }
+}
+
+/** Say the current step, then the way to the next when there is one, wait for both and a beat, move on; again. */
+async function narrateWalk(run: number): Promise<void> {
+  while (run === walkRun) {
+    if (currentPage() !== "guides") { stopPlay(); return; }
+    if (!narrating()) { walkOn(); return; }
+    const at = activeIdx;
+    const vs = visibleSteps[at];
+    if (vs) {
+      const line = stepLine(vs.step, narratedActions(vs.step), null);
+      if (line) saidVia.add(vs.src);
+      await sayLine(line);
+    }
+    if (run !== walkRun) return;
+    await sayLine(transitionSpeech(at));            // worked out after the step's line: its route has had time
+    if (run !== walkRun) return;
+    await sleep(NARRATION_BEAT_MS);
+    if (run !== walkRun) return;
+    if (!narrating()) { walkOn(); return; }         // muted mid-step: the timer takes over from this step
+    if (activeIdx >= visibleSteps.length - 1) { stopPlay(); return; }
+    walkStep();
+  }
+}
+
+/** Speak a line and wait for its end; a voice that never says it has ended holds the walk a while, not for ever. */
+async function sayLine(text: string): Promise<void> {
+  if (!text) return;
+  const cap = 6000 + text.split(/\s+/).length * 1000;
+  await Promise.race([speech.speakAndWait(text, NARRATION_TAG), sleep(cap)]);
+}
+
+/** The step's actions the picked character gets (all of them with "Show all <<" on), as the step list shows them. */
+function narratedActions(st: RxpGuideStep): RxpGuideAction[] {
+  return (st.actions || []).filter((a) => filter.showAllCond || actionApplies(a));
+}
+
+/** Where a step is: its first or last waypoint the picked character gets, else its own position; null without one. */
+function stopOf(st: RxpGuideStep, last: boolean): NarrationStop | null {
+  const wps = stepWaypoints(st);
+  const w = wps.length ? wps[last ? wps.length - 1 : 0].w : null;
+  const x = w ? w.x : st.x, y = w ? w.y : st.y;
+  if (x == null || y == null) return null;
+  return { ui_map: (w && w.ui_map) || st.ui_map, x, y, zone: (w && w.zone) || st.zone, who: stepWho(st, narratedActions(st)) };
+}
+
+/** The way from the current step to the next, "" when it isn't worth saying (rxp-narration.ts decides). It starts
+ * at the last step with a position (a hearth or a note between has none) and ends at the next step's first stop. */
+function transitionSpeech(at: number): string {
+  const nxt = visibleSteps[at + 1];
+  const to = nxt ? stopOf(nxt.step, false) : null;
+  if (!to || !currentGuide) return "";
+  let fromAt = at, from: NarrationStop | null = null;
+  for (; fromAt >= 0 && at - fromAt < 30; fromAt--) {
+    from = stopOf(visibleSteps[fromAt].step, true);
+    if (from) break;
+  }
+  if (!from) return "";
+  let via: ReturnType<typeof stepVia> = null, viaSaid = false;
+  for (let i = fromAt; i <= at; i++) {
+    const v = stepVia(visibleSteps[i].step, narratedActions(visibleSteps[i].step));
+    if (v) { via = v; viaSaid = saidVia.has(visibleSteps[i].src); }
+  }
+  const fromSrc = visibleSteps[fromAt].src;
+  // the legs the map asks the engine for (requestRoutes): what has come back by now, never waited for
+  const legs = [...routeLegs.values()].filter((l) => l.from === fromSrc && l.to === nxt.src);
+  return transitionLine({ from, to, legs, via, viaSaid, maps: currentGuide.maps });
 }
 
 let openSeq = 0;            // the latest openGuide call: an older one that answers later is dropped
@@ -1363,6 +1468,10 @@ function wireMapView(): void {
     filter.follow = (e.target as HTMLInputElement).checked;
     followStep();
   };
+  $<HTMLInputElement>("rxpb-narrate").onchange = (e) => {
+    filter.narrate = (e.target as HTMLInputElement).checked;
+    if (walking) walkOn();                // speak from the current step, or back to the timer
+  };
   $<HTMLInputElement>("rxpb-showdone").onchange = (e) => {
     filter.showDone = (e.target as HTMLInputElement).checked;
     updateClasses();
@@ -1596,4 +1705,5 @@ export function wireRxpBrowser(): void {
     playMs = Number((e.target as HTMLSelectElement).value) || 1600;
     if (playTimer !== null) { stopPlay(); togglePlay(); }
   };
+  whenLeft("guides", stopPlay);           // leaving the page stops the walk and its voice at once
 }
