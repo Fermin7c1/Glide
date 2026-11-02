@@ -2,7 +2,8 @@
 """The route on the Guides map (desktop/src/renderer/rxp-route.ts with rxp-geometry.ts, compiled with the project's
 TypeScript into a temp folder and run under Node): where a step's pin goes, the legs between stops (the same plan as
 the engine's routes command, companion/rxp_routes.py), a leg's drawable pieces on one map, clipping at the map's edge,
-the words of a leg's card, the outline of an objective cluster and the timeline's tick layout.
+the words of a leg's card, the outline of an objective cluster, the timeline's tick layout and how faint a step
+ahead is drawn.
 
 Regressions: a step's pin sat on its first goto, often one of RestedXP's hidden path points rather than where the
 step happens; the timeline's glyph ticks piled on top of each other in a busy hub.
@@ -85,6 +86,7 @@ CALLS = {
     "infoGuess": "legInfo(planLegs(steps).find(l => l.to === 7), undefined, maps, (u) => maps[u].name)",
     "hull": "hull([[0,0],[10,0],[10,10],[0,10],[5,5],[5,1]]).length",
     "hullFew": "hull([[1,1],[2,2]])",
+    "ahead": "[0, 1, 2, 3, 10, 50, -3].map(aheadOpacity)",
     "ticks": "layoutTicks([{x:0,rank:1},{x:5,rank:1},{x:8,rank:6},{x:30,rank:1},{x:31,rank:1},{x:32,rank:1}], 13)",
 }
 
@@ -103,7 +105,7 @@ try:
     script = os.path.join(tmp, "run.js")
     with open(script, "w") as fh:
         fh.write("import { %s } from %s;\n%s" % (
-            "stopsOf, pinStop, planLegs, clipPolyline, legPieces, arcPoints, durText, legInfo, hull, layoutTicks",
+            "stopsOf, pinStop, planLegs, clipPolyline, legPieces, arcPoints, durText, legInfo, hull, layoutTicks, aheadOpacity",
             json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
     r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8",
                        timeout=60)
@@ -147,6 +149,10 @@ assert info["lines"] == ["Go east 300 yd to Razor Hill, then north-east 300 yd."
 assert "Fly from Razor Hill to Crossroads (2 hops), 2 min." in got["infoFly"], got["infoFly"]
 assert got["infoGuess"]["approx"] and "Durotar → The Barrens" in got["infoGuess"]["head"], got["infoGuess"]
 assert got["hull"] == 4 and got["hullFew"] == [[1, 1], [2, 2]], (got["hull"], got["hullFew"])
+# steps ahead fade like 1/x (the player asked: the map was crowded by the rest of the guide): the current step and
+# the next at full strength, half two ahead, a tenth ten ahead, never below the floor; done steps keep their own look
+a = got["ahead"]
+assert a[:3] == [1, 1, 0.5] and abs(a[3] - 1 / 3) < 1e-9 and a[4] == 0.1 and a[5] == 0.07 and a[6] == 1, a
 # Regression: crowded ticks share two rows, the most important first, the rest left out instead of piling up
 assert got["ticks"] == [1, -1, 0, 0, 1, -1], got["ticks"]
 print("rxp-route: ok")

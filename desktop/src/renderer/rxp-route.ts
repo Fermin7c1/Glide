@@ -201,6 +201,16 @@ export function hull(pts: Pt[]): Pt[] {
   return lower.slice(0, -1).concat(upper.slice(0, -1)).map(([x, y]) => [x / 10.02, y / 6.68] as Pt);
 }
 
+/** How faint the map draws a step `ahead` steps past the current one (and the leg into it): the current step and the
+ * next at full strength, then 1/x (half two ahead, a third three ahead, a tenth ten ahead) down to AHEAD_FLOOR, so the
+ * next few minutes of the route stand out and the rest of the guide is a faint trace. Steps already done keep their own
+ * look (hidden, or "Done steps"). */
+export const AHEAD_FLOOR = 0.07;
+export function aheadOpacity(ahead: number): number {
+  if (!(ahead > 1)) return 1;
+  return Math.max(AHEAD_FLOOR, 1 / ahead);
+}
+
 /** Timeline ticks laid out without overlapping: each tick (its x in pixels and its importance) gets row 0 or 1, the
  * first with `gap` pixels free around it; the more important ticks are placed first, and a tick with no room in
  * either row is left out (-1). */

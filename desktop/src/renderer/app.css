@@ -688,6 +688,11 @@ polyline.rxpb-loop { fill: none; }
 .rxpb-pin.k-hearth circle { fill: #2a143d; stroke: #d580ff; }
 .rxpb-pin.k-death circle { fill: #420c0c; stroke: #ff5722; }
 .rxpb-pin.is-done { opacity: 0.62; display: none; }
+/* steps ahead fade with distance (current and next full, then 1/x: rxp-route.ts aheadOpacity, set as --ahead), so the
+   next few minutes stand out; pointing at one (on the map or in the list), focusing or picking it brings it back */
+.rxpb-pin.is-next { opacity: var(--ahead, 1); transition: transform 0.12s var(--ease-out), opacity 0.15s linear; }
+.rxpb-rleg:not(.is-done):not(.is-cur) { opacity: var(--ahead, 1); transition: opacity 0.15s linear; }
+#rxpb-map-svg :is(.rxpb-pin.lit, .rxpb-pin.is-pinned, .rxpb-pin:focus-visible, .rxpb-rleg.lit, .rxpb-rleg.is-sel, .rxpb-rleg:hover) { opacity: 1; }
 .show-done .rxpb-pin.is-done, .rxpb-pin.is-done.is-pinned { display: inline; }
 .rxpb-pin.is-cur .rxpb-pin-dot { r: 15px; }
 .rxpb-pin.is-pinned .rxpb-pin-dot { r: 13px; }

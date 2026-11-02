@@ -13,8 +13,8 @@ import { NarrationStop, stepLine, stepVia, stepWho, transitionLine } from "./rxp
 import { coachRunning, live } from "./state.js";
 import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
-import { durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt, type Stop,
-  stopsOf } from "./rxp-route.js";
+import { aheadOpacity, durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt,
+  type Stop, stopsOf } from "./rxp-route.js";
 
 const MAP_W = 1002;
 const MAP_H = 668;
@@ -506,11 +506,13 @@ function updateClasses(): void {
     g.classList.toggle("is-done", pos < activeIdx);
     g.classList.toggle("is-next", pos > activeIdx);
     g.classList.toggle("is-pinned", selected?.kind === "step" && src === selSrc && pos !== activeIdx);
+    g.style.setProperty("--ahead", String(aheadOpacity(pos - activeIdx)));
   });
   svgEl.querySelectorAll<SVGGElement>(".rxpb-rleg").forEach((g) => {
     const pos = Number(g.dataset.pos);
     g.classList.toggle("is-done", pos < activeIdx);
     g.classList.toggle("is-cur", pos === activeIdx);
+    g.style.setProperty("--ahead", String(aheadOpacity(pos - activeIdx)));
     g.classList.toggle("is-sel", selected?.kind === "leg" && g.dataset.leg === selected.key);
   });
   svgEl.querySelectorAll<SVGGElement>(".rxpb-sloops, .rxpb-sobjs").forEach((g) => {
@@ -521,6 +523,43 @@ function updateClasses(): void {
     el.classList.toggle("is-sel", !!selected && selected.kind === el.dataset.kind && Number(el.dataset.src) === selSrc
       && Number(el.dataset.sub) === selected.sub);
   });
+  restack(document.getElementById("rxpb-l-route"));
+  restack(document.getElementById("rxpb-l-pins"));
+}
+
+/** Draw a layer's steps nearest the current one on top (steps done at the bottom, then the furthest ahead up to the
+ * current step), so a faded step far ahead never covers the step about to be walked, nor takes its pointer. */
+function restack(layer: Element | null): void {
+  if (!layer) return;
+  const key = (el: Element) => {
+    const pos = Number((el as SVGElement).dataset.pos);
+    return Number.isNaN(pos) ? -2e9 : pos < activeIdx ? -1e9 + pos : activeIdx - pos;
+  };
+  const items = [...layer.children];
+  const order = items.map((el, i) => ({ el, i, k: key(el) })).sort((a, b) => a.k - b.k || a.i - b.i);
+  if (order.every((o, i) => o.el === items[i])) return;
+  const focused = document.activeElement;
+  for (const { el } of order) layer.appendChild(el);
+  if (focused instanceof SVGElement && layer.contains(focused)) focused.focus();
+}
+
+/** Bring one step back to full strength on the map while it's looked at (its pin and the leg into it, which fade the
+ * further ahead they are: aheadOpacity), or none: `pos` is its place in the visible steps. */
+let litPos: number | null = null;
+function lightStep(pos: number | null): void {
+  if (pos === litPos) return;
+  const svgEl = document.getElementById("rxpb-map-svg");
+  svgEl?.querySelectorAll(".rxpb-pin.lit, .rxpb-rleg.lit").forEach((el) => el.classList.remove("lit"));
+  litPos = pos;
+  if (pos == null || !svgEl) return;
+  svgEl.querySelectorAll(`.rxpb-pin[data-pos="${pos}"], .rxpb-rleg[data-pos="${pos}"]`).forEach((el) => el.classList.add("lit"));
+}
+
+/** The place in the visible steps of the step a map element belongs to (a leg: the step it leads to). */
+function posOfEl(el: Element): number | null {
+  const d = (el as HTMLElement | SVGElement).dataset;
+  if (d.pos != null) return Number(d.pos);
+  return d.src != null ? posBySrc.get(Number(d.src)) ?? null : null;
 }
 
 /** The step's waypoints that are stops (not path points), each with its letter: the map and the step's waypoint
@@ -1620,13 +1659,17 @@ function wireMapView(): void {
   // every map element: a card on hover or keyboard focus, a click (or Enter / Space) picks it
   const svgEl = $("rxpb-map-svg");
   const elOf = (t: EventTarget | null) => (t as Element | null)?.closest?.<SVGElement>("[data-kind]") || null;
-  svgEl.addEventListener("pointerover", (e) => { const el = elOf(e.target); if (el && !drag) showHoverCard(el, { x: e.clientX, y: e.clientY }); });
+  // (a faded step ahead comes back to full strength while it's looked at: lightStep)
+  svgEl.addEventListener("pointerover", (e) => {
+    const el = elOf(e.target);
+    if (el && !drag) { lightStep(posOfEl(el)); showHoverCard(el, { x: e.clientX, y: e.clientY }); }
+  });
   svgEl.addEventListener("pointerout", (e) => {
     const el = elOf(e.target);
-    if (el && elOf((e as PointerEvent).relatedTarget) !== el) hideHoverCard();       // left it (not just moved within it)
+    if (el && elOf((e as PointerEvent).relatedTarget) !== el) { hideHoverCard(); lightStep(null); }   // left it (not just moved within it)
   });
-  svgEl.addEventListener("focusin", (e) => { const el = elOf(e.target); if (el) showHoverCard(el); });
-  svgEl.addEventListener("focusout", hideHoverCard);
+  svgEl.addEventListener("focusin", (e) => { const el = elOf(e.target); if (el) { lightStep(posOfEl(el)); showHoverCard(el); } });
+  svgEl.addEventListener("focusout", () => { hideHoverCard(); lightStep(null); });
   svgEl.addEventListener("click", (e) => {
     const el = elOf(e.target);
     if (!el) return;
@@ -1687,6 +1730,12 @@ function wireKeys(): void {
  * link; Up/Down/Home/End/PageUp/PageDown move through the steps (a listbox with a roving tabindex). */
 function wireStepList(): void {
   const listEl = $("rxpb-step-list");
+  // pointing at a step in the list brings it back to full strength on the map too
+  listEl.addEventListener("pointerover", (e) => {
+    const li = (e.target as HTMLElement).closest<HTMLLIElement>("li[data-src]");
+    lightStep(li ? posBySrc.get(Number(li.dataset.src)) ?? null : null);
+  });
+  listEl.addEventListener("pointerleave", () => lightStep(null));
   listEl.addEventListener("click", (e) => {
     const el = e.target as HTMLElement;
     const li = el.closest<HTMLLIElement>("li[data-src]");

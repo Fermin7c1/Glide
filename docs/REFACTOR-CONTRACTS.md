@@ -680,3 +680,8 @@ they don't spell out.
   request of its own), else a straight line. The player-visible words are built in `desktop/src/renderer/rxp-narration.ts`. The narrator gains
   `speakAndWait(text, tag)`, `cancel(tag)` and `canSpeak()`; the coach's lines are unchanged (tests/test_narrator.py).
   `nav.ts` gains `whenLeft(page, fn)`. No IPC, file or state change. Player request (Guides narration, 2026-11-02).
+- **Guides map: steps ahead fade (contract 8, what the player sees; no text, no golden probe).** Pins and route legs
+  of the steps ahead of the current one are drawn at `aheadOpacity(steps ahead)` (`desktop/src/renderer/rxp-route.ts`:
+  the current step and the next full, then 1/x down to 0.07), and each layer is restacked so the nearest steps draw on
+  top. Pointing at a pin or leg, or at a step in the list, focusing or picking it, brings that step (its pin and the leg
+  into it) back to full. Steps done keep their look. Player request (the rest of the guide crowded the map, 2026-11-02).
