@@ -30,6 +30,21 @@ cfg = G.GlideLinkDB
 cols, rows, cell = cfg.cols, cfg.rows, cfg.cell
 CAP = (cols * rows - 2) // 4 * 3 - 6             # payload bytes one frame carries
 PAD = (11, 5)                                      # window offset of the strip in the "screen"
+_shown = L.eval("""function(textures)
+  local out = {}
+  for _, t in pairs(textures) do              -- the order G.textures.values() gives: later textures paint over earlier
+    if t.shown and not t.skip then             -- minimap button art (skip) is not part of the strip
+      out[#out + 1] = string.format("%.17g %.17g %.17g %.17g %.17g %.17g %.17g", t.r, t.g, t.b, t.x, t.y, t.w, t.h)
+    end
+  end
+  return table.concat(out, "\\n")
+end""")
+
+
+def shown_textures():
+    """The shown textures as (r, g, b, x, y, w, h), read in one Lua call (reading each field from Python was slow)."""
+    text = _shown(G.textures)
+    return [tuple(map(float, ln.split())) for ln in text.split("\n")] if text else []
 
 
 def screen_frame():
@@ -39,15 +54,20 @@ def screen_frame():
     G.tick()
     W, H = PAD[0] + cols * cell + 20, PAD[1] + 2 * rows * cell + 20      # binary strip: two cells per symbol
     buf = bytearray([30, 30, 40] * (W * H))
-    for t in G.textures.values():
-        if not t.shown or t.skip:      # minimap button art is not part of the strip
-            continue
-        col = bytes((int(round(t.r * 255)), int(round(t.g * 255)), int(round(t.b * 255))))
-        for yy in range(int(t.h)):
-            for xx in range(int(t.w)):
-                x, y = PAD[0] + int(t.x) + xx, PAD[1] + int(-t.y) + yy
-                j = (y * W + x) * 3
-                buf[j:j + 3] = col
+    for r, g, b, x, y, w, h in shown_textures():
+        col = bytes((int(round(r * 255)), int(round(g * 255)), int(round(b * 255))))
+        # a row of the texture at a time (pixel by pixel took most of the test); a row that isn't wholly inside the
+        # buffer goes pixel by pixel as before, so the bytes are exactly the same
+        x0, y0, w, h = PAD[0] + int(x), PAD[1] + int(-y), int(w), int(h)
+        row, n, end = col * w, 3 * w, len(buf)
+        for yy in range(h):
+            j = ((y0 + yy) * W + x0) * 3
+            if n > 0 and 0 <= j and j + n <= end:
+                buf[j:j + n] = row
+                continue
+            for xx in range(w):
+                k = j + xx * 3
+                buf[k:k + 3] = col
     img = protocol.Image(W, H, bytes(buf), bgra=False)
     res, loc = protocol.decode_image(img, cols, rows)
     assert res, "frame did not decode (loc=%s)" % (loc,)
