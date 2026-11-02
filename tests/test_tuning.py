@@ -11,6 +11,8 @@ import urllib.request
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "companion"))
 import tuning  # noqa: E402
 from dashboard import Hub, post_json, serve  # noqa: E402
+import dashboard  # noqa: E402
+dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
 
 # limits
 assert tuning.clamp("voice_lookahead_steps", 14) == 14 and tuning.clamp("voice_lookahead_steps", 99) == 30

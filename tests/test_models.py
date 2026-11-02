@@ -134,7 +134,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
 port = srv.server_address[1]
-threading.Thread(target=srv.serve_forever, daemon=True).start()
+threading.Thread(target=srv.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
 os.environ["OPENROUTER_API_KEY"] = "or-test"
 os.environ.pop("ANTHROPIC_API_KEY", None)
 os.environ.pop("GEMINI_API_KEY", None)
@@ -250,7 +250,7 @@ class G(http.server.BaseHTTPRequestHandler):
 
 srv3 = http.server.ThreadingHTTPServer(("127.0.0.1", 0), G)
 port3 = srv3.server_address[1]
-threading.Thread(target=srv3.serve_forever, daemon=True).start()
+threading.Thread(target=srv3.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
 os.environ["GEMINI_API_KEY"] = "gm-test"
 gmsgs = []
 gc = Coach({"gemini_url": "http://127.0.0.1:%d/v1beta/openai/chat/completions" % port3, "fast_model": "gemini:gemini-3.8-flash",
@@ -373,7 +373,7 @@ class S(http.server.BaseHTTPRequestHandler):
 if os.path.exists(KB):
     srv4 = http.server.ThreadingHTTPServer(("127.0.0.1", 0), S)
     port4 = srv4.server_address[1]
-    threading.Thread(target=srv4.serve_forever, daemon=True).start()
+    threading.Thread(target=srv4.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
     smsgs = []
     sc = Coach({"gemini_url": "http://127.0.0.1:%d/x" % port4, "fast_model": "gemini:gemini-3.8-flash",
                 "deep_model": "gemini:gemini-3.8-flash"}, GlideDB("/x.db"), smsgs.append, kb=KB, offline_ok=True)
@@ -403,6 +403,8 @@ prof = tuning.profile(kc)
 assert set(prof) == {"fast", "deep"} and prof["fast"]["measured"] is False and prof["fast"]["cache_read"] > 0
 
 from dashboard import Hub, get_json, serve  # noqa: E402
+import dashboard  # noqa: E402
+dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
 calls = []
 srv2 = serve(Hub(), 0, {("GET", "/models"): get_json(lambda q: calls.append(q.get("refresh") == "1")
                                                        or {"models": cat.entries()})})

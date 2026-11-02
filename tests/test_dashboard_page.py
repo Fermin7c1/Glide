@@ -22,6 +22,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 sys.path.insert(0, os.path.join(ROOT, "companion"))
 sys.path.insert(0, os.path.join(ROOT, "tests", "golden"))
 import dashboard  # noqa: E402
+dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
 from probe_dashboard import edge  # noqa: E402
 
 exe = edge()

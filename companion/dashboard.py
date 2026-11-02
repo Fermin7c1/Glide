@@ -19,6 +19,7 @@ import jsonfile
 # client's hook waits this long so all of them are listening when it runs
 FIRST_CLIENT_DELAY_S = 1.5
 PING_S = 15                     # an idle event stream gets a comment line this often (and notices it was dropped)
+SHUTDOWN_POLL_S = 0.5           # how soon the server notices shutdown() (the engine never calls it; tests lower it)
 
 
 # The light stream (/events?lite=1) for the desktop app's overlay and session bar: its "state" events and init carry
@@ -397,7 +398,7 @@ def serve(hub, port, routes=None, layout_path=None, token=None):
 
     srv = ThreadingHTTPServer(("127.0.0.1", port), H)
     srv.daemon_threads = True
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    threading.Thread(target=srv.serve_forever, args=(SHUTDOWN_POLL_S,), daemon=True).start()
     return srv
 
 

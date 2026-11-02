@@ -40,7 +40,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
 port = srv.server_address[1]
-threading.Thread(target=srv.serve_forever, daemon=True).start()
+threading.Thread(target=srv.serve_forever, args=(0.02,), daemon=True).start()  # shutdown() returns at once
 ptt.ONLINE["openai"] = ("OpenAI", "http://127.0.0.1:%d/v1/audio/transcriptions" % port, "OPENAI_API_KEY", "gpt-4o-mini-transcribe")
 ptt.ONLINE["deepgram"] = ("Deepgram", "http://127.0.0.1:%d/v1/listen" % port, "DEEPGRAM_API_KEY", "nova-3")
 
