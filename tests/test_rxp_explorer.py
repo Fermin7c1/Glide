@@ -50,7 +50,7 @@ try:
     def at(name, group):
         return next(i for i, g in enumerate(free) if g["name"] == name and g["groups"][0] == group)
     for name, group, n in (("1-6 Shadowglen", "RestedXP Forever Dungeon Guide (A)", 71),
-                           ("14-16 Darkshore", "RestedXP Forever Guide (A)", 340),
+                           ("14-16 Darkshore", "RestedXP Forever Guide (A)", 342),
                            ("9-13 Zephras Isle", "RestedXP Forever Dungeon Guide (A)", 847)):
         d = R.guide_detail(home, R.FREE_ID, at(name, group))
         build = corpus["%s||%s" % (group, name)]["steps"]
