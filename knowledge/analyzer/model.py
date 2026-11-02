@@ -16,6 +16,7 @@ import re
 
 from knowledge.mechanics import combat as MC
 from knowledge.mechanics import death as MD
+from knowledge.mechanics import params as MP
 from knowledge.mechanics import xp as MX
 from knowledge.mechanics import travel as MT
 from . import params as AP
@@ -201,7 +202,15 @@ class Walker:
         self.skip_steps = set(self.opts.get("skip_steps") or ())
         self.grind_at = dict(self.opts.get("grind_at") or {})
         self.hold = dict(self.opts.get("hold") or {})
-        self._kxp, self._kt = {}, {}
+        # kill XP, kill times and travel legs depend only on their keys (and the class) for the parameter values in
+        # force, so walks share them per KB; under a scoped overlay each walk keeps its own
+        gen = MP.generation()
+        if gen is None:
+            self._kxp, self._kt, self._legs = {}, {}, None
+        else:
+            self._kxp = data.memo("kill_xp", gen)
+            self._kt = data.memo("kill_time:%s" % self.cls, gen)
+            self._legs = data.memo("travel_legs", gen)
         self.search_s = float(AP.get("analyzer.kill.search_s"))
         self.incidental = float(AP.get("analyzer.kill.incidental_frac"))
         self.calib = float(AP.get("analyzer.calib.%s" % self.cls, 1.0))
@@ -597,6 +606,37 @@ class Walker:
         return True
 
     # -------------------------------------------------------------------------------------- travel
+    def _leg(self, cur, p, lvl):
+        """(time_s, dist_yd, mode, observed, param) one leg from cur to p adds, None when its distance is unknown.
+        A leg depends only on its two points, the level and the parameter values in force, and every walk of a
+        guide crosses the same ones, so legs are remembered per KB for one parameter generation (never under a
+        scoped overlay)."""
+        legs = self._legs
+        key = (cur[0], cur[1], cur[2], p[0], p[1], p[2], lvl)
+        if legs is not None:
+            leg = legs.get(key)
+            if leg is not None:
+                return leg
+        dd = self.data.dist_yd(cur, p)
+        if dd is None:
+            return None
+        if dd == math.inf:
+            leg = (float(AP.get("analyzer.travel.cross_continent_s")), 0.0, "boat", False,
+                   "analyzer.travel.cross_continent_s")
+        else:
+            transit = TRANSIT.get((cur[0], p[0]))
+            obs = self.data.observed_path(cur, p) if dd > 15 and cur[0] == p[0] else None
+            rt = run_time(dd, lvl)
+            if transit and transit[1] < rt:
+                leg = (transit[1], 0.0, transit[0], False, "analyzer.travel.tram_s")
+            elif obs:
+                leg = (obs[0], obs[1], None, True, None)
+            else:
+                leg = (rt, dd, None, False, None)
+        if legs is not None:
+            legs[key] = leg
+        return leg
+
     def travel(self, step, st, res):
         path = step["path"]
         tr = {"from_idx": self._last_idx, "dist_yd": 0.0, "time_s": 0.0, "detour_yd": 0.0,
@@ -610,33 +650,24 @@ class Walker:
         straight = None
         cur = st.pos
         for p in path:
-            dd = self.data.dist_yd(cur, p)
-            if dd is None:
+            leg = self._leg(cur, p, lvl)
+            if leg is None:
                 self.data.count("travel_leg_unknown_distance", (cur[0], p[0]))
                 if self.data.map_size(p[0])[0] is None:
                     self.data.count("map_size_missing", p[0])
                 inst = self.data.map_size(p[0])[0] is None
                 tr["time_s"] += float(AP.get("analyzer.travel.instance_s" if inst else "analyzer.travel.unknown_s"))
                 tr["unknown"] = True
-            elif dd == math.inf:
-                tr["time_s"] += float(AP.get("analyzer.travel.cross_continent_s"))
-                tr["mode"] = "boat"
-                res["params"].add("analyzer.travel.cross_continent_s")
             else:
-                transit = TRANSIT.get((cur[0], p[0]))
-                obs = self.data.observed_path(cur, p) if dd > 15 and cur[0] == p[0] else None
-                rt = run_time(dd, lvl)
-                if transit and transit[1] < rt:
-                    tr["time_s"] += transit[1]
-                    tr["mode"] = transit[0]
-                    res["params"].add("analyzer.travel.tram_s")
-                elif obs:
-                    tr["time_s"] += obs[0]
-                    tr["dist_yd"] += obs[1]
+                t, d, mode, observed, param = leg
+                tr["time_s"] += t
+                tr["dist_yd"] += d
+                if mode:
+                    tr["mode"] = mode
+                if observed:
                     tr["observed"] = True
-                else:
-                    tr["time_s"] += rt
-                    tr["dist_yd"] += dd
+                if param:
+                    res["params"].add(param)
             cur = p
         sd = self.data.dist_yd(st.pos, path[-1])
         if sd is not None and sd != math.inf:

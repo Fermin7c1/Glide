@@ -28,7 +28,7 @@ def get_route(kb, guide_key, player):
     key = (id(data), guide_key, p["class"], p["race"], p["faction"]) + settings_key(p, g)
     r = _ROUTE_CACHE.get(key)
     if r is None:
-        if len(_ROUTE_CACHE) > 64:
+        if len(_ROUTE_CACHE) > 256:
             _ROUTE_CACHE.clear()
         r = _ROUTE_CACHE[key] = Route(kb, guide_key, p, data=data)
     return r

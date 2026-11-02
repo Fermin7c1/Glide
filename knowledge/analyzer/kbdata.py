@@ -130,6 +130,17 @@ class KBData:
             out[k] = len(v)
         return dict(sorted(out.items()))
 
+    def memo(self, name, gen):
+        """One of the walker's memos (travel legs, kill XP, kill times) for parameter generation `gen`
+        (mechanics.params.generation), shared by every walk of this KB: a new generation starts them empty."""
+        memos = self.__dict__.get("_memos")
+        if memos is None or memos[0] != gen:
+            memos = self.__dict__["_memos"] = (gen, {})
+        m = memos[1].get(name)
+        if m is None or len(m) > 200000:
+            m = memos[1][name] = {}
+        return m
+
     def _need(self, name):
         if name in self._loaded:
             return
@@ -835,7 +846,7 @@ class KBData:
         g = dict(row)
         g["steps"] = steps
         with self._lock:
-            if len(self._guides) > 64:
+            if len(self._guides) > 256:        # every guide of a KB (172 today): none is parsed twice
                 self._guides.clear()
             self._guides[key] = g
         return g

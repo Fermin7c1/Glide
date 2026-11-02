@@ -1,5 +1,6 @@
 """Community intelligence (knowledge/community, gathered by the daily community scan): the notes that concern the
 player, as the knowledge block and the community tool show them."""
+import functools
 import time
 
 from knowledge import store
@@ -7,6 +8,12 @@ from knowledge.api.values import as_int, clean
 
 
 NOTE_SKIP = ("superseded", "contradicted")
+
+
+@functools.lru_cache(maxsize=4096)
+def _day_s(day):
+    """Local midnight of a YYYY-MM-DD date as epoch seconds (ValueError for anything else; not cached then)."""
+    return time.mktime(time.strptime(day, "%Y-%m-%d"))
 
 
 def note_out(r, full=False):
@@ -52,7 +59,7 @@ def community_notes(kb, ctx=None, query=None, level=None, zone=None, kind=None, 
         if recent_days:
             d = r.get("published") or r.get("seen") or ""
             try:
-                age = (time.mktime(time.strptime(today, "%Y-%m-%d")) - time.mktime(time.strptime(d[:10], "%Y-%m-%d"))) / 86400
+                age = (_day_s(today) - _day_s(d[:10])) / 86400
             except ValueError:
                 age = 0
             if age > recent_days:

@@ -59,6 +59,7 @@ _local = threading.local()
 _loaded_from = []
 _LOCK = threading.Lock()
 _NOW = None                  # the values of the KB in use (a Snapshot; see use_kb), or None
+_GEN = 0                     # bumped whenever the values in force change (see generation)
 MECHANICS = "mechanics"
 
 CLASSES = ("WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID")
@@ -362,6 +363,20 @@ def use_kb(kb_or_snapshot):
         snap = snapshot_of(snap)
     with _LOCK:
         _NOW = snap
+        _bump()
+
+
+def _bump():
+    global _GEN
+    _GEN += 1
+
+
+def generation():
+    """A token for the values get() answers with on this thread: while it stays the same, so do they. None under a
+    scoped overlay (scoped / classic_scope), when nothing may be remembered against it."""
+    if getattr(_local, "stack", None):
+        return None
+    return _GEN
 
 
 def current_kb():
@@ -458,6 +473,7 @@ def apply(overrides, lane=MECHANICS):
                 continue
             _OVR[k] = {"value": v["value"], "status": st, "evidence": v.get("evidence")}
             done.append(k)
+        _bump()
     return done
 
 
@@ -490,6 +506,7 @@ def load_overrides(path_or_dict=None):
         _OVR[key] = {"value": ov["value"], "status": st, "evidence": ov.get("evidence"),
                      "updated": ov.get("updated")}
         applied.append(key)
+    _bump()
     if isinstance(src, str):
         _loaded_from.append(src)
     return {"applied": applied, "ignored": ignored, "source": src if isinstance(src, str) else "dict"}
@@ -506,6 +523,7 @@ def reset(lane=MECHANICS):
         for k in [k for k in _OVR if _LANE[k] == lane]:
             del _OVR[k]
         _NOW = None
+        _bump()
     if lane == MECHANICS:
         del _loaded_from[:]
 
