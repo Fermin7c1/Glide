@@ -3,7 +3,7 @@
 // directional arrows, objectives, and guide commentary.
 // Which steps show and their numbers come from the engine (rxp-model.ts reads its masks); every step is known by its
 // number in the guide (st.idx), never by its place in the filtered list, so a filter change keeps what was picked.
-import type { RxpFactsTarget, RxpGuideAction, RxpGuideDetail, RxpGuideFacts, RxpGuideStep, RxpGuideSummary, RxpGuideWaypoint,
+import type { RxpFactsPrep, RxpFactsTarget, RxpGuideAction, RxpGuideDetail, RxpGuideFacts, RxpGuideStep, RxpGuideSummary, RxpGuideWaypoint,
   RxpImport, RxpRouteLeg, RxpRoutes } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
@@ -13,6 +13,7 @@ import { NarrationStop, stepLine, stepVia, stepWho, transitionLine } from "./rxp
 import { coachRunning, live } from "./state.js";
 import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
+import { PREP_GLYPH, prepLabel, prepNeed, prepShown, prepTitle } from "./rxp-prep.js";
 import { chainCrossings, chainOf, chainStops, continuesAfter, questsOf, type QuestRole, skipLine } from "./rxp-quests.js";
 import { aheadOpacity, durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt,
   type Stop, stopsOf } from "./rxp-route.js";
@@ -214,6 +215,8 @@ function classifyStep(st: RxpGuideStep): VisibleStep["kind"] {
 
 /** A quest's name: the guide's (glide.db), else the knowledge base's. */
 const questName = (a: RxpGuideAction) => a.quest_name || (a.quest_id != null ? facts?.quests?.[String(a.quest_id)]?.name : null) || null;
+/** An item's name from the facts' prep list (the knowledge base, else the guide's own words). */
+const itemName = (id: number | null) => (id != null ? facts?.prep?.find((p) => p.item_id === id && p.name)?.name : null) || null;
 const QUEST_BADGE = new Set(["accept", "turnin", "complete", "collect"]);
 
 interface Badge { cls: string; sym: string; label: string; quest?: number }
@@ -243,7 +246,7 @@ function actionBadgeOf(a: RxpGuideAction): Badge | null {
     case "complete":
       return { cls: "ab-combat", sym: "◎", label: (qn ? `${qn}` : `Quest #${a.quest_id || "?"}`) + (a.qty ? ` (×${a.qty})` : "") };
     case "collect":
-      return { cls: "ab-loot", sym: "◆", label: `Collect ${a.qty && a.qty > 1 ? `${a.qty}× ` : ""}${a.entity_name || `item #${a.entity_id || "?"}`}` };
+      return { cls: "ab-loot", sym: "◆", label: `Collect ${a.qty && a.qty > 1 ? `${a.qty}× ` : ""}${a.entity_name || itemName(a.entity_id) || `item #${a.entity_id || "?"}`}` };
     case "kill":
     case "mob":
       return { cls: "ab-combat", sym: "⚔", label: `Target: ${(a.units && a.units.join(", ")) || a.entity_name || "mob"}` };
@@ -787,6 +790,69 @@ function renderChainBar(): void {
     ${skip ? `<div class="rxpb-cb-skip" title="The coach's own rule: what can't be picked up once this quest is skipped, in this guide and the next">${esc(skip)}</div>` : ""}`;
 }
 
+const BUY_VERBS = new Set(["collect", "buy", "buyAll", "buyUntilBroke"]);
+
+/** Whether a prep item is the picked characters': its step is listed for them (not dimmed) and the action getting
+ * it applies to them (the engine's masks, the Character picks). */
+function prepIsShown(p: RxpFactsPrep): boolean {
+  const at = posBySrc.get(p.idx);
+  if (at === undefined || visibleSteps[at].dimmed) return false;
+  const bank = p.kind === "bank_in" || p.kind === "bank_out";
+  const a = (visibleSteps[at].step.actions || []).find((x) => bank ? x.verb === (p.kind === "bank_in" ? "bankdeposit" : "bankwithdraw")
+    : BUY_VERBS.has(x.verb) && x.entity_id === p.item_id);
+  return !a || actionApplies(a);
+}
+
+let prepKey = "";
+
+/** "Before you start": the guide's purchases and bank trips for the picked character still ahead of the current step,
+ * in one slim row at the top of the guide window, each with its count and where it's needed; a click goes to the
+ * step that gets it. A row too long for the window ends in "+N", which opens the rest. */
+function renderPrep(): void {
+  const box = $("rxpb-prep");
+  const all = currentGuide && facts?.prep?.length ? prepShown(facts.prep, prepIsShown) : [];
+  const items = all.filter((p) => activeSrc == null || p.idx >= activeSrc);
+  const key = `${currentGuide?.id}:${currentGuide?.index}|${factsVersion}|${visKey}|${items.map((p) => p.idx).join(",")}`;
+  if (key !== prepKey) {
+    prepKey = key;
+    if (!items.length) { box.hidden = true; box.innerHTML = ""; return; }
+    const num = (src: number) => { const at = posBySrc.get(src); return at !== undefined && visibleSteps[at].rxpNum != null ? String(visibleSteps[at].rxpNum) : null; };
+    const qname = (q: number) => facts?.quests?.[String(q)]?.name || null;
+    box.hidden = false;
+    const head = items.length === all.length ? "Before you start" : "Still to get";
+    box.innerHTML = `<span class="rxpb-prep-head" title="What this guide has you buy or take from the bank, for this character, from here on">${head}</span>`
+      + `<div class="rxpb-prep-items">${items.map((p) => {
+        const need = prepNeed(p, num);
+        return `<button type="button" class="rxpb-pc k-${p.kind}" data-src="${p.idx}" title="${esc(prepTitle(p, num, qname))}">`
+          + `<b>${PREP_GLYPH[p.kind]}</b> ${esc(prepLabel(p))}${need ? ` <em>${esc(need)}</em>` : ""}</button>`;
+      }).join("")}</div><button type="button" class="rxpb-prep-more" id="rxpb-prep-more" hidden></button>`;
+    fitPrep();
+  }
+  box.querySelectorAll<HTMLButtonElement>(".rxpb-pc").forEach((b) => b.classList.toggle("on", Number(b.dataset.src) === activeSrc));
+}
+
+/** The prep row in one line: the items that don't fit are counted on a "+N" button that opens the whole list. */
+function fitPrep(): void {
+  const box = $("rxpb-prep");
+  const row = box.querySelector<HTMLElement>(".rxpb-prep-items"), more = document.getElementById("rxpb-prep-more");
+  if (!row || !more || box.hidden) return;
+  if (box.classList.contains("open")) {
+    row.querySelectorAll<HTMLElement>(".rxpb-pc").forEach((c) => { c.hidden = false; });
+    more.hidden = false; more.textContent = "Less"; more.title = "Back to one row"; return;
+  }
+  const chips = [...row.children] as HTMLElement[];
+  chips.forEach((c) => { c.hidden = false; });
+  more.hidden = false;                       // measured with the "+N" in the row, so the last chip shown isn't cut
+  more.textContent = `+${chips.length}`;
+  const right = row.getBoundingClientRect().right;
+  const cut = chips.filter((c) => c.getBoundingClientRect().right > right + 1);
+  cut.forEach((c) => { c.hidden = true; });
+  const hidden = cut.length;
+  if (!hidden) { more.hidden = true; return; }
+  more.textContent = `+${hidden}`;
+  more.title = `${hidden} more: show them all`;
+}
+
 /** The yards and time of the legs to the current target, when the engine has worked them all out. */
 function activeLegTotals(): { yd: number | null; s: number | null } {
   const legs = activeLegs();
@@ -1200,6 +1266,7 @@ function selectStep(idx: number, scrollList = true): void {
       && mapsGeo()?.[String(inLeg.pb.um)]?.parent === cont) activeMapId = cont;
   renderTimeline();
   if (focusQuest != null) renderChainBar();
+  renderPrep();
   renderStepList(scrollList);
   renderMap();
   followStep();
@@ -1268,6 +1335,7 @@ async function requestFacts(g: RxpGuideDetail): Promise<void> {
   factsVersion++;
   renderStepList(false);             // the badges take the knowledge base's quest names
   if (focusQuest != null) focusChain(focusQuest, false); else renderChainBar();
+  renderPrep();
   renderMap();
 }
 
@@ -1413,6 +1481,8 @@ export async function openGuide(packId: string, index: number): Promise<void> {
   chainSrcs = new Set();
   renderChainBar();
   $("rxpb-step-list").classList.remove("chain-on");
+  facts = null;
+  renderPrep();
   const seq = ++openSeq;
   const key = `${packId}:${index}`;
   let g = cache.get(key) || null;
@@ -1974,6 +2044,7 @@ function wireCharacter(): void {
 function refilter(): void {
   rebuildVisibleSteps();
   renderChainBar();
+  renderPrep();
   renderHeader();
   renderCharacter();
   renderTimeline();
@@ -2056,6 +2127,13 @@ export function wireRxpBrowser(): void {
   });
   wireStepList();
   wireCharacter();
+  $("rxpb-prep").addEventListener("click", (e) => {
+    const el = e.target as Element;
+    if (el.closest("#rxpb-prep-more")) { $("rxpb-prep").classList.toggle("open"); fitPrep(); return; }
+    const b = el.closest<HTMLButtonElement>(".rxpb-pc");
+    if (b) { stopPlay(); selectSrc(Number(b.dataset.src), true); }
+  });
+  new ResizeObserver(() => fitPrep()).observe($("rxpb-prep"));
   $("rxpb-chainbar").addEventListener("click", (e) => {
     const el = e.target as Element;
     if (el.closest("#rxpb-cb-close")) { focusChain(null); return; }
