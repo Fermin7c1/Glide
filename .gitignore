@@ -1,5 +1,9 @@
 # Python
 __pycache__/
+# tests/run_all.py: this machine's time per test (it starts the longest first); tests/affected.py: each file's
+# dependencies, by its size and time
+tests/.timings.json
+tests/.affected-cache.json
 *.py[cod]
 .venv/
 venv/
