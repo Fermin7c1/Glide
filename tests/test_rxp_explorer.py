@@ -2,8 +2,10 @@
 """What the Guides page gets from the engine with each guide (companion/rxp_explorer.py, rxp_import.guide_detail).
 
 - #include: a guide's include steps expand over the guides the knowledge build reads, as the build expands them
-  (regression: the free Dungeon guides showed as one empty step, kb has 71-847, and "14-16 Darkshore" drifted from
-  step 166: 236 steps instead of 340).
+  (regression: the free Dungeon guides showed as one empty step, and "14-16 Darkshore" drifted from step 166: 236
+  steps, its own lines without the included guide's). The counts come from the seed and the build, never written
+  here: a knowledge refresh that changes these guides must not break the test (it did, at 342 for 340). How #include
+  expands, with exact counts, is pinned on a fixture in tests/kb/test_rxp_parser.py.
 - Which steps show, and their numbers: the masks give, for every character and settings combination, exactly the
   numbering the coach uses (knowledge/rxp_parser views.rxp_numbering) on all of RestedXP's free guides (regression:
   the page's own copy of RestedXP's rules disagreed on 41 of 80 guides for a Human Mage: `step << skip`, season,
@@ -15,6 +17,7 @@ Uses the seed's free guides (data/seed); no game data, no model.
 """
 import json
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -49,12 +52,16 @@ try:
 
     def at(name, group):
         return next(i for i, g in enumerate(free) if g["name"] == name and g["groups"][0] == group)
-    for name, group, n in (("1-6 Shadowglen", "RestedXP Forever Dungeon Guide (A)", 71),
-                           ("14-16 Darkshore", "RestedXP Forever Guide (A)", 342),
-                           ("9-13 Zephras Isle", "RestedXP Forever Dungeon Guide (A)", 847)):
+    for name, group in (("1-6 Shadowglen", "RestedXP Forever Dungeon Guide (A)"),
+                        ("14-16 Darkshore", "RestedXP Forever Guide (A)"),
+                        ("9-13 Zephras Isle", "RestedXP Forever Dungeon Guide (A)")):
         d = R.guide_detail(home, R.FREE_ID, at(name, group))
         build = corpus["%s||%s" % (group, name)]["steps"]
-        assert len(d["steps"]) == n == len(build), (name, len(d["steps"]), len(build))
+        own = len(re.findall(r"^\s*step\b", free[at(name, group)]["text"], re.M))   # its own step lines, no includes
+        n = len(build)
+        assert len(d["steps"]) == n, (name, len(d["steps"]), n)
+        assert n > own and any(s["flags"].get("included_from") for s in d["steps"]), \
+            "%s: its #include steps expanded (%d steps, %d of its own)" % (name, n, own)
         assert [s["idx"] for s in d["steps"]] == list(range(1, n + 1))
         assert [s["text"] for s in d["steps"]] == [s["text"] for s in build], name
         if "Dungeon" in group:
