@@ -36,9 +36,8 @@ def parsed_guide(root, iid, index, wow_dir=None):
     idx = int(index)
     if idx < 0 or idx >= len(guides) or not isinstance(guides[idx], dict):
         raise R.ImportProblem("Guide not found in that import.")
-    from knowledge.rxp_parser.guide import parse_guide
     text = guides[idx].get("text") or ""
-    parsed = parse_guide(text)
+    parsed = R.expanded_guide(root, iid, guides, text, wow_dir)     # #include expanded: guide_detail's step numbers
     steps = parsed.get("steps") or ()
     if any(st.get("x") is None and st.get("wx") is not None for st in steps):
         maps = {st.get("ui_map") for st in steps} | {(a.get("args") or {}).get("ui_map") for st in steps

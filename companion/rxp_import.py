@@ -412,6 +412,21 @@ def place_world_points(parsed, bounds):
     return placed
 
 
+def expanded_guide(root, iid, guides, text, wow_dir=None, map_ids=None):
+    """A guide's text parsed for the Guides page, its #include steps expanded over every guide the knowledge build
+    reads (the free ones and the added ones), so the steps and their numbers (idx) are kb.db's. `guides`: the guides
+    of import `iid` (the free ones for FREE_ID). guide_detail and the facts command (rxp_facts) both parse through
+    here, so their step numbers agree."""
+    import rxp_explorer as X
+    corpus = [g["text"] for g in free_guides(root, wow_dir)[1]] if str(iid) != FREE_ID else [g["text"] for g in guides]
+    for rec in load_store(root)["imports"].values():
+        corpus += [g.get("text") or "" for g in (rec.get("guides") if isinstance(rec, dict) else None) or ()
+                   if isinstance(g, dict)]
+    if map_ids is None:
+        map_ids = X.map_names(X.kb_path(root))
+    return X.include_expanded(text, corpus, map_ids)
+
+
 def guide_detail(root, iid, index, wow_dir=None):
     """Full parsed guide (steps, waypoints, loops, lines, actions, commentary) for the interactive guide browser:
     guide `index` of an added string, or of RestedXP's free guides (iid FREE_ID)."""
@@ -430,13 +445,7 @@ def guide_detail(root, iid, index, wow_dir=None):
     text = guides[idx].get("text") or ""
     kb = X.kb_path(root)
     map_ids = X.map_names(kb)
-    # #include steps expanded over every guide the knowledge build reads (the free ones and the added ones), so
-    # the steps and their numbers are kb.db's
-    corpus = [g["text"] for g in free_guides(root, wow_dir)[1]] if str(iid) != FREE_ID else [g["text"] for g in guides]
-    for rec in load_store(root)["imports"].values():
-        corpus += [g.get("text") or "" for g in (rec.get("guides") if isinstance(rec, dict) else None) or ()
-                   if isinstance(g, dict)]
-    parsed = X.include_expanded(text, corpus, map_ids)
+    parsed = expanded_guide(root, iid, guides, text, wow_dir, map_ids)
     # RestedXP's Forever guides give positions in world coordinates: put them on their maps (kb.db's map bounds)
     steps_in: list = parsed.get("steps") or []
     maps_used = {st.get("ui_map") for st in steps_in}

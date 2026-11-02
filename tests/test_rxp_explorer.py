@@ -58,6 +58,10 @@ try:
         assert [s["text"] for s in d["steps"]] == [s["text"] for s in build], name
         if "Dungeon" in group:
             assert any(s["flags"].get("included_from") for s in d["steps"]), "included steps say where they came from"
+        # the facts command (quest chains, plan) parses the same way, so its step numbers are the page's
+        import rxp_facts
+        fp = rxp_facts.parsed_guide(home, R.FREE_ID, at(name, group))
+        assert [s["idx"] for s in fp["steps"]] == [s["idx"] for s in d["steps"]], name
     plain = R.guide_detail(home, R.FREE_ID, at("1-6 Durotar", "RestedXP Forever Guide (H)"))
     assert not any(s["flags"].get("included_from") for s in plain["steps"])
 
