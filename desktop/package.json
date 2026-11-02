@@ -9,7 +9,7 @@
   "main": "dist/main/main.js",
   "type": "commonjs",
   "scripts": {
-    "build": "node scripts/gen-settings.js && tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && tsc -p tsconfig.dashboard.json && node scripts/copy-static.js",
+    "build": "node scripts/gen-settings.js && tsc -b --builders 1 tsconfig.main.json tsconfig.renderer.json tsconfig.dashboard.json && node scripts/copy-static.js",
     "start": "npm run build && electron .",
     "sim": "npm run build && electron . --sim",
     "python": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-python.ps1",
