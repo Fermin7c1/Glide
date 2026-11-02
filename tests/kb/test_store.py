@@ -54,6 +54,42 @@ def test_coords():
     check(store.map_size_yd(b) == (abs(b["wy1"] - b["wy0"]), abs(b["wx1"] - b["wx0"])), "map size")
 
 
+def test_schema_one_transaction(tmpdir):
+    """Both databases' tables are made in one transaction (regression: one per statement, each a journal file created,
+    flushed and deleted: 20 s of a test on a Windows runner, and on the player's PC at every glide.db build). An older
+    kb.db that has some of the ALTERed columns still gets the rest, committed, with no transaction left open."""
+    import inspect
+
+    import build_db                         # tools/ is on sys.path (fixture.py)
+    for make in (store.create_schema, build_db.create_schema):
+        conn = sqlite3.connect(":memory:")
+        seen = []
+        conn.set_trace_callback(seen.append)
+        make(conn)
+        check(len(seen) > 20 and seen[0].lstrip().startswith("BEGIN") and seen[-1].rstrip().endswith("COMMIT;") and
+              not conn.in_transaction, "%s: %r ... %r" % (make.__module__, seen[:1], seen[-1:]))
+        conn.close()
+    src = inspect.getsource(build_db.build)
+    check("create_schema(db)" in src and "executescript(SCHEMA)" not in src, "build_db.build makes glide.db's tables "
+          "with create_schema")
+    # an older kb.db: the v1 tables and the first store ALTER only; create_schema, then close without a commit
+    with open(store.SCHEMA, encoding="utf-8") as fh:
+        script = fh.read()
+    cut = script.index("ALTER TABLE quest ADD COLUMN xp_conf")
+    path = os.path.join(tmpdir, "old-kb.db")
+    conn = sqlite3.connect(path)
+    conn.executescript("BEGIN;\n%s\nCOMMIT;" % script[:script.index("\n", cut) + 1])
+    conn.close()
+    conn = sqlite3.connect(path)
+    store.create_schema(conn)
+    check(not conn.in_transaction, "create_schema leaves no transaction open on an existing kb.db")
+    conn.close()
+    conn = sqlite3.connect(path)
+    cols = lambda t: {r[1] for r in conn.execute("PRAGMA table_info(%s)" % t)}  # noqa: E731
+    check({"xp_conf", "removed"} <= cols("quest") and "race" in cols("step_brief"), "older kb.db upgraded and kept")
+    conn.close()
+
+
 def test_db2_import(kb_path, tmpdir):
     """The optional DB2 importer on synthetic CSVs (in a scratch copy: never in the real KB)."""
     from wowfiles import db2_import
@@ -153,6 +189,7 @@ def test_staleness(tmpdir):
         if os.path.exists(kb):
             os.remove(kb)
         c = sqlite3.connect(kb)
+        c.execute("BEGIN")                                       # one commit: one journal file, not one per statement
         c.execute("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT)")
         if built:
             c.execute("INSERT INTO meta VALUES('built', ?)", (built,))
@@ -361,6 +398,7 @@ def main():
     test_coords()
     tmpdir = fixture.tmpdir("store-")
     try:
+        test_schema_one_transaction(tmpdir)
         test_staleness(tmpdir)
         test_install_in_use(tmpdir)
         t0 = time.time()

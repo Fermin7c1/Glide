@@ -444,6 +444,11 @@ CREATE INDEX i_rs ON rxp_steps(quest_id); CREATE INDEX i_ent_name ON entities(na
 """
 
 
+def create_schema(db):
+    """glide.db's tables in one transaction: one journal file and one sync to disk instead of one per statement."""
+    db.executescript("BEGIN;\n%s\nCOMMIT;" % SCHEMA)
+
+
 def input_fingerprint(files, dirs=(), root=ROOT):
     """sha1 over (path, size, mtime) of every input file (and every file under `dirs`) plus the content of this
     builder's code (CODE, under `root`), so glide.db is only rebuilt when something it reads or runs changed."""
@@ -754,7 +759,7 @@ def build(args):
     if os.path.exists(tmp):
         os.remove(tmp)
     db = sqlite3.connect(tmp)
-    db.executescript(SCHEMA)
+    create_schema(db)
     n_quests = write_quests(db, book, seed)
     write_entities(db, seed, w, sessions)
     write_zones(db, seed)

@@ -258,7 +258,7 @@ def glide_db(path, run=None):
     if os.path.exists(path):
         os.remove(path)
     c = sqlite3.connect(path)
-    c.executescript(build_db.SCHEMA)
+    build_db.create_schema(c)
     ins = lambda t, rows: rows and c.executemany(  # noqa: E731
         "INSERT INTO %s VALUES(%s)" % (t, ",".join("?" * len(rows[0]))), rows)
     ins("meta", [("built", "2026-10-05 12:00:00"), ("fixture", "tests/kb/fixture.py")])

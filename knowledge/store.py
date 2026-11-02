@@ -247,25 +247,36 @@ def _remove_quiet(path):
 
 
 def create_schema(conn):
+    """schema.sql's tables, in one transaction: one journal file and one sync to disk, not one per statement (on
+    Windows each is a file created, flushed and deleted)."""
     with open(SCHEMA, encoding="utf-8") as fh:
         script = fh.read()
     try:
-        conn.executescript(script)
+        conn.executescript("BEGIN;\n%s\nCOMMIT;" % script)
         return
     except sqlite3.OperationalError as e:
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
         if "duplicate column" not in str(e):
             raise
-    # schema applied to an existing database: run statement by statement, skipping columns that exist
-    buf = ""
-    for line in script.splitlines(True):
-        buf += line
-        if sqlite3.complete_statement(buf):
-            try:
-                conn.execute(buf)
-            except sqlite3.OperationalError as e:
-                if "duplicate column" not in str(e):
-                    raise
-            buf = ""
+    # schema applied to an existing database: run statement by statement, skipping columns that exist (a failed
+    # statement undoes only itself), still in one transaction
+    conn.execute("BEGIN")
+    try:
+        buf = ""
+        for line in script.splitlines(True):
+            buf += line
+            if sqlite3.complete_statement(buf):
+                try:
+                    conn.execute(buf)
+                except sqlite3.OperationalError as e:
+                    if "duplicate column" not in str(e):
+                        raise
+                buf = ""
+    except BaseException:
+        conn.execute("ROLLBACK")
+        raise
+    conn.execute("COMMIT")
 
 
 def open_rw(path):
