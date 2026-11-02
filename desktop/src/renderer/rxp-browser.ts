@@ -13,6 +13,7 @@ import { NarrationStop, stepLine, stepVia, stepWho, transitionLine } from "./rxp
 import { coachRunning, live } from "./state.js";
 import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
+import { dangerRuns, dingText, hazardLine, hazardWhere, nextDing, type PlanSteps, roughDur, span, spanText } from "./rxp-plan.js";
 import { PREP_GLYPH, prepLabel, prepNeed, prepShown, prepTitle } from "./rxp-prep.js";
 import { chainCrossings, chainOf, chainStops, continuesAfter, questsOf, type QuestRole, skipLine } from "./rxp-quests.js";
 import { aheadOpacity, durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt,
@@ -63,7 +64,7 @@ let activeWpIdx = 0;        // the active sub-waypoint: its position in the step
 let activeMapId: number | null = null;
 /** The element picked on the map (shown in the inspector): a step's pin, one of its waypoints (sub = its position in
  * the step's waypoints), a leg (key, src = the step it arrives at), a grind loop or an objective (sub = its index). */
-let selected: { kind: "step" | "wp" | "leg" | "loop" | "obj"; src: number; sub?: number; key?: string } | null = null;
+let selected: { kind: "step" | "wp" | "leg" | "loop" | "obj" | "hz"; src: number; sub?: number; key?: string } | null = null;
 let playTimer: number | null = null;
 let playMs = 1500;
 const checkedObjs = new Set<string>();      // `${guide id}:${index}:${st.idx}:${action line}`
@@ -83,6 +84,10 @@ let facts: RxpGuideFacts | null = null;        // what the knowledge base knows 
 let factsVersion = 0;
 const factsCache = new Map<string, RxpGuideFacts | null>();
 // the quest chain picked (a quest badge's button): its steps lit on the map, the timeline and in the list
+let factsWant = "";                           // the facts last asked for (guide, class, race): an older answer is dropped
+let scrubFrom: number | null = null;          // the list position the scrub started from (time and XP shown from there)
+let scrubTimer: number | null = null;
+let scrubHeld = false;                        // the slider's thumb is held
 let focusQuest: number | null = null;
 let chainSrcs = new Set<number>();            // the chain's steps (st.idx)
 
@@ -519,7 +524,7 @@ function buildLayers(mapId: number | null, imgUrl: string | null): void {
   }
   svgEl.innerHTML = `<defs></defs>${grid.join("")}<g id="rxpb-l-zones">${zones.join("")}</g><g id="rxpb-l-route">${route.join("")}</g>`
     + `<g id="rxpb-l-loops">${loops.join("")}</g><g id="rxpb-l-objectives">${objs.join("")}</g><g id="rxpb-l-leg"></g>`
-    + `<g id="rxpb-l-chain"></g><g id="rxpb-l-pins">${pins.join("")}</g><g id="rxpb-l-active"></g><g id="rxpb-l-hl"></g>${note}`;
+    + `<g id="rxpb-l-chain"></g><g id="rxpb-l-pins">${pins.join("")}</g><g id="rxpb-l-active"></g><g id="rxpb-l-hz"></g><g id="rxpb-l-hl"></g>${note}`;
   if (focusedSrc) svgEl.querySelector<SVGGElement>(`.rxpb-pin[data-src="${focusedSrc}"]`)?.focus();
 }
 
@@ -727,6 +732,55 @@ function drawChain(mapId: number | null): void {
   el.innerHTML = parts.join("");
 }
 
+/** The middle of the longest drawn stretch of the legs into the current step on map `mapId`, or null. */
+function legMiddle(mapId: number): Pt | null {
+  let best: Pt[] | null = null, bestLen = 0;
+  for (const leg of activeLegs()) {
+    if (leg.from === leg.to) continue;
+    for (const p of legPieces(leg, routeLegs.get(leg.key), mapId, mapsGeo())) {
+      for (const run of p.runs) {
+        let len = 0;
+        for (let i = 1; i < run.length; i++) len += Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]);
+        if (len > bestLen) { bestLen = len; best = run; }
+      }
+    }
+  }
+  if (!best || bestLen < 2) return null;
+  let half = bestLen / 2;
+  for (let i = 1; i < best.length; i++) {
+    const seg = Math.hypot(best[i][0] - best[i - 1][0], best[i][1] - best[i - 1][1]);
+    if (seg >= half) { const t = seg ? half / seg : 0; return [best[i - 1][0] + (best[i][0] - best[i - 1][0]) * t, best[i - 1][1] + (best[i][1] - best[i - 1][1]) * t]; }
+    half -= seg;
+  }
+  return best[best.length - 1];
+}
+
+/** The current step's hazards on the map: a warning sign on the way in for what's met on the road (the coach's risks
+ * near the way), beside the pin for the step's own elite target or a dangerous quest. A card says it in a line. */
+function drawHazards(mapId: number | null): void {
+  const el = document.getElementById("rxpb-l-hz");
+  if (!el) return;
+  const vs = visibleSteps[activeIdx];
+  const hz = vs && mapId != null ? facts?.hazards?.[String(vs.src)] || [] : [];
+  if (!hz.length || mapId == null) { el.innerHTML = ""; return; }
+  const road = legMiddle(mapId), at = stepPoint(vs.src, mapId);
+  const pin: Pt | null = at ? [at.x, at.y] : null;
+  const out: string[] = [];
+  let onRoad = 0, atPin = 0;
+  hz.slice(0, 4).forEach((h, i) => {
+    const way = h.why === "risk" || h.why === "near";
+    const base: Pt | null = way && road ? road : pin;
+    if (!base) return;
+    const k = way && road ? onRoad++ : atPin++;
+    // side by side, and off the pin itself
+    const dx = way && road ? k * 26 : 24 + k * 26, dy = way && road ? 0 : -24;
+    out.push(`<g class="rxpb-hz${h.elite ? " elite" : ""}" data-kind="hz" data-src="${vs.src}" data-sub="${i}" tabindex="0" role="button"
+      aria-label="${esc(`Danger: ${hazardLine(h)}`)}" transform="translate(${mapX(base[0])},${mapY(base[1])})">
+      <g class="rxpb-body"><g transform="translate(${dx},${dy})"><path d="M0 -11 L10.5 8 L-10.5 8 Z"/><text dy="5.5">!</text></g></g></g>`);
+  });
+  el.innerHTML = out.join("");
+}
+
 /** Light quest `qid`'s chain (or the chain shown, off again): its steps on the map, the timeline and in the list,
  * the rest faded, and the chain bar saying what a skip breaks. */
 function focusChain(qid: number | null, toggle = true): void {
@@ -912,6 +966,7 @@ function renderMap(): void {
   updateClasses();
   drawActive(mapId);
   drawChain(mapId);
+  drawHazards(mapId);
 
   // Update the RestedXP Waypoint Arrow HUD widget: where the current target is, how far and how long the way there
   const arrowHud = $("rxpb-arrow-hud");
@@ -997,6 +1052,14 @@ function elementCard(kind: string, src: number, sub: number | null, legK: string
       head: `<b>${lp.kind === "loop" ? "Grind loop" : "Grind line"}</b><span>Step ${stepNum(vs)}${isFinite(per) && per ? ` · ${yardsText(per)} ${lp.kind === "loop" ? "around" : "long"}` : ""}</span>`,
       body: `<div class="rxpb-hc-text">${lp.kind === "loop" ? "Circle this loop" : "Walk up and down this line"}${lp.range ? `, staying within ${lp.range} yd of it,` : ""} until the step is done.</div>`
         + (kills.length ? `<div class="rxpb-hc-line">${esc(kills.slice(0, 3).join(" · "))}</div>` : ""),
+    };
+  }
+  if (kind === "hz" && vs && sub != null) {
+    const h = facts?.hazards?.[String(src)]?.[sub];
+    if (!h) return null;
+    return {
+      head: `<b class="warn">⚠ ${esc(hazardLine(h))}</b>`,
+      body: `<div class="rxpb-hc-line dim">${esc(hazardWhere(h))} · step ${esc(stepNum(vs))}</div>`,
     };
   }
   if (kind === "obj" && vs && sub != null) {
@@ -1095,8 +1158,58 @@ function renderTimeline(): void {
       ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-live" style="left:${((li / (n - 1)) * 100).toFixed(2)}%" data-src="${liveSrc}" title="${esc(label)}" aria-label="${esc(label)}"></button>`);
     }
   }
+  if (n > 1 && facts) {
+    // the dangerous stretches: a red band over the slider (a click goes to its first step)
+    const order = visibleSteps.map((v) => v.src);
+    for (const r of dangerRuns(order, facts.hazards || {}, planSteps())) {
+      const a = (r.from / (n - 1)) * 100, b = (r.to / (n - 1)) * 100;
+      const steps = r.from === r.to ? `Step ${stepNum(visibleSteps[r.from])}` : `Steps ${stepNum(visibleSteps[r.from])}–${stepNum(visibleSteps[r.to])}`;
+      const label = `${steps}: ${r.hz.length ? r.hz.slice(0, 2).map(hazardLine).join("; ") : "a risky stretch at the coach's reckoning"}`;
+      ticks.push(`<button type="button" tabindex="-1" class="tl-danger" style="left:${a.toFixed(2)}%;width:max(4px, ${(b - a).toFixed(2)}%)" data-src="${visibleSteps[r.from].src}" title="${esc(label)}" aria-label="${esc(label)}"></button>`);
+    }
+  }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
   $("rxpb-tl-ticks").classList.toggle("chain-on", focusQuest != null);
+  renderPace();
+}
+
+const CLASS_WORD = (c: string) => c[0] + c.slice(1).toLowerCase();
+
+/** The pace beside the timeline: "45 min to 23" from the current step (the coach's plan for the picked class), and
+ * while scrubbing, a bubble over the slider with the time and XP from where the scrub started. */
+function renderPace(): void {
+  const eta = $("rxpb-tl-eta"), bubble = $("rxpb-tl-bubble");
+  const plan = planSteps();
+  const order = visibleSteps.map((v) => v.src);
+  const d = plan ? nextDing(plan, order, activeIdx) : null;
+  eta.hidden = !d;
+  if (d) {
+    eta.textContent = dingText(d);
+    eta.title = `At the coach's pace for a ${CLASS_WORD(filter.cls)}: level ${d.level} at step ${stepNum(visibleSteps[d.pos])}`
+      + (facts?.plan?.approx ? " (roughly: the knowledge base has another version of this guide)" : "");
+  }
+  const sp = plan && scrubFrom != null && scrubFrom !== activeIdx ? span(plan, order, scrubFrom, activeIdx) : null;
+  const txt = spanText(sp, scrubFrom != null && activeIdx < scrubFrom);
+  bubble.hidden = !txt;
+  if (txt) {
+    bubble.textContent = txt;
+    const n = visibleSteps.length;
+    bubble.style.left = `${n > 1 ? (activeIdx / (n - 1)) * 100 : 0}%`;
+  }
+}
+
+/** The slider moved: the scrub's start is remembered until the slider rests (time and XP are said from there). */
+function noteScrub(before: number): void {
+  if (scrubFrom == null) scrubFrom = before;
+  if (scrubTimer) window.clearTimeout(scrubTimer);
+  scrubTimer = window.setTimeout(endScrub, 1600);
+}
+
+function endScrub(): void {
+  if (scrubHeld) return;
+  scrubTimer = null;
+  scrubFrom = null;
+  renderPace();
 }
 
 /** The guide window's header: the guide's name and RestedXP's #next guide. */
@@ -1170,8 +1283,15 @@ function activeStepHtml(vs: VisibleStep): string {
     </div>
     <div class="rxpb-cs-rows">${rows.length ? rows.join("") : `<div class="rxpb-obj-text dim">Travel / transition step</div>`}</div>
     ${wpPills ? `<div class="rxpb-wp-bar">${wpPills}</div>` : ""}
+    ${hazardRows(vs.src)}
     ${st.comments ? `<div class="rxpb-comment">💬 ${esc(st.comments)}</div>` : ""}
   </div>`;
+}
+
+/** The opened step's hazards, a line each (the two that matter most): what the player meets here. */
+function hazardRows(src: number): string {
+  const hz = facts?.hazards?.[String(src)] || [];
+  return hz.slice(0, 2).map((h) => `<div class="rxpb-hz-row${h.elite ? " elite" : ""}" title="${esc(hazardWhere(h))}"><b>⚠</b> ${esc(hazardLine(h))}</div>`).join("");
 }
 
 /** One step in the list: collapsed (number, instruction, badges), or opened when it's the current step. */
@@ -1323,20 +1443,37 @@ async function requestRoutes(): Promise<void> {
 }
 
 /** What the knowledge base knows of the guide (its map targets): asked once per guide, after the guide is drawn. */
+/** The class and race the facts' plan is asked for: the Character picks (no plan without a class). */
+function factsPick(): { cls?: string; race?: string } {
+  const race = racePick(filter.race).race;
+  return { cls: filter.cls || undefined, race: filter.cls && race ? race : undefined };
+}
+
+/** What the knowledge base knows of the guide (map targets, quests, prep, and for the picked class the coach's
+ * plan and hazards): asked once per guide and pick, after the guide is drawn; the last ask wins. */
 async function requestFacts(g: RxpGuideDetail): Promise<void> {
-  const key = `${g.id}:${g.index}`;
+  const want = factsPick();
+  const key = `${g.id}:${g.index}:${want.cls || ""}:${want.race || ""}`;
+  factsWant = key;
   let f = factsCache.get(key);
   if (f === undefined) {
-    f = ((await quiet("addon:rxpFacts", g.id, g.index)) as RxpGuideFacts | null | undefined) ?? null;
+    f = ((await quiet("addon:rxpFacts", g.id, g.index, want.cls, want.race)) as RxpGuideFacts | null | undefined) ?? null;
     factsCache.set(key, f);
   }
-  if (currentGuide !== g) return;
+  if (currentGuide !== g || factsWant !== key) return;
   facts = f;
   factsVersion++;
   renderStepList(false);             // the badges take the knowledge base's quest names
   if (focusQuest != null) focusChain(focusQuest, false); else renderChainBar();
   renderPrep();
+  renderCharacter();
+  renderTimeline();
   renderMap();
+}
+
+/** The coach's plan for the picked class (step_brief figures per st.idx), when the facts hold it for that class. */
+function planSteps(): PlanSteps | null {
+  return facts?.plan && filter.cls && facts.plan.class === filter.cls ? facts.plan.steps : null;
 }
 
 /** Make the step with this guide step number (st.idx) the current one, when it is listed. */
@@ -1816,7 +1953,7 @@ function pickElement(el: SVGElement): void {
   } else if (kind === "leg") {
     const leg = planned.find((l) => l.key === el.dataset.leg);
     if (leg) { selected = { kind: "leg", src: leg.to, key: leg.key }; updateClasses(); renderInspector(); }
-  } else if (kind === "loop" || kind === "obj") {
+  } else if (kind === "loop" || kind === "obj" || kind === "hz") {
     selected = { kind, src, sub: Number(el.dataset.sub) };
     updateClasses();
     renderInspector();
@@ -2018,8 +2155,9 @@ function renderCharacter(): void {
   const opts = [filter.ssf ? "SSF" : "", filter.groupQuests ? "group" : "", filter.hardcore ? "HC" : ""].filter(Boolean);
   $("rxpb-char-label").textContent = opts.length ? `${who} · ${opts.join(", ")}` : who;
   const one = vis ? vis.pick(filter.race, filter.cls).length === 1 : false;
-  $("rxpb-char-note").textContent = !vis ? "" : one ? "Step numbers are RestedXP's own for this character."
-    : "Showing the steps any of these characters gets. Pick a race and a class for RestedXP's own step numbers.";
+  $("rxpb-char-note").textContent = (!vis ? "" : one ? "Step numbers are RestedXP's own for this character."
+    : "Showing the steps any of these characters gets. Pick a race and a class for RestedXP's own step numbers.")
+    + (!filter.cls && facts?.briefs?.length ? " Pick a class to see how long to each level at the coach's pace." : "");
 }
 
 /** The Character chip opens its popover; Escape or a click elsewhere closes it. */
@@ -2042,6 +2180,10 @@ function wireCharacter(): void {
 
 /** The race, class or a toggle changed: list the steps again, keeping the current one. */
 function refilter(): void {
+  if (currentGuide) {
+    const p = factsPick();
+    if (factsWant !== `${currentGuide.id}:${currentGuide.index}:${p.cls || ""}:${p.race || ""}`) requestFacts(currentGuide);
+  }
   rebuildVisibleSteps();
   renderChainBar();
   renderPrep();
@@ -2091,8 +2233,16 @@ export function wireRxpBrowser(): void {
 
   $("rxpb-scrub").oninput = (e) => {
     stopPlay();
+    noteScrub(activeIdx);
     selectStep(Number((e.target as HTMLInputElement).value), true);
   };
+  $("rxpb-scrub").addEventListener("pointerdown", () => { scrubHeld = true; });
+  window.addEventListener("pointerup", () => {
+    if (!scrubHeld) return;
+    scrubHeld = false;
+    if (scrubTimer) window.clearTimeout(scrubTimer);
+    scrubTimer = window.setTimeout(endScrub, 1600);
+  });
   $("rxpb-prev").onclick = () => { stopPlay(); selectStep(activeIdx - 1, true); };
   $("rxpb-next").onclick = () => { stopPlay(); selectStep(activeIdx + 1, true); };
   $("rxpb-play").onclick = togglePlay;
@@ -2122,7 +2272,7 @@ export function wireRxpBrowser(): void {
     zonesEl.querySelector<HTMLButtonElement>(`button[data-map="${next.dataset.map}"]`)?.focus();
   });
   $("rxpb-tl-ticks").addEventListener("click", (e) => {
-    const t = (e.target as Element).closest<HTMLElement>(".tl-tick");
+    const t = (e.target as Element).closest<HTMLElement>(".tl-tick, .tl-danger");
     if (t) { stopPlay(); selectSrc(Number(t.dataset.src), true); }
   });
   wireStepList();

@@ -892,3 +892,27 @@ button.rxpb-badge.mini.rxpb-qb { font-size: 11.5px; }
 .rxpb-prep-more { flex: none; height: 24px; padding: 0 8px; border-radius: 5px; border: 1px solid #4a5596; background: #262d59; color: var(--gold-hi);
   font: inherit; font-size: 12px; cursor: pointer; }
 .rxpb-prep-more[hidden] { display: none; }
+
+/* Time, XP and hazards: dangerous stretches a red band over the slider, the pace beside it ("45 min to 23"), a bubble
+   with the time and XP from where the scrub started, a warning sign at the current step's hazards on the map */
+.tl-danger { position: absolute; top: 30px; height: 5px; margin: 0; padding: 0; border: 0; border-radius: 3px; background: rgba(255, 87, 34, 0.75);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); cursor: pointer; z-index: 1; }
+.tl-danger:hover { background: #ff7043; }
+.rxpb-tl-ticks.chain-on .tl-danger { opacity: 0.35; }
+.rxpb-tl-eta { flex: none; font-size: 12.5px; color: #c8d0f8; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rxpb-tl-eta[hidden] { display: none; }
+.rxpb-tl-bubble { position: absolute; top: -22px; transform: translateX(-50%); margin-left: 8px; padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+  background: rgba(12, 12, 27, 0.95); box-shadow: 0 0 0 1px var(--gold-dim), 0 6px 16px rgba(0, 0, 0, 0.6); color: var(--gold-hi);
+  font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; z-index: 3; }
+.rxpb-tl-bubble[hidden] { display: none; }
+@container guides (max-width: 1150px) { .rxpb-tl-eta { display: none; } }
+.rxpb-hz { cursor: pointer; }
+.rxpb-hz path { fill: #ffb300; stroke: #1a0d00; stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
+.rxpb-hz.elite path { fill: #ff5722; }
+.rxpb-hz text { fill: #1a0d00; font: 800 12px var(--f-ui); text-anchor: middle; pointer-events: none; }
+.rxpb-hz:hover path, .rxpb-hz:focus-visible path { stroke: #fff; }
+.rxpb-hz:focus { outline: none; }
+.rxpb-hz-row { font-size: 13px; color: #ffcf8a; padding: 4px 8px; border-radius: 4px; background: rgba(255, 179, 0, 0.08); border-left: 2px solid #ffb300; }
+.rxpb-hz-row.elite { border-left-color: #ff5722; background: rgba(255, 87, 34, 0.1); }
+.rxpb-hz-row b { color: #ffb300; margin-right: 4px; }
+.rxpb-hz-row.elite b { color: #ff7043; }

@@ -709,3 +709,17 @@ they don't spell out.
   solo self-found); the same need offered at two steps counts once. A row too long for the window ends in "+N",
   which opens the rest ("Less" closes it). Collect badges take the prep list's item name when glide.db has none. No
   IPC, file or state change. DOM-free logic in `rxp-prep.ts` (`tests/test_rxp_prep.py`). Guides page plan, phase 4.
+- **Guides page: time, XP and hazards on the timeline (contract 8).** `addon:rxpFacts` is now asked with the picked
+  class and race (the existing optional arguments; one answer per guide and pick, the last ask winning), so the
+  facts carry the coach's plan for that class. Player-visible: beside the timeline position the time to the next level
+  at the coach's pace ("37 min to 7"; its card names the step and says "roughly" when the knowledge base has another
+  version of the guide; hidden below 1150 px and without a class); while the slider moves, a bubble over it says the
+  time and XP from where the scrub started ("+46 min · +3,510 XP", or "level 21 → 23" when a level is gained;
+  "−" scrubbing back). Dangerous stretches (a hazard at the step, or the coach's risk at 0.6 or more; one safe step
+  joins two) are red bands over the slider whose card says the hazards met ("Steps 12–15: Hogger, level 11 elite:
+  patrols the road, calls for help"); a click goes to the stretch's first step. On the map the current step's hazards
+  are a warning sign: on the way in for what's met on the road, beside the pin for its own elite target or a
+  dangerous quest; hover or click says it in a line and where. The opened step lists up to two hazards the same way.
+  The Character popover adds "Pick a class to see how long to each level at the coach's pace." when the knowledge base
+  has plans and no class is picked. Without a knowledge base none of this shows. No IPC, file or state change.
+  DOM-free logic in `rxp-plan.ts` (`tests/test_rxp_plan.py`). Guides page plan, phase 5.
