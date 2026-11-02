@@ -74,6 +74,7 @@ try:
     commit("Guides map draws flights")                            # a failed run's draft, 0.4.3: no entry of its own
     c3 = commit("CI: faster checks", sha=True)
     commit("Narrate reads the steps aloud")
+    commit("Tests: the runner starts the longest tests first")      # work on the tests: not in What's new
     c4 = commit("Knowledge refresh 2026-11-01", sha=True)
     commit("Steps ahead fade on the map")                          # this build: 0.4.5
 
@@ -95,7 +96,8 @@ try:
     assert [v["version"] for v in got] == ["0.4.5", "0.4.4", "0.4.2", "0.4.1", "0.4.0"], [v["version"] for v in got]
     # this build: the commits since the last release
     assert by["0.4.5"]["items"] == ["test data", "Steps ahead fade on the map"], by["0.4.5"]["items"]
-    # filled in: 0.4.4 holds the failed 0.4.3 run's commits too; CI and docs left out, a refresh summed up
+    # filled in: 0.4.4 holds the failed 0.4.3 run's commits too; tests ("Tests:"), CI and docs left out, a refresh
+    # summed up
     assert by["0.4.4"]["items"] == ["Narrate reads the steps aloud", "Guides map draws flights",
                                     "Fresh community notes and quest data."], by["0.4.4"]["items"]
     assert by["0.4.4"]["date"] == "2026-11-02", by["0.4.4"]

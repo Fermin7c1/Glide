@@ -35,8 +35,8 @@ function itemsFor(range) {
   const out = range ? git(["log", "--no-merges", "--format=%s", ...range]) : null;
   const subjects = (out || "").split("\n").map((s) => s.trim()).filter(Boolean);
   const deps = subjects.filter((s) => /^Build\(deps/.test(s)).length;
-  // what players notice: not dependency bumps, refreshes (summed up below) or work on CI, docs and releases
-  const items = subjects.filter((s) => !/^(Build\(deps|Knowledge refresh|CI|Docs?|README|Releases?)\b/i.test(s));
+  // what players notice: not dependency bumps, refreshes (summed up below) or work on tests, CI, docs and releases
+  const items = subjects.filter((s) => !/^(?:(?:Build\(deps|Knowledge refresh|CI|Docs?|README|Releases?)\b|Tests?:)/i.test(s));
   if (subjects.some((s) => /^Knowledge refresh/.test(s))) items.push("Fresh community notes and quest data.");
   if (deps) items.push("Updated the components Glide is built on.");
   return items.length ? items : ["Small fixes and improvements."];
