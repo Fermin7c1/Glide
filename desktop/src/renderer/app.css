@@ -554,6 +554,15 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-arrowhead.done { fill: rgba(242, 194, 79, 0.75); }
 .rxpb-arrowhead.chain { fill: #00bcd4; }
 .rxpb-leg-start { fill: #12152b; stroke: #fffaf0; stroke-width: 2; }
+/* the card a pin shows while hovered or focused */
+.rxpb-hovercard { position: absolute; z-index: 4; width: 300px; max-width: 70%; padding: 10px 12px; border-radius: 8px; pointer-events: none;
+  background: rgba(12, 12, 27, 0.96); box-shadow: 0 0 0 1px #363e6d, 0 12px 28px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; gap: 6px; }
+.rxpb-hovercard[hidden] { display: none; }
+.rxpb-hc-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: #9aa4d6; }
+.rxpb-hc-head b { color: var(--gold-hi); font-size: 13px; }
+.rxpb-hc-text { font-size: 13.5px; line-height: 1.4; color: #f0f2fa; }
+.rxpb-pin:focus { outline: none; }
+.rxpb-pin:focus-visible .rxpb-body > circle:not(.rxpb-pin-pulse) { stroke: var(--gold-hi); stroke-width: 3.5; }
 .rxpb-map-tools { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
   justify-content: flex-end; max-width: 60%; cursor: default; }
 .rxpb-mt { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border-radius: 7px; background: rgba(12, 13, 18, 0.88);

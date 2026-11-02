@@ -420,8 +420,8 @@ function renderMap(): void {
     const sym = vs.kind === "accept" ? "!" : vs.kind === "turnin" ? "?" : vs.kind === "combat" ? "⚔"
       : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : String(vs.rxpNum);
     const r = isCur ? 15 : isPinned ? 13 : 10.5;
-    svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-step="${idx}" transform="translate(${cx},${cy})">
-      <title>Step ${vs.rxpNum}: ${esc(stepHeadline(vs.step))} (${vs.step.x!.toFixed(1)}, ${vs.step.y!.toFixed(1)})</title>
+    svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-step="${idx}" transform="translate(${cx},${cy})"
+      tabindex="0" role="button" aria-label="Step ${vs.rxpNum}: ${esc(stepHeadline(vs.step))}">
       <g class="rxpb-body">${isCur ? `<circle class="rxpb-pin-pulse" r="22"/>` : ""}<circle r="${r}"/>
       <text dy="0.35em">${esc(sym)}</text></g>
     </g>`);
@@ -869,6 +869,33 @@ export function browseGuide(packId: string, index: number): void {
   show("guides");               // the page loads its list (refreshGuides), then opens this guide
 }
 
+/** The card a pin shows while hovered or focused: the step's instruction, its quests and targets, where it is. */
+function showHoverCard(g: SVGGElement): void {
+  const vs = visibleSteps[Number(g.dataset.step)];
+  const card = $("rxpb-hovercard");
+  if (!vs) { card.hidden = true; return; }
+  const st = vs.step;
+  const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
+  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
+  const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
+  card.innerHTML = `<div class="rxpb-hc-head"><b>Step ${vs.rxpNum}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}</div>
+    <div class="rxpb-hc-text">${text ? formatRxpText(text) : esc(stepHeadline(st))}</div>
+    ${badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}`;
+  card.hidden = false;
+  // beside the pin, kept inside the map
+  const stage = $("rxpb-map-stage").getBoundingClientRect(), pin = g.getBoundingClientRect();
+  const w = card.offsetWidth, h = card.offsetHeight;
+  let left = pin.right - stage.left + 10, top = pin.top - stage.top - 6;
+  if (left + w > stage.width - 8) left = pin.left - stage.left - w - 10;
+  top = Math.max(8, Math.min(stage.height - h - 8, top));
+  card.style.left = `${Math.max(8, left)}px`;
+  card.style.top = `${top}px`;
+}
+
+function hideHoverCard(): void {
+  $("rxpb-hovercard").hidden = true;
+}
+
 /** Zoom with the wheel, pan by dragging, the whole zone on double-click; the view buttons and toggles. */
 function wireMapView(): void {
   const stage = $("rxpb-map-stage");
@@ -914,6 +941,27 @@ function wireMapView(): void {
     renderMap();
   };
   new ResizeObserver(() => applyView()).observe(stage);
+
+  // pins: a card on hover or keyboard focus; Enter or Space on a focused pin picks it
+  const svgEl = $("rxpb-map-svg");
+  const pinOf = (e: Event) => (e.target as Element).closest<SVGGElement>(".rxpb-pin");
+  svgEl.addEventListener("pointerover", (e) => { const g = pinOf(e); if (g && !drag) showHoverCard(g); });
+  svgEl.addEventListener("pointerout", (e) => {
+    const to = (e as PointerEvent).relatedTarget as Element | null;
+    if (pinOf(e) && !to?.closest?.(".rxpb-pin")) hideHoverCard();       // left the pin (not just moved within it)
+  });
+  svgEl.addEventListener("focusin", (e) => { const g = pinOf(e); if (g) showHoverCard(g); });
+  svgEl.addEventListener("focusout", hideHoverCard);
+  svgEl.addEventListener("keydown", (e) => {
+    const g = pinOf(e);
+    if (g && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      e.stopPropagation();
+      (g as unknown as HTMLElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+  });
+  stage.addEventListener("wheel", hideHoverCard, { passive: true });
+  stage.addEventListener("pointerdown", hideHoverCard);
 }
 
 /** On the Guides page, away from a text box: left/right step, Space walks the route or stops, +/- zoom, 0 whole zone. */

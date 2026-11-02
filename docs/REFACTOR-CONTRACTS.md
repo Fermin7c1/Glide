@@ -576,3 +576,7 @@ they don't spell out.
   never sees Druid steps. "Next guide" looks in the group RestedXP names, else the group being browsed, before any
   other group, so a Dungeon guide's next is the Dungeon guide. The player asked for the Explorer's review fixes
   (2026-11-02).
+- **Follow-up, what the player sees: pin hover cards on the Guides map.** Hovering a pin (or reaching it with Tab) shows
+  a card beside it with the step's number, instruction, quest and NPC badges and position; Enter or Space picks it.
+  The pins' native tooltips (SVG `<title>`) are replaced by the card and an `aria-label`. The player asked for map
+  interactivity (2026-11-02).
