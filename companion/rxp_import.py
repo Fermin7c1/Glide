@@ -549,6 +549,9 @@ def guide_detail(root, iid, index, wow_dir=None):
             })
             if act_vis is not None:
                 actions_out[-1]["vis"] = act_vis
+            more_q = [int(x) for x in args.get("quest_ids") or () if isinstance(x, int) and not isinstance(x, bool)]
+            if len(more_q) > 1:
+                actions_out[-1]["quest_ids"] = more_q      # a multi-quest verb (.turninmultiple 101,200): every quest
         if st.get("ui_map") and st.get("zone"):
             zones_seen[int(st["ui_map"])] = st["zone"]
         flags_in = st.get("flags")

@@ -13,6 +13,7 @@ import { NarrationStop, stepLine, stepVia, stepWho, transitionLine } from "./rxp
 import { coachRunning, live } from "./state.js";
 import { comboOf, liveClassPick, liveGuide, liveRacePick, liveStepPos, racePick, Visibility } from "./rxp-model.js";
 import { bearingDeg, between, yards, yardsText } from "./rxp-geometry.js";
+import { chainCrossings, chainOf, chainStops, continuesAfter, questsOf, type QuestRole, skipLine } from "./rxp-quests.js";
 import { aheadOpacity, durText, hull, layoutTicks, legInfo, legPieces, pinStop, type Piece, planLegs, type PlanLeg, type Pt,
   type Stop, stopsOf } from "./rxp-route.js";
 
@@ -80,6 +81,9 @@ const listKeyOf = () => visKey;                         // bumps when routeLegs 
 let facts: RxpGuideFacts | null = null;        // what the knowledge base knows of the current guide (map targets)
 let factsVersion = 0;
 const factsCache = new Map<string, RxpGuideFacts | null>();
+// the quest chain picked (a quest badge's button): its steps lit on the map, the timeline and in the list
+let focusQuest: number | null = null;
+let chainSrcs = new Set<number>();            // the chain's steps (st.idx)
 
 // Filter state (matches RestedXP's in-game player & profile checks)
 const filter = {
@@ -208,14 +212,36 @@ function classifyStep(st: RxpGuideStep): VisibleStep["kind"] {
   return "step";
 }
 
-function actionBadge(a: RxpGuideAction): { cls: string; sym: string; label: string } | null {
+/** A quest's name: the guide's (glide.db), else the knowledge base's. */
+const questName = (a: RxpGuideAction) => a.quest_name || (a.quest_id != null ? facts?.quests?.[String(a.quest_id)]?.name : null) || null;
+const QUEST_BADGE = new Set(["accept", "turnin", "complete", "collect"]);
+
+interface Badge { cls: string; sym: string; label: string; quest?: number }
+
+/** An action's badge as HTML: a quest's badge is a button that lights the quest's chain. */
+function badgeHtml(b: Badge, mini = false): string {
+  const cls = `rxpb-badge${mini ? " mini" : ""} ${b.cls}`;
+  if (b.quest == null) return `<span class="${cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`;
+  const on = b.quest === focusQuest;
+  return `<button type="button" tabindex="-1" class="${cls} rxpb-qb${on ? " on" : ""}" data-quest="${b.quest}" aria-pressed="${on}"
+    title="${on ? "Stop showing this quest's chain (Esc)" : "Show this quest's chain on the map, the timeline and the list"}"><b>${esc(b.sym)}</b> ${esc(b.label)}</button>`;
+}
+
+function actionBadge(a: RxpGuideAction): Badge | null {
+  const b = actionBadgeOf(a);
+  if (b && a.quest_id && QUEST_BADGE.has(a.verb)) b.quest = a.quest_id;
+  return b;
+}
+
+function actionBadgeOf(a: RxpGuideAction): Badge | null {
+  const qn = questName(a);
   switch (a.verb) {
     case "accept":
-      return { cls: "ab-accept", sym: "!", label: a.quest_name ? `Accept: ${a.quest_name}` : `Accept quest #${a.quest_id || "?"}` };
+      return { cls: "ab-accept", sym: "!", label: qn ? `Accept: ${qn}` : `Accept quest #${a.quest_id || "?"}` };
     case "turnin":
-      return { cls: "ab-turnin", sym: "?", label: a.quest_name ? `Turn in: ${a.quest_name}` : `Turn in quest #${a.quest_id || "?"}` };
+      return { cls: "ab-turnin", sym: "?", label: qn ? `Turn in: ${qn}` : `Turn in quest #${a.quest_id || "?"}` };
     case "complete":
-      return { cls: "ab-combat", sym: "◎", label: (a.quest_name ? `${a.quest_name}` : `Quest #${a.quest_id || "?"}`) + (a.qty ? ` (×${a.qty})` : "") };
+      return { cls: "ab-combat", sym: "◎", label: (qn ? `${qn}` : `Quest #${a.quest_id || "?"}`) + (a.qty ? ` (×${a.qty})` : "") };
     case "collect":
       return { cls: "ab-loot", sym: "◆", label: `Collect ${a.qty && a.qty > 1 ? `${a.qty}× ` : ""}${a.entity_name || `item #${a.entity_id || "?"}`}` };
     case "kill":
@@ -490,7 +516,7 @@ function buildLayers(mapId: number | null, imgUrl: string | null): void {
   }
   svgEl.innerHTML = `<defs></defs>${grid.join("")}<g id="rxpb-l-zones">${zones.join("")}</g><g id="rxpb-l-route">${route.join("")}</g>`
     + `<g id="rxpb-l-loops">${loops.join("")}</g><g id="rxpb-l-objectives">${objs.join("")}</g><g id="rxpb-l-leg"></g>`
-    + `<g id="rxpb-l-pins">${pins.join("")}</g><g id="rxpb-l-active"></g><g id="rxpb-l-hl"></g>${note}`;
+    + `<g id="rxpb-l-chain"></g><g id="rxpb-l-pins">${pins.join("")}</g><g id="rxpb-l-active"></g><g id="rxpb-l-hl"></g>${note}`;
   if (focusedSrc) svgEl.querySelector<SVGGElement>(`.rxpb-pin[data-src="${focusedSrc}"]`)?.focus();
 }
 
@@ -507,7 +533,9 @@ function updateClasses(): void {
     g.classList.toggle("is-next", pos > activeIdx);
     g.classList.toggle("is-pinned", selected?.kind === "step" && src === selSrc && pos !== activeIdx);
     g.style.setProperty("--ahead", String(aheadOpacity(pos - activeIdx)));
+    g.classList.toggle("in-chain", chainSrcs.has(src));
   });
+  svgEl.classList.toggle("chain-on", focusQuest != null);
   svgEl.querySelectorAll<SVGGElement>(".rxpb-rleg").forEach((g) => {
     const pos = Number(g.dataset.pos);
     g.classList.toggle("is-done", pos < activeIdx);
@@ -649,6 +677,116 @@ function drawActive(mapId: number | null): void {
   actEl.innerHTML = marks.join("");
 }
 
+/** Where a listed step is on map `mapId` (its pin, else the place carried from the steps before it), or null. */
+function stepPoint(src: number, mapId: number): { x: number; y: number } | null {
+  const at = posBySrc.get(src);
+  if (at === undefined) return null;
+  const vs = visibleSteps[at];
+  const stop = pinStop(vs.step);
+  if (stop) return pointOn(mapId, stop.um, stop.x, stop.y);
+  return vs.ui_map != null && vs.x != null && vs.y != null ? pointOn(mapId, vs.ui_map, vs.x, vs.y) : null;
+}
+
+/** The map a listed step happens on (its pin's, else the one carried from the steps before it). */
+function stepMap(src: number): number | null {
+  const at = posBySrc.get(src);
+  if (at === undefined) return null;
+  return pinStop(visibleSteps[at].step)?.um ?? visibleSteps[at].ui_map;
+}
+
+/** The picked quest chain on the map: a gold connector through its steps in step order, and where it goes on in
+ * (or comes from) another zone, a "continues in <zone>" marker that opens that zone's map. */
+function drawChain(mapId: number | null): void {
+  const el = document.getElementById("rxpb-l-chain");
+  if (!el) return;
+  if (focusQuest == null || mapId == null) { el.innerHTML = ""; return; }
+  const srcs = [...chainSrcs].filter((src) => posBySrc.has(src)).sort((a, b) => a - b);
+  const parts: string[] = [];
+  let run: Pt[] = [];
+  const flush = () => { if (run.length > 1) parts.push(`<polyline class="rxpb-chain-case" points="${SVGP(run)}"/><polyline class="rxpb-chain-line" points="${SVGP(run)}"/>`); run = []; };
+  for (const src of srcs) {
+    const at = stepPoint(src, mapId);
+    if (!at) { flush(); continue; }
+    run.push([at.x, at.y]);
+  }
+  flush();
+  if (!isParentMap(mapId)) {
+    for (const c of chainCrossings(srcs.map((src) => ({ src, um: stepMap(src) })), mapId)) {
+      const at = stepPoint(c.at, mapId);
+      if (!at) continue;
+      const label = c.dir === "to" ? `continues in ${mapName(c.um)}` : `from ${mapName(c.um)}`;
+      const anchor = at.x > 75 ? "end" : "start", dx = anchor === "end" ? -18 : 18;
+      parts.push(`<g class="rxpb-chain-edge" data-kind="edge" data-chain="1" data-map="${c.um}" data-dir="${c.dir}" tabindex="0" role="button"
+        aria-label="${esc(`The quest chain ${c.dir === "to" ? "continues in" : "comes from"} ${mapName(c.um)}: open its map`)}" transform="translate(${mapX(at.x)},${mapY(at.y)})">
+        <g class="rxpb-body"><text x="${dx}" y="${c.dir === "to" ? 22 : -16}" text-anchor="${anchor}">${esc(label)} ›</text></g></g>`);
+    }
+  }
+  el.innerHTML = parts.join("");
+}
+
+/** Light quest `qid`'s chain (or the chain shown, off again): its steps on the map, the timeline and in the list,
+ * the rest faded, and the chain bar saying what a skip breaks. */
+function focusChain(qid: number | null, toggle = true): void {
+  focusQuest = toggle && qid != null && qid === focusQuest ? null : qid;
+  const quests = questsOf(facts, currentGuide?.steps || []);
+  chainSrcs = focusQuest == null ? new Set() : new Set(chainStops(quests, chainOf(quests, focusQuest)).map((c) => c.src));
+  renderChain();
+}
+
+/** Redraw what the chain changes: the bar, the list's classes and badges, the timeline, the map. */
+function renderChain(): void {
+  renderChainBar();
+  const listEl = $("rxpb-step-list");
+  listEl.classList.toggle("chain-on", focusQuest != null);
+  listEl.querySelectorAll<HTMLLIElement>("li[data-src]").forEach((li) => setItemState(li, posBySrc.get(Number(li.dataset.src))!));
+  listEl.querySelectorAll<HTMLButtonElement>(".rxpb-qb").forEach((b) => {
+    const on = Number(b.dataset.quest) === focusQuest;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  renderTimeline();
+  if (currentGuide) renderMap();
+}
+
+const ROLE_GLYPH: Record<QuestRole, string> = { accept: "!", objective: "◎", turnin: "?" };
+const ROLE_WORD: Record<QuestRole, string> = { accept: "Accept", objective: "Do", turnin: "Turn in" };
+
+/** The chain bar over the step list while a chain is lit: the chain's quests in order, each with its steps (a click
+ * goes there), and what skipping the picked quest loses (the coach's rule; said only with the knowledge base). */
+function renderChainBar(): void {
+  const bar = $("rxpb-chainbar");
+  if (focusQuest == null || !currentGuide) { bar.hidden = true; bar.innerHTML = ""; return; }
+  const quests = questsOf(facts, currentGuide.steps);
+  const chain = chainOf(quests, focusQuest);
+  const nameOf = (q: number) => quests[String(q)]?.name || currentGuide!.steps.flatMap((st) => st.actions || [])
+    .find((a) => a.quest_id === q && a.quest_name)?.quest_name || `Quest #${q}`;
+  const num = (src: number) => { const at = posBySrc.get(src); return at !== undefined ? visibleSteps[at].rxpNum : null; };
+  // a long chain shows the quests around the picked one (fewer in a narrow guide window)
+  const at = chain.indexOf(focusQuest);
+  const span = ($("rxpb-chainbar").parentElement?.clientWidth || 900) > 760 ? 5 : 3;
+  const lo = Math.max(0, Math.min(at - (span >> 1), chain.length - span)), hi = Math.min(chain.length, lo + span);
+  const stops = chainStops(quests, chain);
+  const pieces = chain.slice(lo, hi).map((q) => {
+    const chips = stops.filter((c) => c.quest === q).map((c) => {
+      const n = num(c.src);
+      const label = n != null ? `${ROLE_WORD[c.role]}: step ${n}` : `${ROLE_WORD[c.role]}: another character's step`;
+      return `<button type="button" class="rxpb-cb-step r-${c.role}${n == null ? " other" : ""}${c.src === activeSrc ? " on" : ""}" data-src="${c.src}"
+        ${n == null ? "disabled" : ""} title="${esc(label)}" aria-label="${esc(label)}"><b>${ROLE_GLYPH[c.role]}</b>${n ?? "–"}</button>`;
+    }).join("");
+    return `<span class="rxpb-cb-q${q === focusQuest ? " on" : ""}"><span class="rxpb-cb-name">${esc(nameOf(q))}</span>${chips}</span>`;
+  });
+  if (lo > 0) pieces.unshift(`<span class="rxpb-cb-more">${lo} before</span>`);
+  if (hi < chain.length) pieces.push(`<span class="rxpb-cb-more">${chain.length - hi} more</span>`);
+  if (continuesAfter(quests, chain)) pieces.push(`<span class="rxpb-cb-more">goes on after this guide</span>`);
+  const skip = skipLine(quests, focusQuest, (src) => { const n = num(src); return n != null ? String(n) : null; });
+  const head = chain.length > 1 ? `Quest ${at + 1} of ${chain.length} in a chain` : "Quest";
+  bar.hidden = false;
+  bar.innerHTML = `<div class="rxpb-cb-row"><span class="rxpb-cb-head">⛓ ${esc(head)}</span>
+      <button type="button" class="rxpb-ins-close" id="rxpb-cb-close" title="Stop showing the chain (Esc)" aria-label="Stop showing the chain">×</button></div>
+    <div class="rxpb-cb-path">${pieces.join(` <span class="rxpb-cb-arrow" aria-hidden="true">→</span> `)}</div>
+    ${skip ? `<div class="rxpb-cb-skip" title="The coach's own rule: what can't be picked up once this quest is skipped, in this guide and the next">${esc(skip)}</div>` : ""}`;
+}
+
 /** The yards and time of the legs to the current target, when the engine has worked them all out. */
 function activeLegTotals(): { yd: number | null; s: number | null } {
   const legs = activeLegs();
@@ -707,6 +845,7 @@ function renderMap(): void {
   }
   updateClasses();
   drawActive(mapId);
+  drawChain(mapId);
 
   // Update the RestedXP Waypoint Arrow HUD widget: where the current target is, how far and how long the way there
   const arrowHud = $("rxpb-arrow-hud");
@@ -747,7 +886,7 @@ function elementCard(kind: string, src: number, sub: number | null, legK: string
   if (kind === "step" && vs) {
     const st = vs.step;
     const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
-    const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
+    const badges = (st.actions || []).map(actionBadge).filter(Boolean) as Badge[];
     const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
     return {
       head: `<b>Step ${stepNum(vs)}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}`,
@@ -803,7 +942,7 @@ function elementCard(kind: string, src: number, sub: number | null, legK: string
     return {
       head: `<b>${esc(`${ROLE_NAME[t.role] || ""} ${t.name || (t.kind === "poi" ? "the quest area" : `#${t.id}`)}`.trim())}</b>${bits.length ? `<span class="${(t.rank || 0) >= 1 ? "warn" : ""}">${esc(bits.join(" · "))}</span>` : ""}`,
       body: (item ? `<div class="rxpb-hc-line">For ${esc(item)}</div>` : "")
-        + (quest ? `<div class="rxpb-hc-line">${esc(quest.quest_name || `Quest #${quest.quest_id}`)}</div>` : "")
+        + (quest ? `<div class="rxpb-hc-line">${esc(questName(quest) || `Quest #${quest.quest_id}`)}</div>` : "")
         + `<div class="rxpb-hc-line dim">${t.points.length > 1 ? `${t.points.length} places near the step` : "Near the step"}</div>`,
     };
   }
@@ -874,8 +1013,16 @@ function renderTimeline(): void {
       if (rows[k] < 0 || vs.kind === "step") return;
       const pct = ((i / (n - 1)) * 100).toFixed(2);
       const label = `Step ${stepNum(vs)}, ${KIND_NAME[vs.kind]}: ${stepHeadline(vs.step)}`;
-      ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${rows[k] ? " row2" : ""}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
+      ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-${vs.kind}${rows[k] ? " row2" : ""}${i === activeIdx ? " on" : ""}${chainSrcs.has(vs.src) ? " in-chain" : ""}" style="left:${pct}%" data-src="${vs.src}" title="${esc(label)}" aria-label="${esc(label)}">${KIND_GLYPH[vs.kind]}</button>`);
     });
+    if (focusQuest != null) {
+      for (const src of chainSrcs) {
+        const at = posBySrc.get(src);
+        if (at === undefined) continue;
+        const label = `Quest chain: step ${stepNum(visibleSteps[at])}`;
+        ticks.push(`<button type="button" tabindex="-1" class="tl-tick tl-chain" style="left:${((at / (n - 1)) * 100).toFixed(2)}%" data-src="${src}" title="${esc(label)}" aria-label="${esc(label)}"></button>`);
+      }
+    }
     const li = liveSrc != null ? posBySrc.get(liveSrc) : undefined;
     if (li !== undefined) {
       const label = `${liveWho()} is here: step ${stepNum(visibleSteps[li])}`;
@@ -883,6 +1030,7 @@ function renderTimeline(): void {
     }
   }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
+  $("rxpb-tl-ticks").classList.toggle("chain-on", focusQuest != null);
 }
 
 /** The guide window's header: the guide's name and RestedXP's #next guide. */
@@ -938,7 +1086,7 @@ function activeStepHtml(vs: VisibleStep): string {
     rows.push(`<div class="rxpb-obj-row${done ? " done" : ""}" data-obj="${esc(objKey)}">
       ${isCheckable ? `<input type="checkbox" class="rxpb-chk" tabindex="-1" ${done ? "checked" : ""} aria-label="Objective done">` : `<span class="rxpb-bullet">•</span>`}
       <div class="rxpb-obj-body">
-        ${b ? `<span class="rxpb-badge ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>` : ""}
+        ${b ? badgeHtml(b) : ""}
         ${hasText ? `<div class="rxpb-obj-text">${formatRxpText(a.raw_text || a.text)}${urlLink}${condTag}</div>` : `${urlLink}${condTag}`}
         ${commentTag}
       </div>
@@ -964,7 +1112,7 @@ function activeStepHtml(vs: VisibleStep): string {
 function stepItemHtml(vs: VisibleStep, i: number): string {
   const st = vs.step;
   const on = i === activeIdx;
-  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
+  const badges = (st.actions || []).map(actionBadge).filter(Boolean) as Badge[];
   const summaryText = st.text || badges.map((b) => b.label).join(" · ") || stepHeadline(st);
   const coord = st.x != null && st.y != null ? `${st.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
   return `<div class="rxpb-sitem-top">
@@ -972,14 +1120,14 @@ function stepItemHtml(vs: VisibleStep, i: number): string {
         <span class="rxpb-stitle">${formatRxpText((st.actions || []).find((a) => a.raw_text)?.raw_text || summaryText)}</span>
         ${coord ? `<span class="rxpb-scoord">${esc(coord)}</span>` : ""}
       </div>
-      ${badges.length ? `<div class="rxpb-sbadges">${badges.slice(0, 4).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}
+      ${badges.length ? `<div class="rxpb-sbadges">${badges.slice(0, 4).map((b) => badgeHtml(b, true)).join("")}</div>` : ""}
       ${on ? activeStepHtml(vs) : ""}`;
 }
 
 function setItemState(li: HTMLElement, i: number): void {
   const vs = visibleSteps[i];
   const on = i === activeIdx;
-  li.className = `rxpb-sitem k-${vs.kind}${on ? " on" : ""}${i < activeIdx ? " done" : ""}${vs.dimmed ? " dimmed" : ""}${vs.src === liveSrc ? " live" : ""}`;
+  li.className = `rxpb-sitem k-${vs.kind}${on ? " on" : ""}${i < activeIdx ? " done" : ""}${vs.dimmed ? " dimmed" : ""}${vs.src === liveSrc ? " live" : ""}${chainSrcs.has(vs.src) ? " in-chain" : ""}`;
   li.setAttribute("aria-selected", on ? "true" : "false");
   if (vs.src === liveSrc) li.setAttribute("aria-current", "location"); else li.removeAttribute("aria-current");
   li.tabIndex = on ? 0 : -1;
@@ -994,7 +1142,7 @@ function renderStepList(scrollActive = false): void {
   const listEl = $("rxpb-step-list");
   if (!listEl || !currentGuide) return;
   const q = filter.stepSearch.trim().toLowerCase();
-  const key = `${currentGuide.id}:${currentGuide.index}|${visibleSteps.map((v) => `${v.src}${v.rxpNum ?? "-"}`).join(",")}|${q}`;
+  const key = `${currentGuide.id}:${currentGuide.index}|${visibleSteps.map((v) => `${v.src}${v.rxpNum ?? "-"}`).join(",")}|${q}|${factsVersion}`;
   const hadFocus = listEl.contains(document.activeElement);
   if (key !== listKey) {
     listKey = key;
@@ -1051,6 +1199,7 @@ function selectStep(idx: number, scrollList = true): void {
   if (cont != null && inLeg && inLeg.kind === "fly" && mapsGeo()?.[String(inLeg.pa.um)]?.parent === cont
       && mapsGeo()?.[String(inLeg.pb.um)]?.parent === cont) activeMapId = cont;
   renderTimeline();
+  if (focusQuest != null) renderChainBar();
   renderStepList(scrollList);
   renderMap();
   followStep();
@@ -1117,6 +1266,8 @@ async function requestFacts(g: RxpGuideDetail): Promise<void> {
   if (currentGuide !== g) return;
   facts = f;
   factsVersion++;
+  renderStepList(false);             // the badges take the knowledge base's quest names
+  if (focusQuest != null) focusChain(focusQuest, false); else renderChainBar();
   renderMap();
 }
 
@@ -1258,6 +1409,10 @@ let wantGuide: { packId: string; index: number } | null = null;   // browseGuide
 export async function openGuide(packId: string, index: number): Promise<void> {
   stopPlay();
   selected = null;
+  focusQuest = null;
+  chainSrcs = new Set();
+  renderChainBar();
+  $("rxpb-step-list").classList.remove("chain-on");
   const seq = ++openSeq;
   const key = `${packId}:${index}`;
   let g = cache.get(key) || null;
@@ -1544,7 +1699,8 @@ function showHoverCard(el: SVGElement, pt?: { x: number; y: number }): void {
   const card = $("rxpb-hovercard");
   const kind = el.dataset.kind || "";
   const c = kind === "edge" || kind === "zone"
-    ? { head: `<b>${esc(mapName(Number(el.dataset.map)))}</b>`, body: `<div class="rxpb-hc-line">${kind === "edge" ? (el.dataset.dir === "from" ? "The way comes in from here." : "The way goes on there.") + " " : ""}Click to open its map.</div>` }
+    ? { head: `<b>${esc(mapName(Number(el.dataset.map)))}</b>`, body: `<div class="rxpb-hc-line">${kind === "edge" ? (el.dataset.chain ? (el.dataset.dir === "from" ? "The quest chain comes from there." : "The quest chain goes on there.")
+      : el.dataset.dir === "from" ? "The way comes in from here." : "The way goes on there.") + " " : ""}Click to open its map.</div>` }
     : elementCard(kind, Number(el.dataset.src ?? (kind === "leg" ? planned.find((l) => l.key === el.dataset.leg)?.to : NaN)),
       el.dataset.sub != null ? Number(el.dataset.sub) : null, el.dataset.leg ?? null);
   if (!c) { card.hidden = true; return; }
@@ -1697,7 +1853,8 @@ function wireKeys(): void {
       // the card, else the inspector (a popover closes itself first)
       const card = $("rxpb-hovercard");
       if (!card.hidden && !selected) { hideHoverCard(); e.preventDefault(); return; }
-      if (selected) { clearSelection(); e.preventDefault(); }
+      if (selected) { clearSelection(); e.preventDefault(); return; }
+      if (focusQuest != null) { focusChain(null); e.preventDefault(); }
       return;
     }
     // a text box, a select, a checkbox or the timeline slider handles its own keys (the slider steps on arrows);
@@ -1740,6 +1897,8 @@ function wireStepList(): void {
     const el = e.target as HTMLElement;
     const li = el.closest<HTMLLIElement>("li[data-src]");
     if (!li) return;
+    const qb = el.closest<HTMLButtonElement>(".rxpb-qb");
+    if (qb) { focusChain(Number(qb.dataset.quest)); return; }
     const link = el.closest<HTMLAnchorElement>(".rxpb-ext");
     if (link) { e.preventDefault(); if (link.dataset.url) call("shell:open", link.dataset.url); return; }
     const pill = el.closest<HTMLButtonElement>(".rxpb-wp-pill");
@@ -1814,6 +1973,7 @@ function wireCharacter(): void {
 /** The race, class or a toggle changed: list the steps again, keeping the current one. */
 function refilter(): void {
   rebuildVisibleSteps();
+  renderChainBar();
   renderHeader();
   renderCharacter();
   renderTimeline();
@@ -1896,6 +2056,12 @@ export function wireRxpBrowser(): void {
   });
   wireStepList();
   wireCharacter();
+  $("rxpb-chainbar").addEventListener("click", (e) => {
+    const el = e.target as Element;
+    if (el.closest("#rxpb-cb-close")) { focusChain(null); return; }
+    const b = el.closest<HTMLButtonElement>(".rxpb-cb-step");
+    if (b && !b.disabled) { stopPlay(); selectSrc(Number(b.dataset.src), true); }
+  });
   $("rxpb-speed").onchange = (e) => {
     playMs = Number((e.target as HTMLSelectElement).value) || 1600;
     if (playTimer !== null) { stopPlay(); togglePlay(); }

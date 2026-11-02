@@ -685,3 +685,17 @@ they don't spell out.
   the current step and the next full, then 1/x down to 0.07), and each layer is restacked so the nearest steps draw on
   top. Pointing at a pin or leg, or at a step in the list, focusing or picking it, brings that step (its pin and the leg
   into it) back to full. Steps done keep their look. Player request (the rest of the guide crowded the map, 2026-11-02).
+- **Guides page lights a quest's chain (contracts 4 and 8).** Additive to contract 4: an action of `rxp_import.py
+  guide` (`RxpGuideAction`) that names several quests (`.turninmultiple 101,200`, `.acceptmultiple`) carries
+  `quest_ids` (every quest, the first being `quest_id`); actions naming one quest are unchanged. Player-visible: the
+  accept / turn-in / objective / quest-collect badges in the step list are buttons, and their labels take the
+  knowledge base's quest name (`addon:rxpFacts` `quests[*].name`) when glide.db has none. A click lights the quest's
+  chain (back and forward through `quests[*].prev` / `next`, only the guide's quests; the quest alone without a
+  knowledge base): its steps stay bright on the map (a gold connector through them in step order, "continues in
+  <zone>" / "from <zone>" where it crosses zones, opening that zone), on the timeline (gold diamonds over the slider)
+  and in the list, the rest fades. A slim chain bar over the step list says "Quest N of M in a chain", each quest's
+  steps as buttons (RestedXP's number, ! ◎ ?; a click goes there), "goes on after this guide" when the last quest's
+  follow-up isn't in it, and with the knowledge base what a skip loses (`lost_if_skipped`, the coach's rule): "Skip it
+  and you lose X (step N) and Y (next guide)." / "Skipping it loses nothing later in this guide or the next." The ×,
+  Escape or the badge again turn it off; a guide change drops it. DOM-free logic in `rxp-quests.ts`
+  (`tests/test_rxp_quests.py`). Guides page plan, phase 3.
