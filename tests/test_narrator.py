@@ -42,6 +42,29 @@ export interface SpeechSettings { provider?: string; voiceName?: string; rate?: 
 
 # the stand-ins and the scenarios; every line takes DUR ms to say
 RUN = r"""
+// virtual time: the timers fire in the order they fall due, each as soon as nothing else is left to run, so the
+// lines' DUR and the waits take no real time and the measured times are exact (a loaded machine can't stretch them).
+// The clock starts at the real time (the narrator compares Date.now() with 0 for its once-a-minute notes).
+let now = Date.now(), seq = 0, pumping = false;
+const timers = [];
+const pump = () => {
+  pumping = false;
+  if (!timers.length) return;
+  timers.sort((a, b) => a.at - b.at || a.seq - b.seq);
+  const t = timers.shift();
+  now = Math.max(now, t.at);
+  t.fn(...t.args);
+  schedule();
+};
+const realImmediate = setImmediate;
+const schedule = () => { if (!pumping && timers.length) { pumping = true; realImmediate(pump); } };
+globalThis.setTimeout = (fn, ms = 0, ...args) => {
+  const t = { at: now + Math.max(0, Number(ms) || 0), seq: seq++, fn, args };
+  timers.push(t); schedule(); return t;
+};
+globalThis.clearTimeout = (t) => { const i = timers.indexOf(t); if (i >= 0) timers.splice(i, 1); };
+Date.now = () => now;
+
 const DUR = 80;
 const log = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

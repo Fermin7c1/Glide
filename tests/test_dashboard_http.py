@@ -16,11 +16,13 @@ import json
 import os
 import socket
 import sys
+import threading
 import time
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.join(ROOT, "companion"))
 import dashboard  # noqa: E402
+dashboard.SHUTDOWN_POLL_S = 0.02     # shutdown() returns at once instead of after up to 0.5 s
 from voice import HubVoice  # noqa: E402
 
 TOKEN = "t-0123456789abcdef"
@@ -192,25 +194,41 @@ assert '"after"' in q.get_nowait() and h.connected(q)
 h.disconnect(q)
 assert not h.connected(q)
 
+def settle(before):
+    """Wait for every thread started since `before` (the hooks' timers, and anything they start) to finish: the checks
+    below then see all that a connect() set off, without sleeping a fixed time."""
+    while True:
+        new = [t for t in threading.enumerate() if t not in before and t is not threading.current_thread()]
+        if not new:
+            return
+        for t in new:
+            t.join(10)
+            assert not t.is_alive(), "a thread the connect started is still running: %r" % t
+        before = before | set(new)
+
+
 # the first-client hook: once, shortly after the first client connects; "Glide voice ready." goes out then
 dashboard.FIRST_CLIENT_DELAY_S = 0.05
 h = dashboard.Hub()
 HubVoice({"enabled": True, "announce": True}, h)
 HubVoice({"enabled": True, "announce": False}, h)       # announce off: says nothing
 assert not h.clients, "nothing said before anyone listens"
+before = set(threading.enumerate())
 q, _ = h.connect()
 q2, _ = h.connect()
-time.sleep(0.5)
+settle(before)
 said = [q.get_nowait() for _ in range(q.qsize())]
 assert len(said) == 1 and "Glide voice ready." in said[0] and said[0].startswith("event: speak"), said
 assert q2.qsize() == 1, "the hook waited until both windows were listening"
+before = set(threading.enumerate())
 q3, _ = h.connect()
-time.sleep(0.3)
+settle(before)
 assert q3.empty(), "only once"
 muted_voice = HubVoice({"enabled": True, "announce": True}, dashboard.Hub())
 muted_voice.muted = True
+before = set(threading.enumerate())
 q4, _ = muted_voice.hub.connect()
-time.sleep(0.3)
+settle(before)
 assert q4.empty(), "muted by the time the app connects: silent"
 # the desktop window opens only web links outside (a link to a file or another app's scheme is dropped)
 win_ts = open(os.path.join(ROOT, "desktop", "src", "main", "app", "main-window.ts"), encoding="utf-8").read()
