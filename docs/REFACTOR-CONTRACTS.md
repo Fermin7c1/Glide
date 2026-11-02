@@ -699,3 +699,13 @@ they don't spell out.
   and you lose X (step N) and Y (next guide)." / "Skipping it loses nothing later in this guide or the next." The ×,
   Escape or the badge again turn it off; a guide change drops it. DOM-free logic in `rxp-quests.ts`
   (`tests/test_rxp_quests.py`). Guides page plan, phase 3.
+- **Guides page: before you start (contract 8).** Player-visible: a slim row at the top of the guide window lists
+  what the guide has the picked character buy, buy at the Auction House or take from / put in the bank
+  (`addon:rxpFacts` `prep`, which needs no knowledge base), from the current step on: "Before you start" while every
+  item is ahead, "Still to get" once some are behind. Each chip shows ◈ / ⚖ / ⇡ / ⇣, the count and name ("10×
+  Refreshing Spring Water") and where it's needed ("for step 15", "for the next guide"); its card says the step, who
+  sells it and for how much (with the knowledge base) and the quest it's for; a click goes to the step that gets it.
+  Items follow the Character picks and settings (the step's and the action's masks: an Auction House step drops with
+  solo self-found); the same need offered at two steps counts once. A row too long for the window ends in "+N",
+  which opens the rest ("Less" closes it). Collect badges take the prep list's item name when glide.db has none. No
+  IPC, file or state change. DOM-free logic in `rxp-prep.ts` (`tests/test_rxp_prep.py`). Guides page plan, phase 4.
