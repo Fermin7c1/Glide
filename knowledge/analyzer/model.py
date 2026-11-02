@@ -895,28 +895,8 @@ class Walker:
         res["travel"] = dict(res["travel"] or {}, mode="death")
 
     def deathskip_graveyard(self, here, nxt):
-        """Graveyard a deathskip lands at. RestedXP places deathskips where the respawn is useful, so among the
-        graveyards of the continent within ~2500 yd of the death spot take the one nearest to the next step;
-        without a next position, the nearest one (graveyard zone links are not in the KB)."""
-        d = self.data
-        if here is None:
-            return None
-        if nxt is None:
-            return d.nearest_graveyard(here)[0]
-        best, bk = None, None
-        for r in d.pois["graveyard"]:
-            if r["x"] is None:
-                continue
-            gp = (r["ui_map"], r["x"], r["y"])
-            dh = d.dist_yd(here, gp)
-            if dh is None or dh == math.inf or dh > 2500:
-                continue
-            dn = d.dist_yd(gp, nxt)
-            if dn is None or dn == math.inf:
-                continue
-            if bk is None or dn < bk:
-                best, bk = r, dn
-        return best or d.nearest_graveyard(here)[0]
+        """Graveyard a deathskip lands at (KBData.deathskip_graveyard, shared with the guide browser's routes)."""
+        return self.data.deathskip_graveyard(here, nxt)
 
     def extra_grind(self, st, step, res, g):
         if g.get("to_level"):

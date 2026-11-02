@@ -2,6 +2,7 @@
 from extract_maps, data/gamedata/nav from tools/navmesh.py) and the way to the current step (walk, fly, walk)."""
 import math
 import threading
+from types import SimpleNamespace
 
 from knowledge import store
 from knowledge.api._layer import MT, NAV, TX, get_data, run_time
@@ -62,13 +63,14 @@ def _nav_links(ctx, t):
     return links
 
 
-def _walk_grid(ctx, t, wa, wb):
+def _walk_grid(ctx, t, wa, wb, max_expand=None):
     """The old 8.3 yd terrain grid (until tools/navmesh.py has built the walkable-space graph) -> (world points,
-    swim yd, area ids along the way, source) or None."""
+    swim yd, area ids along the way, source) or None. max_expand caps the search (None: find_path's default)."""
     a, b = NAV.nearest_walkable(t, t.cell_of(*wa)), NAV.nearest_walkable(t, t.cell_of(*wb))
     straight = math.hypot(wa[0] - wb[0], wa[1] - wb[1])
     margin = int(min(300, max(60, straight / t.cell * 0.6)))
-    path, _cost, _ex = NAV.find_path(t, a, b, _nav_links(ctx, t), margin=margin)
+    cap = {} if max_expand is None else {"max_expand": int(max_expand)}
+    path, _cost, _ex = NAV.find_path(t, a, b, _nav_links(ctx, t), margin=margin, **cap)
     if path is None:
         return None
     pts = [t.world_of(r, c) for r, c in path]
@@ -80,8 +82,9 @@ def _walk_grid(ctx, t, wa, wb):
 _TRACK = {}          # kb id -> (node, (X, Y)): the node the player was last seen on (which floor: NavGraph.track)
 
 
-def _walk_nav(ctx, g, wa, wb, track=False):
-    """Over the walkable-space graph -> (world points, swim yd, area ids, source) or None."""
+def _walk_nav(ctx, g, wa, wb, track=False, max_expand=None):
+    """Over the walkable-space graph -> (world points, swim yd, area ids, source) or None. max_expand caps the
+    search (None: NavGraph.find's default)."""
     a = None
     if track:
         h = ctx.summary.get("height")
@@ -98,7 +101,8 @@ def _walk_nav(ctx, g, wa, wb, track=False):
         _TRACK[id(ctx.kb)] = (a, wa)
     straight = math.hypot(wa[0] - wb[0], wa[1] - wb[1])
     margin = int(min(320, max(40, straight / g.cell * 0.7)))
-    path, _cost, _ex = g.find(a, b, margin=margin, any_floor=True)
+    cap = {} if max_expand is None else {"max_expand": int(max_expand)}
+    path, _cost, _ex = g.find(a, b, margin=margin, any_floor=True, **cap)
     if path is None:
         return None
     nodes = g.smooth(path)
@@ -112,19 +116,30 @@ def _walk_nav(ctx, g, wa, wb, track=False):
     return pts, swim, [int(g.area[n[1], n[2]]) for n in path], src
 
 
-def _walk(ctx, cont, wa, wb, track=False):
-    """Walking route between two world points of one continent -> (points, swim_yd, area ids, source) or a reason."""
-    g = NAV.load_graph(store.ROOT, cont)
+def _walk(ctx, cont, wa, wb, track=False, max_expand=None, root=None):
+    """Walking route between two world points of one continent -> (points, swim_yd, area ids, source) or a reason.
+    max_expand caps each search (None: the searches' own defaults, as the coach uses them); root is the install
+    whose data/gamedata is read (None: store.ROOT)."""
+    root = root or store.ROOT
+    g = NAV.load_graph(root, cont)
     if g is not None:
-        r = _walk_nav(ctx, g, wa, wb, track)
+        r = _walk_nav(ctx, g, wa, wb, track, max_expand)
         if r is not None:
             return r
-    t = NAV.load(store.ROOT, cont)
+    t = NAV.load(root, cont)
     if t is None:
         return "no terrain for this continent yet"
     if t.cell_of(*wa) is None or t.cell_of(*wb) is None:
         return "a point is outside the extracted terrain"
-    return _walk_grid(ctx, t, wa, wb) or "no walkable route found"
+    return _walk_grid(ctx, t, wa, wb, max_expand) or "no walkable route found"
+
+
+def walk_world(kb, cont, wa, wb, max_expand=None, root=None):
+    """Walking route between two world points (X, Y) of continent `cont`, outside the live coach (the guide
+    browser's routes, companion/rxp_routes.py): no player, no floor tracking. kb is a store.KB (the terrain grid's
+    extra links read its guides). -> (world points, swim yd, area ids along the way, source) or a reason string."""
+    ctx = SimpleNamespace(kb=kb, level=None, summary={})
+    return _walk(ctx, cont, (float(wa[0]), float(wa[1])), (float(wb[0]), float(wb[1])), False, max_expand, root)
 
 
 def _area_names(ctx, ids):

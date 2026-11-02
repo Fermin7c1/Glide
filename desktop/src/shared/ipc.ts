@@ -180,6 +180,57 @@ export interface RxpGuideDetail {
   world_only?: number;               // steps RestedXP placed only in world coordinates
   placed?: number;                   // of those, the positions put on their maps (needs the knowledge base's map bounds)
 }
+/** What the Guides page asks `rxp_import.py routes` (companion/rxp_routes.py): the visible steps in page order
+ * (guide step numbers, st.idx), the step looked at (its legs first), a time budget, and the character. */
+export interface RxpRoutesRequest {
+  steps: number[];
+  focus?: number;
+  budget_ms?: number;                // 0: only what the route cache already holds
+  faction?: string | null;           // default: the guide's
+  level?: number | null;             // default: the guide's first level (walking times, mounted from the mount level)
+}
+/** One piece of a leg, in map percent on every guide map (and continent map) of its continent it touches (keys are
+ * uiMap ids; points not clamped to 0..100). walk: routed over the walking map; straight: not routed (why says why);
+ * fly: along the flown curve; hearth / death / boat: a jump to where it lands, never walked. */
+export interface RxpRouteSegment {
+  mode: "walk" | "straight" | "fly" | "hearth" | "death" | "boat";
+  maps: Record<string, [number, number][]>;
+  yd: number | null;
+  s: number | null;                  // seconds, when known
+  straight_yd?: number;              // walk
+  swim_yd?: number | null;
+  through?: string[];                // areas passed through
+  dirs?: { go: string; yd: number; to: string | null }[];   // compass directions
+  source?: string;                   // what it was routed over
+  why?: string;                      // straight: why it isn't routed
+  from?: string;                     // fly: flight masters
+  to?: string | null;                // fly: landing; hearth / death: where it lands
+  hops?: number;
+  approx?: boolean;                  // fly: straight between flight masters (no taxi tables)
+}
+/** The way between two consecutive stops: step `from`'s waypoint `a` to step `to`'s waypoint `b` (indexes into
+ * the step's waypoints; -1 is the step's own x/y). */
+export interface RxpRouteLeg {
+  from: number;
+  a: number;
+  to: number;
+  b: number;
+  mode: "walk" | "straight" | "fly" | "hearth" | "death" | "boat";
+  yd: number | null;                 // walked and flown
+  s: number | null;
+  approx: boolean;                   // part of it is a straight guess
+  segments: RxpRouteSegment[];
+}
+/** What `addon:rxpRoutes` answers: the legs worked out so far, and the ones still pending (ask again: each call
+ * mostly reads the cache, data/rxp_imports/routes.db). nav: per continent, what walking legs were routed over. */
+export interface RxpRoutes {
+  legs: RxpRouteLeg[];
+  pending: [number, number, number, number][];   // [from, a, to, b], nearest the focus first
+  nav: Record<string, "graph" | "grid" | "none">;
+  unavailable?: string;              // nothing can be placed (no knowledge base yet)
+  error?: string;                    // the command failed
+  ms?: number;
+}
 /** A RestedXP guide string added on the Addon page (companion/rxp_import.py status). rxp: whether RestedXP has it
  * yet; the Glide addon hands it to RestedXP's importer at the next login ("waiting"), then notes "done" or "failed". */
 export interface RxpImport {
@@ -256,6 +307,7 @@ export interface InvokeMap {
   "addon:install": () => { done: string[]; status: AddonStatus };
   "addon:rxpImport": (text: string) => RxpImportResult;   // add a RestedXP guide string (companion/rxp_import.py)
   "addon:rxpImports": (id?: string, index?: number) => RxpImport[] | RxpGuideDetail | null; // list or one parsed guide
+  "addon:rxpRoutes": (id: string, index: number, req: RxpRoutesRequest) => RxpRoutes; // walking routes between steps
   "dialog:folder": (title: string, defaultPath?: string) => string | null;
   "data:import": (from: string) => boolean;
   "shell:open": (target: string) => string | void;

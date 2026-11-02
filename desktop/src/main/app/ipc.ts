@@ -9,7 +9,7 @@ import { defaultHome, isCheckout, isDev, logsDir, pythonCommand, whisperDirs } f
 import { ResourceSampler } from "../resources";
 import { keyStatus, KNOWN_KEYS, setKey } from "../secrets";
 import { listWhisperModels, Speech } from "../speech";
-import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpImport, RxpImportResult } from "../../shared/ipc";
+import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpImport, RxpImportResult, RxpRoutes, RxpRoutesRequest } from "../../shared/ipc";
 import { appSettingsProblem, Obj } from "../store";
 import { synth, TTS_KEYS, voices as ttsVoices } from "../tts";
 import { Updater } from "../updater";
@@ -262,6 +262,18 @@ function addonChannels({ engine }: IpcDeps): void {
       return g;
     }
     return ((await rxpTool(engine, "status")).imports || []) as RxpImport[];
+  });
+  // walking routes between a guide's steps: its own short process at below-normal priority (rxp_routes.py), so the
+  // live coach's walking map stays loaded; one request in flight per guide is the Guides page's job
+  handle("addon:rxpRoutes", async (id: string, index: number, req: RxpRoutesRequest) => {
+    try {
+      const r = await engine.pythonJson([path.join("companion", "rxp_import.py"), "routes", String(id), String(index)],
+        JSON.stringify(req || {}), engineOptions());
+      if (r.ok && r.routes) return r.routes as RxpRoutes;
+      return { legs: [], pending: [], nav: {}, error: String(r.error || "no answer") };
+    } catch (e) {
+      return { legs: [], pending: [], nav: {}, error: (e as Error).message };
+    }
   });
 }
 

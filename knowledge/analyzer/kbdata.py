@@ -620,6 +620,30 @@ class KBData:
                 best, bd = r, d
         return best, bd
 
+    def deathskip_graveyard(self, here, nxt):
+        """Graveyard a deathskip at `here` lands at, (ui_map, x, y) points. RestedXP places deathskips where the
+        respawn is useful, so among the graveyards of the continent within ~2500 yd of the death spot take the one
+        nearest to the next step `nxt`; without a next position, the nearest one (graveyard zone links are not in
+        the KB). -> poi row or None."""
+        if here is None:
+            return None
+        if nxt is None:
+            return self.nearest_graveyard(here)[0]
+        best, bk = None, None
+        for r in self.pois["graveyard"]:
+            if r["x"] is None:
+                continue
+            gp = (r["ui_map"], r["x"], r["y"])
+            dh = self.dist_yd(here, gp)
+            if dh is None or dh == math.inf or dh > 2500:
+                continue
+            dn = self.dist_yd(gp, nxt)
+            if dn is None or dn == math.inf:
+                continue
+            if bk is None or dn < bk:
+                best, bk = r, dn
+        return best or self.nearest_graveyard(here)[0]
+
     def _load_area_boxes(self):
         out = {}
         for r in self.kb.q("SELECT area_id, ui_map, x1, y1, x2, y2 FROM area_box"):

@@ -771,6 +771,8 @@ def main(argv=None):
     """add (the string on stdin) | status | sync, for the desktop app: one JSON object on stdout."""
     argv = sys.argv[1:] if argv is None else argv
     cmd = argv[0] if argv else ""
+    if cmd == "routes" and len(argv) >= 3:      # walking routes between the steps (rxp_routes.py; JSON on stdin)
+        return __import__("rxp_routes").main(argv)
     import glideconfig
     wow_dir = glideconfig.wow_dir(ROOT)
     try:

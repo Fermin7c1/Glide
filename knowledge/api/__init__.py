@@ -36,15 +36,15 @@ poi:<kind>:<id> g:<glossary term>. verify_facts() accepts one only when the row 
 
 Modules: pack (KnowledgePack, a facade over resolve, lookup, panel, extras and facts), context (Ctx), guides
 (guide and player resolution), results (budgets, trimming, fact ids), reasons (why codes in words), community
-(community notes), navigation (walking and flying routes), tools (the Claude tools and dispatch), values (small
-shared helpers), _layer (the defensive imports).
+(community notes), navigation (walking and flying routes; walk_world for routes outside the coach), tools (the
+Claude tools and dispatch), values (small shared helpers), _layer (the defensive imports).
 """
 from knowledge.api._layer import IMPORT_ERROR
 from knowledge.api.community import NOTE_SKIP, community_notes
 from knowledge.api.context import Ctx
 from knowledge.api.guides import (DEFAULT_RXP, HORDE_RACES, RXP_KEYS, GuideResolver, norm_guide_name, player_from,
                                   resolve_guide_key)
-from knowledge.api.navigation import flight_from_track, plan_to_step, walk_route, walk_to_step
+from knowledge.api.navigation import flight_from_track, plan_to_step, walk_route, walk_to_step, walk_world
 from knowledge.api.pack import KnowledgePack, verify_facts
 from knowledge.api.reasons import WHY_NOT_TEXT, WHY_TEXT, why_text
 from knowledge.api.results import BLOCK_TOKENS, FACT_RE, RESULT_TOKENS, approx_tokens, fit_block, trim_result
@@ -60,7 +60,8 @@ from knowledge.api.values import COMPASS, CONFIRMED, RANK, compass, money_text
 
 __all__ = ["IMPORT_ERROR", "NOTE_SKIP", "community_notes", "Ctx", "DEFAULT_RXP", "HORDE_RACES", "RXP_KEYS",
            "GuideResolver", "norm_guide_name", "player_from", "resolve_guide_key", "flight_from_track", "plan_to_step",
-           "walk_route", "walk_to_step", "KnowledgePack", "verify_facts", "WHY_NOT_TEXT", "WHY_TEXT", "why_text",
+           "walk_route", "walk_to_step", "walk_world", "KnowledgePack", "verify_facts", "WHY_NOT_TEXT", "WHY_TEXT",
+           "why_text",
            "BLOCK_TOKENS", "FACT_RE", "RESULT_TOKENS", "approx_tokens", "fit_block", "trim_result", "TOOL_BUDGET_S",
            "TOOLS", "dispatch", "tool_definitions", "tool_names", "t_community", "t_heuristics", "t_creature_info",
            "t_glossary", "t_quest_info", "t_search", "t_kill_xp", "t_param", "t_quest_xp", "route_steps",

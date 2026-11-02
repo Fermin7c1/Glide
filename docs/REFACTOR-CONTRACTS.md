@@ -580,3 +580,14 @@ they don't spell out.
   a card beside it with the step's number, instruction, quest and NPC badges and position; Enter or Space picks it.
   The pins' native tooltips (SVG `<title>`) are replaced by the card and an `aria-label`. The player asked for map
   interactivity (2026-11-02).
+- **Desktop IPC, command lines and files on disk (additive): walking routes between a guide's steps.** A new channel
+  `addon:rxpRoutes(id, index, req)` (contract 4; in `InvokeMap`, the preload allowlist and `main/app/ipc.ts`; types
+  `RxpRoutesRequest`, `RxpRoutes`, `RxpRouteLeg`, `RxpRouteSegment` in `desktop/src/shared/ipc.ts`) runs a new
+  subcommand `rxp_import.py routes <id> <index>` with the request as JSON on stdin (contract 7;
+  `companion/rxp_routes.py`, which documents the answer: legs between consecutive stops of the visible steps by
+  guide step number, walk / fly / hearth / death / boat / straight segments in map percent on every guide map of
+  their continent, and `pending` legs to ask for again). It keeps walking geometry in a new cache,
+  `data/rxp_imports/routes.db` (contract 5; sqlite3, safe to delete). `knowledge/api/navigation.py` gains an
+  optional `max_expand` (None keeps the coach's searches as they are) and `walk_world`. Nothing is drawn yet: the
+  Guides page uses it in phase 1 of docs/plans/guides-explorer.md (recommendation "Drawn walking routes" 1-8,
+  2026-11-02).
