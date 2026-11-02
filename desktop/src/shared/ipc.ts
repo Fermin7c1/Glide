@@ -131,6 +131,7 @@ export interface RxpGuideAction {
   comment?: string | null;
   cond: string | null;
   quest_id: number | null;
+  quest_ids?: number[];              // a multi-quest verb (.turninmultiple 101,200): every quest it names, quest_id first
   quest_name: string | null;
   entity_kind: string | null;
   entity_id: number | null;
