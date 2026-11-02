@@ -542,18 +542,37 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-map-stage { position: relative; aspect-ratio: 1002 / 668; width: min(100cqw, calc(100cqh * 1002 / 668));
   border-radius: var(--radius-m); overflow: hidden;
   background: radial-gradient(110% 90% at 50% 45%, #1d2230, #0c0e15); box-shadow: 0 0 0 1px var(--edge), 0 14px 32px rgba(0, 0, 0, 0.55); user-select: none; }
+/* zoom and pan move one layer (the image and the drawing together); pins, arrowheads and lines keep their size on
+   screen: their bodies scale by --inv (1 / zoom), and line widths and dashes are multiplied by it */
+.rxpb-map-stage { cursor: grab; touch-action: none; }
+.rxpb-map-stage.dragging { cursor: grabbing; }
+.rxpb-map-layer { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
 #rxpb-map-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 #rxpb-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.rxpb-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }
+.rxpb-body { transform: scale(var(--inv, 1)); }
+.rxpb-arrowhead { fill: var(--gold); stroke: rgba(0, 0, 0, 0.8); stroke-width: 1.2; }
+.rxpb-arrowhead.done { fill: rgba(242, 194, 79, 0.75); }
+.rxpb-arrowhead.chain { fill: #00bcd4; }
+.rxpb-leg-start { fill: #12152b; stroke: #fffaf0; stroke-width: 2; }
+.rxpb-map-tools { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  justify-content: flex-end; max-width: 60%; cursor: default; }
+.rxpb-mt { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border-radius: 7px; background: rgba(12, 13, 18, 0.88);
+  color: var(--ink); border: 1px solid var(--edge); font: 600 18px/1 var(--f-ui); cursor: pointer; }
+.rxpb-mt:hover { color: var(--gold); border-color: var(--gold-dim); }
+.rxpb-mt-chk { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 7px;
+  background: rgba(12, 13, 18, 0.88); border: 1px solid var(--edge); font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.rxpb-mt-chk:has(input:checked) { color: var(--gold); border-color: var(--gold-dim); }
+.rxpb-mt-chk input { accent-color: var(--gold); margin: 0; }
+.rxpb-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: calc(1px * var(--inv, 1)); }
 .rxpb-map-note { fill: #fff3d6; font-size: 17px; paint-order: stroke; stroke: rgba(12, 13, 18, 0.85); stroke-width: 4px; }
-.rxpb-path-future { fill: none; stroke: rgba(255, 250, 240, 0.28); stroke-width: 2.2; stroke-dasharray: 5 6; }
-.rxpb-path-case { fill: none; stroke: rgba(0, 0, 0, 0.72); stroke-width: 6.5; stroke-linecap: round; stroke-linejoin: round; }
-.rxpb-path-done { fill: none; stroke: rgba(242, 194, 79, 0.65); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.rxpb-leg-case { fill: none; stroke: rgba(0, 0, 0, 0.85); stroke-width: 8.5; stroke-linecap: round; }
-.rxpb-leg-walk { fill: none; stroke: #fffaf0; stroke-width: 3.8; stroke-linecap: round; }
-.rxpb-leg-flow { fill: none; stroke: var(--gold); stroke-width: 3.8; stroke-dasharray: 8 10; stroke-linecap: round; animation: rxpb-dash 1s linear infinite; }
-.rxpb-step-chain { fill: none; stroke: #00bcd4; stroke-width: 3; stroke-dasharray: 5 5; }
-.rxpb-loop { fill: rgba(255, 87, 34, 0.14); stroke: #ff5722; stroke-width: 2.8; stroke-dasharray: 6 4; }
+.rxpb-path-future { fill: none; stroke: rgba(255, 250, 240, 0.28); stroke-width: calc(2.2px * var(--inv, 1)); stroke-dasharray: calc(5px * var(--inv, 1)) calc(6px * var(--inv, 1)); }
+.rxpb-path-case { fill: none; stroke: rgba(0, 0, 0, 0.72); stroke-width: calc(6.5px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-path-done { fill: none; stroke: rgba(242, 194, 79, 0.65); stroke-width: calc(3px * var(--inv, 1)); stroke-linecap: round; stroke-linejoin: round; }
+.rxpb-leg-case { fill: none; stroke: rgba(0, 0, 0, 0.85); stroke-width: calc(8.5px * var(--inv, 1)); stroke-linecap: round; }
+.rxpb-leg-walk { fill: none; stroke: #fffaf0; stroke-width: calc(3.8px * var(--inv, 1)); stroke-linecap: round; }
+.rxpb-leg-flow { fill: none; stroke: var(--gold); stroke-width: calc(3.8px * var(--inv, 1)); stroke-dasharray: calc(8px * var(--inv, 1)) calc(10px * var(--inv, 1)); stroke-linecap: round; animation: rxpb-dash 1s linear infinite; }
+.rxpb-step-chain { fill: none; stroke: #00bcd4; stroke-width: calc(3px * var(--inv, 1)); stroke-dasharray: calc(5px * var(--inv, 1)) calc(5px * var(--inv, 1)); }
+.rxpb-loop { fill: rgba(255, 87, 34, 0.14); stroke: #ff5722; stroke-width: calc(2.8px * var(--inv, 1)); stroke-dasharray: calc(6px * var(--inv, 1)) calc(4px * var(--inv, 1)); }
 @keyframes rxpb-dash { to { stroke-dashoffset: -18; } }
 
 .rxpb-pin { cursor: pointer; transition: transform 0.12s var(--ease-out); }

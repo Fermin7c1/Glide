@@ -182,9 +182,18 @@
         <div class="rxpb-zones" id="rxpb-zones" role="tablist" aria-label="Guide zones"></div>
         <div class="rxpb-map-box">
           <div class="rxpb-map-stage" id="rxpb-map-stage">
-            <img id="rxpb-map-img" alt="" draggable="false">
-            <svg id="rxpb-map-svg" viewBox="0 0 1002 668" preserveAspectRatio="none"></svg>
+            <div class="rxpb-map-layer" id="rxpb-map-layer">
+              <img id="rxpb-map-img" alt="" draggable="false">
+              <svg id="rxpb-map-svg" viewBox="0 0 1002 668" preserveAspectRatio="none"></svg>
+            </div>
             <div class="rxpb-arrow-hud" id="rxpb-arrow-hud" hidden></div>
+            <div class="rxpb-map-tools" role="toolbar" aria-label="Map view">
+              <button type="button" class="rxpb-mt" id="rxpb-zoom-in" title="Zoom in (scroll wheel, +)" aria-label="Zoom in">+</button>
+              <button type="button" class="rxpb-mt" id="rxpb-zoom-out" title="Zoom out (scroll wheel, -)" aria-label="Zoom out">&minus;</button>
+              <button type="button" class="rxpb-mt" id="rxpb-zoom-reset" title="Whole zone (double-click the map, 0)" aria-label="Show the whole zone">&#x2922;</button>
+              <label class="rxpb-mt-chk" title="Keep the current step in the middle of the map"><input type="checkbox" id="rxpb-follow"><span>Follow step</span></label>
+              <label class="rxpb-mt-chk" title="Show the pins of the steps before the current one"><input type="checkbox" id="rxpb-showdone"><span>Done steps</span></label>
+            </div>
             <div class="rxpb-inspector" id="rxpb-inspector" hidden></div>
           </div>
         </div>

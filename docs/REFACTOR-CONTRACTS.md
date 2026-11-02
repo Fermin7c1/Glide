@@ -564,3 +564,9 @@ they don't spell out.
   change. Also from the review: walking the route stops when the player leaves the page and scrolls only the step
   list, the latest guide picked wins over a slower earlier one, a guide that fails to open says so, and a guide filed
   under both factions keeps the group it was picked from. The player asked (2026-11-02).
+- **Follow-up, what the player sees: the Guides map zooms and pans, and done steps step aside.** The scroll wheel zooms
+  toward the cursor (up to 8x), dragging pans, double-click (or the reset button, or 0) shows the whole zone, + and -
+  zoom; pins, arrowheads and lines keep their size on screen. "Follow step" keeps the current step in the middle;
+  pins of the steps before the current one are hidden unless "Done steps" is on. On the Guides page, away from a text
+  box, Left/Right step through the route and Space walks it or stops. Arrowheads are drawn as their own shapes
+  instead of line markers (markers grow with zoom). The player asked (2026-11-02).

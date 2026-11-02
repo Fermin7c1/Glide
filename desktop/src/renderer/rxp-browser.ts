@@ -61,7 +61,59 @@ const filter = {
   groupQuests: true,
   hardcore: false,
   showAllCond: false,
+  showDone: false,          // the pins of the steps before the current one ("Done steps")
+  follow: false,            // keep the current step in the middle of the map ("Follow step")
 };
+
+// ---- the map's zoom and pan: the layer holding the image and the drawing, scaled and moved together -------------
+const MAX_ZOOM = 8;
+const view = { z: 1, fx: 0, fy: 0, map: null as number | null };   // fx, fy: the layer's offset as a share of the stage
+
+function stageSize(): { w: number; h: number } {
+  const r = $("rxpb-map-stage").getBoundingClientRect();
+  return { w: r.width || 1, h: r.height || 1 };
+}
+
+/** Put the layer where `view` says, kept over the stage (no empty edge), and keep pins at their size on screen. */
+function applyView(): void {
+  view.z = Math.min(MAX_ZOOM, Math.max(1, view.z));
+  view.fx = Math.min(0, Math.max(1 - view.z, view.fx));
+  view.fy = Math.min(0, Math.max(1 - view.z, view.fy));
+  const { w, h } = stageSize();
+  $("rxpb-map-layer").style.transform = `translate(${(view.fx * w).toFixed(1)}px, ${(view.fy * h).toFixed(1)}px) scale(${view.z})`;
+  $("rxpb-map-svg").style.setProperty("--inv", String(1 / view.z));
+}
+
+/** Zoom by `factor` keeping the stage point (sx, sy) (pixels; default the middle) where it is. */
+function zoomAt(factor: number, sx?: number, sy?: number): void {
+  const { w, h } = stageSize();
+  const px = sx ?? w / 2, py = sy ?? h / 2;
+  const z0 = view.z, z1 = Math.min(MAX_ZOOM, Math.max(1, z0 * factor));
+  view.fx = (px - (px - view.fx * w) * (z1 / z0)) / w;
+  view.fy = (py - (py - view.fy * h) * (z1 / z0)) / h;
+  view.z = z1;
+  applyView();
+}
+
+/** The whole zone again. */
+function resetView(): void {
+  view.z = 1;
+  view.fx = view.fy = 0;
+  applyView();
+}
+
+/** Put map point (x, y) (percent) in the middle, zooming in first when the whole zone is shown. */
+function centerOn(x: number, y: number): void {
+  if (view.z < 2) view.z = 2.5;
+  view.fx = 0.5 - (x / 100) * view.z;
+  view.fy = 0.5 - (y / 100) * view.z;
+  applyView();
+}
+
+function followStep(): void {
+  const cur = visibleSteps[activeIdx];
+  if (filter.follow && cur && cur.ui_map === activeMapId && cur.step.x != null && cur.step.y != null) centerOn(cur.step.x, cur.step.y);
+}
 
 /** Evaluate RestedXP's `<<` condition string against the picked race (with its faction) and class. */
 function condApplies(raw: string | null | undefined): boolean {
@@ -235,6 +287,11 @@ function renderMap(): void {
     };
   });
 
+  if (view.map !== mapId) {
+    view.map = mapId;
+    resetView();
+  }
+
   const imgUrl = mapImageUrl(mapId);
   const imgEl = $<HTMLImageElement>("rxpb-map-img");
   if (imgUrl) {
@@ -269,18 +326,36 @@ function renderMap(): void {
     }
   }
 
+  // Steps before the current one are hidden unless "Done steps" is on (a busy hub is otherwise a pile of old pins);
+  // the step the player pinned stays
+  const shownSteps = zoneSteps.filter(({ idx }) => filter.showDone || idx >= activeIdx || idx === pinnedStepIdx);
+
+  // An arrowhead at (x, y) pointing along (dx, dy), in a body that keeps its size on screen at any zoom
+  const arrowhead = (x: number, y: number, dx: number, dy: number, cls: string) => {
+    if (!dx && !dy) return "";
+    const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${deg.toFixed(1)})"><g class="rxpb-body">`
+      + `<path class="rxpb-arrowhead ${cls}" d="M 7 0 L -5 -5.5 L -2 0 L -5 5.5 Z"/></g></g>`;
+  };
+  const midArrows = (pts: [number, number][], cls: string) => pts.slice(1).map(([x2, y2], i) => {
+    const [x1, y1] = pts[i];
+    return Math.hypot(x2 - x1, y2 - y1) > 18 ? arrowhead((x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1, cls) : "";
+  }).join("");
+
   // 1. Future route path (steps after activeIdx in this zone)
   const futurePts = zoneSteps.filter((z) => z.idx >= activeIdx).map((z) => `${mapX(z.vs.step.x!)},${mapY(z.vs.step.y!)}`);
   if (futurePts.length > 1) {
     svg.push(`<polyline class="rxpb-path-future" points="${futurePts.join(" ")}"/>`);
   }
 
-  // 2. Completed route path (steps up to activeIdx in this zone)
+  // 2. Completed route path (steps up to activeIdx in this zone), with "Done steps" on
   const pastSteps = zoneSteps.filter((z) => z.idx <= activeIdx);
-  if (pastSteps.length > 1) {
-    const pastPts = pastSteps.map((z) => `${mapX(z.vs.step.x!)},${mapY(z.vs.step.y!)}`).join(" ");
+  if (filter.showDone && pastSteps.length > 1) {
+    const pts = pastSteps.map((z) => [mapX(z.vs.step.x!), mapY(z.vs.step.y!)] as [number, number]);
+    const pastPts = pts.map(([x, y]) => `${x},${y}`).join(" ");
     svg.push(`<polyline class="rxpb-path-case" points="${pastPts}"/>`);
-    svg.push(`<polyline class="rxpb-path-done" points="${pastPts}" marker-mid="url(#rxpb-arr-done)"/>`);
+    svg.push(`<polyline class="rxpb-path-done" points="${pastPts}"/>`);
+    svg.push(midArrows(pts, "done"));
   }
 
   // 3. Active leg (from previous waypoint in this zone to the current step's waypoint)
@@ -298,16 +373,23 @@ function renderMap(): void {
   const targetWp = curWps[activeWpIdx] || curWps[0] || (cur && cur.ui_map === mapId && cur.step.x != null ? { x: cur.step.x, y: cur.step.y! } : null);
 
   if (prevX != null && prevY != null && targetWp && (Math.hypot(targetWp.x - prevX, targetWp.y - prevY) > 0.2)) {
-    const legPts = `${mapX(prevX)},${mapY(prevY)} ${mapX(targetWp.x)},${mapY(targetWp.y)}`;
+    const [x1, y1, x2, y2] = [mapX(prevX), mapY(prevY), mapX(targetWp.x), mapY(targetWp.y)];
+    const legPts = `${x1},${y1} ${x2},${y2}`;
     svg.push(`<polyline class="rxpb-leg-case" points="${legPts}"/>`);
     svg.push(`<polyline class="rxpb-leg-walk" points="${legPts}"/>`);
-    svg.push(`<polyline class="rxpb-leg-flow" points="${legPts}" marker-end="url(#rxpb-arr-cur)"/>`);
+    svg.push(`<polyline class="rxpb-leg-flow" points="${legPts}"/>`);
+    // where the leg starts (the last step, whose pin may be hidden) and an arrowhead short of the target pin
+    svg.push(`<g transform="translate(${x1},${y1})"><g class="rxpb-body"><circle class="rxpb-leg-start" r="4.5"/></g></g>`);
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const back = Math.min(len / 2, 22);
+    svg.push(arrowhead(x2 - ((x2 - x1) / len) * back, y2 - ((y2 - y1) / len) * back, x2 - x1, y2 - y1, ""));
   }
 
   // 4. Multi-waypoint chain within the active step itself
   if (curWps.length > 1) {
-    const wpPts = curWps.map((w) => `${mapX(w.x)},${mapY(w.y)}`).join(" ");
-    svg.push(`<polyline class="rxpb-step-chain" points="${wpPts}" marker-mid="url(#rxpb-arr-cur)"/>`);
+    const pts = curWps.map((w) => [mapX(w.x), mapY(w.y)] as [number, number]);
+    svg.push(`<polyline class="rxpb-step-chain" points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}"/>`);
+    svg.push(midArrows(pts, "chain"));
   }
 
   // 5. Grinding loops / lines (.loop / .line) on the active step
@@ -327,8 +409,8 @@ function renderMap(): void {
     svg.push(`<text class="rxpb-map-note" x="${MAP_W / 2}" y="${MAP_H / 2}" text-anchor="middle">${esc(why)}</text>`);
   }
 
-  // 6. Step waypoint pins (clickable!)
-  for (const { vs, idx } of zoneSteps) {
+  // 6. Step waypoint pins (clickable!), each body keeping its size on screen at any zoom
+  for (const { vs, idx } of shownSteps) {
     const isCur = idx === activeIdx;
     const isPinned = idx === pinnedStepIdx;
     const isDone = idx < activeIdx;
@@ -338,13 +420,10 @@ function renderMap(): void {
     const sym = vs.kind === "accept" ? "!" : vs.kind === "turnin" ? "?" : vs.kind === "combat" ? "⚔"
       : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : String(vs.rxpNum);
     const r = isCur ? 15 : isPinned ? 13 : 10.5;
-    if (isCur) {
-      svg.push(`<circle class="rxpb-pin-pulse" cx="${cx}" cy="${cy}" r="22"/>`);
-    }
     svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-step="${idx}" transform="translate(${cx},${cy})">
       <title>Step ${vs.rxpNum}: ${esc(stepHeadline(vs.step))} (${vs.step.x!.toFixed(1)}, ${vs.step.y!.toFixed(1)})</title>
-      <circle r="${r}"/>
-      <text dy="0.35em">${esc(sym)}</text>
+      <g class="rxpb-body">${isCur ? `<circle class="rxpb-pin-pulse" r="22"/>` : ""}<circle r="${r}"/>
+      <text dy="0.35em">${esc(sym)}</text></g>
     </g>`);
   }
 
@@ -355,8 +434,8 @@ function renderMap(): void {
       const on = wi === activeWpIdx;
       svg.push(`<g class="rxpb-subwp${on ? " on" : ""}" data-wp="${wi}" transform="translate(${cx},${cy})">
         <title>Sub-waypoint ${wi + 1}: (${w.x.toFixed(1)}, ${w.y.toFixed(1)}) ${esc(w.text || "")}</title>
-        <circle r="${on ? 11 : 8}"/>
-        <text dy="0.35em">${String.fromCharCode(65 + (wi % 26))}</text>
+        <g class="rxpb-body"><circle r="${on ? 11 : 8}"/>
+        <text dy="0.35em">${String.fromCharCode(65 + (wi % 26))}</text></g>
       </g>`);
     });
   }
@@ -622,6 +701,7 @@ export function selectStep(idx: number, scrollList = true): void {
   renderActiveStep();
   renderStepList(scrollList);
   renderMap();
+  followStep();
 }
 
 function stopPlay(): void {
@@ -782,7 +862,83 @@ export function browseGuide(packId: string, index: number): void {
   show("guides");               // the page loads its list (refreshGuides), then opens this guide
 }
 
+/** Zoom with the wheel, pan by dragging, the whole zone on double-click; the view buttons and toggles. */
+function wireMapView(): void {
+  const stage = $("rxpb-map-stage");
+  const onMapItself = (e: Event) => !(e.target as HTMLElement).closest(".rxpb-map-tools, .rxpb-inspector, .rxpb-arrow-hud");
+  stage.addEventListener("wheel", (e) => {
+    if (!onMapItself(e)) return;
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomAt(e.deltaY < 0 ? 1.25 : 1 / 1.25, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  let drag: { x: number; y: number; fx: number; fy: number; moved: boolean } | null = null;
+  let justDragged = false;
+  stage.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || !onMapItself(e)) return;
+    drag = { x: e.clientX, y: e.clientY, fx: view.fx, fy: view.fy, moved: false };
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; stage.classList.add("dragging"); }
+    const { w, h } = stageSize();
+    view.fx = drag.fx + dx / w;
+    view.fy = drag.fy + dy / h;
+    applyView();
+  });
+  window.addEventListener("pointerup", () => {
+    if (drag?.moved) justDragged = true;       // the click that ends a drag doesn't pick a pin
+    drag = null;
+    stage.classList.remove("dragging");
+  });
+  stage.addEventListener("click", (e) => { if (justDragged) { e.stopPropagation(); justDragged = false; } }, true);
+  stage.addEventListener("dblclick", (e) => { if (onMapItself(e)) resetView(); });
+  $("rxpb-zoom-in").onclick = () => zoomAt(1.5);
+  $("rxpb-zoom-out").onclick = () => zoomAt(1 / 1.5);
+  $("rxpb-zoom-reset").onclick = resetView;
+  $<HTMLInputElement>("rxpb-follow").onchange = (e) => {
+    filter.follow = (e.target as HTMLInputElement).checked;
+    followStep();
+  };
+  $<HTMLInputElement>("rxpb-showdone").onchange = (e) => {
+    filter.showDone = (e.target as HTMLInputElement).checked;
+    renderMap();
+  };
+  new ResizeObserver(() => applyView()).observe(stage);
+}
+
+/** On the Guides page, away from a text box: left/right step, Space walks the route or stops, +/- zoom, 0 whole zone. */
+function wireKeys(): void {
+  document.addEventListener("keydown", (e) => {
+    if (currentPage() !== "guides" || e.ctrlKey || e.altKey || e.metaKey || !visibleSteps.length) return;
+    // a text box, a select, a checkbox or the timeline slider handles its own keys (the slider steps on arrows);
+    // Space on a focused button presses it
+    const el = e.target as HTMLElement;
+    if (el.closest("input, select, textarea, [contenteditable]")) return;
+    if (e.key === " " && el.closest("button, a, label")) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      stopPlay();
+      selectStep(activeIdx + (e.key === "ArrowRight" ? 1 : -1), true);
+    } else if (e.key === " ") {
+      togglePlay();
+    } else if (e.key === "+" || e.key === "=") {
+      zoomAt(1.5);
+    } else if (e.key === "-") {
+      zoomAt(1 / 1.5);
+    } else if (e.key === "0") {
+      resetView();
+    } else {
+      return;
+    }
+    e.preventDefault();
+  });
+}
+
 export function wireRxpBrowser(): void {
+  wireMapView();
+  wireKeys();
   $("rxpb-to-addon").onclick = () => show("addon");
   $("rxpb-group").onchange = (e) => {
     filter.group = (e.target as HTMLSelectElement).value;
