@@ -505,35 +505,56 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .su-head h1, .su-choices, .su-panel, .su-leaf { animation: none; } }
 
 /* ---- RestedXP Guide & Route Explorer (rxp-browser.ts) ----------------------------------------------------- */
-/* The Guides page: fitted to the window like the Coach page. The page never scrolls; the step list does, and a long
-   current step gets a capped box of its own. */
-#page-guides { overflow: hidden; }
-.rxpb-head { gap: 12px 24px; }
-.rxpb-titles { flex: none; }
-.rxpb-head .rxpb-filters { flex: 1; justify-content: flex-end; }
+/* The Guides page: fitted to the window like the Coach page, and tight: one slim toolbar row, the map at the largest
+   3:2 size its column holds, a one-row timeline, and one scroller (the guide window's step list, where the current step
+   opens). The page itself never scrolls, down to the 900 x 600 window: narrow pages narrow the guide window and the
+   map, they don't stack. */
+#page-guides { overflow: hidden; container-type: inline-size; container-name: guides; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rxpb-empty-page[hidden] { display: none; }
-.rxpb-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.rxpb-filters select, .rxpb-filters input[type="search"] { height: 34px; font-size: 13.5px; }
-#rxpb-group { min-width: 240px; }
-#rxpb-guide { min-width: 270px; flex: 1; max-width: 420px; }
-#rxpb-search { width: 170px; }
-.rxpb-chk-pill { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px; border-radius: var(--radius-s);
-  background: var(--night-deep); border: 1px solid var(--edge); color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; }
+.rxpb-toolbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 24px; min-width: 0;
+  border-bottom: 1px solid var(--edge-soft); background: rgba(12, 13, 18, 0.94); position: relative; z-index: 5; }
+.rxpb-toolbar select, .rxpb-toolbar input[type="search"] { height: 32px; font-size: 13.5px; min-width: 0; }
+#rxpb-group { flex: 0 1 240px; }
+#rxpb-guide { flex: 1 1 300px; max-width: 420px; }
+#rxpb-search { flex: 0 1 160px; }
+.rxpb-chk-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: var(--radius-s); flex: none;
+  background: var(--night-deep); border: 1px solid var(--edge); color: var(--ink-2); font-size: 13px; cursor: pointer; user-select: none; white-space: nowrap; }
 .rxpb-chk-pill:has(input:checked) { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-wash); }
 .rxpb-chk-pill input { accent-color: var(--gold); margin: 0; }
+.rxpb-char { position: relative; flex: none; }
+.rxpb-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--radius-s); cursor: pointer;
+  background: var(--night-deep); border: 1px solid var(--edge); color: var(--ink-2); font: inherit; font-size: 13px; white-space: nowrap; }
+.rxpb-chip b { color: var(--gold); font-weight: 600; }
+.rxpb-chip:hover, .rxpb-chip[aria-expanded="true"] { border-color: var(--gold-dim); }
+.rxpb-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 330px; padding: 12px; border-radius: 8px;
+  background: #11131c; box-shadow: 0 0 0 1px var(--edge), 0 16px 36px rgba(0, 0, 0, 0.65); display: flex; flex-wrap: wrap; gap: 8px; }
+.rxpb-pop[hidden] { display: none; }
+.rxpb-pop-row { display: flex; gap: 8px; width: 100%; }
+.rxpb-pop-row select { flex: 1; height: 32px; font-size: 13.5px; min-width: 0; }
+.rxpb-pop-note { margin: 2px 0 0; width: 100%; font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.rxpb-pop-note:empty { display: none; }
+@container guides (max-width: 1150px) { #rxpb-search { display: none; } .rxpb-toolbar .rxpb-chk-pill span { font-size: 12px; } }
 
 .rxpb-workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
-  gap: 18px; padding: 16px 24px; }
+  grid-template-rows: minmax(0, 1fr); gap: 16px; padding: 12px 24px 14px; }
 .rxpb-workspace[hidden] { display: none; }
-/* a very narrow window stacks the guide window under the map, and only then does the page scroll */
-@media (max-width: 900px) { .rxpb-workspace { grid-template-columns: 1fr; } #page-guides { overflow: auto; }
-  .rxpb-map-box { flex: none; container-type: normal; } .rxpb-map-stage { width: 100%; } }
+@container guides (max-width: 1150px) {
+  .rxpb-win-sub { display: none; }
+  .rxpb-tl-play { padding: 0 9px; }
+  .rxpb-tl-pos { min-width: 0; font-size: 12.5px; }
+  #rxpb-step-search { flex-basis: 110px; }
+  .rxpb-next-guide { max-width: 34%; }
+  .rxpb-workspace { grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr); gap: 12px; padding: 10px 14px 12px; }
+  .rxpb-toolbar { padding: 8px 14px; }
+}
 
-.rxpb-map-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+.rxpb-map-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
 /* the map keeps its 1002 x 668 shape and takes the largest size the column's free space holds */
 .rxpb-map-box { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
-.rxpb-zones { display: flex; gap: 6px; flex-wrap: wrap; }
-.rxpb-ztab { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--radius-s);
+.rxpb-zones { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; flex: none; }
+.rxpb-zones:empty { display: none; }
+.rxpb-ztab { display: inline-flex; flex: none; align-items: center; gap: 6px; padding: 4px 10px; white-space: nowrap; border-radius: var(--radius-s);
   background: var(--night-deep); border: 1px solid var(--edge-soft); color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; }
 .rxpb-ztab span { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .rxpb-ztab:hover { color: var(--ink); border-color: var(--edge); }
@@ -620,7 +641,7 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-arrow-txt span { font-size: 12px; color: #d0d4e8; font-variant-numeric: tabular-nums; }
 
 /* Clickable Map Element Inspector */
-.rxpb-inspector { position: absolute; left: 12px; right: 12px; bottom: 12px; max-height: 52%; overflow: auto; padding: 12px 14px;
+.rxpb-inspector { position: absolute; left: 12px; right: 12px; bottom: 12px; max-height: 40%; overflow: hidden; padding: 10px 12px;
   border-radius: 8px; background: rgba(12, 12, 27, 0.95); box-shadow: 0 0 0 1.5px var(--gold-dim), 0 14px 34px rgba(0,0,0,0.75); backdrop-filter: blur(8px);
   display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; }
 .rxpb-inspector[hidden] { display: none; }
@@ -631,47 +652,41 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .rxpb-ins-close:hover { color: #fff; }
 .rxpb-ins-body { display: flex; flex-direction: column; gap: 4px; color: #e8ecf7; line-height: 1.45; }
 
-/* Timeline Scrubber Bar */
-.rxpb-timeline { padding: 12px 14px; border-radius: var(--radius-m); background: var(--night-deep); border: 1px solid var(--edge-soft); display: flex; flex-direction: column; gap: 9px; }
-.rxpb-tl-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rxpb-tl-pos { font-weight: 650; font-size: 14px; color: var(--gold); font-variant-numeric: tabular-nums; margin-left: 4px; }
-.rxpb-tl-zone { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.rxpb-scrub-wrap { position: relative; height: 28px; display: flex; align-items: center; }
-#rxpb-scrub { width: 100%; margin: 0; cursor: pointer; accent-color: var(--gold); position: relative; z-index: 2; background: transparent; }
-.rxpb-tl-ticks { position: absolute; left: 8px; right: 8px; top: 3px; bottom: 3px; pointer-events: none; z-index: 1; }
-.tl-tick { position: absolute; top: 2px; bottom: 2px; width: 3px; margin-left: -1.5px; border-radius: 2px; opacity: 0.75; pointer-events: auto; cursor: pointer; }
-.tl-tick.tl-accept { background: #ffd877; }
-.tl-tick.tl-turnin { background: #4cd471; }
-.tl-tick.tl-combat { background: #ff6257; }
-.tl-tick.tl-travel { background: #4fd8ff; }
-.tl-tick.tl-hearth { background: #d580ff; }
-.tl-tick.tl-death { background: #ff5722; }
-.tl-tick.tl-zone { top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.45); }
-.rxpb-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-3); }
-.rxpb-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.leg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.leg-dot.k-accept { background: #ffd877; }
-.leg-dot.k-turnin { background: #4cd471; }
-.leg-dot.k-combat { background: #ff6257; }
-.leg-dot.k-travel { background: #4fd8ff; }
-.leg-dot.k-hearth { background: #d580ff; }
-.leg-dot.k-death { background: #ff5722; }
+/* Timeline: one row (step buttons, speed, the scrubber with its glyph ticks above it, the position) */
+.rxpb-timeline { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-m); background: var(--night-deep); border: 1px solid var(--edge-soft); }
+.rxpb-tl-btn { width: 32px; height: 32px; padding: 0; justify-content: center; flex: none; }
+.rxpb-tl-play { height: 32px; padding: 0 12px; flex: none; }
+#rxpb-speed { height: 32px; font-size: 13px; flex: none; width: 72px; min-width: 0; padding-right: 4px; }
+.rxpb-tl-pos { flex: none; min-width: 9ch; font-weight: 650; font-size: 13.5px; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.rxpb-scrub-wrap { position: relative; flex: 1; min-width: 80px; height: 40px; display: flex; flex-direction: column; justify-content: flex-end; }
+#rxpb-scrub { width: 100%; margin: 0 0 2px; cursor: pointer; accent-color: var(--gold); background: transparent; }
+/* the ticks sit above the slider, each a glyph (the pins' own) as well as a colour, so they're clickable and tell apart */
+.rxpb-tl-ticks { position: absolute; left: 8px; right: 8px; top: 0; height: 18px; }
+.tl-tick { position: absolute; top: 0; width: 14px; height: 16px; margin-left: -7px; padding: 0; border: 0; border-radius: 3px; background: none;
+  font: 700 11px/16px var(--f-ui); text-align: center; cursor: pointer; opacity: 0.8; }
+.tl-tick:hover, .tl-tick.on { opacity: 1; background: rgba(255, 255, 255, 0.1); z-index: 1; }
+.tl-tick.tl-accept { color: #ffd877; }
+.tl-tick.tl-turnin { color: #4cd471; }
+.tl-tick.tl-combat { color: #ff6257; font-size: 10px; }
+.tl-tick.tl-travel { color: #4fd8ff; }
+.tl-tick.tl-hearth { color: #d580ff; }
+.tl-tick.tl-death { color: #ff5722; }
+.tl-zone { position: absolute; top: 0; height: 40px; width: 0; border-left: 1px dashed rgba(255, 255, 255, 0.35); pointer-events: none; }
 
 /* In-Game Style RestedXP Guide Window (RXP Blue theme: Themes.lua #0c0c1b / #121228 / #363e6d) */
 .rxpb-window { display: flex; flex-direction: column; border-radius: var(--radius-m); overflow: hidden;
   background: #0c0c1b; box-shadow: 0 0 0 1px #363e6d, 0 0 0 3px #090914, 0 16px 36px rgba(0,0,0,0.6); min-height: 0; }
-.rxpb-win-hdr, .rxpb-list-hdr { flex: none; }
-.rxpb-win-hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px;
+.rxpb-win-hdr { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px;
   background: linear-gradient(180deg, #1f2447, #12152b); border-bottom: 1px solid #363e6d; }
-.rxpb-win-titles { display: flex; flex-direction: column; min-width: 0; }
-.rxpb-win-sub { font-size: 11.5px; color: #9aa4d6; text-transform: uppercase; letter-spacing: 0.06em; }
+#rxpb-step-search { height: 28px; font-size: 12.5px; flex: 0 1 170px; min-width: 70px; }
+.rxpb-win-titles { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.rxpb-win-sub { font-size: 11.5px; color: #9aa4d6; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rxpb-win-title { font-size: 16.5px; color: var(--gold-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rxpb-next-guide { height: 30px; padding: 0 10px; font-size: 12.5px; background: #262d59; color: var(--gold-hi); border: 1px solid #4a5596; }
+.rxpb-next-guide { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 30px; padding: 0 10px; font-size: 12.5px; background: #262d59; color: var(--gold-hi); border: 1px solid #4a5596; }
 .rxpb-next-guide:hover { background: #363e6d; }
 
-/* Active Step Frame (CurrentStepFrame) */
-.rxpb-active-step { padding: 14px 15px; background: #121228; border-bottom: 2px solid #363e6d; display: flex; flex-direction: column; gap: 9px;
-  flex: none; max-height: 42%; overflow: auto; }
+/* The current step opens inside the step list (RestedXP's CurrentStepFrame look) */
+.rxpb-active-step { padding: 4px 0 2px; display: flex; flex-direction: column; gap: 8px; }
 .rxpb-cs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .rxpb-cs-num { font-size: 13px; font-weight: 700; color: var(--gold-hi); text-transform: uppercase; letter-spacing: 0.05em; }
 .rxpb-cs-flags { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -706,13 +721,14 @@ body.in-setup > #rail, body.in-setup > main { visibility: hidden; }
 .ab-buy { background: rgba(46, 204, 64, 0.16); color: #69f0ae; border: 1px solid rgba(46, 204, 64, 0.4); }
 .ab-death { background: rgba(255, 87, 34, 0.22); color: #ff6e40; border: 1px solid #ff5722; }
 
-/* Step List (BottomFrame) */
-.rxpb-list-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: #0f1123; border-bottom: 1px solid #25294a; font-size: 12px; color: #9aa4d6; }
-#rxpb-step-search { height: 28px; font-size: 12.5px; width: 210px; }
+/* Step List (BottomFrame): the guide window's one scroller, a listbox */
 .rxpb-step-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 0; }
+.rxpb-step-list:focus-within .rxpb-sitem:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: -2px; }
+.rxpb-sitem:focus { outline: none; }
 .rxpb-sitem { display: flex; flex-direction: column; gap: 5px; padding: 9px 13px; border-bottom: 1px solid rgba(54, 62, 109, 0.35); cursor: pointer; transition: background 0.12s; }
 .rxpb-sitem:hover { background: #191d38; }
-.rxpb-sitem.on { background: #262e5c; box-shadow: inset 3px 0 0 var(--gold-hi); }
+.rxpb-sitem.on { background: #151935; box-shadow: inset 3px 0 0 var(--gold-hi); cursor: default; scroll-margin: 8px; }
+.rxpb-sitem.on > .rxpb-sitem-top, .rxpb-sitem.on > .rxpb-sbadges { display: none; }
 .rxpb-sitem.done { opacity: 0.62; }
 .rxpb-sitem.dimmed { opacity: 0.42; }
 .rxpb-sitem-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }

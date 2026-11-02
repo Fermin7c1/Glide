@@ -614,3 +614,14 @@ they don't spell out.
   `/map/<id>.png`, so maps show with the coach stopped and one decoded image serves every guide. The map image is
   stretched to the map (`object-fit: fill`, as on the coach screen) instead of cropped. Guides page plan, phase 0
   item 5 (map-imagery recommendation 1-2, 2026-11-02).
+- **Follow-up, what the player sees: a tight Guides page.** The page header (title, lede and ten wrapping filters)
+  becomes one slim toolbar row: the guide group and guide pickers, the guide filter, a "Character" chip that opens a
+  popover with race, class, Solo self-found, Group quests, Hardcore and "Show all <<" (and says when the step
+  numbers are RestedXP's own), and Follow step / Done steps (moved off the map). The guide window has one scroller:
+  the current step opens inside the step list instead of its own capped box, and the list is a listbox
+  (Up/Down/Home/End/PageUp/PageDown, the current step focusable) that is built once per guide or filter and only
+  re-opens the step that changed. The timeline is one row: its ticks are glyph buttons (the pins' own ! ? ⚔ ✦ ⌂ ☠)
+  above the slider, clickable, with a dashed line at zone changes; the colour legend row is gone and the position
+  reads "12 / 334". The map inspector is a compact card without a scrollbar. Narrow windows narrow the guide window
+  and the map (a container query) instead of stacking the columns, so the page never scrolls down to 900 x 600.
+  No IPC, file or state change. Guides page plan, phase 0 item 6 (explorer-ui recommendations 7 and 9, 2026-11-02).
