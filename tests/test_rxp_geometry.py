@@ -47,13 +47,15 @@ CALLS = [
 tmp = tempfile.mkdtemp(prefix="glide-rxp-geometry-")
 try:
     r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, timeout=120)
+                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
+                       timeout=120)
     assert r.returncode == 0, "tsc failed on rxp-geometry.ts: %s" % (r.stdout + r.stderr)[-2000:]
     mjs = os.path.join(tmp, "rxp-geometry.mjs")
     os.replace(os.path.join(tmp, "rxp-geometry.js"), mjs)
     code = ("import(%s).then(m => console.log(JSON.stringify(%s.map(([f, ...a]) => m[f](...a)))))"
             % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(CALLS)))
-    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, timeout=60)
+    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
+                       timeout=60)
     assert r.returncode == 0, "running rxp-geometry failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)
 finally:

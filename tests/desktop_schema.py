@@ -28,14 +28,14 @@ def schema():
     tmp = tempfile.mkdtemp(prefix="glide-schema-")
     try:
         r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--skipLibCheck",
-                            "--outDir", tmp], capture_output=True, text=True, timeout=120)
+                            "--outDir", tmp], capture_output=True, text=True, encoding="utf-8", timeout=120)
         assert r.returncode == 0, "tsc failed on settings-schema.ts: %s" % (r.stdout + r.stderr)[-2000:]
         mjs = os.path.join(tmp, "settings-schema.mjs")
         os.replace(os.path.join(tmp, "settings-schema.js"), mjs)
         code = ("import(%s).then(m => console.log(JSON.stringify(m.SCHEMA, "
                 "(k, v) => typeof v === 'function' ? 'fn ' + (v.name || 'anon') : v)))"
                 % json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")))
-        r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, timeout=60)
+        r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8", timeout=60)
         assert r.returncode == 0, "importing the schema failed: %s" % r.stderr[-2000:]
         _cache["schema"] = json.loads(r.stdout)
     finally:

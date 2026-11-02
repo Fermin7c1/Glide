@@ -67,7 +67,7 @@ assert not re.search(r'new Set\(\["voice_lookahead_steps"', page)
 node = shutil.which("node")
 if node:
     r = subprocess.run([node, os.path.join(ROOT, "desktop", "scripts", "gen-settings.js"), "--check"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, r.stdout + r.stderr
 
 # no engine read keeps a default of its own for a manifest setting (cfg.get("lookahead_steps", 40))

@@ -45,7 +45,7 @@ def run():
     try:
         out = os.path.join(tmp, "dash.json")
         r = subprocess.run(["node", os.path.join(HERE, "dash_cdp.mjs"), exe, os.path.join(tmp, "profile"),
-                            "http://127.0.0.1:%d/" % port, out], capture_output=True, text=True, timeout=180)
+                            "http://127.0.0.1:%d/" % port, out], capture_output=True, text=True, encoding="utf-8", timeout=180)
         if r.returncode or not os.path.exists(out):
             raise RuntimeError("dash_cdp failed: %s" % (r.stderr or r.stdout)[-2000:])
         return json.load(open(out, encoding="utf-8"))

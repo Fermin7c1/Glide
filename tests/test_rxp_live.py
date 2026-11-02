@@ -94,7 +94,8 @@ step_cases.append({"p": 0, "combo": 3, "n": 0, "want": None})
 tmp = tempfile.mkdtemp(prefix="glide-rxp-live-")
 try:
     r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, timeout=120)
+                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
+                       timeout=120)
     assert r.returncode == 0, "tsc failed on rxp-model.ts: %s" % (r.stdout + r.stderr)[-2000:]
     mjs = os.path.join(tmp, "rxp-model.mjs")
     os.replace(os.path.join(tmp, "rxp-model.js"), mjs)
@@ -114,7 +115,8 @@ const classes = ['mage', 'WARRIOR', 'DEATHKNIGHT', '', null].map(m.liveClassPick
 const names = ['05-11  Dun Morogh', '5-11 dun morogh', '10-12 Durotar\\uFFFD', ' 01 - 06 X '].map(m.normGuideName);
 console.log(JSON.stringify({found, pos, races, classes, names}));
 """ % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(data))
-    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, timeout=60)
+    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
+                       timeout=60)
     assert r.returncode == 0, "running rxp-model failed: %s" % r.stderr[-2000:]
     out = json.loads(r.stdout)
 finally:

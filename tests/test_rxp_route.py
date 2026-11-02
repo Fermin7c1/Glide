@@ -91,7 +91,8 @@ CALLS = {
 tmp = tempfile.mkdtemp(prefix="glide-rxp-route-")
 try:
     r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--rootDir", os.path.join(DESK, "src"), "--outDir", tmp], capture_output=True, text=True, timeout=120)
+                        "--rootDir", os.path.join(DESK, "src"), "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
+                       timeout=120)
     assert r.returncode == 0, "tsc failed on rxp-route.ts: %s" % (r.stdout + r.stderr)[-2000:]
     with open(os.path.join(tmp, "package.json"), "w") as fh:
         fh.write('{"type": "module"}')
@@ -104,7 +105,8 @@ try:
         fh.write("import { %s } from %s;\n%s" % (
             "stopsOf, pinStop, planLegs, clipPolyline, legPieces, arcPoints, durText, legInfo, hull, layoutTicks",
             json.dumps("file:///" + mod.replace("\\", "/").lstrip("/")), body))
-    r = subprocess.run([node, script], capture_output=True, text=True, timeout=60)
+    r = subprocess.run([node, script], capture_output=True, text=True, encoding="utf-8",
+                       timeout=60)
     assert r.returncode == 0, "running rxp-route failed: %s" % r.stderr[-2000:]
     got = json.loads(r.stdout)
 finally:

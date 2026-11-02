@@ -115,7 +115,8 @@ assert who("Gnome", "DRUID") == [] and len(who("Human", "")) == 6 and len(who("S
 tmp = tempfile.mkdtemp(prefix="glide-rxp-model-")
 try:
     r = subprocess.run([node, TSC, SRC, "--target", "ES2023", "--module", "ES2022", "--strict", "--skipLibCheck",
-                        "--outDir", tmp], capture_output=True, text=True, timeout=120)
+                        "--outDir", tmp], capture_output=True, text=True, encoding="utf-8",
+                       timeout=120)
     assert r.returncode == 0, "tsc failed on rxp-model.ts: %s" % (r.stdout + r.stderr)[-2000:]
     mjs = os.path.join(tmp, "rxp-model.mjs")
     os.replace(os.path.join(tmp, "rxp-model.js"), mjs)
@@ -134,7 +135,8 @@ const acts = D.guides[0].acts.map(a => [v0.actionShown(a, hm), v0.actionShown(a,
 console.log(JSON.stringify({got, acts, combo: [m.comboOf(true, true, false), m.comboOf(false, false, true)],
   picks: ['Skyborne@Alliance', 'Skyborne@Horde', 'Skyborne', 'Undead', 'Gnome', ''].map(m.racePick)}));
 """ % (json.dumps("file:///" + mjs.replace("\\", "/").lstrip("/")), json.dumps(data))
-    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, timeout=60)
+    r = subprocess.run([node, "--input-type=module", "-e", code], capture_output=True, text=True, encoding="utf-8",
+                       timeout=60)
     assert r.returncode == 0, "running rxp-model failed: %s" % r.stderr[-2000:]
     out = json.loads(r.stdout)
 finally:

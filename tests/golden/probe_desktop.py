@@ -24,7 +24,7 @@ def run():
         raise RuntimeError("build failed: %s" % (r.stdout + r.stderr)[-2000:])
     out = os.path.join(tempfile.mkdtemp(), "desktop.json")
     r = subprocess.run(["node", os.path.join(HERE, "desktop_probe.cjs"), os.path.join(desk, "dist"), out],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8")
     if r.returncode or not os.path.exists(out):
         raise RuntimeError("desktop_probe failed: %s" % (r.stderr or r.stdout)[-2000:])
     return json.load(open(out, encoding="utf-8"))

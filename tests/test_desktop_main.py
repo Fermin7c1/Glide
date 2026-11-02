@@ -21,9 +21,9 @@ tmp = tempfile.mkdtemp(prefix="glide-desktop-main-")
 try:
     out = os.path.join(tmp, "desktop", "dist")          # tsconfig.main.json emits main/ and shared/ under it
     r = subprocess.run([node, TSC, "-p", os.path.join(DESK, "tsconfig.main.json"), "--outDir", out, "--sourceMap", "false"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, "tsc failed: %s" % (r.stdout + r.stderr)[-2000:]
-    r = subprocess.run([node, os.path.join(HERE, "desktop_main_check.cjs"), tmp], capture_output=True, text=True,
+    r = subprocess.run([node, os.path.join(HERE, "desktop_main_check.cjs"), tmp], capture_output=True, text=True, encoding="utf-8",
                        timeout=120)
     print(r.stdout + r.stderr)
     assert r.returncode == 0 and "ok" in r.stdout, "desktop_main_check failed"
