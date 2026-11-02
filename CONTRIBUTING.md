@@ -87,7 +87,9 @@ builds the installer as the next patch version and publishes it to `Fermin7c1/Gl
 update from there. The version is never committed back; `desktop/scripts/next-release.js` picks it. Raise `version`
 in `desktop/package.json` by hand only for a new minor or major version. What's new gets an entry from the commit
 subjects since the last release unless `desktop/changelog.json` already has one for that version, so write commit
-subjects a player can read.
+subjects a player can read. Those entries aren't committed back either: each build also fills in every published
+release newer than `changelog.json`'s newest entry, from the commits between its source and the release before it
+(a release's notes end with `source: <sha>`).
 
 The installer ships only what the engine runs (`build.extraResources` in `desktop/package.json`): a new
 development-only script in `tools/` or `knowledge/` belongs in its exclusions.

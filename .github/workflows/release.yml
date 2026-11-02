@@ -71,6 +71,12 @@ jobs:
             git log -1 --format=%H -G '.version.: .[0-9]' -- package.json }
           $env:LATEST = if ($latest) { $latest.tagName } else { "" }
           $env:SINCE = $since
+          # every published release: What's new fills in the versions desktop/changelog.json has no entry for (the
+          # entries next-release.js adds are never committed back)
+          $env:RELEASES = Join-Path $env:RUNNER_TEMP "releases.jsonl"
+          gh api --paginate "repos/Fermin7c1/Glide-releases/releases?per_page=100" --jq '.[] | {tag_name, draft, published_at, body}' |
+            Set-Content -Encoding utf8NoBOM -Path $env:RELEASES
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::Couldn't list the published releases: What's new has only this version's notes" }
           $v = (node scripts/next-release.js) -replace '^version=', ''
           if ($LASTEXITCODE -ne 0 -or -not $v) { exit 1 }
           "version=$v" >> $env:GITHUB_OUTPUT
@@ -105,9 +111,15 @@ jobs:
           VER: ${{ steps.ver.outputs.version }}
         run: |
           $v = $env:VER
+          $notes = "Glide $v`n`nsource: $env:GITHUB_SHA"
           gh release view "v$v" --repo Fermin7c1/Glide-releases *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes "Glide $v`n`nsource: $env:GITHUB_SHA"
+            gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes $notes
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          } else {
+            # a draft left by a run that failed: this run's commit is the source now (the next release's notes start
+            # from it; the failed run's source made them repeat this one's)
+            gh release edit "v$v" --repo Fermin7c1/Glide-releases --notes $notes
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
           exit 0
