@@ -22,7 +22,8 @@ Public API (implemented in the submodules; the analyzer and the coach API import
   rested.accrual_xp(level, hours, resting=True, pool=0) / hours_to_cap / bonus_capacity(pool)
   rested.kill_bonus(kill_xp, pool) -> (bonus, pool_after) / camp_bonus_xp(level) / summary(level, pool)
   travel.run_speed_yds(mounted=False, level=None) -> float
-  travel.run_time_s(dist_yd, mounted=False, level=None) -> float
+  travel.run_time_s(dist_yd, mounted=False, level=None) -> float     straight line (detour factor included)
+  travel.path_time_s(path_yd, mounted=False, level=None) -> float    a walked route's length (no detour)
   travel.distance_yd(map_w_yd, map_h_yd, x1, y1, x2, y2) -> float   (x,y in percent)
   travel.hearth_cooldown_s() -> float
   travel.taxi_time_s(dist_yd) -> float

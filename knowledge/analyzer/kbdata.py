@@ -817,9 +817,12 @@ class KBData:
         return g
 
 
-def run_time(dist, level=None):
-    """Seconds on foot (mounted when the level allows a mount) for a straight-line map distance."""
+def run_time(dist, level=None, walked=False):
+    """Seconds on foot (mounted when the level allows a mount) for a straight-line map distance; with walked=True,
+    for the length of a route that already follows the terrain (a walking-map path), with no detour on top."""
     mounted = level is not None and int(level) >= int(MP.get("mount.level"))
+    if walked:
+        return MT.path_time_s(dist, mounted=mounted, level=level)
     t = MT.run_time_s(dist, mounted=mounted, level=level)
     if MP.status("travel.detour_factor") in ("classic", "unverified") and float(MP.get("travel.detour_factor")) == 1.0:
         t *= float(AP.get("analyzer.travel.detour"))

@@ -45,6 +45,12 @@ def run_time_s(dist_yd, mounted=False, level=None):
     return float(dist_yd) * float(P.get("travel.detour_factor")) / map_speed_yds(mounted, level)
 
 
+def path_time_s(path_yd, mounted=False, level=None):
+    """Seconds along a route that already follows the ground (a walking-map path, its length on the map plane):
+    the map-plane speed ratio (slopes and turns) included, no detour factor (that is for straight lines)."""
+    return float(path_yd) / map_speed_yds(mounted, level)
+
+
 def swim_time_s(dist_yd):
     return float(dist_yd) / float(P.get("travel.swim_speed"))
 

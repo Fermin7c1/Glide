@@ -192,6 +192,90 @@ g = graph(build(flat, [high]))
 r0 = g.node_at(*g.world_of(node(g, 32, 32, prefer=100)))
 assert abs(g.height(r0) - 100) < 1.0 or int(g.reach[r0]) >= int(g.reach[node(g, 32, 32, prefer=103)])
 
+# ---- walk times: a walked route already follows the terrain, so it is timed by its length at map-plane run speed,
+# without the straight-line detour run_time adds for straight distances (500 yd walked at level 10: 73 s, not 91)
+from knowledge.analyzer.kbdata import run_time  # noqa: E402
+from knowledge.api import navigation as NV  # noqa: E402
+from knowledge.mechanics import params as MP  # noqa: E402
+
+SPEEDS = {"travel.run_speed": 7.0, "travel.plane_speed_ratio": 0.98, "travel.detour_factor": 1.0,
+          "analyzer.travel.detour": 1.25, "mount.level": 40, "mount.speed_bonus": 0.6, "travel.taxi_speed": 30.0,
+          "travel.taxi_overhead_s": 10.0}
+FOOT = 7.0 * 0.98                                              # yd/s of map distance on foot
+
+
+class FakeKB:
+    """A map whose coordinates are the world's own (ui_map 1, continent 0)."""
+    def to_world(self, um, x, y):
+        return 0, x, y
+
+    def to_map(self, um, wx, wy):
+        return wx, wy
+
+    def one(self, *a):
+        return None
+
+
+class FakeCtx:
+    def __init__(self, level=10, here=None, summary=None):
+        self.kb, self.level, self.summary, self.rxp_step_no, self._here = FakeKB(), level, summary or {}, 1, here
+
+    def here(self):
+        return self._here
+
+    def p(self):
+        return {"faction": "Alliance"}
+
+
+saved = NAV.load_graph, NAV.load, NV._walk, TX.load, NV.get_data
+try:
+    with MP.scoped(SPEEDS):
+        assert int(round(run_time(500, 10))) == 91, "a straight line keeps its detour (the analyzer's simulator)"
+        # over the walking map, open ground: the route is the straight line itself, 500 yd
+        g = graph(build(flat))
+        NAV.load_graph, NAV.load = (lambda root, m: g), (lambda root, m: None)
+        here, dest = (1, 600.0, 1000.0), (1, 1000.0, 700.0)    # 400 yd north, 300 yd east
+        w = NV.walk_route(FakeCtx(), here, dest)
+        assert w["walk_yd"] == 500 and w["straight_yd"] == 500, w
+        assert w["run_s"] == int(round(500 / FOOT)) == 73, ("walked 500 yd at level 10", w["run_s"])
+        w = NV.walk_route(FakeCtx(level=40), here, dest)
+        assert w["run_s"] == int(round(500 / (FOOT * 1.6))) == 46, ("mounted at 40, as run_time", w["run_s"])
+        # around the end of a wall: the time is the bent route's length at run speed, nothing on top
+        g = graph(build(flat, [half]))
+        here, dest = (1,) + g.world_of(node(g, 20, 10)), (1,) + g.world_of(node(g, 44, 10))
+        pts = NV._walk(FakeCtx(), 0, here[1:], dest[1:])[0]
+        walk = sum(math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) for i in range(1, len(pts)))
+        w = NV.walk_route(FakeCtx(), here, dest)
+        assert w["detour_pct"] > 20 and w["run_s"] == int(round(walk / FOOT)), (w, walk)
+
+        # "faster by flight": the straight walks to and from the flight masters get run_time's detour once, and are
+        # weighed against the walked route's own time
+        class FakeNet:
+            nodes = {1: {"name": "North Post", "x": 0.0, "y": 100.0, "cont": 0},
+                     2: {"name": "South Post", "x": 0.0, "y": 2300.0, "cont": 0}}
+
+            def nearest(self, cont, x, y, allowed=None):
+                n = min(self.nodes, key=lambda k: math.hypot(self.nodes[k]["x"] - x, self.nodes[k]["y"] - y))
+                return n, math.hypot(self.nodes[n]["x"] - x, self.nodes[n]["y"] - y)
+
+            def route(self, a, b, allowed=None):
+                pa, pb = self.nodes[a], self.nodes[b]
+                return {"points": [(pa["x"], pa["y"]), (pb["x"], pb["y"])], "yd": 2400.0, "hops": 1, "nodes": [a, b]}
+        NAV.load_graph = lambda root, m: None
+        TX.load, NV.get_data = (lambda root: FakeNet()), (lambda kb: None)
+        NV._walk = lambda ctx, cont, wa, wb, track=False: ([wa, (900.0, 1200.0), wb], 0.0, [], "test")   # 3000 yd
+        ctx = FakeCtx(here=(1, 0.0, 0.0), summary={"flight_paths": [1, 2], "arrow": {"map": 1, "x": 0.0, "y": 2400.0}})
+        p = NV.plan_to_step(ctx)
+        run_s, fly_total = int(round(3000 / FOOT)), int(round(2 * 100 * 1.25 / FOOT + 2400 / 30.0 + 10))
+        assert (run_s, fly_total) == (437, 126)
+        assert p["run_s"] == p["segments"][0]["s"] == run_s, p
+        assert p["faster"] == {"fly_from": "North Post", "fly_to": "South Post", "total_s": fly_total,
+                               "run_s": run_s, "to_flight_master_yd": 100, "from_landing_yd": 100}, p["faster"]
+        q = NV.walk_to_step(ctx, p)
+        assert q["run_s"] == run_s and q["faster_by_flight"] == p["faster"], q
+finally:
+    NAV.load_graph, NAV.load, NV._walk, TX.load, NV.get_data = saved
+
 # ---- flights: names, multi-hop routes along the flown curves (from the client's taxi tables when extracted)
 net = TX.load(ROOT)
 if net is not None and net.nodes:

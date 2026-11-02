@@ -193,7 +193,8 @@ def walk_route(ctx, here, dest, max_legs=7, track=False):
     return clean({"points": _to_map(ctx, um, pts), "walk_yd": int(round(walk)),
                    "straight_yd": int(round(straight)),
                    "detour_pct": int(round((walk / straight - 1) * 100)) if straight > 1 else 0,
-                   "run_s": int(round(run_time(walk, ctx.level or 1))), "swim_yd": int(round(swim)) or None,
+                   "run_s": int(round(run_time(walk, ctx.level or 1, walked=True))),
+                   "swim_yd": int(round(swim)) or None,
                    "through": _area_names(ctx, areas)[:10], "legs": _legs(ctx, um, pts, area_at, max_legs),
                    "source": source})
 
@@ -379,8 +380,10 @@ def plan_to_step(ctx):
         if a and b and a != b:
             seg = _fly_segment(ctx, net, um, a, b)
             if seg:
+                # the walks to and from the flight masters are straight lines (run_time adds the detour once); the
+                # run it beats is the walked route (no detour on top)
                 lv = ctx.level or 1
-                total = run_time(da * 1.25, lv) + seg["s"] + run_time(db * 1.25, lv)
+                total = run_time(da, lv) + seg["s"] + run_time(db, lv)
                 if total < 0.7 * w["run_s"] and w["run_s"] - total > 60:
                     out["faster"] = {"fly_from": seg["from"], "fly_to": seg["to"], "total_s": int(round(total)),
                                      "run_s": w["run_s"], "to_flight_master_yd": int(round(da)),
