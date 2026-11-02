@@ -14,11 +14,15 @@ Adding a string:
      RestedXP's own cache, so the coach knows the route at its next refresh;
   3. the decrypted guide texts also go to <wow_dir>/Interface/AddOns/Glide/Data/RXPImports.lua, and at the next login
      the Glide addon (RXPImport.lua) loads them straight into RestedXP (ImportGuide) without running RestedXP's
-     in-game string decryptor.
-The addon notes each hand-off in GlideRecorderDB.rxpImports[id]; once one is done its guides leave the addon's file.
-An addon install replaces the addon's folder (and that file with it), so the app syncs again after installing.
+     in-game string decryptor. The decrypted texts no longer carry RestedXP's account check and every account on the
+     PC shares that folder, so each pack carries its buyer account's key check (key_check) and the addon loads it only
+     into the account whose RestedXP key matches.
+The addon notes each hand-off in GlideRecorderDB.rxpImports[id] on the account that took it; once the buyer's
+account has noted it done (note_for: another account's note never counts), its guides leave the addon's file. An
+addon install replaces the addon's folder (and that file with it), so the app syncs again after installing; an addon
+older than HANDOFF_FORMAT (it reads encrypted strings) keeps the file it has until it's updated.
 
-Run by the desktop app (`python companion/rxp_import.py add|status|sync`, the string on stdin for add), answering
+Run by the desktop app (`python companion/rxp_import.py add|status|sync|guide`, the string on stdin for add), answering
 one JSON object on stdout. Guide texts are yours and stay on this PC, like RestedXP's own cache.
 """
 import base64
@@ -360,8 +364,10 @@ def place_world_points(parsed, bounds):
     placed = 0
 
     def put(um, wx, wy):
-        xy = finalize._convert(bounds[um], wx, wy, swap)     # noqa: SLF001
-        return (round(xy[0], 2), round(xy[1], 2)) if finalize._on_map(xy) else None     # noqa: SLF001
+        x, y = finalize._convert(bounds[um], wx, wy, swap)     # noqa: SLF001
+        if x is None or y is None or not finalize._on_map((x, y)):     # noqa: SLF001
+            return None
+        return round(x, 2), round(y, 2)
     for st in parsed.get("steps") or ():
         if st.get("x") is None and st.get("wx") is not None and st.get("wy") is not None and st.get("ui_map") in bounds:
             xy = put(st["ui_map"], st["wx"], st["wy"])
@@ -544,10 +550,16 @@ def account_keys(wow_dir):
     return out
 
 
+def key_check(key):
+    """A short check value of an account's RestedXP key (Adler-32 of its 16 numbers). The addon computes the same
+    from RestedXP's key for whoever logs in, so a pack goes only into the account it was bought for: the decrypted
+    guides carry no account check of their own, and every account on the PC shares the AddOns folder."""
+    return zlib.adler32(bytes(key))
+
+
 def handed_over(wow_dir):
-    """{id: {"t", "ok", "err", "account"}}: what the Glide addon noted in GlideRecorderDB.rxpImports (WoW writes it
-    at logout and /reload). Per id, an account where RestedXP took it wins over one where it failed (a string is for
-    one account, so another account of this PC fails on it), then the newest note."""
+    """{id: {account folder: {"t", "ok", "err", "account"}}}: what the Glide addon noted in GlideRecorderDB.rxpImports
+    on each account (WoW writes it at logout and /reload). note_for() picks the one that counts."""
     out = {}
     if not wow_dir:
         return out
@@ -562,11 +574,24 @@ def handed_over(wow_dir):
         for k, v in (notes.items() if isinstance(notes, dict) else ()):
             if not isinstance(v, dict):
                 continue
-            v = dict(v, account=os.path.basename(os.path.dirname(os.path.dirname(p))))
-            cur = out.get(str(k))
-            if cur is None or (bool(v.get("ok")), v.get("t") or 0) > (bool(cur.get("ok")), cur.get("t") or 0):
-                out[str(k)] = v
+            acct = os.path.basename(os.path.dirname(os.path.dirname(p)))
+            out.setdefault(str(k), {})[acct] = dict(v, account=acct)
     return out
+
+
+def note_for(notes, rec):
+    """The note that says whether RestedXP has this import: the one from the account it was bought for
+    (rec["account"]). Another account's note never counts, so it can't take the pack out of the addon's file before
+    the buyer's account has it. A record from before the account was kept: the best note (taken, then newest)."""
+    notes = notes or {}
+    acct = rec.get("account") if isinstance(rec, dict) else None
+    if acct:
+        return notes.get(acct) or {}
+    best = {}
+    for v in notes.values():
+        if not best or (bool(v.get("ok")), v.get("t") or 0) > (bool(best.get("ok")), best.get("t") or 0):
+            best = v
+    return best
 
 
 def _store_path(root):
@@ -609,21 +634,37 @@ def _lua_string(s):
     return '"%s"' % "".join(out)
 
 
-def handoff_lua(pending):
-    """The addon's Data/RXPImports.lua for these imports ([(id, record)]): the decrypted guide texts."""
+def handoff_lua(pending, checks=None):
+    """The addon's Data/RXPImports.lua for these imports ([(id, record)]): the decrypted guide texts, each pack with
+    its buyer account's key check (`k`, key_check(); checks: {id: check}). A pack without one isn't written: the addon
+    could not tell which account may have it."""
+    checks = checks or {}
     lines = ["-- Written by the Glide app (companion/rxp_import.py): the RestedXP guides you added in the app,",
              "-- already decrypted for RestedXP at your next login (RXPImport.lua). The app rewrites this file.",
              "local _, ns = ...", "ns.rxpImports = {"]
     for iid, rec in pending:
         texts = [g.get("text") for g in (rec.get("guides") or ())
                  if isinstance(g, dict) and isinstance(g.get("text"), str) and g.get("text")]
-        if not texts:
+        if not texts or checks.get(iid) is None:
             continue
         body = ",\n        ".join(_lua_string(t) for t in texts)
-        lines.append("    { id = %s, n = %d, guides = {\n        %s,\n    } },"
-                     % (_lua_string(iid), len(texts), body))
+        lines.append("    { id = %s, n = %d, k = %d, guides = {\n        %s,\n    } },"
+                     % (_lua_string(iid), len(texts), checks[iid], body))
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+HANDOFF_FORMAT = (0, 17, 2)     # the first addon that loads decrypted guides (RXPImport.lua reads `guides`)
+
+
+def _addon_version(wow_dir):
+    """The installed Glide addon's version as a tuple ((0, 17, 2)), or None without one."""
+    try:
+        with open(os.path.join(wow_dir, "Interface", "AddOns", "Glide", "Glide.toc"), encoding="utf-8-sig") as fh:
+            m = re.search(r"^##\s*Version:\s*(\d+(?:\.\d+)*)", fh.read(), re.M)
+    except OSError:
+        return None
+    return tuple(int(x) for x in m.group(1).split(".")) if m else None
 
 
 def sync(root, wow_dir):
@@ -634,10 +675,15 @@ def sync(root, wow_dir):
     path = os.path.join(wow_dir, HANDOFF)
     if not os.path.isdir(os.path.dirname(os.path.dirname(path))):
         return None
+    inst = _addon_version(wow_dir)
+    if inst is not None and inst < HANDOFF_FORMAT:
+        return None         # an older addon reads the encrypted strings its file has: leave it until it's updated
     done = handed_over(wow_dir)
     pending = [(k, v) for k, v in sorted(load_store(root)["imports"].items(), key=lambda kv: kv[1].get("added") or 0)
-               if not (done.get(k) or {}).get("ok")]
-    text = handoff_lua(pending)
+               if not note_for(done.get(k), v).get("ok")]
+    keys = dict(account_keys(wow_dir))
+    checks = {k: key_check(keys[v["account"]]) for k, v in pending if v.get("account") in keys}
+    text = handoff_lua(pending, checks)
     try:
         with open(path, encoding="utf-8") as fh:
             if fh.read() == text:
@@ -662,7 +708,7 @@ def status(root, wow_dir):
     done = handed_over(wow_dir)
     out = []
     for iid, rec in load_store(root)["imports"].items():
-        note = done.get(iid) or {}
+        note = note_for(done.get(iid), rec)
         state = "done" if note.get("ok") else "failed" if note.get("err") else "waiting"
         raw_guides = rec.get("guides") or ()
         out.append({"id": iid, "added": rec.get("added"), "account": rec.get("account"),

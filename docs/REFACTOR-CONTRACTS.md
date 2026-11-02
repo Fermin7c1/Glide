@@ -544,3 +544,14 @@ they don't spell out.
   already did (`ui_map`, `continent`, `wpoints`); before, its world numbers became map-percent points on no map. A
   machine-tier `parser`/`knowledge` golden on the development PC differs only where a guide has a world-form `.loop`;
   re-record those probes there if they flag it. The player reported the empty map (2026-11-02).
+- **Addon 0.17.3, files on disk: decrypted RestedXP packs go only to the account they were bought for.** Since 0.17.2
+  the addon loaded the decrypted texts with RestedXP's `ImportGuide`, which runs no account check (the encrypted
+  string carried it), into whichever account logged in first, and that account's note took the pack out of the file
+  before the buyer's account had it (review of 7d21f49, three reviewers). Each pack in `Data/RXPImports.lua` now
+  carries `k`, the buyer account's key check (`rxp_import.key_check`: Adler-32 of its 16-number RestedXP key); the
+  addon computes the same from RestedXP's key for the account logged in (`ReadCacheData`, else `RXPData.cache`) and
+  leaves other accounts' packs alone, with no note. `handed_over()` now answers per account and `note_for()` counts
+  only the buyer account's note. The addon loads guides for at most 40 ms of RestedXP parsing per tick
+  (`debugprofilestop`; one guide a tick without it, as RestedXP's own importer), counting a guide only once RestedXP
+  took it, instead of 15 at a time (Hardcore aborts a script after 200 ms). The engine leaves the file alone while
+  the installed addon is older than 0.17.2 (it reads encrypted strings).

@@ -130,8 +130,12 @@ try:
     ns = L.table()
     L.eval("function(src, ns) local f, e = loadstring(src, '@RXPImports.lua') if not f then error(e) end f('Glide', ns) end")(
         handoff_text, ns)
-    got = {e.id: (e.n, [e.guides[i] for i in range(1, len(e.guides) + 1)]) for e in ns.rxpImports.values()}
-    assert got == {r["id"]: (2, [G1, G2]), r3["id"]: (1, [G3])}, got
+    got = {e.id: (e.n, e.k, [e.guides[i] for i in range(1, len(e.guides) + 1)]) for e in ns.rxpImports.values()}
+    # each pack carries its buyer account's key check: the addon loads it only into that account
+    k_main, k_alt = R.key_check(R.key_from_battletag("Main#1111")), R.key_check(R.key_from_battletag("Alt#2222"))
+    assert got == {r["id"]: (2, k_main, [G1, G2]), r3["id"]: (1, k_alt, [G3])}, got
+    assert k_main != k_alt and 'id = "x"' not in R.handoff_lua([("x", {"guides": [{"text": G1}]})]), \
+        "a pack with no account check isn't written"
 
     st = {x["id"]: x for x in R.status(home, wow)}
     assert st[r["id"]]["rxp"] == "waiting" and st[r["id"]]["guides"] == ["1-6 Durotar", "6-11 Durotar"], st
@@ -153,6 +157,22 @@ try:
                  '\t},\n}\n' % (r["id"], r3["id"]))
     st = {x["id"]: x for x in R.status(home, wow)}
     assert st[r["id"]]["rxp"] == "done", st[r["id"]]
+    # Regression (review of 7d21f49): another account's note never marks a pack delivered. With only an ok note
+    # from ALT for MAIN's pack, it stays waiting and in the file, so MAIN still gets it.
+    main_sv = open(os.path.join(sv["MAIN"], "Glide.lua"), encoding="utf-8").read()
+    os.remove(os.path.join(sv["MAIN"], "Glide.lua"))
+    alt_sv = open(os.path.join(sv["ALT"], "Glide.lua"), encoding="utf-8").read()
+    with open(os.path.join(sv["ALT"], "Glide.lua"), "w", encoding="utf-8") as fh:
+        fh.write(alt_sv.replace('["ok"] = false,\n\t\t\t["err"] = "Account mismatch",', '["ok"] = true,', 1))
+    assert {x["id"]: x for x in R.status(home, wow)}[r["id"]]["rxp"] == "waiting"
+    R.sync(home, wow)
+    assert r["id"] in open(handoff, encoding="utf-8").read(), "the buyer's pack stays for the buyer's account"
+    with open(os.path.join(sv["MAIN"], "Glide.lua"), "w", encoding="utf-8") as fh:
+        fh.write(main_sv)
+    with open(os.path.join(sv["ALT"], "Glide.lua"), "w", encoding="utf-8") as fh:
+        fh.write(alt_sv)
+    st = {x["id"]: x for x in R.status(home, wow)}
+    assert st[r["id"]]["rxp"] == "done", st[r["id"]]
     assert st[r3["id"]]["rxp"] == "failed" and st[r3["id"]]["error"] == "Incompatible guide", st[r3["id"]]
     assert R.sync(home, wow) == handoff
     left = open(handoff, encoding="utf-8").read()
@@ -164,6 +184,17 @@ try:
     assert r3["id"] in open(handoff, encoding="utf-8").read()
     # no Glide addon in the folder: nothing written there, the guides are still the coach's
     assert R.sync(home, os.path.join(tmp, "elsewhere")) is None
+    # an older addon (before 0.17.2) reads encrypted strings: its file is left alone until the addon is updated
+    toc = os.path.join(wow, "Interface", "AddOns", "Glide", "Glide.toc")
+    with open(toc, "w", encoding="utf-8") as fh:
+        fh.write("## Interface: 16001\n## Version: 0.17.1\n")
+    before = open(handoff, encoding="utf-8").read()
+    with open(handoff, "w", encoding="utf-8") as fh:
+        fh.write("-- an 0.17.1 file\n")
+    assert R.sync(home, wow) is None and open(handoff, encoding="utf-8").read() == "-- an 0.17.1 file\n"
+    with open(toc, "w", encoding="utf-8") as fh:
+        fh.write("## Interface: 16001\n## Version: 0.17.3\n")
+    assert R.sync(home, wow) == handoff and open(handoff, encoding="utf-8").read() == before
     # a record with no guide text is skipped; control bytes + following digits round-trip through Lua 5.1 intact
     assert "ns.rxpImports = {\n}" in R.handoff_lua([("x", {"guides": []})])
     assert R._lua_string('a"b\\c\n0\x019') == '"a\\"b\\\\c\\n0\\0019"'
@@ -294,15 +325,26 @@ end
 function ticks(n) for _ = 1, n do tick() end end
 """)
 ns = L.table()
-# "aaa" has 20 guides (> BATCH = 15, so it spans two ticks); "bbb" has 1 guide
+# this account's RestedXP key (ReadCacheData's 16 numbers, keys 0..15) and another account's
+MINE, OTHER = R.key_from_battletag("Main#1111"), R.key_from_battletag("Alt#2222")
+L.execute("KEY = {" + ", ".join("[%d] = %d" % (i, v) for i, v in enumerate(MINE)) + "}")
+L.execute("""RXP.ReadCacheData = function(mode) if mode then return nil end return KEY end
+-- debugprofilestop: a clock RestedXP's parsing moves on, 10 ms a guide
+CLOCK = 0
+function debugprofilestop() return CLOCK end
+local import = RXP.ImportGuide
+RXP.ImportGuide = function(text) CLOCK = CLOCK + 10 return import(text) end""")
+# "aaa" has 20 guides (more than one tick's 40 ms holds), "bbb" 1; "ccc" was bought on another account
 g_many = [{"text": "#group G\n#name Guide %d\nstep\n" % i} for i in range(1, 21)]
-handoff_src = R.handoff_lua([("aaa", {"guides": g_many}),
-                             ("bbb", {"guides": [{"text": G3}]})])
+handoff_src = R.handoff_lua([("aaa", {"guides": g_many}), ("bbb", {"guides": [{"text": G3}]}),
+                             ("ccc", {"guides": [{"text": G2}]})],
+                            {"aaa": R.key_check(MINE), "bbb": R.key_check(MINE), "ccc": R.key_check(OTHER)})
 run = L.eval("function(src, name, a, ns) local f, e = loadstring(src, name) if not f then error(e) end return f(a, ns) end")
 for name in ("Core.lua", "Data/RXPImports.lua", "RXPImport.lua"):
     src = handoff_src if name == "Data/RXPImports.lua" else open(os.path.join(ROOT, "addon", "Glide", name), encoding="utf-8").read()
     run(src, "@" + name, "Glide", ns)
 G = L.globals()
+calls = lambda: list(G.CALLS.values())
 G.fire("ADDON_LOADED", "Glide")
 G.COMBAT_LOCK = True                 # in combat at login: nothing starts until it's over
 G.fire("PLAYER_LOGIN")
@@ -313,21 +355,23 @@ G.setBusy(True)                      # RestedXP's worker is busy: waits for it t
 G.ticks(4)
 assert len(G.CALLS) == 0, "waits for RestedXP's worker"
 G.setBusy(False)
-G.ticks(1)                           # first batch of "aaa": 15 of 20 guides
-assert len(G.CALLS) == 15, len(G.CALLS)
+G.ticks(1)                           # one tick: guides until 40 ms of RestedXP's parsing (4 at 10 ms each)
+assert calls() == [g["text"] for g in g_many[:4]], calls()
 assert "handing the 20 RestedXP guides" in G.last(), G.last()
-G.ticks(1)                           # second batch of "aaa": remaining 5 guides, then done
-assert len(G.CALLS) == 20 and G.MENUS == 1, (len(G.CALLS), G.MENUS)
+G.ticks(4)                           # the rest of "aaa", 4 a tick, in order, then done
+assert calls() == [g["text"] for g in g_many] and G.MENUS == 1, (len(G.CALLS), G.MENUS)
 notes = G.GlideRecorderDB.rxpImports
 assert notes["aaa"].ok and notes["aaa"].err is None, dict(notes["aaa"])
 assert any("RestedXP now has the 20 guides" in p for p in G.PRINTED.values())
 G.REFUSE = "Error parsing guide: bad step"
 G.ticks(1)                           # next tick tries "bbb", which fails
-assert list(G.CALLS.values())[-1] == G3 and len(G.CALLS) == 21
+assert calls()[-1] == G3 and len(G.CALLS) == 21
 assert notes["bbb"].ok is False and "Error parsing guide" in notes["bbb"].err, dict(notes["bbb"])
 assert "/glide rxpimport tries again" in G.last(), G.last()
 G.ticks(10)
 assert len(G.CALLS) == 21, "a failed pack isn't retried by itself"
+# Regression (review of 7d21f49): another account's pack never goes into this account's RestedXP, and leaves no note
+assert G2 not in calls() and notes["ccc"] is None, "another account's guides were loaded here"
 
 # the next login: RestedXP has "aaa", "bbb" failed: nothing goes again
 G.fire("PLAYER_LOGIN")
@@ -337,7 +381,7 @@ assert len(G.CALLS) == 21, len(G.CALLS)
 G.REFUSE = "Incompatible guide"
 G.SlashCmdList.GLIDE("rxpimport")
 G.ticks(1)
-assert list(G.CALLS.values())[-1] == G3 and len(G.CALLS) == 22
+assert calls()[-1] == G3 and len(G.CALLS) == 22
 assert "Incompatible guide" in notes["bbb"].err and "Incompatible guide" in G.last(), G.last()
 G.ticks(10)
 assert len(G.CALLS) == 22, "tried once per command"
@@ -346,10 +390,29 @@ G.SlashCmdList.GLIDE("rxpimport")
 G.ticks(1)
 assert notes["bbb"].ok and len(G.CALLS) == 23 and G.MENUS == 2
 G.SlashCmdList.GLIDE("rxpimport")
-assert "already has every guide" in G.last(), G.last()
+assert "for another Battle.net account" in G.last(), G.last()      # only "ccc" is left, and it isn't this account's
+assert G2 not in calls() and notes["ccc"] is None
+
+# without debugprofilestop: one guide a tick, as RestedXP's own importer loads them
+G.GlideRecorderDB.rxpImports = L.table()
+G.debugprofilestop = None
+before = len(G.CALLS)
+G.SlashCmdList.GLIDE("rxpimport")
+G.ticks(1)
+assert len(G.CALLS) == before + 1, len(G.CALLS) - before
+G.ticks(30)
+assert len(G.CALLS) == before + 21 and G.GlideRecorderDB.rxpImports["aaa"].ok, len(G.CALLS) - before
+
+# RestedXP can't say which account this is: nothing goes, said once
+G.GlideRecorderDB.rxpImports = L.table()
+G.RXP.ReadCacheData = None
+before, said_before = len(G.CALLS), len(G.PRINTED)
+G.fire("PLAYER_LOGIN")
+G.ticks(10)
+said = [p for p in list(G.PRINTED.values())[said_before:] if "can't say which Battle.net account" in p]
+assert len(G.CALLS) == before and len(said) == 1, (len(G.CALLS) - before, list(G.PRINTED.values())[said_before:])
 
 # without RestedXP: says so once and stops looking
-G.GlideRecorderDB.rxpImports = L.table()
 G.RXP = None
 before = len(G.PRINTED)
 G.fire("PLAYER_LOGIN")
