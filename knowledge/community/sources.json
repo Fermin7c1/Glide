@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-29",
+  "updated": "2026-11-02",
   "notes": "Registry of every WoW Forever community source. kind: git (data repo; adapter = folder name build_seed.py reads), forum, news, guide, wiki, video, social, discord, addon, bugtracker, database. access: how a scan can read it from here (cloud-webfetch, cloud-websearch-only, device-curl, git, none). status: active, candidate (found, not yet used), dead. Never store credentials here.",
   "sources": [
     {
@@ -13,7 +13,7 @@
       "access": "git",
       "status": "unlicensed",
       "first_seen": "2026-10-03",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "builds/<build>.json.gz holds a spell/item/recipe snapshot per client build (refreshed daily from wago.tools); diff consecutive builds to find undocumented changes (learn levels, costs, cooldowns, tooltip text). Latest: 1.60.1.70532 (Oct 23; identical to 70450 — hotfixes aren't in build files)."
     },
     {
@@ -26,7 +26,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-03",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-lodestar",
@@ -38,7 +38,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-03",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-rxpguides",
@@ -50,7 +50,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-03",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Guides/Forever/dungeon/: free 1-20 dungeon route (Alliance 17-18 HoT, 18-19 RoL, 19-20 DM; Horde 16-17 RFC, 17-18 RoL, 21-22 WC); paid guide covers 1-30."
     },
     {
@@ -63,7 +63,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-wowsims-forever",
@@ -87,7 +87,7 @@
       "status": "candidate",
       "first_seen": "2026-10-03",
       "notes": "large; ForeverGuide already carries its data",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-tzcnt-forever-data",
@@ -98,7 +98,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-forever-loot",
@@ -109,7 +109,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-forever-bugs",
@@ -120,8 +120,8 @@
       "access": "device-curl",
       "status": "active",
       "first_seen": "2026-10-08",
-      "notes": "read with device_bash: curl https://api.github.com/repos/ClassicWoWCommunity/forever-bugs/issues?state=all&sort=updated&per_page=50 and .../issues/comments?sort=updated&since=<iso>; cloud GitHub API and WebFetch are blocked",
-      "last_checked": "2026-10-29"
+      "notes": "read with device_bash: curl https://api.github.com/repos/ClassicWoWCommunity/forever-bugs/issues?state=all&sort=updated&per_page=50 and .../issues/comments?sort=updated&since=<iso>; cloud GitHub API and WebFetch are blocked 2026-10-31: no staff comments since Oct 26; newest #439 Gnome Eureka! vs Execute rage cost.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "blizz-forums-forever",
@@ -132,8 +132,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "notes": "Discourse JSON: /l/latest.json, /c/wow-forever/346/l/latest.json, /t/<slug>/<id>.json (staff flag marks Blizzard posts). EU forums too: eu.forums.blizzard.com. Fetch with WebFetch; raw curl to the forums fails from both the cloud and the PC (2026-10-09). EU equivalent: https://eu.forums.blizzard.com/en/wow/c/wow-forever/359 (latest.json works). 2026-10-29: latest.json, latest.json?order=created and top.json?period=daily all served stale caches (Oct 23-26); raw/2360696/9 client_error (no post 9 or blocked). Use the EU category and Arctium meanwhile.",
-      "last_checked": "2026-10-29"
+      "notes": "Discourse JSON: /l/latest.json, /c/wow-forever/346/l/latest.json, /t/<slug>/<id>.json (staff flag marks Blizzard posts). EU forums too: eu.forums.blizzard.com. Fetch with WebFetch; raw curl to the forums fails from both the cloud and the PC (2026-10-09). EU equivalent: https://eu.forums.blizzard.com/en/wow/c/wow-forever/359 (latest.json works). 2026-10-29: latest.json, latest.json?order=created and top.json?period=daily all served stale caches (Oct 23-26); raw/2360696/9 client_error (no post 9 or blocked). Use the EU category and Arctium meanwhile. 2026-10-31: category 346 latest.json with ?_=20261031 served fresh topics (to 08:35 UTC); no staff posts. 07:07 run: plain latest.json via WebFetch fresh to 11:10 UTC, no staff posts.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "blizz-devnotes",
@@ -144,8 +144,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "notes": "Each build's notes are a new post: /raw/2360696/<post_number> returns the full text (post 6 = Oct 15 build 70425). The topic .json lags behind the slug; use the 349 category listing to see the newest title. Also watch 'Beta Realm Maintenance', 'Beta Client Update' topics.",
-      "last_checked": "2026-10-29"
+      "notes": "Each build's notes are a new post: /raw/2360696/<post_number> returns the full text (post 6 = Oct 15 build 70425). The topic .json lags behind the slug; use the 349 category listing to see the newest title. Also watch 'Beta Realm Maintenance', 'Beta Client Update' topics. 2026-10-31: raw/2360696/9 client_error again; no dev notes for the Oct 30 hotfixes.",
+      "last_checked": "2026-10-31"
     },
     {
       "id": "blizz-news",
@@ -156,7 +156,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "index and feed render empty for WebFetch; find articles via arctium.io and search, then fetch each article"
     },
     {
@@ -168,8 +168,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29",
-      "notes": "news index needs JavaScript, but the RSS feed https://www.wowhead.com/news/rss/forever reads fine with WebFetch (titles, dates, snippets); then WebFetch each article"
+      "last_checked": "2026-11-02",
+      "notes": "news index needs JavaScript, but the RSS feed https://www.wowhead.com/news/rss/forever reads fine with WebFetch (titles, dates, snippets); then WebFetch each article 2026-10-31: article pages (news=... and forever/news/...) render only the headline via WebFetch; use the RSS snippet plus secondary sites (wowforever.be) for bodies."
     },
     {
       "id": "icyveins-forever",
@@ -181,7 +181,7 @@
       "status": "active",
       "first_seen": "2026-10-08",
       "notes": "index loads by script; find articles by search, then WebFetch each article news index renders empty via WebFetch ('Loading'); find articles by search Oct 28: WebFetch of article and index pages fails (client_error).",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "warcrafttavern-forever",
@@ -192,7 +192,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02",
+      "notes": "Riding guide /forever/guides/riding/ used 2026-10-31."
     },
     {
       "id": "massivelyop",
@@ -203,7 +204,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-27"
+      "last_checked": "2026-11-02",
+      "notes": "2026-10-31: article pages client_error via WebFetch."
     },
     {
       "id": "pcgamer",
@@ -214,7 +216,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-22"
+      "last_checked": "2026-10-31"
     },
     {
       "id": "kotaku",
@@ -236,7 +238,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-28"
+      "last_checked": "2026-11-02",
+      "notes": "English beginner guide pages (e.g. professions and gold) used 2026-10-31."
     },
     {
       "id": "kami-labs",
@@ -247,7 +250,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-28"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "zockify",
@@ -303,7 +306,7 @@
       "status": "active",
       "first_seen": "2026-10-08",
       "notes": "boosting-service blog; lower trust",
-      "last_checked": "2026-10-27"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "reddit-classicwow",
@@ -315,7 +318,7 @@
       "status": "active",
       "first_seen": "2026-10-08",
       "notes": "reddit is blocked for WebFetch and the device proxy; discover posts through WebSearch and the articles that quote them",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-10-31"
     },
     {
       "id": "x-aggrend",
@@ -326,7 +329,7 @@
       "access": "cloud-websearch-only",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "yt-blizzard-podcast",
@@ -337,8 +340,8 @@
       "access": "cloud-websearch-only",
       "status": "active",
       "first_seen": "2026-10-08",
-      "notes": "leveling stats: average 1-20 in 20.5 h on Forever vs 20.4 h Era; ep. 3 (dungeons, Oct 8): https://www.youtube.com/watch?v=LwOWAf06YPg, Aggrend follow-up in forum topic 2376010",
-      "last_checked": "2026-10-24"
+      "notes": "leveling stats: average 1-20 in 20.5 h on Forever vs 20.4 h Era; ep. 3 (dungeons, Oct 8): https://www.youtube.com/watch?v=LwOWAf06YPg, Aggrend follow-up in forum topic 2376010 Episode 6 (tech, layering, OCE day/night; Oct 29): https://www.youtube.com/watch?v=BVyhnixdPQg",
+      "last_checked": "2026-10-31"
     },
     {
       "id": "yt-creators",
@@ -349,7 +352,7 @@
       "access": "cloud-websearch-only",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-28"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "curseforge-forever",
@@ -360,7 +363,7 @@
       "access": "cloud-websearch-only",
       "status": "active",
       "first_seen": "2026-10-08",
-      "last_checked": "2026-10-28"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "discord-wowforever",
@@ -392,7 +395,8 @@
       "access": "none",
       "status": "candidate",
       "first_seen": "2026-10-08",
-      "notes": "blocked by the organization's network allowlist and robots for WebFetch; allowing wago.tools in Admin settings > Capabilities would let the scan import client tables into data/db2"
+      "notes": "blocked by the organization's network allowlist and robots for WebFetch; allowing wago.tools in Admin settings > Capabilities would let the scan import client tables into data/db2",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "arctium-bluetracker",
@@ -404,7 +408,7 @@
       "status": "active",
       "first_seen": "2026-10-08",
       "notes": "fastest way to see new Blizzard posts (class deep dives, dev notes, maintenance) across US/EU/KR/TW. 2026-10-13: fresh (newest Oct 12, Linxy retail tuning posts; no Forever posts since Oct 9).",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "reddit-wowforever",
@@ -416,7 +420,7 @@
       "status": "active",
       "first_seen": "2026-10-08",
       "notes": "blocked for WebFetch; discover via WebSearch and articles quoting it",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "pcgamesn",
@@ -449,8 +453,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-09",
-      "last_checked": "2026-10-29",
-      "notes": "fan project by the Daybreak guild; lists build 1.60.1.70291; summary page only, per-item pages untested /changes gives a per-build table diff (70532 vs 70450 on 2026-10-22). Oct 28: /changes lists 70630 (80 rows vs 70532), 70634, 70658; per-build pages /changes/1.60.1.<build> show item rows and tooltip names. 2026-10-29: /changes lists 1.60.1.70685 (3 rows vs 70658); /changes/<build> names rows but not field values."
+      "last_checked": "2026-10-31",
+      "notes": "fan project by the Daybreak guild; lists build 1.60.1.70291; summary page only, per-item pages untested /changes gives a per-build table diff (70532 vs 70450 on 2026-10-22). Oct 28: /changes lists 70630 (80 rows vs 70532), 70634, 70658; per-build pages /changes/1.60.1.<build> show item rows and tooltip names. 2026-10-29: /changes lists 1.60.1.70685 (3 rows vs 70658); /changes/<build> names rows but not field values. 2026-10-31: /changes lists 1.60.1.70707 (133 rows vs 70685); still the newest build at 11:20 UTC."
     },
     {
       "id": "warcraft-wiki-gg",
@@ -496,7 +500,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-09",
-      "last_checked": "2026-10-27",
+      "last_checked": "2026-10-31",
       "notes": " Legacy system guide has per-rank perk values (used 2026-10-22)."
     },
     {
@@ -506,8 +510,10 @@
       "name": "Method.gg WoW Forever (leveling guides, racials)",
       "url": "https://www.method.gg/wow-forever",
       "access": "cloud-webfetch",
-      "status": "candidate",
-      "first_seen": "2026-10-09"
+      "status": "active",
+      "first_seen": "2026-10-09",
+      "notes": "Mount/riding cost guide (Oct 21) used 2026-10-31.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "wowforevertalent",
@@ -530,7 +536,7 @@
       "status": "candidate",
       "first_seen": "2026-10-09",
       "notes": "needs an adapter: data/datasets/<build>.json",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-shortest-path-forever",
@@ -542,7 +548,7 @@
       "status": "candidate",
       "first_seen": "2026-10-09",
       "notes": "needs an adapter for transport/flight data; Nav/*.lua is large",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-adventure-guide-forever",
@@ -565,7 +571,7 @@
       "status": "candidate",
       "first_seen": "2026-10-09",
       "notes": "trainer/spell-level tables could feed the KB; needs an adapter",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-wowf-qrp",
@@ -576,7 +582,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-09",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-atlasmobs",
@@ -587,7 +593,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-09",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "curseforge-forever-loot-sparkles",
@@ -620,8 +626,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-10",
-      "last_checked": "2026-10-29",
-      "notes": "Pages: /patch-notes, /downranking, /downrank-calculator, /beta. Solo fan site reading the beta client."
+      "last_checked": "2026-10-31",
+      "notes": "Pages: /patch-notes, /downranking, /downrank-calculator, /beta. Solo fan site reading the beta client. 2026-10-31: /patch-notes has build 70707 (Oct 30): Revenge AP scaling, Adventurer's Tent change; nothing newer at 11:20 UTC."
     },
     {
       "id": "theforeverera-blue",
@@ -656,7 +662,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-10",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "data/site.db (SQLite, rebuilt per build from wago.tools; build 1.60.1.70334 on Oct 10). Tables xp_source, xp_spell, camping_spell, xp_curve, quest_xp, spellbook, talent_full. Needs an adapter."
     },
     {
@@ -771,7 +777,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-10",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-wow-forever-search",
@@ -836,8 +842,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-11",
-      "last_checked": "2026-10-29",
-      "notes": "latest.json and t/<id>.json work via WebFetch; EU-only threads (e.g. Truthseeker's Bow level change, resurrection sickness) appear here first. Oct 28: EU latest.json fails (client_error). 2026-10-29: the general EU WoW Forever category https://eu.forums.blizzard.com/en/wow/c/wow-forever/l/latest.json returned fresh topics via WebFetch (US latest.json/top.json were stale caches from Oct 23-26)."
+      "last_checked": "2026-11-02",
+      "notes": "latest.json and t/<id>.json work via WebFetch; EU-only threads (e.g. Truthseeker's Bow level change, resurrection sickness) appear here first. Oct 28: EU latest.json fails (client_error). 2026-10-29: the general EU WoW Forever category https://eu.forums.blizzard.com/en/wow/c/wow-forever/l/latest.json returned fresh topics via WebFetch (US latest.json/top.json were stale caches from Oct 23-26). 2026-10-31: general EU category latest.json fresh (to 08:33 UTC); no staff flags."
     },
     {
       "id": "bluetracker-gg",
@@ -860,8 +866,8 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-11",
-      "last_checked": "2026-10-29",
-      "notes": "Database plus news/blue tracker (foreverdb.net/news) with articles that check Blizzard announcements and community claims against the client data (e.g. Krol'dok Speed spell, quest log 40 claim). No API or bulk download; companion addon + uploader + Discord bot. Oct 24: /changelog/<build> pages list per-build spell/talent diffs incl. server hotfixes read from the local client cache (e.g. 1.60.1.70532). Oct 25: addon 0.48/0.49 records per-level active time and quest turn-ins; from launch foreverdb.net/leveling-route shows median XP/hour per zone and level (no download). Oct 28: /changelog/1.60.1.<build> gives per-ability old->new values vs the previous live build (70658 vs 70532)."
+      "last_checked": "2026-10-31",
+      "notes": "Database plus news/blue tracker (foreverdb.net/news) with articles that check Blizzard announcements and community claims against the client data (e.g. Krol'dok Speed spell, quest log 40 claim). No API or bulk download; companion addon + uploader + Discord bot. Oct 24: /changelog/<build> pages list per-build spell/talent diffs incl. server hotfixes read from the local client cache (e.g. 1.60.1.70532). Oct 25: addon 0.48/0.49 records per-level active time and quest turn-ins; from launch foreverdb.net/leveling-route shows median XP/hour per zone and level (no download). Oct 28: /changelog/1.60.1.<build> gives per-ability old->new values vs the previous live build (70658 vs 70532). 2026-10-31: /changelog index newest is 70658 (Oct 28); 70707 not yet listed."
     },
     {
       "id": "talentsforever",
@@ -896,7 +902,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-11",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Last reviewed Oct 9; slower than the forums but clean official-only list. Oct 28: unofficial news digest linking each item to Blizzard sources; database 'coming at launch'."
     },
     {
@@ -992,7 +998,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-12",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Upstream of forever-ref (which pins a QuestieDB commit) and required by the Ding addon. Releases ship QuestieDB-Forever.zip ('preview' tag rebuilt daily). Needs an adapter to read directly; docs/forever-delta-base*.md describe how Forever data is derived."
     },
     {
@@ -1050,7 +1056,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-12",
-      "last_checked": "2026-10-20",
+      "last_checked": "2026-11-02",
       "notes": "Fast index of new Icy Veins/Wowhead Forever articles (Icy Veins' own index doesn't render). Unofficial; AI summaries, cite the original articles."
     },
     {
@@ -1061,7 +1067,8 @@
       "url": "https://gamewave.fr/world-of-warcraft-forever/",
       "access": "cloud-webfetch",
       "status": "candidate",
-      "first_seen": "2026-10-12"
+      "first_seen": "2026-10-12",
+      "last_checked": "2026-10-31"
     },
     {
       "id": "gh-myxpbar-forever",
@@ -1179,7 +1186,7 @@
       "access": "cloud-webfetch",
       "status": "candidate",
       "first_seen": "2026-10-13",
-      "last_checked": "2026-10-13",
+      "last_checked": "2026-11-02",
       "notes": "Cited by Kami Labs for Questie Forever status."
     },
     {
@@ -1191,7 +1198,7 @@
       "access": "cloud-webfetch",
       "status": "candidate",
       "first_seen": "2026-10-13",
-      "last_checked": "2026-10-13",
+      "last_checked": "2026-11-02",
       "notes": "SEO-style; dated per-build recaps (e.g. Oct 1 patch, Kyle's Gone Missing / sleeping bag). Low trust, use for leads only."
     },
     {
@@ -1203,7 +1210,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-14",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "data/forever.sqlite.zst (43 MB SQLite: m_quest, m_npc, m_spawn, m_item_source drop rates, client_taxipath/taxipathnode, client_questxp, client_talent, terrain) and overrides/forever/travel.toml (boats, portals, Zephras Isle exits with ride seconds). Needs an adapter. Very active (several commits a day)."
     },
     {
@@ -1227,7 +1234,7 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-14",
-      "last_checked": "2026-10-27",
+      "last_checked": "2026-11-02",
       "notes": "Fan site; lists each beta build from wago.tools with a file/DB2 diff (70374: 666 files, no talent/spell changes). Good early build signal."
     },
     {
@@ -1318,7 +1325,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-17",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "~100 stars in 4 days, releases daily. addon/Polestar_Guides/Guides.lua (6 MB), guides/forever/ (220 files), tools/planner, data/sim params, docs/SIMULATION.md (model: Classic kill XP, client QuestXP tiers, 7 yd/s). Has a recorder module. Needs an adapter."
     },
     {
@@ -1354,7 +1361,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-17",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Sibling of WoWF-QRP. data/bundle.b64; camp advisor says one camp feature per player, 3 on a Basic Campfire (unverified)."
     },
     {
@@ -1400,8 +1407,8 @@
       "access": "device-curl",
       "status": "active",
       "first_seen": "2026-10-17",
-      "last_checked": "2026-10-28",
-      "notes": "device_bash curl https://api.github.com/search/repositories?q=... ; dozens of new Forever repos a day (mostly UI); scan names/descriptions for leveling, route, XP, data."
+      "last_checked": "2026-11-02",
+      "notes": "device_bash curl https://api.github.com/search/repositories?q=... ; dozens of new Forever repos a day (mostly UI); scan names/descriptions for leveling, route, XP, data. 2026-10-31: 192 repos pushed since Oct 29 for \"wow forever\"; gold/AH, profession, guild and social addons now appear."
     },
     {
       "id": "lfcarry-forever",
@@ -1468,7 +1475,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "SlopLeveler/ addon + companion/ + tools/; routes converted from RXPGuides, so mostly a derivative; watch its quest-order optimizer",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-audhd",
@@ -1480,7 +1487,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "Route_*.lua for starts 1-20 (NE Hunter 14-20 variants); DropData.lua/RareData.lua/WalkData.lua are data tables; no adapter",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-signpost",
@@ -1492,7 +1499,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "Phase 0, not playable yet; Data/ and Guides/ folders",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-ding-polestar-pack",
@@ -1516,7 +1523,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "XP-rate addon; useful for comparing measured XP/h methods",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-openmap-forever",
@@ -1528,7 +1535,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "original jiforever repo deleted; map/coordinate data, not leveling",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-forever-campfire-codex",
@@ -1540,7 +1547,7 @@
       "status": "active",
       "first_seen": "2026-10-18",
       "notes": "src/data/state.json tracks latest builds and blue posts; a cheap change detector",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-wow4-sims",
@@ -1552,7 +1559,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "possible replacement for the deleted ElliotWood/Forever; check for spell/talent data",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-wowsimforever-cannonjunior",
@@ -1564,7 +1571,7 @@
       "status": "candidate",
       "first_seen": "2026-10-18",
       "notes": "new Oct 17, 0 stars; watch",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "metaforge-forever",
@@ -1600,7 +1607,7 @@
       "status": "active",
       "first_seen": "2026-10-19",
       "notes": "Go sim with per-class spell/talent data (sim/, proto/); pushed Oct 19. Replaces dead ElliotWood/Forever for class damage numbers. No adapter. 2026-10-29: its PRs titled '... onto the <build> hotfixes' diff the raidbots 'forever' hotfix cache (DBCache.bin) per class: the earliest independent read of unannounced server hotfixes (PR #744: Mage talent reshuffle, Frost Blast removed). Read PRs via device curl on the GitHub API.",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "curseforge-foreverroute",
@@ -1659,7 +1666,7 @@
       "status": "candidate",
       "first_seen": "2026-10-19",
       "notes": "news.json + images; pushed daily; possible cheap news detector. 2026-10-20: news.json mirrors the Russian Telegram channel t.me/WoW_Forever_RU (mostly a mini-app changelog); low value.",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "guildorder-forever-wiki",
@@ -1670,8 +1677,8 @@
       "access": "cloud-webfetch",
       "status": "candidate",
       "first_seen": "2026-10-19",
-      "last_checked": "2026-10-19",
-      "notes": "Third-party summaries of Blizzard announcements; dates only."
+      "last_checked": "2026-11-02",
+      "notes": "Third-party summaries of Blizzard announcements; dates only. Also guild officer pages: launch officer checklist, guild treasury on a fresh economy, moving a Classic Era guild to Forever (guild/social scope)."
     },
     {
       "id": "gh-ezwow-flightmap",
@@ -1810,7 +1817,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-21",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "data/quests.lua (3.4 MB), npcs.lua (6 MB), objects.lua, items.lua, world.lua, provenance.lua; schema 1.4 in SPEC.md. Starts from QuestieDB + pfQuest, reads Forever client tables, filled in by the NorgannonDB Collector addon. Suite: Clairvoyance (quest helper), Oracle (dungeon atlas). Needs an adapter."
     },
     {
@@ -1894,7 +1901,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-21",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Private-server tool; lists every client resource (quests, flight points, dungeons). Low leveling value; watch for client-data exports."
     },
     {
@@ -1907,7 +1914,7 @@
       "access": "git",
       "status": "active",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Routes.lua: every taxi route's path length from the client tables (Tools/taxi_routes.py); time = length / 30 yd/s, calibrated on 266 Classic routes. Needs an adapter for Glide's flight-time model."
     },
     {
@@ -1920,7 +1927,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Addon + app + site roadtosixty.online; records level journey per character, CurseForge 'road-to-sixty'. Possible future source of real leveling paths/paces."
     },
     {
@@ -1933,7 +1940,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Guide addon v0.8.8-beta, levels 1-30; repo holds only README, guides via evertrail.online."
     },
     {
@@ -1946,7 +1953,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Ranks gear by level and role, lists dungeon/quest/crafting sources."
     },
     {
@@ -1959,7 +1966,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Same author as shortest-path-forever and skillup-forever; may hold Legacy challenge data."
     },
     {
@@ -1972,7 +1979,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Dungeon Journal-style window with dungeon quest chains; possible dungeon-quest data."
     },
     {
@@ -1985,7 +1992,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Offline item data for every Classic flavor including Forever."
     },
     {
@@ -1998,7 +2005,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Physical waypoint network + logical links (NavNetwork.lua); unclear Forever coverage."
     },
     {
@@ -2011,8 +2018,8 @@
       "access": "cloud-webfetch",
       "status": "candidate",
       "first_seen": "2026-10-22",
-      "last_checked": "2026-10-24",
-      "notes": "Editorial class tier list (Oct 18), no measured data."
+      "last_checked": "2026-11-02",
+      "notes": "Editorial class tier list (Oct 18), no measured data. Korean and Russian versions: https://seemeta.com/ko/wow-forever/leveling-tier-list"
     },
     {
       "id": "conquestcapped-forever",
@@ -2022,10 +2029,10 @@
       "url": "https://conquestcapped.com/guides/wow-forever/wow-forever-alt-leveling/",
       "adapter": null,
       "access": "cloud-webfetch",
-      "status": "candidate",
+      "status": "active",
       "first_seen": "2026-10-22",
-      "last_checked": null,
-      "notes": "Alt leveling guide (rested XP, dungeons, professions); not read yet."
+      "last_checked": "2026-11-02",
+      "notes": "Alt leveling guide (rested XP, dungeons, professions); not read yet. Commercial (boosting site). Nov 2: addon compatibility table used (status checked Oct 29)."
     },
     {
       "id": "gh-erenkinik-forever-leveling",
@@ -2063,7 +2070,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-24",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "C# tool + generated RXPGuides_ZoneRoutes per zone/faction for Classic/TBC/MoP/Forever. Created Oct 23."
     },
     {
@@ -2102,7 +2109,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-24",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Level-60 sim with reproducible DPS benchmarks per build (artifacts/). Endgame; low leveling value."
     },
     {
@@ -2139,10 +2146,10 @@
       "url": "https://github.com/romaninsh/wow-plan.git",
       "adapter": null,
       "access": "git",
-      "status": "candidate",
-      "notes": "Items, zones, quests, recipes, NPCs, spells per client build, cleaned and indexed (pipeline/dbt/mongo); planned leveling guides and a read-only API/MCP at wow-plan.com. Needs an adapter. 2026-10-29: clone and GitHub API return 404 (repo gone or private); set dead if still 404 next run.",
+      "status": "dead",
+      "notes": "Items, zones, quests, recipes, NPCs, spells per client build, cleaned and indexed (pipeline/dbt/mongo); planned leveling guides and a read-only API/MCP at wow-plan.com. Needs an adapter. 2026-10-29: clone and GitHub API return 404 (repo gone or private); set dead if still 404 next run. 2026-10-31: clone asks for credentials again (second failed check); dead.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-10-31"
     },
     {
       "id": "gh-swedish-team-level-guide",
@@ -2155,7 +2162,7 @@
       "status": "candidate",
       "notes": "Created Oct 25. Vite site https://kdfinis.github.io/Swedish-Team-Level-Guide/ : Elwynn or Coldridge, then one road through Hall of Thanes to 40.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-soulfound",
@@ -2168,7 +2175,7 @@
       "status": "candidate",
       "notes": "Created Oct 25. Talent reminders, quest reward picks for your build, item scores, profession tips; open plan format docs/plan-format.md.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-leveling-consumables",
@@ -2181,7 +2188,7 @@
       "status": "candidate",
       "notes": "Created Oct 25; tested on the Forever beta.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-forever-core",
@@ -2194,7 +2201,7 @@
       "status": "candidate",
       "notes": "Created Oct 23; objective-tracker column shared by Adventure Guide, Legacy, Shortest Path, SkillUp; Questie bridge.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "foreverscout",
@@ -2219,7 +2226,7 @@
       "status": "candidate",
       "notes": "Created Oct 26.",
       "first_seen": "2026-10-26",
-      "last_checked": "2026-10-29"
+      "last_checked": "2026-11-02"
     },
     {
       "id": "patchbot-forever",
@@ -2338,7 +2345,7 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-27",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-11-02",
       "notes": "Guide data in Lua for GuideMate routes and class quests; needs an adapter."
     },
     {
@@ -2362,7 +2369,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-27",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Shared/missing quests per partner, leader skip, catch-up route of a partner's turn-ins. Created Oct 27."
     },
     {
@@ -2374,7 +2381,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-27",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Standalone Luxthos-style XP bar with quest and rested XP and session stats; supports Forever; CurseForge smooth-experience-bar."
     },
     {
@@ -2386,7 +2393,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-27",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Static build of an Expo web app \"WoW Forever Path\" with map tiles, 12 locales; purpose unclear (route planner?). Watch for a public URL."
     },
     {
@@ -2455,7 +2462,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-28",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Created Oct 28 by miyankooo (also TargetFinder, ItemFlow, BetterTracking). Lists quests you can take now grouped by zone with total trip XP and a 'Next' best-zone banner; relies on Questie's Forever DB."
     },
     {
@@ -2467,7 +2474,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-28",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Next Action Guide team. Ships Data/NAGDeathData.lua: 200x200 death-density cells per map (published windows, refreshed by the NAG app). Could flag dangerous pulls/camps on routes; needs an adapter."
     },
     {
@@ -2479,7 +2486,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-28",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Created Oct 27; repo holds dataset releases only, code 'soon'. Check release assets for route/quest data format."
     },
     {
@@ -2491,7 +2498,7 @@
       "access": "device-curl-github-api",
       "status": "candidate",
       "first_seen": "2026-10-28",
-      "last_checked": "2026-10-28",
+      "last_checked": "2026-11-02",
       "notes": "Created Oct 27; README only so far."
     },
     {
@@ -2526,7 +2533,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Bun/TS sim pinned to wago CSVs per build with an overrides file citing sources (pet modifiers, hotfixes); level-60 focus, combat-log calibration blocked. Useful cross-check for Hunter mechanics; no adapter."
+      "notes": "Bun/TS sim pinned to wago CSVs per build with an overrides file citing sources (pet modifiers, hotfixes); level-60 focus, combat-log calibration blocked. Useful cross-check for Hunter mechanics; no adapter.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-artiavi-5man-guide",
@@ -2537,7 +2545,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Single markdown file '5man Guide.md' (Oct 28): Durotar->Barrens->dungeon cascade at 15-24, Cozy Sleeping Bag steps; reads AI-written, unverified. Also ArtiaVI/WoW-Leveling-Guide-Wayward (stub)."
+      "notes": "Single markdown file '5man Guide.md' (Oct 28): Durotar->Barrens->dungeon cascade at 15-24, Cozy Sleeping Bag steps; reads AI-written, unverified. Also ArtiaVI/WoW-Leveling-Guide-Wayward (stub).",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-benjamh681-atlas",
@@ -2548,7 +2557,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "_build/fp.json: every flight master with zone, level range and destinations with flight time rounded to minutes (e.g. Orgrimmar->Crossroads 2 min); _build/dj.json dungeons. Needs an adapter (cross-check for LibTaxiTime)."
+      "notes": "_build/fp.json: every flight master with zone, level range and destinations with flight time rounded to minutes (e.g. Orgrimmar->Crossroads 2 min); _build/dj.json dungeons. Needs an adapter (cross-check for LibTaxiTime).",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-rgx78-atlas",
@@ -2559,7 +2569,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Polish-language Leaflet site (rgx78.github.io/wow-forever-atlas); pins inline in index.html. Needs an adapter; mostly duplicates QuestieDB."
+      "notes": "Polish-language Leaflet site (rgx78.github.io/wow-forever-atlas); pins inline in index.html. Needs an adapter; mostly duplicates QuestieDB.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-mcnerve-forever-bot",
@@ -2570,7 +2581,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Tauri/Node app polling blue posts every 3 min; data/<class>.json for Rogue/Priest/Warlock. Possible source of a blue-post feed; not leveling data."
+      "notes": "Tauri/Node app polling blue posts every 3 min; data/<class>.json for Rogue/Priest/Warlock. Possible source of a blue-post feed; not leveling data. 2026-11-02: clone fails (asks for credentials): repo deleted or made private. One failed check.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-arxaion-foreverbestiary",
@@ -2579,9 +2591,10 @@
       "name": "Arxaion/ForeverBestiary (creature encounter logger addon)",
       "url": "https://github.com/Arxaion/ForeverBestiary.git",
       "access": "git",
-      "status": "candidate",
+      "status": "dead",
       "first_seen": "2026-10-29",
-      "notes": "Created Oct 29, empty repo so far; promises logged mob encounters (levels, locations). Recheck after launch."
+      "notes": "Created Oct 29, empty repo so far; promises logged mob encounters (levels, locations). Recheck after launch. 2026-10-31: repo still empty (fetch fails); recheck after launch. 2026-11-02: still empty, second failed check; marked dead.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-greysaurus-foreverguide",
@@ -2592,7 +2605,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Created Oct 29; pre-release, route data not filled in yet. Recheck after launch for its route format."
+      "notes": "Created Oct 29; pre-release, route data not filled in yet. Recheck after launch for its route format.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "gh-anom0ly-journey-forever",
@@ -2603,7 +2617,8 @@
       "access": "git",
       "status": "candidate",
       "first_seen": "2026-10-29",
-      "notes": "Created Oct 29; personal level/zone timeline addon. Possible source of per-level timing if players share exports."
+      "notes": "Created Oct 29; personal level/zone timeline addon. Possible source of per-level timing if players share exports.",
+      "last_checked": "2026-11-02"
     },
     {
       "id": "outputlag-news",
@@ -2614,8 +2629,1667 @@
       "access": "cloud-webfetch",
       "status": "active",
       "first_seen": "2026-10-29",
-      "last_checked": "2026-10-29",
+      "last_checked": "2026-10-31",
       "notes": "Oct 29: the most detailed summary of podcast ep. 6 (layering at launch). Article pages fetch fine."
+    },
+    {
+      "id": "aotc-race-to-60",
+      "kind": "database",
+      "medium": "leaderboard",
+      "name": "AOTC Race to 60 (live leaderboard: level, XP/hour, zone, class, /played of 45+ racers)",
+      "url": "https://race.aotc.gg/",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "notes": "Fed by the AOTC addon and Companion app (updates every few seconds). Real XP/hour per class, zone and level from the fastest players from launch (Nov 4): check daily for pace benchmarks and which zones racers use. No documented API. Racers' Twitch channels linked (e.g. gingitv, tommysalamiwow, vitochier1, alenyaclassic). 2026-10-31 07:07 run: not live (countdown to launch), 96 racers and 45 streamers registered; sample table only.",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "twitch-wowforever-tag",
+      "kind": "video",
+      "medium": "twitch",
+      "name": "Twitch: wowforever tag directory (live streams)",
+      "url": "https://www.twitch.tv/directory/all/tags/wowforever",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Live leveling streams; Twitch pages need JavaScript. Use with the AOTC race list to find racers' VODs; findings only through articles or search snippets.",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "twitch-jokerdtv",
+      "kind": "video",
+      "medium": "twitch",
+      "name": "Twitch: JokerdTV (Forever race to 60)",
+      "url": "https://www.twitch.tv/jokerdtv",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Surfaced for 'WoW Forever race to 60'; check its VOD titles for route choices."
+    },
+    {
+      "id": "yt-forever-world-first-60",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "YouTube: WoW Forever world-first 60 prep and practice runs",
+      "url": "https://www.youtube.com/watch?v=P_8PxsMFOJ0",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Also https://www.youtube.com/watch?v=xiQnhEcwAWc ([LIVE] World First 60 Practice) and https://www.youtube.com/watch?v=u8-1bBp9R_A. Racers' route prep; identify the channels and add them by name."
+    },
+    {
+      "id": "yt-forever-route-videos",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "YouTube: WoW Forever 1-60 route videos",
+      "url": "https://www.youtube.com/watch?v=XLBWghr72-M",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "'My WoW Forever leveling route, 1 to 60: Alliance and Horde'; also 'This Tool Plans Your Entire 1-60 Leveling Route' https://www.youtube.com/watch?v=mLqyJosDPuk (find which tool), 'Watch This Before You Level' https://www.youtube.com/watch?v=5-2ndk855JU, 'Blizzard Is Rethinking How We Level' https://www.youtube.com/watch?v=bIO--73558g."
+    },
+    {
+      "id": "yt-forever-class-leveling-guides",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "YouTube: class leveling guides 1-60 (Shaman, Warrior, Priest)",
+      "url": "https://www.youtube.com/watch?v=mXbA3PiOT2I",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Shaman mXbA3PiOT2I; Warrior ZuV3J8q7uUg and 62TPbsVCTSk; Priest wVU59PWpeMc (deep dive) and bNPJLjob1js. Talent and rank choices per class; read via descriptions and articles quoting them."
+    },
+    {
+      "id": "podcast-azeroth-united",
+      "kind": "video",
+      "medium": "podcast",
+      "name": "Azeroth United podcast (WoW Forever episodes)",
+      "url": "https://rss.com/podcasts/azerothunited/3175156/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Community podcast; episode 'WoW Forever - The Good The Bad & The Ugly'. RSS feed readable; check show notes for leveling findings."
+    },
+    {
+      "id": "discord-wow-forever-pvp",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "WoW: Forever [PvP] Discord server",
+      "url": "https://discord.com/servers/wow-forever-pvp-846234511540617246",
+      "access": "none",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Public listing only; never join or read. Record findings only when a public source reports them."
+    },
+    {
+      "id": "disdex-forever-servers",
+      "kind": "web",
+      "medium": "directory",
+      "name": "disdex: top World of Warcraft: Forever Discord servers",
+      "url": "https://disdex.io/servers/world-of-warcraft-forever",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Public directory of Forever Discord servers with member counts; use it to find class and leveling communities (listing only)."
+    },
+    {
+      "id": "forevercommunity-org",
+      "kind": "web",
+      "medium": "community",
+      "name": "Forever Community (forevercommunity.org)",
+      "url": "https://forevercommunity.org/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Community hub site surfaced with the Discord search; check what it publishes."
+    },
+    {
+      "id": "tiktok-wowforever",
+      "kind": "social",
+      "medium": "tiktok",
+      "name": "TikTok: #wowforever leveling clips",
+      "url": "https://www.tiktok.com/discover/wow-forever-hunter-best-leveling-spec",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Mostly low-detail clips; only record a tip with numbers that a second source confirms.",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-dujoer-wow-forever-cn",
+      "kind": "git",
+      "medium": "github",
+      "name": "dujoer/wow-forever (Chinese Forever prep library with an intel digest)",
+      "url": "https://github.com/dujoer/wow-forever.git",
+      "access": "git",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Markdown: leveling-and-gold.md, intel-digest.md, timeline.md, class pages; built to a static site. Last push Oct 13; recheck for CN-community findings.",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cn-wx-wow",
+      "kind": "news",
+      "medium": "web",
+      "name": "魔兽世界：无限 · 版本信息站 (wx-wow.com, Chinese Forever version info)",
+      "url": "https://www.wx-wow.com/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Chinese build/patch info site; may carry CN-region datamining and translations."
+    },
+    {
+      "id": "cn-kovarel",
+      "kind": "database",
+      "medium": "web",
+      "name": "Kovarel WoW Forever database and tools (Chinese)",
+      "url": "https://kovarel.com/cn/wow-forever",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "CN database/tools site; check for quest XP and build diffs."
+    },
+    {
+      "id": "wowforeveratlas",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Forever Atlas (wowforeveratlas.com; multi-language guides incl. Chinese)",
+      "url": "https://wowforeveratlas.com/zh/guides",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Guides on classes, addons and dungeon prep in several languages."
+    },
+    {
+      "id": "cn-nieyi",
+      "kind": "news",
+      "medium": "web",
+      "name": "车长不二 (nieyi.cn; Chinese Forever patch-note write-ups)",
+      "url": "https://nieyi.cn/mo-shou-shi-jie-forever-10-yue-1-ri-bu-ding-shuo-ming-30-ji",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Chinese translations of patch notes; useful to see what CN players emphasise."
+    },
+    {
+      "id": "kr-jab-guyver",
+      "kind": "guide",
+      "medium": "web",
+      "name": "jab-guyver.co.kr (Korean WoW Forever guide roundup)",
+      "url": "https://jab-guyver.co.kr/7542",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Korean roundup: class picks, dungeons, camping."
+    },
+    {
+      "id": "kr-ruliweb",
+      "kind": "forum",
+      "medium": "forum",
+      "name": "Ruliweb PC news board (Korean; WoW Forever interviews)",
+      "url": "https://bbs.ruliweb.com/news/board/1003/read/2358360",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Korean coverage of Blizzard's Korean Forever interview; also check Inven for KR datamining."
+    },
+    {
+      "id": "kr-inews24",
+      "kind": "news",
+      "medium": "web",
+      "name": "inews24 (Korean news; Blizzard Forever interview)",
+      "url": "http://inews24.com/view/2020390",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Korean interview: 'slower adventure instead of fast growth'; check for leveling-pace statements."
+    },
+    {
+      "id": "ru-wow-forever-pro",
+      "kind": "guide",
+      "medium": "web",
+      "name": "wow-forever.pro (Russian Forever guides, прокачка 1-60)",
+      "url": "https://wow-forever.pro/prokachka/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Russian leveling guide; check for original data versus translation."
+    },
+    {
+      "id": "ru-warcraftforever-games",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Warcraft Forever (warcraftforever.games; Russian guides)",
+      "url": "https://warcraftforever.games/guides",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Russian guide hub."
+    },
+    {
+      "id": "ru-dving",
+      "kind": "guide",
+      "medium": "web",
+      "name": "dving.net (Russian; WoW Forever professions guide, 600+ recipes)",
+      "url": "https://dving.net/guides/wow-forever-professions-guide",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Professions data; relevant for cooking/first aid/camp features while leveling. Also a gold guide: https://dving.net/guides/wow-forever-gold-guide (commercial site).",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "de-gamestar",
+      "kind": "news",
+      "medium": "web",
+      "name": "GameStar (German; WoW Forever level guide)",
+      "url": "https://www.gamestar.de/artikel/wow-forever-level-schnell-auf-stufe-60-guide,3460950.html",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Major German outlet; WoW Forever coverage."
+    },
+    {
+      "id": "de-jessirocks",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Jessirocks.tv (German; best leveling builds for all classes)",
+      "url": "https://jessirocks.tv/guide/wow-forever-beste-leveling-builds/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "German creator site with leveling builds."
+    },
+    {
+      "id": "commercial-overgear",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Overgear WoW Forever guides (commercial)",
+      "url": "https://overgear.com/guides/wow-forever/1-60-leveling-guide/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Commercial boosting site; secondary, cite only with a primary source."
+    },
+    {
+      "id": "commercial-leprestore",
+      "kind": "guide",
+      "medium": "web",
+      "name": "LePrestore WoW Forever guides (commercial)",
+      "url": "https://leprestore.com/guides/world-of-warcraft-forever/wow-forever-leveling-guide-1-60/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "notes": "Commercial; leveling, race tier list, profession routes. Secondary only."
+    },
+    {
+      "id": "wowforever-be",
+      "kind": "news",
+      "medium": "news",
+      "name": "WoW Forever (wowforever.be): fan news and guide site (Belgian, creator 'nutri')",
+      "url": "https://wowforever.be/news/",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "notes": "Readable full write-ups of Wowhead datamining articles (e.g. Oct 30 class hotfix list with old->new values); credits Wowhead, so not an independent source.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "maxroll-forever",
+      "kind": "news",
+      "medium": "news+guides",
+      "name": "Maxroll WoW Forever (news, launch details, guides)",
+      "url": "https://maxroll.gg/wow-forever/news/wow-forever-launch-details",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Found via search on Oct 31; Maxroll usually has well-sourced class/leveling guides. Not read yet.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "exputer-forever",
+      "kind": "news",
+      "medium": "news",
+      "name": "eXputer (WoW Forever zone articles)",
+      "url": "https://exputer.com/?p=445380",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Oct 28 article on Riverglades (35-45), Shen'dralas (range uncertain) and Mount Hyjal; names no sources. Low trust; leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "noobtoboss-forever",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "NoobToBoss WoW Forever leveling tier list",
+      "url": "https://noobtoboss.com/wowforever-leveling-tierlist/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Editorial tier list, SEO style; no measured data.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "root-nation-forever",
+      "kind": "news",
+      "medium": "news",
+      "name": "Root Nation: WoW Forever leveling plan for players with limited time",
+      "url": "https://root-nation.com/en/games-en/games-articles-en/en-a-wow-forever-leveling-plan-for-players-with-limited-time/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Ukrainian outlet, EN/DE/ES versions. Not read.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gfinity-forever",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "Gfinity Esports WoW Forever guides (camping, beginner tips, addons)",
+      "url": "https://www.gfinityesports.com/article/world-of-warcraft-forever-camping-guide-how-to-build-camps",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Camping guide could cross-check camp features and tent cooldowns.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "wow-professions-forever",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "wow-professions.com Forever camping guide (every profession camp item)",
+      "url": "https://www.wow-professions.com/forever/camping-guide",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Per-profession camp items; useful for the camp model (which features, skill levels).",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "curseforge-leveltimetracker",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "LevelTimeTracker (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/leveltimetracker",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "notes": "Time-per-level tracker; possible source of shared pace data. Forever support not checked.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "curseforge-levelingbisadvisor",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Leveling BiS Advisor (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/levelingbisadvisor",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "notes": "Leveling gear advisor; Forever support not checked.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-expcarry",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "ExpCarry WoW Forever leveling guides (commercial; EN/FR/ES)",
+      "url": "https://expcarry.com/wow-forever-leveling-guide-horde",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Boosting service; its hour estimates are editorial. Secondary only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-u4n",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "U4N WoW Forever leveling tips (commercial gold seller; EN/FR/ES)",
+      "url": "https://www.u4n.com/fr/news/wow-forever-leveling-tips-best-classes-xp-boosts-dungeons-and-faster-progression.html",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Gold/boost seller blog. Leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-koroboost",
+      "kind": "guide",
+      "medium": "guide",
+      "name": "Koroboost WoW Forever leveling guide (commercial)",
+      "url": "https://koroboost.com/guide/wow-forever-leveling-guide",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Boosting service. Leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "gold-forever-app",
+      "kind": "database",
+      "medium": "web",
+      "name": "Gold Forever (gold-forever.app): web app turning addon exports into prices, ledgers and gold plans",
+      "url": "https://gold-forever.app",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Economy tracker fed by the Gold Forever addon (gh-gold-forever-addon) and a companion uploader; records only your own characters and scans. Site renders by script (empty via WebFetch). Watch from launch for AH price data.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "gh-gold-forever-addon",
+      "kind": "git",
+      "medium": "github",
+      "name": "gold-forever/addon (Gold Forever recorder addon: what your characters see and earn, AH scans)",
+      "url": "https://github.com/gold-forever/addon.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Source-available, all rights reserved. /gf export for gold-forever.app. Gold/economy scope.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-craft-ladder",
+      "kind": "git",
+      "medium": "github",
+      "name": "saintmodx/craft-ladder (Craft Ladder: profession leveling 1-300 routes priced from AH and vendor costs; CurseForge craft-ladder)",
+      "url": "https://github.com/saintmodx/craft-ladder.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Profession scope: cheapest skill-up routes, recipe sources, profitable crafts and gathering zones. Possible recipe/skill-up data; needs an adapter.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-dwarf-explorers-bible",
+      "kind": "git",
+      "medium": "github",
+      "name": "masterred92/DwarfExplorersBible (what a material crafts into, with Auctionator prices)",
+      "url": "https://github.com/masterred92/DwarfExplorersBible.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 30, MIT. Profession/economy scope.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-arkinventory-auctionator-rules",
+      "kind": "git",
+      "medium": "github",
+      "name": "byWulf/wow-arkinventory-rules-auctionator (ArkInventory rules: ahprice, vendorunit, ahflip)",
+      "url": "https://github.com/byWulf/wow-arkinventory-rules-auctionator.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 31. Sorts bags by AH value and vendor-flip margin; gold scope.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-mealbook",
+      "kind": "git",
+      "medium": "github",
+      "name": "salty-max/mealbook (cookbook addon and the road to 300 Cooking)",
+      "url": "https://github.com/salty-max/mealbook.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Profession scope (Cooking, camp food).",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-wowforeversim-terranventures",
+      "kind": "git",
+      "medium": "sim",
+      "name": "terranventures/wowforeversim (browser sim: leveling plans with talents per level, sims at any level; wowforeversim.vercel.app)",
+      "url": "https://github.com/terranventures/wowforeversim.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 31; wowsims engine patched for any level, talent audit against client data. Class power while leveling. 2026-11-02: clone fails (asks for credentials): repo deleted or made private. One failed check.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-realmfirst-launch-data",
+      "kind": "git",
+      "medium": "github",
+      "name": "realmfirst/wow-forever-launch-data (launch time by time zone, addon status at launch, source ledger)",
+      "url": "https://github.com/realmfirst/wow-forever-launch-data.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 29 by the RealmFirst desk (realmfirst-forever); every row names its source. Launch Nov 4 15:00 PST = 23:00 UTC.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-sidequest-guild-addon",
+      "kind": "git",
+      "medium": "github",
+      "name": "SideQuest-Guild/addon (guild addon: raid recording, EPGP loot, standings sync)",
+      "url": "https://github.com/SideQuest-Guild/addon.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 30. Guild scope; shows what guild tools Forever guilds use.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-bff-wow",
+      "kind": "git",
+      "medium": "github",
+      "name": "Shtian/bff-wow (BFF: addon for friend groups who play at different times)",
+      "url": "https://github.com/Shtian/bff-wow.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 31. Social scope (keeping a friend group level-matched).",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-faxion-addon",
+      "kind": "git",
+      "medium": "github",
+      "name": "swiftyPigeon/Faxion_AddOn (faction-based realm feed for social objectives)",
+      "url": "https://github.com/swiftyPigeon/Faxion_AddOn.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 31. Social/PvP scope.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-dondata",
+      "kind": "git",
+      "medium": "github",
+      "name": "WoW-Forever-Addons/dondata + donmap (quest DB and shared map pins of the Don addons: Questdon, Leveldon)",
+      "url": "https://github.com/WoW-Forever-Addons/dondata.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 30; splits the Questdon/Leveldon data into a shared library (see gh-questdon, gh-leveldon). Needs an adapter.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-gabella-wow-guide",
+      "kind": "git",
+      "medium": "github",
+      "name": "gabella-wow/wow (WoW Forever guide in 9 languages: classes, talents, races, leveling, dungeons)",
+      "url": "https://github.com/gabella-wow/wow.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 22. Multi-language guide; check for original data.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-foreveritemfinder",
+      "kind": "git",
+      "medium": "github",
+      "name": "ArcSim/ForeverItemFinder (finds new and changed Forever items, shared searchable list)",
+      "url": "https://github.com/ArcSim/ForeverItemFinder.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 30. Item/gear scope.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "podcast-warcraft-brew",
+      "kind": "video",
+      "medium": "podcast",
+      "name": "Warcraft Brew podcast (WoW Forever + Classic)",
+      "url": "https://podscan.fm/podcasts/379d37ca",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Community podcast covering Forever; check episode notes for findings.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "podcast-azeroth-morning-radio",
+      "kind": "video",
+      "medium": "podcast",
+      "name": "Azeroth Morning Radio (WoW podcast, Podbean/Apple)",
+      "url": "https://www.podbean.com/itunes/1842355669",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "General WoW podcast; Forever coverage not checked.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "twitch-aotc-racers",
+      "kind": "video",
+      "medium": "twitch",
+      "name": "Twitch: AOTC Race to 60 streamers (gingitv, donthecrown, tommysalamiwow, vandett0, cdank, vitochier1, blastinhos, derek_macintyre, ksuper2, figment_rs, ochikanda, vyrnal, shiekrunner, alenyaclassic, bornlesszero, zeroki, ohmpy)",
+      "url": "https://race.aotc.gg/",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "notes": "Channel list from race.aotc.gg (45 streamers registered on Oct 31). Use their VOD titles/route choices once the race starts Nov 4; Twitch needs JavaScript.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "kr-inven-forever",
+      "kind": "forum",
+      "medium": "forum",
+      "name": "Inven WoW Forever board (Korean, board 6567)",
+      "url": "https://www.inven.co.kr/board/wow/6567",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "notes": "Main Korean Forever forum; posts readable via WebFetch. Oct 20: repost of a beta all-class leveling tier list (BM Hunter, Affliction S; Elemental, Balance F). Mostly reposts and opinion.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "dynasage-ign-repost",
+      "kind": "news",
+      "medium": "news",
+      "name": "DynaSage blog (reposts of IGN India WoW Forever interviews)",
+      "url": "https://blog.dynasage.com/2026/10/the-big-world-of-warcraft-forever.html",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "notes": "Readable copy of IGN content (ign.com is blocked for WebFetch). Original: https://www.ign.com/articles/world-of-warcraft-forever-launch-interview-blizzard-azeroth",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-odealo",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Odealo WoW Forever gold-making guide (commercial marketplace)",
+      "url": "https://odealo.com/articles/best-gold-making-methods-world-of-warcraft-forever-guide",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Gold seller/marketplace. Gold scope; leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-mmogah",
+      "kind": "guide",
+      "medium": "web",
+      "name": "MMOGAH WoW Forever professions and gold guides (commercial gold seller)",
+      "url": "https://www.mmogah.com/news/wow-forever/wow-forever-best-professions-for-gold-leveling-pve-pvp",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Gold seller blog. Leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "commercial-gamsgo",
+      "kind": "guide",
+      "medium": "web",
+      "name": "GamsGo WoW Forever gold and leveling guides (commercial)",
+      "url": "https://www.gamsgo.com/blog/wow-forever-gold-guide",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "notes": "Commercial; leads only.",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31"
+    },
+    {
+      "id": "playfulls-patch-notes",
+      "kind": "database",
+      "medium": "datamining",
+      "name": "Playfulls WoW Forever patch notes and daily game-data diffs",
+      "url": "https://playfulls.com/patch-notes/",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "Daily diff of game data vs the day before (talents, spells, items, hidden server items), plus datamined hotfix articles. Some entries garbled; cross-check. Used for the Oct 31 hotfix layer."
+    },
+    {
+      "id": "wowforevertalents-patch-notes",
+      "kind": "database",
+      "medium": "datamining",
+      "name": "wowforevertalents.com patch notes (hotfix measurements per class)",
+      "url": "https://wowforevertalents.com/patch-notes/",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "Per-build and per-hotfix change counts by class with before/after values; says EU runs 70685 and NA/Asia 70707 (unverified). Gave the Enchant Boots - Speed change."
+    },
+    {
+      "id": "wowforeverinfo-bluetracker",
+      "kind": "news",
+      "medium": "blue-post-tracker",
+      "name": "WoW Forever Info blue tracker",
+      "url": "https://wowforeverinfo.com/blue-tracker/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "Fan blue-post tracker for Forever; backup to Arctium."
+    },
+    {
+      "id": "skillcapped-bluetracker",
+      "kind": "news",
+      "medium": "blue-post-tracker",
+      "name": "Skill-Capped PvP patch notes and blue tracker",
+      "url": "https://www.skill-capped.com/wowarticles/blue-tracker/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "PvP-oriented tuning tracker; may cover Forever PvP and class tuning."
+    },
+    {
+      "id": "news-cogconnected-economy",
+      "kind": "news",
+      "medium": "news",
+      "name": "COGconnected: Gold in WoW Forever, an economy without a token",
+      "url": "https://cogconnected.com/2026/10/gold-in-wow-forever-an-economy-without-a-token/",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Economy rules round-up with sources (no Token, no GDKP, no boosts, ruleset grouping)."
+    },
+    {
+      "id": "news-gameluster",
+      "kind": "news",
+      "medium": "news",
+      "name": "GameLuster WoW Forever news",
+      "url": "https://gameluster.com/?p=143384",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "GDKP ban article (Sep 20) quoting Kaivax and Josh Greenfield."
+    },
+    {
+      "id": "news-tentonhammer-economy",
+      "kind": "news",
+      "medium": "news",
+      "name": "Ten Ton Hammer: What a realmless Classic economy means for gold",
+      "url": "https://www.tentonhammer.com/articles/what-a-realmless-classic-economy-means-for-gold",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Economy analysis; read next run."
+    },
+    {
+      "id": "news-esportsgg-roadmap",
+      "kind": "news",
+      "medium": "news",
+      "name": "esports.gg WoW Forever roadmap 2026-2027",
+      "url": "https://esports.gg/news/world-of-warcraft/wow-forever-roadmap-2026-and-2027",
+      "access": "cloud-websearch-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Roadmap article; WebFetch failed once."
+    },
+    {
+      "id": "news-khelnow",
+      "kind": "news",
+      "medium": "news",
+      "name": "Khel Now WoW Forever release and roadmap",
+      "url": "https://khelnow.com/gaming/wow-forever-release-date-global-launch-timings-roadmap-202610",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Launch timings and roadmap round-up (Oct 2026)."
+    },
+    {
+      "id": "news-playnews",
+      "kind": "news",
+      "medium": "news",
+      "name": "Playnews WoW Forever launch time",
+      "url": "https://www.playnews.gg/en/release-dates/world-of-warcraft-forever-launch-time-11-p-m-on-4-november-names-from-27-october",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "Launch time article."
+    },
+    {
+      "id": "news-fictionhorizon",
+      "kind": "news",
+      "medium": "news",
+      "name": "Fiction Horizon: 5 decisions before planning a 1-60 route",
+      "url": "https://fictionhorizon.com/?p=386315",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Leveling-route planning article."
+    },
+    {
+      "id": "guide-rankedboost-race",
+      "kind": "guide",
+      "medium": "web",
+      "name": "RankedBoost WoW Forever race guide",
+      "url": "https://rankedboost.com/world-of-warcraft/forever/race/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Race (character race) choice guide; SEO, low priority."
+    },
+    {
+      "id": "fr-judgehype",
+      "kind": "guide",
+      "medium": "web",
+      "name": "JudgeHype (French) WoW leveling guides",
+      "url": "https://worldofwarcraft.judgehype.com/article/guide-de-leveling-rapide-sur-wow/50/",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "French WoW site; Classic leveling guides, no Forever page found yet. Watch for Forever coverage."
+    },
+    {
+      "id": "addon-wow-forever-tracker",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "WoW Forever Tracker (route, profession and gear planner with AH prices)",
+      "url": "https://www.curseforge.com/wow/addons/wow-forever-tracker",
+      "access": "cloud-webfetch",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "MIT, by spokras14, 963 downloads, updated Oct 23 (game 1.60.1). Plans fastest leveling route, profession path and gear upgrades from character data and AH prices; tracker window, AH price tools, macros. Has a companion website."
+    },
+    {
+      "id": "addon-cf-forever-buddy",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Forever Buddy (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/forever-buddy",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Found via CurseForge search; not yet read."
+    },
+    {
+      "id": "addon-cf-mastercraft",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "MasterCraft (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/mastercraft",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Profession addon found via CurseForge search; not yet read."
+    },
+    {
+      "id": "addon-cf-forever-profession-master",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Forever Profession Master (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/forever-profession-master",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Profession leveling addon; not yet read."
+    },
+    {
+      "id": "addon-cf-foreverforge",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "ForeverForge (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/foreverforge",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Found via CurseForge search; not yet read."
+    },
+    {
+      "id": "addon-cf-professionsadvisor",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Professions Advisor (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/professionsadvisor",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Profession advice addon; not yet read."
+    },
+    {
+      "id": "addon-cf-bigbraincrafting",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "BigBrainCrafting (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/bigbraincrafting",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Crafting profit/route addon; not yet read."
+    },
+    {
+      "id": "addon-cf-restedxp-professions",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "RestedXP Professions (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/restedxp-professions",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "RestedXP profession leveling guides addon (commercial guide maker); check Forever support."
+    },
+    {
+      "id": "addon-cf-professionpricer",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "ProfessionPricer (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/professionpricer",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Recipe cost/profit pricing from AH data; not yet read."
+    },
+    {
+      "id": "addon-cf-cheapskill",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "CheapSkill (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/cheapskill",
+      "access": "cloud-webfetch",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Cheapest profession skill-up planner; not yet read."
+    },
+    {
+      "id": "discord-wow-forever-deutsch",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "WoW Forever Deutsch (Discord listing)",
+      "url": "https://discord.com/servers/world-of-warcraft-forever-deutsch-1182077645983326311",
+      "access": "none",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "German community server, public listing only; never join or read. Server id predates Forever, may be a renamed Classic server."
+    },
+    {
+      "id": "discord-wow-forever-fr",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "WoW Forever FR / Sulfuron (Discord listing)",
+      "url": "https://discord.com/servers/wow-forever-fr-708730422267346944",
+      "access": "none",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "French community server (also listed as Sulfuron on discordbotlist), listing only; never join or read. Renamed older server."
+    },
+    {
+      "id": "yt-15-new-leveling-tips-forever",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "15 NEW Leveling Tips for WoW Forever (YouTube)",
+      "url": "https://www.youtube.com/watch?v=M3UDmkL4gKE",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Pre-launch leveling tips video; read through quotes/snippets only."
+    },
+    {
+      "id": "yt-skyborne-leveling-tips",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "Skyborne Leveling Tips and Tricks Before Launch (YouTube)",
+      "url": "https://www.youtube.com/watch?v=nP4-vyf_0z0",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Race-specific (Skyborne) leveling tips."
+    },
+    {
+      "id": "yt-paladin-1-60-launch-plan",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "How I'm Leveling My Paladin in WoW Forever, 1-60 launch plan (YouTube)",
+      "url": "https://www.youtube.com/watch?v=E-Vmp8gi7jM",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Paladin leveling plan; check against the Oct 30-31 Paladin hotfixes."
+    },
+    {
+      "id": "yt-paladin-leveling-guide-forever",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "Paladin Leveling Guide for WoW: Forever (YouTube)",
+      "url": "https://www.youtube.com/watch?v=vGAfvJC3hY0",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Class leveling guide video."
+    },
+    {
+      "id": "yt-launch-day-essential-tips",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "WoW Forever Launch Day - Essential Tips in 5 Minutes (YouTube)",
+      "url": "https://www.youtube.com/watch?v=pFgv2o3sgtg",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Launch-day checklist video."
+    },
+    {
+      "id": "yt-fr-5-conseils-leveling",
+      "kind": "video",
+      "medium": "youtube",
+      "name": "Wow Forever: Mes 5 Conseils pour votre premier Leveling (YouTube, French)",
+      "url": "https://www.youtube.com/watch?v=_MqVMnIvj2A",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "French-language leveling tips."
+    },
+    {
+      "id": "cf-questluma",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "QuestLuma (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/questluma",
+      "access": "web",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Forever 1.60.1 quest helper: quest-progress markers over nameplates, waypoint to selected quest, area quest-mob list, optional auto turn-in and quest-object sparkle. v0.9.7, Oct 12, small (24 downloads)."
+    },
+    {
+      "id": "cf-azerothforge-goldspark",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "AzerothForge Goldspark (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/azerothforge-goldspark",
+      "access": "web",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Forever 1.60.1: golden sparkles and minimap icons on ore, herbs, chests, crates and quest objects (gathering aid; does not reveal hidden nodes). v2.2.5, Oct 21, 21 downloads."
+    },
+    {
+      "id": "cf-forever-quest-items",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Forever Quest Items (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/forever-quest-items",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Quest-item highlighting addon surfaced by the Icy Veins quest-sparkle article; not read yet."
+    },
+    {
+      "id": "cf-itemquester-forever",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "ItemQuester Forever (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/itemquester-forever",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Quest item helper for Forever; not read yet."
+    },
+    {
+      "id": "method-gg-forever",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Method WoW Forever guides",
+      "url": "https://www.method.gg/wow-forever/how-to-get-a-torch-in-wow-forever-night-watchmans-torch",
+      "access": "web",
+      "status": "active",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-11-02",
+      "notes": "Method's Forever guide section (torch, riding costs); fetchable."
+    },
+    {
+      "id": "x-wowhead",
+      "kind": "social",
+      "medium": "x",
+      "name": "Wowhead on X (@Wowhead)",
+      "url": "https://x.com/Wowhead",
+      "access": "search-only",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Relays Aggrend/Forever dev statements (tagging, duel arena, Undermine Reals); read via search snippets."
+    },
+    {
+      "id": "exitlag-forever-professions",
+      "kind": "guide",
+      "medium": "web",
+      "name": "ExitLag blog: WoW Forever professions",
+      "url": "https://www.exitlag.com/blog/wow-forever-professions/",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Profession picks before launch; SEO guide, secondary."
+    },
+    {
+      "id": "noping-ru-forever-classes",
+      "kind": "guide",
+      "medium": "web",
+      "name": "noping.com (Russian): best classes for leveling and PvP",
+      "url": "https://noping.com/ru/blog/wow-forever-best-classes-for-leveling-and-pvp",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Russian class tier article; opinion, secondary. Commercial (VPN vendor blog)."
+    },
+    {
+      "id": "epiccarry-blog",
+      "kind": "guide",
+      "medium": "web",
+      "name": "EpicCarry blog (Forever)",
+      "url": "https://epiccarry.com/blogs/wow-forever-torch/",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Commercial (boosting) blog; leads only."
+    },
+    {
+      "id": "wowcarry-forever-gold",
+      "kind": "guide",
+      "medium": "web",
+      "name": "wowcarry.com Forever gold",
+      "url": "https://wowcarry.com/wow-forever/gold",
+      "access": "web",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Commercial (gold seller); leads only, never a primary source."
+    },
+    {
+      "id": "forum-us-cross-guild-gm-discord",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "#Alliance #NA #PvP Cross Guild GM/Officer Discord (forum post)",
+      "url": "https://us.forums.blizzard.com/en/wow/t/2397483",
+      "access": "none",
+      "status": "candidate",
+      "first_seen": "2026-10-31",
+      "last_checked": "2026-10-31",
+      "notes": "Guild-leader coordination server advertised on the US forum (Oct 31). Never join or read; record only."
+    },
+    {
+      "id": "blizz-new-player-guide",
+      "kind": "news",
+      "medium": "blizzard-official",
+      "name": "Blizzard: New Player's Starter Guide (WoW Forever)",
+      "url": "https://worldofwarcraft.blizzard.com/en-us/news/24315280/new-players-starter-guide-welcome-to-world-of-warcraft-forever",
+      "access": "webfetch",
+      "status": "active",
+      "notes": "Oct 28 official beginner guide: Experience Preset, rulesets and grouping limits, names, professions.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gamerfuzion-launch-guide",
+      "kind": "news",
+      "medium": "news",
+      "name": "GamerFuzion: WoW Forever launch guide (times, presets, rulesets)",
+      "url": "https://www.gamerfuzion.com/world-of-warcraft-forever-launch-times-classic-vs-enhanced-preset-rulesets-hardcore/",
+      "access": "webfetch",
+      "status": "active",
+      "notes": "Launch-time table and preset summary; cites Blizzard news.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "method-bags-guide",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Method: early bags in WoW Forever",
+      "url": "https://www.method.gg/wow-forever/best-early-bags-in-wow-forever-crafted-bags-quest-bags-vendor-bags-and-more",
+      "access": "webfetch",
+      "status": "active",
+      "notes": "Oct 28: quest bags per starting zone, 8-slot bags 9-14, reagent bag slot, crafted and vendor bags with costs (beta data).",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "timesaver-launch-checklist",
+      "kind": "guide",
+      "medium": "web",
+      "name": "timesaver.gg: WoW Forever launch day checklist",
+      "url": "https://timesaver.gg/blog/wow-forever-launch-day-checklist-november-4",
+      "access": "webfetch",
+      "status": "active",
+      "notes": "Updated Oct 30: account, addon folder, presets, rulesets (one faction per account on PvP, language cooldown). Sells services.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "brokenmeta-launch",
+      "kind": "news",
+      "medium": "news",
+      "name": "brokenmeta.gg (French): WoW Forever launch facts",
+      "url": "https://brokenmeta.gg/en/wow-forever/actualites/lancement-wow-forever-heure-noms-serveurs/",
+      "access": "webfetch",
+      "status": "candidate",
+      "notes": "French site with launch time per region, names, editions; mostly restates Blizzard.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "streamscharts-forever",
+      "kind": "data",
+      "medium": "web",
+      "name": "Streams Charts: WoW Forever viewership",
+      "url": "https://streamscharts.com/news/wow-forever-viewership-chat",
+      "access": "webfetch",
+      "status": "candidate",
+      "notes": "Twitch viewership data for Forever; useful to find top racers and streamers.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "curseforge-oneforall-forever",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "OneForAll - Forever (CurseForge, smoergi)",
+      "url": "https://www.curseforge.com/wow/addons/oneforall-forever",
+      "access": "webfetch",
+      "status": "active",
+      "notes": "All-in-one: quest/dungeon tracking, professions and recipes, hunter pets, talent calculator; ~81K downloads, updated Nov 1.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "curseforge-classicui-forever",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "ClassicUI Forever (CurseForge, justawower)",
+      "url": "https://www.curseforge.com/wow/addons/classicui-forever",
+      "access": "webfetch",
+      "status": "candidate",
+      "notes": "Restyles the Forever UI to the 1.x look via Edit Mode; known beta issues.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-ctng1213-wowauction",
+      "kind": "git",
+      "medium": "github",
+      "name": "ctng1213/WowAuction (AHSync companion + AHProfit addon)",
+      "url": "https://github.com/ctng1213/WowAuction.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 1: auction house sync, profit engine and dashboard for Forever. Economy tool; check after launch for price data.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-paden1991-profpaden",
+      "kind": "git",
+      "medium": "github",
+      "name": "paden1991/ProfPaden (profession leveling, recipes, economics addon)",
+      "url": "https://github.com/paden1991/ProfPaden.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 2, Interface 16001: profession leveling, materials, economics and gathering guides; companion ProfPadenRoutes farming planner.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-speeding-fines-sf-speed",
+      "kind": "git",
+      "medium": "github",
+      "name": "speeding-fines/sf-speed (leveling splits addon)",
+      "url": "https://github.com/speeding-fines/sf-speed.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 2 by the Speeding Fines guild: leveling pace and split tracking for Era and Forever; may yield measured level times.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-bradgroux-mission-control",
+      "kind": "git",
+      "medium": "github",
+      "name": "BradGroux/wow-forever-mission-control (Legacy points planner)",
+      "url": "https://github.com/BradGroux/wow-forever-mission-control.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Oct 31: plans four characters to max Legacy points; config-driven planner and static page.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-kevinthedang-azeroth-chronicle-bot",
+      "kind": "git",
+      "medium": "github",
+      "name": "kevinthedang/azeroth-chronicle-bot (Discord bot: dungeon completion and loot)",
+      "url": "https://github.com/kevinthedang/azeroth-chronicle-bot.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 2: guild Discord bot tracking dungeon completions and loot drops.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-renesarjeant-autoinstancecombatlog",
+      "kind": "git",
+      "medium": "github",
+      "name": "ReneSarjeant/AutoInstanceCombatLog (addon)",
+      "url": "https://github.com/ReneSarjeant/AutoInstanceCombatLog.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 2: turns on combat logging in dungeons and raids, keeps it through corpse runs.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gh-choo-e-forever-calendar",
+      "kind": "git",
+      "medium": "github",
+      "name": "Choo-E/wow-forever-calendar (Korean schedule site)",
+      "url": "https://github.com/Choo-E/wow-forever-calendar.git",
+      "access": "git",
+      "status": "candidate",
+      "notes": "Created Nov 1: unofficial Korean WoW Forever schedule calendar.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "web-foreverpathfinder-it",
+      "kind": "guide",
+      "medium": "web",
+      "name": "Forever Pathfinder (Italian leveling guide, interactive map)",
+      "url": "https://foreverpathfinder.github.io/",
+      "access": "webfetch",
+      "status": "candidate",
+      "notes": "Italian guide for all races and classes: talents, routes, interactive map (GitHub Pages, created Nov 1).",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "web-forever-companion-it",
+      "kind": "guide",
+      "medium": "web",
+      "name": "forever-companion.github.io (Italian leveling companion)",
+      "url": "https://forever-companion.github.io/",
+      "access": "webfetch",
+      "status": "candidate",
+      "notes": "Italian leveling companion guide (moved from Stalioot/wow-forever-leveling-companion, Nov 2).",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "discord-wow-forever-eu-pvp",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "WoW Forever EU PvP (Discord listing)",
+      "url": "https://discord.com/servers/wow-forever-eu-pvp-1082345255367614495",
+      "access": "none",
+      "status": "candidate",
+      "notes": "Public Discord listing found by search (Nov 2); older server ID, probably a renamed community. Never join or read; record only.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "discord-world-of-warcraft-forever-pvp",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "World of Warcraft Forever PvP (Discord listing)",
+      "url": "https://discord.com/servers/world-of-warcraft-forever-pvp-1171140498367467711",
+      "access": "none",
+      "status": "candidate",
+      "notes": "Public Discord listing found by search (Nov 2); older server ID, probably a renamed community. Never join or read; record only.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "discord-wow-forever-pvp-waiting-room",
+      "kind": "discord",
+      "medium": "discord",
+      "name": "WoW Forever PvP server waiting room (Discord listing)",
+      "url": "https://discord.com/servers/wow-forever-pvp-server-waiting-room-1041409453473419325",
+      "access": "none",
+      "status": "candidate",
+      "notes": "Public Discord listing found by search (Nov 2); older server ID, probably a renamed community. Never join or read; record only.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "wowhead-news-forever-addon-midnight",
+      "kind": "news",
+      "medium": "news",
+      "name": "Wowhead: WoW Forever will have addon changes from Midnight",
+      "url": "https://www.wowhead.com/news/wow-forever-will-have-addon-changes-from-midnight-382921",
+      "access": "web",
+      "status": "active",
+      "notes": "Sep 16 report of the Blizzard UI Discord statement that Midnight addon disarmament (secret values) is active in Forever. Wowhead pages often fail to render from here; read through quoting articles.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "warperia-forever",
+      "kind": "web",
+      "medium": "web",
+      "name": "Warperia (WoW Forever addon news and addon tracker)",
+      "url": "https://warperia.com/wow-forever-inherits-midnights-addon-changes/",
+      "access": "web",
+      "status": "active",
+      "notes": "Addon/API news; tracks confirmed Forever addon builds.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "wiki-gg-1601-api-notes",
+      "kind": "wiki",
+      "medium": "wiki",
+      "name": "warcraft.wiki.gg Patch 1.60.1 API changes notes",
+      "url": "https://warcraft.wiki.gg/wiki/Patch_1.60.1/API_changes/notes",
+      "access": "web",
+      "status": "active",
+      "notes": "Per-build addon API changes (GUID obfuscation, secret aspects, nameplate CVars). Last edit Oct 17; recheck after launch builds.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "wow-forever-wiki-addons",
+      "kind": "web",
+      "medium": "web",
+      "name": "WoW Forever Wiki (wow--forever.wiki) addons page",
+      "url": "https://www.wow--forever.wiki/en/tools/wow-forever-addons",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Fan wiki page on Midnight API changes for addons; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "wowforevergame-wiki",
+      "kind": "web",
+      "medium": "web",
+      "name": "wowforevergame.wiki addons guide",
+      "url": "https://wowforevergame.wiki/classic-plus/wow-forever-addons-guide/",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Fan wiki/SEO site, addon compatibility; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "forum-forever-addons-thread",
+      "kind": "forum",
+      "medium": "blizzard-forums",
+      "name": "Blizzard forums: \"Forever Addons\" thread",
+      "url": "https://us.forums.blizzard.com/en/wow/t/forever-addons/2374159",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Oct 6 player question on which addons are allowed; no staff reply seen.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-musca-auras",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Musca Auras (CurseForge, WeakAuras 5.22 fork for Forever)",
+      "url": "https://www.curseforge.com/wow/addons/musca-auras",
+      "access": "web",
+      "status": "active",
+      "notes": "Forever 1.60.1 flavor, about 22K downloads, updated Oct 22; one-click HUD for all 9 classes.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-arc-auras",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Arc Auras (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/arc-auras",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Aura addon listed in Forever addon searches; flavor unchecked.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-shield-aura-forever",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Shield Aura Forever (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/shield-aura-forever",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Forever aura addon; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-foreverbags",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "ForeverBags (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/foreverbags",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Forever bag addon; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-forever-quest-tint",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Forever Quest Tint (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/forever-quest-tint",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Marks new Forever quests on the map (v0.6.3 per Kami Labs).",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-x-perl-forever",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "X-Perl UnitFrames Forever (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/x-perl-unitframes-forever",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Unit frames port for Forever; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-forever-metter",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "Forever Metter (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/forever-metter",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Forever meter addon; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "cf-tradeskill-master",
+      "kind": "addon",
+      "medium": "addon",
+      "name": "TradeSkillMaster (CurseForge)",
+      "url": "https://www.curseforge.com/wow/addons/tradeskill-master",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Checked Nov 2: v4.14.78 (Oct 14) for Retail, MoP Classic, Classic, Classic TBC; no Forever flavor. Recheck after launch.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "gamefragger-forever",
+      "kind": "news",
+      "medium": "news",
+      "name": "GameFragger WoW Forever launch guide (Kargoz tips)",
+      "url": "https://gamefragger.com/pc/warcraft/wow-forever-launch-guide-7-tricks-to-get-ahead-on-day-one-plus-launch-times-by-region-a30011",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Oct 27 launch guide quoting speedrunner Kargoz (vendor weapons, tagging, duo); launch times by region.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "zh-17173-forever",
+      "kind": "news",
+      "medium": "news",
+      "name": "17173 (Chinese games news) WoW Forever coverage",
+      "url": "https://news.17173.com/content/06072026/152210295.shtml",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Chinese-language news/guide site; Forever article from June; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "zh-unwire-forever-interview",
+      "kind": "news",
+      "medium": "news",
+      "name": "unwire.hk WoW Forever developer interview (Hong Kong, Chinese)",
+      "url": "https://unwire.hk/2026/09/23/wow-forever-interview-level-60-classic-plus-details/game-channel/",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Sep 23 interview on level 60 and Classic Plus details; unread.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
+    },
+    {
+      "id": "zh-3dmgame-forever",
+      "kind": "news",
+      "medium": "news",
+      "name": "3DMGame online guides (Chinese)",
+      "url": "https://ol.3dmgame.com/gl/114725.html",
+      "access": "web",
+      "status": "candidate",
+      "notes": "Chinese guide page surfaced by a Forever leveling-route search; relevance unverified.",
+      "first_seen": "2026-11-02",
+      "last_checked": "2026-11-02"
     }
   ]
 }

@@ -90,17 +90,47 @@ a second, independent source. Never stop at the first layer of results.
    them, citing that source.
 5. **Datamining.** Watch for client-data diffs (talent proc chances, spell values, new quests): forum threads,
    articles, GitHub data projects. Mark them `reported` until a patch note or Blizzard post confirms.
-6. **New sources.** Every run looks for sources not yet in the registry: new GitHub repos and addons
-   (CurseForge, GitHub search), new guide sites, creators, wikis, trackers, Discord servers, data sites. Add each
-   with `status: candidate` (or `active` when the run already used it), `kind`, `medium`, `access`, `first_seen`
-   and a note on what it offers. A data repo with a known format gets an `adapter` only when
-   `tools/build_seed.py` can read it; otherwise list it in the digest under "Data sources needing an adapter".
+6. **New sources, across all media.** Discovery is half the job: the registry must keep growing beyond the
+   sources it already has, and beyond code and addons. Every run spends about a third of its budget on it,
+   rotating through the media below so each one is searched at least every two days:
+   - **Video:** YouTube channels and new videos (WoW Forever + leveling, route, class guide, world first, race to
+     60), Twitch (the `wowforever` tag, racers and their VODs), TikTok/Shorts only when they carry a concrete tip.
+   - **Audio:** podcasts (Blizzard's WoW: Forever Podcast, community shows on RSS, Spotify, Apple).
+   - **Social:** Reddit subs and recurring threads, X and Bluesky accounts of developers, dataminers, racers and
+     guide writers.
+   - **Chat:** Discord servers, found through public listings (discord.com/servers, disboard, disdex) and the
+     sites that link them. Record the invite and topic; never join or read them.
+   - **Web:** guide sites, databases, calculators, route planners, trackers and leaderboards (race trackers show
+     real XP/hour), auction-house price and economy trackers, gold-making guides, guild-recruitment and LFG sites,
+     wikis, newsletters, blogs.
+   - **Code and addons:** GitHub search (repos created or pushed in the last 2 days), CurseForge, Wago,
+     WoWInterface.
+   - **Other languages:** search in the language: Chinese (NGA, Bilibili, Zhihu, "魔兽世界 永恒 练级"), Korean
+     (Inven, Ruliweb, "와우 포에버 레벨업"), Russian ("WoW Forever прокачка"), German, French, Spanish, Portuguese,
+     Polish.
+   Prefer sources with first-hand data (measured XP and timings, datamining, leaderboards, routes) over reworded
+   SEO guides; mark boosting and gold sellers' blogs as commercial in `notes`. Add each with `status: candidate`
+   (or `active` when the run already used it), `kind`, `medium`, `access`, `first_seen` and a note on what it
+   offers. Promote a candidate to `active` once a run has read something useful from it; set `dead` after two
+   failed checks. A data repo with a known format gets an `adapter` only when `tools/build_seed.py` can read it;
+   otherwise list it in the digest under "Data sources needing an adapter". The digest lists the run's new
+   sources by medium and which media it searched.
 
 ### 4. Write notes
-- Only what matters for leveling 1-60 fast: XP, rested/camps/food, quests and their XP, dungeons as leveling,
-  respawns, routes, travel, class leveling power, talents for leveling, professions that help leveling, level
-  caps and phases, launch timing, addons and data that help. Skip endgame-only, cosmetics and drama unless they
-  change leveling.
+- Scope: everything a WoW Forever player needs to play well, with leveling 1-60 first.
+  - **Leveling:** XP, rested/camps/food, quests and their XP, dungeons as leveling, respawns, routes, travel,
+    level caps and phases, launch timing.
+  - **Classes and combat:** class power, talents, spells and ranks, racials, rotations, gear upgrades.
+  - **Gold and economy:** gold-making methods with numbers (farms, vendor items, profession profits, AH flips),
+    prices and how they move, gold sinks and costs (mounts, training, repairs), the AH and trade rules.
+  - **Professions:** what pays and what helps, recipes and where they come from, leveling a profession.
+  - **Social:** guilds (features, recruiting, perks), grouping and LFG tools, communities, realm rulesets and
+    population, faction balance, events, world PvP that affects play.
+  - **Endgame prep:** raids, attunements and reputations, as they open.
+  - **Addons, data and tools** for any of the above.
+  Skip cosmetics, store items and drama unless they change how people play. Tag every note with its area
+  (`leveling`, `class`, `gold`, `economy`, `profession`, `guild`, `social`, `pvp`, `endgame`) as well as the
+  specifics, and keep `kind` to the fixed list (a gold method is a `tip`, a price trend is `data`).
 - One checkable claim per note, with the numbers. No speculation presented as fact. Duplicates of an existing
   note become an update of that note (same id: new status, more sources), not a new note.
 - Tag `model-impact` when a note changes something the knowledge base models (kill or quest XP formulas, rested,
