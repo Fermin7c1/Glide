@@ -111,6 +111,7 @@ export interface RxpGuideWaypoint {
   radius?: number | null;
   mode?: string | null;
   text?: string | null;
+  act?: number;                      // its action's position in the step's actions (that action's `vis` applies)
 }
 export interface RxpGuideLoop {
   kind: "loop" | "line";
@@ -142,6 +143,7 @@ export interface RxpGuideAction {
   url?: string | null;
   level?: number | null;
   xp?: number | null;
+  vis?: string;                      // an action with its own `<<` condition: who gets it (one chunk of RxpGuideDetail.players bits)
 }
 export interface RxpGuideStep {
   idx: number;
@@ -157,6 +159,16 @@ export interface RxpGuideStep {
   waypoints: RxpGuideWaypoint[];
   loops: RxpGuideLoop[];
   actions: RxpGuideAction[];
+  vis?: number;                      // index into RxpGuideDetail.vis_masks: who gets this step, under which settings
+}
+/** A map the guide uses, from the knowledge base: its size in yards and its rectangle on its parent (the continent),
+ * in the parent's percent. */
+export interface RxpMapGeo {
+  name: string | null;
+  parent: number | null;
+  w_yd: number | null;
+  h_yd: number | null;
+  rect: [number, number, number, number] | null;
 }
 export interface RxpGuideDetail {
   id: string;
@@ -166,7 +178,7 @@ export interface RxpGuideDetail {
   group: string;
   subgroup: string | null;
   next: string | null;
-  next_list: { name: string | null; group: string | null; cond: string | null }[];
+  next_list: { name: string | null; group: string | null; cond: string | null; vis?: string }[];   // vis: who it's for (an action mask)
   level_min: number | null;
   level_max: number | null;
   faction: string | null;
@@ -179,6 +191,14 @@ export interface RxpGuideDetail {
   mapImages?: Record<number, string>;
   world_only?: number;               // steps RestedXP placed only in world coordinates
   placed?: number;                   // of those, the positions put on their maps (needs the knowledge base's map bounds)
+  // which steps RestedXP shows, for whom (companion/rxp_explorer.py visibility): every character ("Human/MAGE",
+  // "Skyborne@Horde/SHAMAN"), the 8 combinations of the settings the page toggles, and the distinct masks (hex: one
+  // chunk of players bits per combination, combination i = ssf 1 | group_quests 2 | hardcore 4)
+  players?: string[];
+  settings?: { ssf: boolean; group_quests: boolean; hardcore: boolean }[];
+  vis_masks?: string[];
+  defaults?: { ssf: boolean; group_quests: boolean; hardcore: boolean };   // the coach's (config.json "rxp")
+  maps?: Record<string, RxpMapGeo>;  // by ui_map: the guide's zones and their continents ({} without a knowledge base)
 }
 /** What the Guides page asks `rxp_import.py routes` (companion/rxp_routes.py): the visible steps in page order
  * (guide step numbers, st.idx), the step looked at (its legs first), a time budget, and the character. */

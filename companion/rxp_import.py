@@ -314,11 +314,12 @@ def _entity_names(root, qids, npcs, items):
 
 
 def _map_bounds(root, maps):
-    """{ui_map: map_bounds row} for these maps from data/kb.db (the knowledge build's world <-> map transforms, from
-    the game client's own map data), or {} without a knowledge base."""
-    path = os.path.join(root, "data", "kb.db")
+    """{ui_map: map_bounds row} for these maps from the newest kb.db (the knowledge build's world <-> map transforms,
+    from the game client's own map data), or {} without a knowledge base."""
+    import rxp_explorer
+    path = rxp_explorer.kb_path(root)
     maps = sorted(m for m in maps if isinstance(m, int))
-    if not maps or not os.path.exists(path):
+    if not maps or not path:
         return {}
     import sqlite3
     try:
@@ -406,11 +407,20 @@ def guide_detail(root, iid, index, wow_dir=None):
         raise ImportProblem("Guide not found in that import.")
     if ROOT not in sys.path:
         sys.path.insert(0, ROOT)
-    from knowledge.rxp_parser.guide import parse_guide
+    import rxp_explorer as X
     from knowledge.rxp_parser.maps import DEFAULT_MAPS
-    parsed = parse_guide(guides[idx].get("text") or "")
+    text = guides[idx].get("text") or ""
+    kb = X.kb_path(root)
+    map_ids = X.map_names(kb)
+    # #include steps expanded over every guide the knowledge build reads (the free ones and the added ones), so
+    # the steps and their numbers are kb.db's
+    corpus = [g["text"] for g in free_guides(root, wow_dir)[1]] if str(iid) != FREE_ID else [g["text"] for g in guides]
+    for rec in load_store(root)["imports"].values():
+        corpus += [g.get("text") or "" for g in (rec.get("guides") if isinstance(rec, dict) else None) or ()
+                   if isinstance(g, dict)]
+    parsed = X.include_expanded(text, corpus, map_ids)
     # RestedXP's Forever guides give positions in world coordinates: put them on their maps (kb.db's map bounds)
-    steps_in = parsed.get("steps") or ()
+    steps_in: list = parsed.get("steps") or []
     maps_used = {st.get("ui_map") for st in steps_in}
     maps_used |= {(a.get("args") or {}).get("ui_map") for st in steps_in for a in st.get("actions") or ()}
     world_only = sum(1 for st in parsed.get("steps") or () if st.get("x") is None and st.get("wx") is not None)
@@ -425,26 +435,35 @@ def guide_detail(root, iid, index, wow_dir=None):
             elif a.get("entity_kind") == "item" and a.get("entity_id"):
                 items.add(int(a["entity_id"]))
     names = _entity_names(root, qids, npcs, items)
+    kb_names = {v: k for k, v in map_ids.items()}
+    try:
+        import glideconfig
+        cfg_rxp = (glideconfig.read(root)[0].get("companion") or {}).get("rxp")
+    except Exception as e:  # noqa: BLE001 - an unreadable config: the coach's defaults
+        log_once("rxp_import.guide_detail.config", e)
+        cfg_rxp = None
+    vis = X.visibility({"text": text, "steps": list(steps_in)}, cfg_rxp if isinstance(cfg_rxp, dict) else None)
     steps_out = []
     zones_seen = {}
-    for st in parsed.get("steps") or ():
+    for si, st in enumerate(steps_in):
         actions_out = []
         wps = []
         loops = []
-        for a in st.get("actions") or ():
+        for ai, a in enumerate(st.get("actions") or []):
             verb = a.get("verb")
             if not verb:
                 continue
+            act_vis = vis["actions"].get((si, ai))
             args = a.get("args") or {}
             um = args.get("ui_map")
-            zname = DEFAULT_MAPS.name(um) if um else (args.get("zone") or st.get("zone"))
+            zname = (DEFAULT_MAPS.name(um) or kb_names.get(um)) if um else (args.get("zone") or st.get("zone"))
             if um and zname:
                 zones_seen[int(um)] = zname
             if verb in ("goto", "groundgoto", "flygoto", "waypoint", "pin", "questgoto", "treasure", "rare"):
                 if args.get("x") is not None and args.get("y") is not None:
                     wps.append({"x": args["x"], "y": args["y"], "zone": zname, "ui_map": um,
                                 "radius": args.get("radius"), "mode": args.get("mode") or verb,
-                                "text": a.get("text") or args.get("tooltip")})
+                                "text": a.get("text") or args.get("tooltip"), "act": len(actions_out)})
             elif verb in ("loop", "line") and args.get("points"):
                 pts = [p for p in args["points"] if isinstance(p, list) and len(p) == 2 and p[0] is not None and p[1] is not None]
                 if pts:
@@ -478,9 +497,12 @@ def guide_detail(root, iid, index, wow_dir=None):
                 "level": args.get("level") if verb in ("xp", "maxlevel", "skill") else None,
                 "xp": args.get("xp") if verb in ("xp", "maxlevel") else None,
             })
+            if act_vis is not None:
+                actions_out[-1]["vis"] = act_vis
         if st.get("ui_map") and st.get("zone"):
             zones_seen[int(st["ui_map"])] = st["zone"]
-        flags = {k: v for k, v in (st.get("flags") or {}).items() if k != "cond_flags"}
+        flags_in = st.get("flags")
+        flags = {k: v for k, v in flags_in.items() if k != "cond_flags"} if isinstance(flags_in, dict) else {}
         steps_out.append({
             "idx": st["idx"],
             "line": st["line"],
@@ -495,6 +517,7 @@ def guide_detail(root, iid, index, wow_dir=None):
             "waypoints": wps,
             "loops": loops,
             "actions": actions_out,
+            "vis": vis["steps"][si],
         })
     return {
         "id": str(iid),
@@ -504,8 +527,8 @@ def guide_detail(root, iid, index, wow_dir=None):
         "group": parsed.get("grp") or guides[idx].get("group") or "RestedXP",
         "subgroup": parsed.get("subgroup"),
         "next": parsed.get("next"),
-        "next_list": [{"name": n.get("name"), "group": n.get("group"), "cond": (n.get("cond") or {}).get("raw")}
-                      for n in (parsed.get("next_list") or ())],
+        "next_list": [{"name": n.get("name"), "group": n.get("group"), "cond": (n.get("cond") or {}).get("raw"),
+                       "vis": X.player_mask(n.get("cond"))} for n in (parsed.get("next_list") or ())],
         "level_min": parsed.get("level_min"),
         "level_max": parsed.get("level_max"),
         "faction": parsed.get("faction"),
@@ -519,6 +542,14 @@ def guide_detail(root, iid, index, wow_dir=None):
         # knowledge base's map bounds (data/kb.db) the map has nothing to draw, and the Explorer says why
         "world_only": world_only,
         "placed": placed,
+        # which steps show, for whom (rxp_explorer.visibility): the page reads these instead of `<<` conditions
+        "players": vis["players"],
+        "settings": vis["settings"],
+        "vis_masks": vis["masks"],
+        "defaults": {k: bool(v) for k, v in X.rxp_options(cfg_rxp if isinstance(cfg_rxp, dict) else None).items()
+                     if k in X.TOGGLES},
+        # each zone's size in yards and its rectangle on its continent (kb.db), {} without a knowledge base
+        "maps": {str(k): v for k, v in X.map_geometry(kb, set(zones_seen)).items()},
     }
 
 

@@ -1,12 +1,15 @@
 // Interactive RestedXP Guide & Map Browser: browse imported guides, filter by race/class/mode as RestedXP does
 // in-game, scrub through a visual step timeline, and walk the route over the zone map with clickable waypoints,
 // directional arrows, objectives, and guide commentary.
-import type { RxpGuideAction, RxpGuideDetail, RxpGuideStep, RxpGuideSummary, RxpImport } from "../shared/ipc.js";
+// Which steps show and their numbers come from the engine (rxp-model.ts reads its masks); every step is known by its
+// number in the guide (st.idx), never by its place in the filtered list, so a filter change keeps what was picked.
+import type { RxpGuideAction, RxpGuideDetail, RxpGuideStep, RxpGuideSummary, RxpGuideWaypoint, RxpImport } from "../shared/ipc.js";
 import { call, quiet } from "./bridge.js";
 import { $, esc } from "./dom.js";
 import { currentPage, show } from "./nav.js";
 import { live } from "./state.js";
-import { conditionApplies } from "./rxp-conditions.js";
+import { comboOf, Visibility } from "./rxp-model.js";
+import { bearingDeg, yards, yardsText } from "./rxp-geometry.js";
 
 const MAP_W = 1002;
 const MAP_H = 668;
@@ -29,8 +32,9 @@ interface CatalogEntry extends RxpGuideSummary {
 
 interface VisibleStep {
   step: RxpGuideStep;
-  rxpNum: number;           // 1-based step number as RestedXP numbers it
-  dimmed: boolean;          // shown only because "Show all class/race steps" is on
+  src: number;              // the step's number in the guide (st.idx): what the page keys everything by
+  rxpNum: number | null;    // RestedXP's step number for the picked character (null: another character's step)
+  dimmed: boolean;          // shown only because "Show all <<" is on
   kind: "accept" | "turnin" | "combat" | "travel" | "hearth" | "death" | "step";
   x: number | null;
   y: number | null;
@@ -41,14 +45,19 @@ interface VisibleStep {
 const cache = new Map<string, RxpGuideDetail>();
 let catalog: CatalogEntry[] = [];
 let currentGuide: RxpGuideDetail | null = null;
+let vis: Visibility | null = null;          // the current guide's masks
 let visibleSteps: VisibleStep[] = [];
-let activeIdx = 0;          // 0-based index into visibleSteps
-let activeWpIdx = 0;        // sub-waypoint index within the active step
+let posBySrc = new Map<number, number>();   // st.idx -> position in visibleSteps
+let activeSrc: number | null = null;        // the current step (st.idx)
+let activeIdx = 0;          // its position in visibleSteps (derived from activeSrc)
+let activeWpIdx = 0;        // the active sub-waypoint: its position in the step's own waypoints
 let activeMapId: number | null = null;
-let pinnedStepIdx: number | null = null;  // clicked element on the map
+/** The element picked on the map: a step's pin (or one of its sub-waypoints, sub = its waypoint position). */
+let selected: { kind: "step" | "wp"; src: number; sub?: number } | null = null;
 let playTimer: number | null = null;
-let playMs = 1600;
-const checkedObjs = new Set<string>();
+let playMs = 1500;
+const checkedObjs = new Set<string>();      // `${guide id}:${index}:${st.idx}:${action line}`
+let defaultsApplied = false;                // the toggles start from the coach's settings once, then are the player's
 
 // Filter state (matches RestedXP's in-game player & profile checks)
 const filter = {
@@ -57,7 +66,7 @@ const filter = {
   stepSearch: "",
   race: "",                 // the race picker's value: "Human", ..., or "Skyborne@Alliance" / "Skyborne@Horde"
   cls: "",
-  ssf: false,
+  ssf: true,                // the coach's defaults until the guide's own say otherwise (RxpGuideDetail.defaults)
   groupQuests: true,
   hardcore: false,
   showAllCond: false,
@@ -115,19 +124,24 @@ function followStep(): void {
   if (filter.follow && cur && cur.ui_map === activeMapId && cur.step.x != null && cur.step.y != null) centerOn(cur.step.x, cur.step.y);
 }
 
-/** Evaluate RestedXP's `<<` condition string against the picked race (with its faction) and class. */
-function condApplies(raw: string | null | undefined): boolean {
-  return conditionApplies(raw, filter.race, filter.cls);
+/** The characters the race and class pickers allow (positions in the guide's players). */
+function pickedPlayers(): number[] {
+  return vis ? vis.pick(filter.race, filter.cls) : [];
 }
 
-function stepFlagsShown(flags: Record<string, unknown>): boolean {
-  const on = (k: string) => flags[k] !== undefined && flags[k] !== false && flags[k] !== null;
-  if ((on("softcore") && filter.hardcore) || (on("hardcore") && !filter.hardcore)) return false;
-  if ((on("ssf") && !filter.ssf) || (on("ah") && filter.ssf)) return false;
-  if ((on("group") && !filter.groupQuests) || (on("solo") && filter.groupQuests)) return false;
-  if (on("disabled") || on("questguide")) return false;
-  return true;
+/** Whether an action applies to the picked characters (its own `<<` condition, as the engine read it). */
+function actionApplies(a: RxpGuideAction): boolean {
+  return !vis || vis.actionShown(a.vis, pickedPlayers());
 }
+
+/** The step's waypoints the picked characters get, each with its position in the step's own list (its letter). */
+function stepWaypoints(st: RxpGuideStep): { w: RxpGuideWaypoint; wi: number }[] {
+  return (st.waypoints || []).map((w, wi) => ({ w, wi }))
+    .filter(({ w }) => filter.showAllCond || w.act == null || !st.actions[w.act] || actionApplies(st.actions[w.act]));
+}
+
+const letter = (wi: number) => String.fromCharCode(65 + (wi % 26));
+const stepNum = (vs: VisibleStep) => (vs.rxpNum != null ? String(vs.rxpNum) : "–");
 
 /** Convert WoW / RestedXP markup (`|cRXP_WARN_...|r`, `|cffRRGGBB...|r`, `|T...|t`, `\n`) into safe HTML. */
 function formatRxpText(raw: string | null | undefined): string {
@@ -219,24 +233,27 @@ function stepHeadline(st: RxpGuideStep): string {
 }
 
 function rebuildVisibleSteps(): void {
-  if (!currentGuide) { visibleSteps = []; return; }
+  if (!currentGuide) { visibleSteps = []; posBySrc = new Map(); return; }
+  const g = currentGuide;
   const out: VisibleStep[] = [];
-  let rxpNum = 0;
+  // which steps the picked characters get under these settings, numbered as RestedXP numbers them (the engine's masks)
+  const listed = vis
+    ? vis.list(g.steps.map((st) => st.vis), comboOf(filter.ssf, filter.groupQuests, filter.hardcore), pickedPlayers(), filter.showAllCond)
+    : g.steps.map((_st, pos) => ({ pos, num: pos + 1, dimmed: false }));
   // Carry forward the last known zone/waypoint when a step has no .goto of its own, so the timeline marker stays placed
-  let lastMap: number | null = currentGuide.zones?.[0]?.ui_map ?? null;
-  let lastZone: string | null = currentGuide.zones?.[0]?.name ?? null;
+  let lastMap: number | null = g.zones?.[0]?.ui_map ?? null;
+  let lastZone: string | null = g.zones?.[0]?.name ?? null;
   let lastX: number | null = null;
   let lastY: number | null = null;
-  for (const st of currentGuide.steps) {
-    const condOk = condApplies(st.cond) && stepFlagsShown(st.flags || {});
-    if (!condOk && !filter.showAllCond) continue;
-    if (condOk) rxpNum++;
+  for (const { pos, num, dimmed } of listed) {
+    const st = g.steps[pos];
     if (st.ui_map != null) { lastMap = st.ui_map; lastZone = st.zone || lastZone; }
     if (st.x != null && st.y != null) { lastX = st.x; lastY = st.y; }
     out.push({
       step: st,
-      rxpNum: condOk ? rxpNum : st.idx,
-      dimmed: !condOk,
+      src: st.idx,
+      rxpNum: num,
+      dimmed,
       kind: classifyStep(st),
       x: st.x ?? lastX,
       y: st.y ?? lastY,
@@ -245,16 +262,24 @@ function rebuildVisibleSteps(): void {
     });
   }
   visibleSteps = out;
-  if (activeIdx >= visibleSteps.length) activeIdx = Math.max(0, visibleSteps.length - 1);
+  posBySrc = new Map(out.map((vs, i) => [vs.src, i]));
+  // the same step as before the change, else the next one still listed (else the last)
+  activeIdx = 0;
+  if (activeSrc != null && out.length) {
+    const at = posBySrc.get(activeSrc);
+    activeIdx = at ?? (() => { const i = out.findIndex((vs) => vs.src > activeSrc!); return i >= 0 ? i : out.length - 1; })();
+    if (at === undefined) activeWpIdx = 0;
+  }
+  activeSrc = out[activeIdx]?.src ?? null;
+  if (selected && !posBySrc.has(selected.src)) selected = null;
   const cur = visibleSteps[activeIdx];
   if (cur && cur.ui_map != null) activeMapId = cur.ui_map;
-  else if (!activeMapId && currentGuide.zones.length) activeMapId = currentGuide.zones[0].ui_map;
+  else if (!activeMapId && g.zones.length) activeMapId = g.zones[0].ui_map;
 }
 
 function mapImageUrl(uiMap: number | null): string | null {
   if (!uiMap) return null;
-  if (live.engineUrl) return `${live.engineUrl}/map/${uiMap}.png`;
-  return currentGuide?.mapImages?.[uiMap] || null;
+  return currentGuide?.mapImages?.[uiMap] || (live.engineUrl ? `${live.engineUrl}/map/${uiMap}.png` : null);
 }
 
 /** Render the interactive zone map, route trail, directional arrows, clickable pins, and RXP Arrow widget. */
@@ -328,7 +353,8 @@ function renderMap(): void {
 
   // Steps before the current one are hidden unless "Done steps" is on (a busy hub is otherwise a pile of old pins);
   // the step the player pinned stays
-  const shownSteps = zoneSteps.filter(({ idx }) => filter.showDone || idx >= activeIdx || idx === pinnedStepIdx);
+  const pinnedSrc = selected?.src ?? null;
+  const shownSteps = zoneSteps.filter(({ vs, idx }) => filter.showDone || idx >= activeIdx || vs.src === pinnedSrc);
 
   // An arrowhead at (x, y) pointing along (dx, dy), in a body that keeps its size on screen at any zoom
   const arrowhead = (x: number, y: number, dx: number, dy: number, cls: string) => {
@@ -369,8 +395,10 @@ function renderMap(): void {
       break;
     }
   }
-  const curWps = (cur?.step.waypoints || []).filter((w) => !w.ui_map || w.ui_map === mapId);
-  const targetWp = curWps[activeWpIdx] || curWps[0] || (cur && cur.ui_map === mapId && cur.step.x != null ? { x: cur.step.x, y: cur.step.y! } : null);
+  // the active step's waypoints on this map, each keeping its letter (its place in the step's own list)
+  const curWps = cur ? stepWaypoints(cur.step).filter(({ w }) => !w.ui_map || w.ui_map === mapId) : [];
+  const targetWp = (curWps.find(({ wi }) => wi === activeWpIdx) || curWps[0])?.w
+    || (cur && cur.ui_map === mapId && cur.step.x != null ? { x: cur.step.x, y: cur.step.y! } : null);
 
   if (prevX != null && prevY != null && targetWp && (Math.hypot(targetWp.x - prevX, targetWp.y - prevY) > 0.2)) {
     const [x1, y1, x2, y2] = [mapX(prevX), mapY(prevY), mapX(targetWp.x), mapY(targetWp.y)];
@@ -387,7 +415,7 @@ function renderMap(): void {
 
   // 4. Multi-waypoint chain within the active step itself
   if (curWps.length > 1) {
-    const pts = curWps.map((w) => [mapX(w.x), mapY(w.y)] as [number, number]);
+    const pts = curWps.map(({ w }) => [mapX(w.x), mapY(w.y)] as [number, number]);
     svg.push(`<polyline class="rxpb-step-chain" points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}"/>`);
     svg.push(midArrows(pts, "chain"));
   }
@@ -412,16 +440,16 @@ function renderMap(): void {
   // 6. Step waypoint pins (clickable!), each body keeping its size on screen at any zoom
   for (const { vs, idx } of shownSteps) {
     const isCur = idx === activeIdx;
-    const isPinned = idx === pinnedStepIdx;
+    const isPinned = vs.src === pinnedSrc;
     const isDone = idx < activeIdx;
     const cx = mapX(vs.step.x!);
     const cy = mapY(vs.step.y!);
     const stateCls = isCur ? "is-cur" : isDone ? "is-done" : "is-next";
     const sym = vs.kind === "accept" ? "!" : vs.kind === "turnin" ? "?" : vs.kind === "combat" ? "⚔"
-      : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : String(vs.rxpNum);
+      : vs.kind === "travel" ? "✦" : vs.kind === "hearth" ? "⌂" : vs.kind === "death" ? "☠" : stepNum(vs);
     const r = isCur ? 15 : isPinned ? 13 : 10.5;
-    svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-step="${idx}" transform="translate(${cx},${cy})"
-      tabindex="0" role="button" aria-label="Step ${vs.rxpNum}: ${esc(stepHeadline(vs.step))}">
+    svg.push(`<g class="rxpb-pin k-${vs.kind} ${stateCls}${isPinned ? " is-pinned" : ""}" data-src="${vs.src}" transform="translate(${cx},${cy})"
+      tabindex="0" role="button" aria-label="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}">
       <g class="rxpb-body">${isCur ? `<circle class="rxpb-pin-pulse" r="22"/>` : ""}<circle r="${r}"/>
       <text dy="0.35em">${esc(sym)}</text></g>
     </g>`);
@@ -429,31 +457,34 @@ function renderMap(): void {
 
   // 7. Sub-waypoints of the active step (when a step has >1 .goto)
   if (curWps.length > 1) {
-    curWps.forEach((w, wi) => {
+    curWps.forEach(({ w, wi }) => {
       const cx = mapX(w.x), cy = mapY(w.y);
       const on = wi === activeWpIdx;
       svg.push(`<g class="rxpb-subwp${on ? " on" : ""}" data-wp="${wi}" transform="translate(${cx},${cy})">
-        <title>Sub-waypoint ${wi + 1}: (${w.x.toFixed(1)}, ${w.y.toFixed(1)}) ${esc(w.text || "")}</title>
+        <title>Waypoint ${letter(wi)}: (${w.x.toFixed(1)}, ${w.y.toFixed(1)}) ${esc(w.text || "")}</title>
         <g class="rxpb-body"><circle r="${on ? 11 : 8}"/>
-        <text dy="0.35em">${String.fromCharCode(65 + (wi % 26))}</text></g>
+        <text dy="0.35em">${letter(wi)}</text></g>
       </g>`);
     });
   }
 
+  // the pin that had keyboard focus gets it back after the redraw
+  const focusedSrc = (document.activeElement as Element | null)?.closest?.<SVGGElement>(".rxpb-pin")?.dataset.src;
   $("rxpb-map-svg").innerHTML = svg.join("");
   $("rxpb-map-svg").querySelectorAll<SVGGElement>(".rxpb-pin").forEach((g) => {
     g.onclick = (e) => {
       e.stopPropagation();
-      const idx = Number(g.dataset.step);
-      pinnedStepIdx = idx;
-      selectStep(idx, true);
+      const src = Number(g.dataset.src);
+      selected = { kind: "step", src };
+      selectSrc(src, true);
     };
   });
+  if (focusedSrc) $("rxpb-map-svg").querySelector<SVGGElement>(`.rxpb-pin[data-src="${focusedSrc}"]`)?.focus();
   $("rxpb-map-svg").querySelectorAll<SVGGElement>(".rxpb-subwp").forEach((g) => {
     g.onclick = (e) => {
       e.stopPropagation();
       activeWpIdx = Number(g.dataset.wp);
-      pinnedStepIdx = activeIdx;
+      if (cur) selected = { kind: "wp", src: cur.src, sub: activeWpIdx };
       renderMap();
       renderActiveStep();
     };
@@ -465,9 +496,11 @@ function renderMap(): void {
     let deg = 0;
     let distText = `${targetWp.x.toFixed(1)}, ${targetWp.y.toFixed(1)}`;
     if (prevX != null && prevY != null && (prevX !== targetWp.x || prevY !== targetWp.y)) {
-      deg = Math.atan2(targetWp.x - prevX, -(targetWp.y - prevY)) * (180 / Math.PI);
-      const approxYds = Math.round(Math.hypot((targetWp.x - prevX) * 35, (targetWp.y - prevY) * 24));
-      distText = `${targetWp.x.toFixed(1)}, ${targetWp.y.toFixed(1)} · ~${approxYds} yd`;
+      // real yards and a compass bearing from the zone's size (the knowledge base); no yard figure without it
+      const dx = targetWp.x - prevX, dy = targetWp.y - prevY;
+      deg = bearingDeg(currentGuide.maps, mapId, dx, dy);
+      const yd = yardsText(yards(currentGuide.maps, mapId, dx, dy));
+      if (yd) distText += ` · ${yd}`;
     }
     arrowHud.hidden = false;
     arrowHud.innerHTML = `<div class="rxpb-arrow-wheel"><svg viewBox="0 0 36 36" style="transform:rotate(${deg.toFixed(1)}deg)">
@@ -487,9 +520,9 @@ function renderMap(): void {
 /** Render the floating map inspector card when a map pin is clicked/selected. */
 function renderInspector(): void {
   const box = $("rxpb-inspector");
-  const idx = pinnedStepIdx ?? activeIdx;
-  const vs = visibleSteps[idx];
-  if (!vs || pinnedStepIdx === null) {
+  const at = selected ? posBySrc.get(selected.src) : undefined;
+  const vs = at !== undefined ? visibleSteps[at] : undefined;
+  if (!vs) {
     box.hidden = true;
     return;
   }
@@ -501,7 +534,7 @@ function renderInspector(): void {
   const coord = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} (${st.x.toFixed(1)}, ${st.y.toFixed(1)})` : (st.zone || vs.zone || "No waypoint");
   box.hidden = false;
   box.innerHTML = `<div class="rxpb-ins-head">
-      <span class="rxpb-step-pill">Step ${vs.rxpNum}</span>
+      <span class="rxpb-step-pill">Step ${stepNum(vs)}</span>
       <span class="rxpb-ins-coord">${esc(coord)}</span>
       ${st.cond ? `<span class="rxpb-cond-pill">&lt;&lt; ${esc(st.cond)}</span>` : ""}
       <button type="button" class="rxpb-ins-close" id="rxpb-ins-close" title="Close details">×</button>
@@ -510,7 +543,7 @@ function renderInspector(): void {
     ${instructions ? `<div class="rxpb-ins-body">${instructions}</div>` : ""}
     ${st.comments ? `<div class="rxpb-comment">💬 ${esc(st.comments)}</div>` : ""}`;
   const closeBtn = document.getElementById("rxpb-ins-close");
-  if (closeBtn) closeBtn.onclick = () => { pinnedStepIdx = null; box.hidden = true; renderMap(); };
+  if (closeBtn) closeBtn.onclick = () => { selected = null; box.hidden = true; renderMap(); };
 }
 
 /** Render the timeline scrubber track with event ticks and playback controls. */
@@ -522,7 +555,9 @@ function renderTimeline(): void {
   slider.disabled = n <= 1;
 
   const cur = visibleSteps[activeIdx];
-  $("rxpb-tl-pos").textContent = n ? `Step ${cur ? cur.rxpNum : activeIdx + 1} of ${n}` : "No steps";
+  const numbered = visibleSteps.reduce((k, vs) => k + (vs.rxpNum != null ? 1 : 0), 0);
+  $("rxpb-tl-pos").textContent = !n ? "No steps" : cur?.rxpNum != null ? `Step ${cur.rxpNum} of ${numbered}`
+    : `Another character's step (guide step ${cur?.src ?? "?"})`;
   $("rxpb-tl-zone").textContent = cur?.zone ? `${cur.zone}${cur.step.x != null ? ` (${cur.step.x.toFixed(1)}, ${cur.step.y!.toFixed(1)})` : ""}` : "";
   $<HTMLButtonElement>("rxpb-prev").disabled = activeIdx <= 0;
   $<HTMLButtonElement>("rxpb-next").disabled = activeIdx >= n - 1;
@@ -536,16 +571,16 @@ function renderTimeline(): void {
       const pct = ((i / (n - 1)) * 100).toFixed(2);
       if (vs.zone && vs.zone !== prevZone) {
         prevZone = vs.zone;
-        ticks.push(`<i class="tl-tick tl-zone" style="left:${pct}%" data-idx="${i}" title="Zone: ${esc(vs.zone)} (Step ${vs.rxpNum})"></i>`);
+        ticks.push(`<i class="tl-tick tl-zone" style="left:${pct}%" data-src="${vs.src}" title="Zone: ${esc(vs.zone)} (Step ${stepNum(vs)})"></i>`);
       }
       if (vs.kind !== "step") {
-        ticks.push(`<i class="tl-tick tl-${vs.kind}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-idx="${i}" title="Step ${vs.rxpNum}: ${esc(stepHeadline(vs.step))}"></i>`);
+        ticks.push(`<i class="tl-tick tl-${vs.kind}${i === activeIdx ? " on" : ""}" style="left:${pct}%" data-src="${vs.src}" title="Step ${stepNum(vs)}: ${esc(stepHeadline(vs.step))}"></i>`);
       }
     });
   }
   $("rxpb-tl-ticks").innerHTML = ticks.join("");
   $("rxpb-tl-ticks").querySelectorAll<HTMLElement>(".tl-tick").forEach((el) => {
-    el.onclick = () => selectStep(Number(el.dataset.idx), true);
+    el.onclick = () => selectSrc(Number(el.dataset.src), true);
   });
 }
 
@@ -557,7 +592,8 @@ function renderActiveStep(): void {
 
   // Next guide button (#next in RXP)
   const nextBtn = $<HTMLButtonElement>("rxpb-next-guide");
-  const nextEntry = (currentGuide.next_list || []).find((n) => n.name && condApplies(n.cond));
+  const who = pickedPlayers();
+  const nextEntry = (currentGuide.next_list || []).find((n) => n.name && (!vis || vis.actionShown(n.vis, who)));
   if (nextEntry && nextEntry.name) {
     // the group RestedXP names (#next Group\Name), else the group being browsed: a Dungeon guide's next is the
     // Dungeon guide of that name, not the Speedrun one; only then any group
@@ -595,13 +631,13 @@ function renderActiveStep(): void {
 
   // Step elements (instructions, objectives, actions)
   const rows: string[] = [];
-  const visibleActions = (st.actions || []).filter((a) => condApplies(a.cond) || filter.showAllCond);
-  visibleActions.forEach((a, ai) => {
+  const visibleActions = (st.actions || []).filter((a) => filter.showAllCond || actionApplies(a));
+  visibleActions.forEach((a) => {
     const b = actionBadge(a);
     const hasText = !!(a.raw_text || a.text);
     if (!b && !hasText && a.verb !== "goto" && a.verb !== "link") return;
     if (a.verb === "goto" && !hasText) return;    // pure coordinate lines are shown in the waypoint pills below
-    const objKey = `${currentGuide!.id}:${currentGuide!.index}:${st.idx}:${ai}`;
+    const objKey = `${currentGuide!.id}:${currentGuide!.index}:${st.idx}:${a.line ?? a.verb}`;
     const done = checkedObjs.has(objKey);
     const isCheckable = a.verb !== "text" || a.kind === "+";
     const condTag = a.cond ? ` <span class="rxpb-cond-pill">&lt;&lt; ${esc(a.cond)}</span>` : "";
@@ -619,12 +655,12 @@ function renderActiveStep(): void {
 
   // Clickable sub-waypoint coordinate pills
   const wps = st.waypoints || [];
-  const wpPills = wps.map((w, wi) => `<button type="button" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
-    📍 ${esc(w.zone || st.zone || "Zone")} <b>${w.x.toFixed(1)}, ${w.y.toFixed(1)}</b>${wps.length > 1 ? ` <em>(${String.fromCharCode(65 + (wi % 26))})</em>` : ""}
+  const wpPills = stepWaypoints(st).map(({ w, wi }) => `<button type="button" class="rxpb-wp-pill${wi === activeWpIdx ? " on" : ""}" data-wp="${wi}">
+    📍 ${esc(w.zone || st.zone || "Zone")} <b>${w.x.toFixed(1)}, ${w.y.toFixed(1)}</b>${wps.length > 1 ? ` <em>(${letter(wi)})</em>` : ""}
   </button>`).join("");
 
   box.innerHTML = `<div class="rxpb-cs-head">
-      <span class="rxpb-cs-num">Step ${vs.rxpNum}</span>
+      <span class="rxpb-cs-num">${vs.rxpNum != null ? `Step ${vs.rxpNum}` : "Another character's step"}</span>
       <div class="rxpb-cs-flags">${flagPills.join("")}</div>
     </div>
     <div class="rxpb-cs-rows">${rows.length ? rows.join("") : `<div class="rxpb-obj-text dim">Travel / transition step</div>`}</div>
@@ -668,15 +704,15 @@ function renderStepList(scrollActive = false): void {
     const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
     const summaryText = st.text || badges.map((b) => b.label).join(" · ") || stepHeadline(st);
     if (q) {
-      const hay = `${vs.rxpNum} ${summaryText} ${st.zone || ""} ${st.comments || ""} ${badges.map((b) => b.label).join(" ")}`.toLowerCase();
+      const hay = `${stepNum(vs)} ${summaryText} ${st.zone || ""} ${st.comments || ""} ${badges.map((b) => b.label).join(" ")}`.toLowerCase();
       if (!hay.includes(q)) return;
     }
     const on = i === activeIdx;
     const done = i < activeIdx;
     const coord = st.x != null && st.y != null ? `${st.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
-    items.push(`<li class="rxpb-sitem k-${vs.kind}${on ? " on" : ""}${done ? " done" : ""}${vs.dimmed ? " dimmed" : ""}" data-idx="${i}">
+    items.push(`<li class="rxpb-sitem k-${vs.kind}${on ? " on" : ""}${done ? " done" : ""}${vs.dimmed ? " dimmed" : ""}" data-src="${vs.src}">
       <div class="rxpb-sitem-top">
-        <span class="rxpb-snum">${vs.rxpNum}</span>
+        <span class="rxpb-snum">${stepNum(vs)}</span>
         <span class="rxpb-stitle">${formatRxpText((st.actions || []).find((a) => a.raw_text)?.raw_text || summaryText)}</span>
         ${coord ? `<span class="rxpb-scoord">${esc(coord)}</span>` : ""}
       </div>
@@ -685,7 +721,7 @@ function renderStepList(scrollActive = false): void {
   });
   listEl.innerHTML = items.length ? items.join("") : `<li class="rxpb-empty">No steps match "${esc(filter.stepSearch)}".</li>`;
   listEl.querySelectorAll<HTMLLIElement>(".rxpb-sitem").forEach((li) => {
-    li.onclick = () => selectStep(Number(li.dataset.idx), false);
+    li.onclick = () => selectSrc(Number(li.dataset.src), false);
   });
   if (scrollActive) {
     // scroll the list itself (scrollIntoView would also scroll the page around it)
@@ -698,9 +734,11 @@ function renderStepList(scrollActive = false): void {
   }
 }
 
-export function selectStep(idx: number, scrollList = true): void {
+/** Make the step at this place in the list the current one. */
+function selectStep(idx: number, scrollList = true): void {
   if (!visibleSteps.length) return;
   activeIdx = Math.max(0, Math.min(visibleSteps.length - 1, idx));
+  activeSrc = visibleSteps[activeIdx].src;
   activeWpIdx = 0;
   const vs = visibleSteps[activeIdx];
   if (vs && vs.ui_map != null) activeMapId = vs.ui_map;
@@ -709,6 +747,12 @@ export function selectStep(idx: number, scrollList = true): void {
   renderStepList(scrollList);
   renderMap();
   followStep();
+}
+
+/** Make the step with this guide step number (st.idx) the current one, when it is listed. */
+function selectSrc(src: number, scrollList = true): void {
+  const at = posBySrc.get(src);
+  if (at !== undefined) selectStep(at, scrollList);
 }
 
 function stopPlay(): void {
@@ -743,7 +787,7 @@ let wantGuide: { packId: string; index: number } | null = null;   // browseGuide
 
 export async function openGuide(packId: string, index: number): Promise<void> {
   stopPlay();
-  pinnedStepIdx = null;
+  selected = null;
   const seq = ++openSeq;
   const key = `${packId}:${index}`;
   let g = cache.get(key) || null;
@@ -759,6 +803,18 @@ export async function openGuide(packId: string, index: number): Promise<void> {
     return;
   }
   currentGuide = g;
+  vis = g.players && g.vis_masks ? new Visibility(g.players, g.vis_masks) : null;
+  if (!defaultsApplied && g.defaults) {
+    // the toggles start as the coach plays (config.json "rxp", else solo self-found and group quests on)
+    defaultsApplied = true;
+    filter.ssf = !!g.defaults.ssf;
+    filter.groupQuests = !!g.defaults.group_quests;
+    filter.hardcore = !!g.defaults.hardcore;
+    $<HTMLInputElement>("rxpb-ssf").checked = filter.ssf;
+    $<HTMLInputElement>("rxpb-grp").checked = filter.groupQuests;
+    $<HTMLInputElement>("rxpb-hc").checked = filter.hardcore;
+  }
+  activeSrc = null;
   activeIdx = 0;
   activeWpIdx = 0;
   activeMapId = g.zones?.[0]?.ui_map ?? null;
@@ -871,14 +927,15 @@ export function browseGuide(packId: string, index: number): void {
 
 /** The card a pin shows while hovered or focused: the step's instruction, its quests and targets, where it is. */
 function showHoverCard(g: SVGGElement): void {
-  const vs = visibleSteps[Number(g.dataset.step)];
+  const at = posBySrc.get(Number(g.dataset.src));
+  const vs = at !== undefined ? visibleSteps[at] : undefined;
   const card = $("rxpb-hovercard");
   if (!vs) { card.hidden = true; return; }
   const st = vs.step;
   const text = (st.actions || []).find((a) => a.raw_text)?.raw_text;
   const badges = (st.actions || []).map(actionBadge).filter(Boolean) as { cls: string; sym: string; label: string }[];
   const where = st.x != null && st.y != null ? `${st.zone || vs.zone || ""} ${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : (st.zone || "");
-  card.innerHTML = `<div class="rxpb-hc-head"><b>Step ${vs.rxpNum}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}</div>
+  card.innerHTML = `<div class="rxpb-hc-head"><b>Step ${stepNum(vs)}</b><span>${esc(where)}</span>${vs.dimmed ? `<span>(another character's)</span>` : ""}</div>
     <div class="rxpb-hc-text">${text ? formatRxpText(text) : esc(stepHeadline(st))}</div>
     ${badges.length ? `<div class="rxpb-badges">${badges.slice(0, 6).map((b) => `<span class="rxpb-badge mini ${b.cls}"><b>${esc(b.sym)}</b> ${esc(b.label)}</span>`).join("")}</div>` : ""}`;
   card.hidden = false;
@@ -1028,9 +1085,9 @@ export function wireRxpBrowser(): void {
   };
   $("rxpb-race").onchange = (e) => { filter.race = (e.target as HTMLSelectElement).value; refilter(); };
   $("rxpb-class").onchange = (e) => { filter.cls = (e.target as HTMLSelectElement).value; refilter(); };
-  $("rxpb-ssf").onchange = (e) => { filter.ssf = (e.target as HTMLInputElement).checked; refilter(); };
-  $("rxpb-grp").onchange = (e) => { filter.groupQuests = (e.target as HTMLInputElement).checked; refilter(); };
-  $("rxpb-hc").onchange = (e) => { filter.hardcore = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-ssf").onchange = (e) => { defaultsApplied = true; filter.ssf = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-grp").onchange = (e) => { defaultsApplied = true; filter.groupQuests = (e.target as HTMLInputElement).checked; refilter(); };
+  $("rxpb-hc").onchange = (e) => { defaultsApplied = true; filter.hardcore = (e.target as HTMLInputElement).checked; refilter(); };
   $("rxpb-allcond").onchange = (e) => { filter.showAllCond = (e.target as HTMLInputElement).checked; refilter(); };
 
   $("rxpb-scrub").oninput = (e) => {

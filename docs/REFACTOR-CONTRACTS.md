@@ -591,3 +591,18 @@ they don't spell out.
   optional `max_expand` (None keeps the coach's searches as they are) and `walk_world`. Nothing is drawn yet: the
   Guides page uses it in phase 1 of docs/plans/guides-explorer.md (recommendation "Drawn walking routes" 1-8,
   2026-11-02).
+- **Follow-up, contract 4 additive and what the player sees: the Guides page shows the coach's steps and numbers.**
+  `rxp_import.py guide <id> <index>` now expands `#include` over the guides the knowledge build reads (the free
+  Dungeon guides showed one empty step instead of 62-847; "14-16 Darkshore" had 236 steps instead of 340), and sends
+  which steps RestedXP shows for whom, worked out with `knowledge/rxp_parser` (new `companion/rxp_explorer.py`):
+  `RxpGuideDetail` gains `players` (every race pick x class), `settings` (the 8 SSF / group quests / hardcore
+  combinations), `vis_masks`, `defaults` (the coach's RestedXP options, config.json "rxp") and `maps` (each zone's
+  size in yards and rectangle on its continent, from the newest kb.db including a waiting `kb.next-*.db`);
+  `RxpGuideStep.vis`, `RxpGuideAction.vis`, `RxpGuideWaypoint.act` and `next_list[].vis` are new. The renderer no
+  longer evaluates `<<` conditions (`rxp-conditions.ts` is replaced by `rxp-model.ts`, which reads the masks;
+  `rxp-geometry.ts` is new): the steps and numbers match the coach for every character (they disagreed on 41 of 80
+  free guides for a Human Mage), the toggles start from the coach's settings (SSF was off), steps RestedXP never loads
+  (`step << skip`) never show, and "Show all <<" dims other characters' steps without numbers. The current step,
+  the picked pin, ticked objectives and waypoint letters are kept by guide step number, so a filter change keeps the
+  step. The arrow's "~N yd" uses the zone's real size (none shown without a knowledge base) and its bearing is in
+  yards. Guides page plan, phase 0 (docs/plans/guides-explorer.md); the player asked (2026-11-02).
