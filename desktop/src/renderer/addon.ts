@@ -89,7 +89,9 @@ async function addRxpGuide(text?: string, from?: string): Promise<void> {
   }
   const rxp = !r.handoff ? "Install the Glide addon above so RestedXP gets it too."
     : addonCurrent ? "RestedXP gets it at your next login or /reload." : "Update the Glide addon above, then RestedXP gets it at your next login.";
-  $("rxp-msg").innerHTML = `<span class="ok">${r.again ? "Added again" : "Added"}${from ? ` from ${esc(from)}` : ""}: ${esc(guideCount((r.guides || []).length))}.</span> ${coach} ${rxp}`;
+  // only the latest guide stays: the coach and RestedXP drop the ones this replaces (companion/rxp_import.py replace)
+  const replaced = r.replaced ? ` It replaces the ${esc(guideCount(r.replaced))} you added before.` : "";
+  $("rxp-msg").innerHTML = `<span class="ok">${r.again ? "Added again" : "Added"}${from ? ` from ${esc(from)}` : ""}: ${esc(guideCount((r.guides || []).length))}.</span>${replaced} ${coach} ${rxp}`;
   refreshRxp();
 }
 

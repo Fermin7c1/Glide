@@ -8,6 +8,11 @@
 -- key check `k` (rxp_import.py key_check: Adler-32 of the account's 16-number RestedXP key); this account's comes
 -- from RestedXP's own key for it (ReadCacheData, made from the BattleTag). Another account's pack is left alone,
 -- with no note. "/glide rxpimport" tries the ones that failed again.
+-- Only the latest pack added in the app stays (rxp_import.py replace). Once RestedXP took a whole pack, its cache
+-- (RestedXP's account-wide db.profile.guides) keeps one copy of each guide: ImportGuide caches a new copy every time
+-- and an older one left beside it would load instead at random at the next login, so the copies that were there
+-- before go wherever a new one was written. The guides the pack replaces (its `drop`: { group, name }) go too; they
+-- leave RestedXP's guide list at the next /reload (RestedXP has no working way to unload a guide).
 local _, ns = ...
 local rec = ns.rec
 
@@ -71,6 +76,63 @@ end
 
 local function plural(n) return (n or 0) == 1 and "guide" or "guides" end
 
+-- RestedXP's guide cache (db.profile.guides: "group|subgroup|name|n" -> { key = "group|subgroup|name", ... }), or nil
+local function guideCache(R)
+    local db = type(R) == "table" and R.db
+    local profile = type(db) == "table" and db.profile
+    local cache = type(profile) == "table" and profile.guides
+    if type(cache) == "table" then return cache end
+end
+
+local function cachedKey(entry, pk)
+    if type(entry) == "table" and type(entry.key) == "string" then return entry.key end
+    return type(pk) == "string" and pk:match("^[^|]+|[^|]-|[^|]+") or nil       -- as RestedXP's LoadCachedGuides
+end
+
+-- the cache entries there before a pack starts (each slot's table: RestedXP numbers its slots from 1 again every
+-- session, so a new copy can take an old copy's slot; CacheGuide always writes a new table)
+local function cacheSnapshot(R)
+    local seen = {}
+    for pk, entry in pairs(guideCache(R) or {}) do seen[pk] = entry end
+    return seen
+end
+
+-- after RestedXP took a whole pack: the older copies of every guide it cached anew, and the guides the pack
+-- replaces (unless it cached them anew), leave RestedXP's cache. Returns how many replaced guides went.
+local function tidyCache(R, cur)
+    local cache = guideCache(R)
+    if not cache then return 0 end
+    local fresh, drop = {}, {}
+    for pk, entry in pairs(cache) do
+        if cur.before[pk] ~= entry then
+            local key = cachedKey(entry, pk)
+            if key then fresh[key] = true end
+        end
+    end
+    for _, d in ipairs(cur.e.drop or {}) do
+        if type(d) == "table" and type(d[1]) == "string" and type(d[2]) == "string" then
+            drop[d[2]] = drop[d[2]] or {}
+            drop[d[2]][d[1]] = true
+        end
+    end
+    local gone, dropped, n = {}, {}, 0
+    for pk, entry in pairs(cache) do
+        local key = cur.before[pk] == entry and cachedKey(entry, pk)
+        if key and fresh[key] then
+            gone[#gone + 1] = pk
+        elseif key then
+            local group, subgroup, name = key:match("^(.*)|(.*)|(.*)$")
+            local by = name and drop[name]
+            if by and (by[group] or by[subgroup]) then         -- RestedXP may file a group as the subgroup
+                gone[#gone + 1] = pk
+                if not dropped[key] then dropped[key] = true; n = n + 1 end
+            end
+        end
+    end
+    for _, pk in ipairs(gone) do cache[pk] = nil end
+    return n
+end
+
 local function stop()
     if ticker then ticker:Cancel() end
     ticker, current, retry = nil, nil, false
@@ -107,7 +169,7 @@ local function step()
         if not e then return stop() end
         tried[e.id] = true
         local total = e.n or #e.guides
-        current = { e = e, i = 1, total = total }
+        current = { e = e, i = 1, total = total, before = cacheSnapshot(R) }
         rec.Print(("handing the %d RestedXP %s you added in the Glide app to RestedXP..."):format(total, plural(total)))
     end
     local e = current.e
@@ -132,9 +194,12 @@ local function step()
         if not t0 or clock() - t0 >= BUDGET_MS then break end
     end
     if current.i <= #guides then return end
+    local dropped = tidyCache(R, current)
     refreshMenu(R)
     notes()[e.id] = { t = rec.Now(), ok = true }
-    rec.Print(("RestedXP now has the %d %s you added in the Glide app."):format(current.total, plural(current.total)))
+    rec.Print(("RestedXP now has the %d %s you added in the Glide app."):format(current.total, plural(current.total))
+        .. (dropped > 0 and (" The %d older %s they replace leave RestedXP at your next /reload.")
+            :format(dropped, plural(dropped)) or ""))
     current = nil
     if not nextPending(mine) then stop() end
 end

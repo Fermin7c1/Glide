@@ -17,7 +17,12 @@ Adding a string:
      in-game string decryptor. The decrypted texts no longer carry RestedXP's account check and every account on the
      PC shares that folder, so each pack carries its buyer account's key check (key_check) and the addon loads it only
      into the account whose RestedXP key matches.
-The addon notes each hand-off in GlideRecorderDB.rxpImports[id] on the account that took it; once the buyer's
+Only the latest pack an account added is kept (replace): adding one takes the account's earlier packs out of the
+store, so the coach, the Guides page and RestedXP follow one route. The kept pack carries `drop`, the replaced packs'
+guides it doesn't have itself, and the addon takes those out of RestedXP's cache when it hands the pack over; a kept
+pack RestedXP already had is handed over again under a new hand-off id (`hand`) when a replaced one had reached
+RestedXP too, so the swap happens in the game.
+The addon notes each hand-off in GlideRecorderDB.rxpImports[hand id] on the account that took it; once the buyer's
 account has noted it done (note_for: another account's note never counts), its guides leave the addon's file. An
 addon install replaces the addon's folder (and that file with it), so the app syncs again after installing; an addon
 older than HANDOFF_FORMAT (it reads encrypted strings) keeps the file it has until it's updated.
@@ -705,7 +710,9 @@ def _store_path(root):
 
 
 def load_store(root):
-    """{"imports": {id: {"added", "account", "string", "count", "guides": [{"group", "name", "text"}]}}}."""
+    """{"imports": {id: {"added", "account", "string", "count", "guides": [{"group", "name", "text"}], "hand"?,
+    "drop"?}}}: hand is the id the addon notes the hand-off under (the import's id until it's handed over again),
+    drop the [group, name] of guides the pack replaces (replace())."""
     try:
         data = jsonfile.read(_store_path(root))
     except (OSError, ValueError):
@@ -726,6 +733,80 @@ def guide_texts(root):
     return out
 
 
+def hand_id(iid, rec):
+    """The id the addon notes this import's hand-off under: the import's own until it's handed over again."""
+    return (rec.get("hand") if isinstance(rec, dict) else None) or iid
+
+
+def _identity(g):
+    """[group, name] of a stored guide as RestedXP keys it (its group without a "<< condition", the name with
+    RestedXP's zero-padded range: '5-11 Dun Morogh' -> '05-11 Dun Morogh'), or None. The addon finds RestedXP's
+    cached copy by these."""
+    if not isinstance(g, dict):
+        return None
+    group, name = g.get("group"), g.get("name")
+    if not (group and name):
+        group, name = guide_meta(g.get("text") or "")
+    return [group, affix_name(name)] if group and name else None
+
+
+def replace(store, keep_id, done, now):
+    """Make keep_id its account's only import: the account's other imports leave the store (a record with no account
+    goes too: it can't be told apart), and the guides of theirs that keep_id doesn't have, with what they still had
+    to drop themselves, join keep_id's `drop`. When a replaced pack reached RestedXP and keep_id already had too,
+    keep_id is handed over again under a new hand-off id, so the addon takes the replaced guides out (and the kept
+    ones' copies stay the latest). done: handed_over(). Returns the replaced records."""
+    imports = store["imports"]
+    keep = imports[keep_id]
+    acct = keep.get("account")
+    gone_ids = sorted(k for k, v in imports.items()
+                      if k != keep_id and (not isinstance(v, dict) or v.get("account") in (acct, None)))
+    if not gone_ids:
+        return []
+
+    def taken(k, rec):
+        return bool(note_for(done.get(hand_id(k, rec)), rec).get("ok"))
+
+    keep_done = taken(keep_id, keep)
+    drop = {tuple(x) for x in (() if keep_done else keep.get("drop") or ()) if isinstance(x, list) and len(x) == 2}
+    gone, reached = [], False
+    for k in gone_ids:
+        rec = imports.pop(k)
+        if not isinstance(rec, dict):
+            continue
+        gone.append(rec)
+        was = taken(k, rec)
+        reached = reached or was
+        drop |= {tuple(i) for i in map(_identity, rec.get("guides") or ()) if i}
+        drop |= {tuple(x) for x in (() if was else rec.get("drop") or ()) if isinstance(x, list) and len(x) == 2}
+    drop -= {tuple(i) for i in map(_identity, keep.get("guides") or ()) if i}
+    if drop:
+        keep["drop"] = [list(x) for x in sorted(drop)]
+    else:
+        keep.pop("drop", None)
+    if keep_done and reached:
+        keep["hand"] = "%s.%d" % (keep_id, int(now))
+    return gone
+
+
+def latest_only(store, done, now):
+    """Each account's latest import only (replace(), for a store kept before only the latest stayed): the newest
+    added per account is kept. True when it changed the store."""
+    newest = {}
+    for k, v in store["imports"].items():
+        if isinstance(v, dict):
+            acct = v.get("account")
+            if acct not in newest or (v.get("added") or 0, k) > newest[acct][0]:
+                newest[acct] = ((v.get("added") or 0, k), k)
+    changed = False
+    # newest first; an account's replace() also takes any record with no account (every import has kept its account
+    # since the first one, so there should be none)
+    for _, (_, k) in sorted(newest.items(), key=lambda kv: kv[1][0], reverse=True):
+        if k in store["imports"]:
+            changed = bool(replace(store, k, done, now)) or changed
+    return changed
+
+
 def _lua_string(s):
     """s as a Lua string literal (quotes, backslashes and control bytes escaped; 3-digit \\ddd so a digit after
     a control byte is never read as part of the escape)."""
@@ -741,9 +822,10 @@ def _lua_string(s):
 
 
 def handoff_lua(pending, checks=None):
-    """The addon's Data/RXPImports.lua for these imports ([(id, record)]): the decrypted guide texts, each pack with
-    its buyer account's key check (`k`, key_check(); checks: {id: check}). A pack without one isn't written: the addon
-    could not tell which account may have it."""
+    """The addon's Data/RXPImports.lua for these imports ([(hand id, record)]): the decrypted guide texts, each pack
+    with its buyer account's key check (`k`, key_check(); checks: {hand id: check}) and, when it replaces guides, their
+    [group, name] (`drop`). A pack without a key check isn't written: the addon could not tell which account may
+    have it."""
     checks = checks or {}
     lines = ["-- Written by the Glide app (companion/rxp_import.py): the RestedXP guides you added in the app,",
              "-- already decrypted for RestedXP at your next login (RXPImport.lua). The app rewrites this file.",
@@ -754,8 +836,12 @@ def handoff_lua(pending, checks=None):
         if not texts or checks.get(iid) is None:
             continue
         body = ",\n        ".join(_lua_string(t) for t in texts)
-        lines.append("    { id = %s, n = %d, k = %d, guides = {\n        %s,\n    } },"
-                     % (_lua_string(iid), len(texts), checks[iid], body))
+        drop = [d for d in rec.get("drop") or () if isinstance(d, list) and len(d) == 2
+                and all(isinstance(x, str) and x for x in d)]
+        drop_lua = ("drop = {\n        %s,\n    }, " % ",\n        ".join(
+            "{ %s, %s }" % (_lua_string(g), _lua_string(n)) for g, n in drop)) if drop else ""
+        lines.append("    { id = %s, n = %d, k = %d, %sguides = {\n        %s,\n    } },"
+                     % (_lua_string(iid), len(texts), checks[iid], drop_lua, body))
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -773,20 +859,30 @@ def _addon_version(wow_dir):
     return tuple(int(x) for x in m.group(1).split(".")) if m else None
 
 
+def current_store(root, wow_dir, done):
+    """The store with each account's latest import only (latest_only), written back when that changed it and the
+    WoW folder is known (handed_over() needs it to decide what goes to RestedXP again)."""
+    store = load_store(root)
+    if latest_only(store, done, time.time()) and wow_dir:
+        jsonfile.write_atomic(_store_path(root), store)
+    return store
+
+
 def sync(root, wow_dir):
     """Write the addon's Data/RXPImports.lua with the strings it hasn't handed to RestedXP yet. Returns the path
     written, or None (no WoW folder, or no Glide addon there)."""
     if not wow_dir:
         return None
+    done = handed_over(wow_dir)
+    store = current_store(root, wow_dir, done)
     path = os.path.join(wow_dir, HANDOFF)
     if not os.path.isdir(os.path.dirname(os.path.dirname(path))):
         return None
     inst = _addon_version(wow_dir)
     if inst is not None and inst < HANDOFF_FORMAT:
         return None         # an older addon reads the encrypted strings its file has: leave it until it's updated
-    done = handed_over(wow_dir)
-    pending = [(k, v) for k, v in sorted(load_store(root)["imports"].items(), key=lambda kv: kv[1].get("added") or 0)
-               if not note_for(done.get(k), v).get("ok")]
+    pending = [(hand_id(k, v), v) for k, v in sorted(store["imports"].items(), key=lambda kv: kv[1].get("added") or 0)
+               if not note_for(done.get(hand_id(k, v)), v).get("ok")]
     keys = dict(account_keys(wow_dir))
     checks = {k: key_check(keys[v["account"]]) for k, v in pending if v.get("account") in keys}
     text = handoff_lua(pending, checks)
@@ -813,8 +909,8 @@ def status(root, wow_dir):
     Explorer lists the levels a bought string leaves to them."""
     done = handed_over(wow_dir)
     out = []
-    for iid, rec in load_store(root)["imports"].items():
-        note = note_for(done.get(iid), rec)
+    for iid, rec in current_store(root, wow_dir, done)["imports"].items():
+        note = note_for(done.get(hand_id(iid, rec)), rec)
         state = "done" if note.get("ok") else "failed" if note.get("err") else "waiting"
         raw_guides = rec.get("guides") or ()
         out.append({"id": iid, "added": rec.get("added"), "account": rec.get("account"),
@@ -834,7 +930,8 @@ def status(root, wow_dir):
 
 def add(root, wow_dir, text, now=None):
     """Add one import string: decode it with the account key RestedXP saved on this PC, keep its guides for the
-    coach, and queue it for RestedXP at the next login. {"ok", "id", "account", "guides", "again", "handoff"};
+    coach in place of the account's earlier ones (replace), and queue it for RestedXP at the next login.
+    {"ok", "id", "account", "guides", "again", "replaced" (how many guides the earlier ones held), "handoff"};
     ImportProblem when it can't."""
     if not wow_dir or not os.path.isdir(wow_dir):
         raise ImportProblem("Set the WoW folder first: Glide reads your RestedXP account there.")
@@ -859,17 +956,26 @@ def add(root, wow_dir, text, now=None):
     if not guides:
         raise ImportProblem("That string opened, but there's no guide in it.")
     iid = hashlib.sha1(parsed["string"].encode("ascii")).hexdigest()[:16]
+    now = int(now or time.time())
     store = load_store(root)
-    again = iid in store["imports"]
-    store["imports"][iid] = {"added": (store["imports"].get(iid) or {}).get("added") or int(now or time.time()),
-                             "account": account, "string": parsed["string"], "count": parsed["count"],
-                             "version": parsed["version"], "guides": guides}
+    old = store["imports"].get(iid)
+    again = isinstance(old, dict)
+    rec = {"added": (old or {}).get("added") or now, "account": account, "string": parsed["string"],
+           "count": parsed["count"], "version": parsed["version"], "guides": guides}
+    for field in ("hand", "drop"):              # an earlier hand-off and what it still had to replace
+        if again and old.get(field):
+            rec[field] = old[field]
+    store["imports"][iid] = rec
+    gone = replace(store, iid, handed_over(wow_dir), now)
+    if gone:
+        rec["added"] = now                      # the latest guide added: it wins over the ones it replaced
     jsonfile.write_atomic(_store_path(root), store)
     try:
         handoff = sync(root, wow_dir)
     except OSError:
         handoff = None
     return {"ok": True, "id": iid, "account": account, "again": again, "handoff": bool(handoff),
+            "replaced": sum(len(r.get("guides") or ()) for r in gone),
             "guides": [g["name"] or "?" for g in guides]}
 
 
