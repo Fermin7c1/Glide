@@ -753,3 +753,20 @@ they don't spell out.
   master, the Hearthstone or innkeeper, a fight's creature, a vendor's or trainer's mark; step badges, the hover card
   and inspector, and the "Before you start" row show the item, spell, creature or role icon. Each icon replaces its
   glyph only once its image has loaded; with no client data, or an image that fails, the glyph stays.
+- **Addon 0.17.4, contract 4 additive and files on disk: only the latest RestedXP guide stays.** Adding a guide on
+  the Addon page added a pack beside the earlier ones, so the page listed every pack, the coach learned them all and
+  RestedXP got them all. Now `rxp_import.py add` replaces the account's earlier packs (`replace`): they leave
+  `data/rxp_imports/imports.json` (so the knowledge build, the Guides page and the Addon page have the latest only),
+  and a store with several packs per account is cut to each account's newest at the next `sync`/`status`
+  (`latest_only`). A kept record gains `drop` (`[[group, name], ...]`: the replaced packs' guides it doesn't have,
+  the name as RestedXP keys it) and, when it must reach RestedXP again, `hand` (the hand-off id, `<id>.<time>`; the
+  id until then). `Data/RXPImports.lua` packs gain an optional `drop = { { group, name }, ... }` and are written under
+  their hand-off id, which `GlideRecorderDB.rxpImports` notes. Once RestedXP took a whole pack, `RXPImport.lua`
+  deletes from RestedXP's account-wide guide cache (`RXP.db.profile.guides`) the older copies of each guide it cached
+  anew (`ImportGuide` caches a new copy every time; an older one beside it loaded instead at random at the next login)
+  and the guides on `drop`; they leave RestedXP's guide list at the next /reload (RestedXP's own `RemoveGuide` finds
+  nothing in this version). A pack a replaced one reached RestedXP before is handed over again under a new hand-off
+  id, so the swap happens in the game; a pack RestedXP didn't take whole leaves the cache alone. `addon:rxpImport`
+  answers `replaced` (how many guides the replaced packs held; `RxpImportResult.replaced` optional) and the page says
+  "It replaces the N guides you added before". An older addon reads the new file as before (no `drop`). The player
+  asked (2026-11-04).

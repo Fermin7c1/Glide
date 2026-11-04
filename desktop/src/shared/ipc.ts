@@ -371,6 +371,7 @@ export interface RxpImportResult {
   account?: string;
   guides?: string[];
   again?: boolean;                   // the same string was added before
+  replaced?: number;                 // guides in the account's earlier strings, which this one replaces (0: none)
   handoff?: boolean;                 // written for the addon (false: no Glide addon in the WoW folder)
 }
 

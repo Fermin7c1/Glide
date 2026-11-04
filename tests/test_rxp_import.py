@@ -5,15 +5,20 @@ The engine side: RestedXP's cipher (RC4, pinned to RFC 6229's first vector) and 
 a string opened with the key RestedXP saved for an account on this PC (as its 16 numbers, or as the BattleTag it
 sometimes leaves there), never with another account's; the guides kept for the knowledge build (tools/build_db.py
 reads them); the addon's Data/RXPImports.lua written as Lua the game loads, and emptied once the addon noted
-RestedXP took the string. Strings that aren't one, or are another account's, say why.
+RestedXP took the string. Strings that aren't one, or are another account's, say why. Only the latest pack an
+account added stays: it replaces the account's earlier ones in the store, the knowledge build and the hand-off,
+carries the guides it replaces (drop), and is handed over again when a replaced pack had reached RestedXP too.
 
 The addon side, under Lua 5.1 with a mocked WoW API and a stand-in for RestedXP's ImportGuide: after login each waiting
 pack's decrypted guides go to RestedXP's ImportGuide in batches, the outcome is noted in GlideRecorderDB.rxpImports,
-nothing goes twice, a failure is retried only by /glide rxpimport, and without RestedXP nothing breaks. Needs lupa.
+nothing goes twice, a failure is retried only by /glide rxpimport, and without RestedXP nothing breaks. Once RestedXP
+took a whole pack, its cache keeps one copy of each of the pack's guides (the latest) and none of the guides the
+pack replaces; a pack it didn't take whole leaves the cache alone. Needs lupa.
 
 Run: python3 tests/test_rxp_import.py   (prints OK)
 """
 import base64
+import json
 import os
 import shutil
 import sys
@@ -289,6 +294,78 @@ try:
     # no addon and no seed: nothing extra listed, the added strings still are
     shutil.rmtree(rxp)
     assert [x["id"] for x in R.status(home, wow)] == [r3["id"], r["id"]]
+
+    # ---- only the latest pack an account added stays (the player asked, 2026-11-04) -------------------------------
+    # MAIN's first pack (pack_a: G1, G2) is in RestedXP already (MAIN's note above). A newer pack for MAIN has a new
+    # copy of G1 (same group and name), a guide pack_a doesn't have, and no G2.
+    home2 = os.path.join(tmp, "home2")
+    pack_a = encode([G1, G2], "Main#1111")       # s1 again (encoding is deterministic: the same id)
+    G1b = G1.replace("Place In The World", "Place In The World, again")
+    G4 = "#group RestedXP Horde 1-30\n#name 11-14 The Barrens\nstep\n    .accept 840\n"
+    first = R.add(home2, wow, pack_a, now=1_790_100_000)
+    assert first["id"] == r["id"] and first["replaced"] == 0, first
+    alt = R.add(home2, wow, encode([G3], "Alt#2222"), now=1_790_100_050)
+    newer = R.add(home2, wow, encode([G1b, G4], "Main#1111"), now=1_790_100_100)
+    assert newer["account"] == "MAIN" and newer["replaced"] == 2 and not newer["again"], newer
+    kept = R.load_store(home2)["imports"]
+    assert set(kept) == {newer["id"], alt["id"]}, "MAIN's earlier pack is gone; ALT's (another account's) stays"
+    # what it replaces: G2, named as RestedXP keys it ("6-11" -> "06-11"); G1 it has itself
+    assert kept[newer["id"]]["drop"] == [["RestedXP Horde 1-30", "06-11 Durotar"]], kept[newer["id"]]
+    assert "hand" not in kept[newer["id"]], "never handed over yet: its own id"
+    assert [x["id"] for x in R.status(home2, wow)] == [newer["id"], alt["id"]], "the Addon page lists one per account"
+    texts = build_db.rxp_imported(os.path.join(home2, R.STORE))     # the coach learns the latest only
+    assert set(texts) == {"RestedXP Horde 1-30||1-6 Durotar", "RestedXP Horde 1-30||11-14 The Barrens",
+                          'RestedXP Horde 30-60||30-32 Thousand Needles "quoted"'}, sorted(texts)
+    assert texts["RestedXP Horde 1-30||1-6 Durotar"]["text"] == G1b
+
+    def handed():
+        """{hand id: (drop, n)} in the addon's file, as the game loads it."""
+        got_ns = L.table()
+        L.eval("function(src, ns) local f, e = loadstring(src, '@RXPImports.lua') if not f then error(e) end "
+               "f('Glide', ns) end")(open(handoff, encoding="utf-8").read(), got_ns)
+        return {e.id: ([list(d.values()) for d in e.drop.values()] if e.drop else None, e.n)
+                for e in got_ns.rxpImports.values()}
+    # the addon's file: the newer pack with what it replaces, never the replaced pack
+    assert handed() == {newer["id"]: ([["RestedXP Horde 1-30", "06-11 Durotar"]], 2), alt["id"]: (None, 1)}, handed()
+
+    # adding the older pack again makes it the latest: it replaces the newer one and is dated now. RestedXP still
+    # has it (the newer one never reached the game), so it isn't handed over again.
+    back = R.add(home2, wow, pack_a, now=1_790_100_200)
+    assert back["id"] == r["id"] and back["replaced"] == 2, back
+    kept = R.load_store(home2)["imports"]
+    assert set(kept) == {r["id"], alt["id"]} and kept[r["id"]]["added"] == 1_790_100_200, kept.keys()
+    assert kept[r["id"]]["drop"] == [["RestedXP Horde 1-30", "11-14 The Barrens"]], kept[r["id"]]
+    assert {x["id"]: x["rxp"] for x in R.status(home2, wow)}[r["id"]] == "done"
+    assert r["id"] not in handed()
+
+    # a store an older Glide kept: both of MAIN's packs (and one from before accounts were kept), and an older addon
+    # loaded both into RestedXP. The next sync keeps the newest and hands it over again under a new id with what it
+    # replaces, so RestedXP ends up with that pack only.
+    def note_main(*ids):
+        with open(os.path.join(sv["MAIN"], "Glide.lua"), "w", encoding="utf-8") as fh:
+            fh.write('GlideRecorderDB = {\n\t["rxpImports"] = {\n' + "".join(
+                '\t\t["%s"] = {\n\t\t\t["t"] = 1790200000,\n\t\t\t["ok"] = true,\n\t\t},\n' % i for i in ids) + '\t},\n}\n')
+    home3, home_b = os.path.join(tmp, "home3"), os.path.join(tmp, "homeB")
+    b = R.add(home_b, wow, encode([G1b, G4], "Main#1111"), now=1_790_100_100)
+    no_acct = {"added": 1_780_000_000, "guides": [{"group": "X", "name": "1-2 Y", "text": "#group X\n#name 1-2 Y\n"}]}
+    os.makedirs(os.path.dirname(os.path.join(home3, R.STORE)))
+    with open(os.path.join(home3, R.STORE), "w", encoding="utf-8") as fh:
+        json.dump({"imports": {r["id"]: R.load_store(home)["imports"][r["id"]], "old0": no_acct,
+                               b["id"]: R.load_store(home_b)["imports"][b["id"]]}}, fh)
+    note_main(r["id"], b["id"])
+    assert R.sync(home3, wow) == handoff
+    kept = R.load_store(home3)["imports"]
+    assert set(kept) == {b["id"]}, kept.keys()
+    hand = kept[b["id"]]["hand"]
+    assert hand.startswith(b["id"] + ".") and kept[b["id"]]["drop"] == [["RestedXP Horde 1-30", "06-11 Durotar"],
+                                                                         ["X", "01-02 Y"]], kept[b["id"]]
+    assert handed() == {hand: ([["RestedXP Horde 1-30", "06-11 Durotar"], ["X", "01-02 Y"]], 2)}, handed()
+    assert [(x["id"], x["rxp"]) for x in R.status(home3, wow)] == [(b["id"], "waiting")]
+    # once the game noted the new hand-off it's done, leaves the file, and nothing changes again
+    note_main(r["id"], b["id"], hand)
+    assert [(x["id"], x["rxp"]) for x in R.status(home3, wow)] == [(b["id"], "done")]
+    R.sync(home3, wow)
+    assert handed() == {} and R.load_store(home3)["imports"][b["id"]]["hand"] == hand
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
@@ -419,4 +496,83 @@ G.fire("PLAYER_LOGIN")
 G.ticks(10)
 said = [p for p in list(G.PRINTED.values())[before:] if "RestedXP isn't loaded" in p]
 assert len(said) == 1, list(G.PRINTED.values())[before:]
+
+# ---- RestedXP keeps the latest pack only: once it took the whole pack, the older copies of its guides and the
+# guides it replaces (its drop) leave RestedXP's cache (db.profile.guides); everything else stays -------------------
+L2 = lua51.LuaRuntime(unpack_returned_tuples=True)
+L2.execute(wowmock.MOCK)
+L2.execute("KEY = {" + ", ".join("[%d] = %d" % (i, v) for i, v in enumerate(MINE)) + "}")
+L2.execute(r"""
+PRINTED = {}
+function print(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring(select(i, ...)) end PRINTED[#PRINTED+1] = table.concat(t, " ") end
+function last() return PRINTED[#PRINTED] or "" end
+function InCombatLockdown() return false end
+function ticks(n) for _ = 1, n do tick() end end
+local H = "RestedXP Horde 1-30"
+OLD_COPY = { key = H .. "||01-06 Durotar" }
+CACHE = {
+  [H .. "||01-06 Durotar|1"] = OLD_COPY,                               -- older copies of a guide the pack has
+  [H .. "||01-06 Durotar|12"] = { key = H .. "||01-06 Durotar" },
+  [H .. "||06-11 Durotar|4"] = { key = H .. "||06-11 Durotar" },       -- a guide the pack replaces, twice
+  [H .. "||06-11 Durotar|9"] = { key = H .. "||06-11 Durotar" },
+  ["RestedXP Speedrun Guide (H)|" .. H .. "|11-14 The Barrens|5"] =    -- replaced; RestedXP filed its group as the subgroup
+    { key = "RestedXP Speedrun Guide (H)|" .. H .. "|11-14 The Barrens" },
+  [H .. "||20-21 Keyless|3"] = "compressed text",                      -- replaced; an old entry known by its slot only
+  ["Other Guides||06-11 Durotar|6"] = { key = "Other Guides||06-11 Durotar" },   -- another group's guide of that name
+  [H .. "||14-16 Mine|7"] = { key = H .. "||14-16 Mine" },             -- the player's own, not replaced
+  [H .. "||16-18 Wrong Game|8"] = { key = H .. "||16-18 Wrong Game" }, -- a guide RestedXP doesn't cache again here
+}
+SEQ = 0
+REFUSE_NAME = nil
+RXP = { db = { profile = { guides = CACHE } }, RXPFrame = { GenerateMenuTable = function() end },
+        ScheduleTask = function() end }
+function RXP.ReadCacheData(mode) if mode then return nil end return KEY end
+-- RestedXP's ImportGuide: caches a new copy every time, numbering its slots from 1 again each session (so a new copy
+-- can take an old copy's slot); a guide for another game ("#wrong") is parsed but not cached
+function RXP.ImportGuide(text)
+  local group, name = text:match("#group%s+([^\r\n]+)"), text:match("#name%s+([^\r\n]+)")
+  name = name:gsub("^(%d)-(%d%d?)", function(a, b) return "0" .. a .. "-" .. (#b == 1 and "0" .. b or b) end)
+  if name == REFUSE_NAME then error("Error parsing guide: bad step", 0) end
+  local key = group .. "||" .. name
+  if not text:find("#wrong") then SEQ = SEQ + 1; CACHE[key .. "|" .. SEQ] = { key = key } end
+  return { name = name, key = key }
+end
+function slots() local t = {} for pk in pairs(CACHE) do t[#t+1] = pk end table.sort(t) return t end
+""")
+H = "RestedXP Horde 1-30"
+P1 = "#group %s\n#name 1-6 Durotar\nstep\n" % H
+P2 = "#group %s\n#name 12-14 New Guide\nstep\n" % H
+P3 = "#group %s\n#name 16-18 Wrong Game\n#wrong\nstep\n" % H
+latest_src = R.handoff_lua([("ppp", {"guides": [{"text": P1}, {"text": P2}, {"text": P3}],
+                                     "drop": [[H, "06-11 Durotar"], [H, "11-14 The Barrens"], [H, "20-21 Keyless"]]})],
+                           {"ppp": R.key_check(MINE)})
+ns2 = L2.table()
+run2 = L2.eval("function(src, name, a, ns) local f, e = loadstring(src, name) if not f then error(e) end return f(a, ns) end")
+for name in ("Core.lua", "Data/RXPImports.lua", "RXPImport.lua"):
+    src = latest_src if name == "Data/RXPImports.lua" else open(os.path.join(ROOT, "addon", "Glide", name), encoding="utf-8").read()
+    run2(src, "@" + name, "Glide", ns2)
+G2L = L2.globals()
+slots = lambda: list(G2L.slots().values())
+untouched = sorted(G2L.CACHE.keys())
+# a pack RestedXP doesn't take whole leaves the cache alone: the player keeps the guides they had
+G2L.REFUSE_NAME = "12-14 New Guide"
+G2L.fire("ADDON_LOADED", "Glide")
+G2L.fire("PLAYER_LOGIN")
+G2L.ticks(30)
+assert G2L.GlideRecorderDB.rxpImports["ppp"].ok is False, dict(G2L.GlideRecorderDB.rxpImports["ppp"])
+assert slots() == untouched, slots()          # the first guide's new copy took slot 1: nothing else changed
+assert G2L.CACHE[H + "||01-06 Durotar|1"] != G2L.OLD_COPY
+# tried again and taken whole: one copy of each of its guides (the latest), and none of what it replaces
+G2L.REFUSE_NAME = None
+G2L.SlashCmdList.GLIDE("rxpimport")
+G2L.ticks(30)
+assert G2L.GlideRecorderDB.rxpImports["ppp"].ok, dict(G2L.GlideRecorderDB.rxpImports["ppp"])
+assert slots() == sorted([H + "||01-06 Durotar|2", H + "||12-14 New Guide|3", "Other Guides||06-11 Durotar|6",
+                          H + "||14-16 Mine|7", H + "||16-18 Wrong Game|8"]), slots()
+assert "RestedXP now has the 3 guides" in G2L.last() and "The 3 older guides they replace" in G2L.last() \
+    and "/reload" in G2L.last(), G2L.last()
+# the next login: nothing goes again, nothing more leaves the cache
+G2L.fire("PLAYER_LOGIN")
+G2L.ticks(30)
+assert G2L.SEQ == 3 and len(slots()) == 5, (G2L.SEQ, slots())
 print("OK")
