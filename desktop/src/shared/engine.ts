@@ -158,6 +158,7 @@ export interface PttEvent { state: "listening" | "transcribing" | "idle" }
 export interface SpeakEvent {
   text: string;
   interrupt: boolean;             // stop what is being said first
+  style?: string;                 // the character the coach plays: how to perform the line (the OpenAI voice)
 }
 
 export interface GuideElement { tag: string; map?: number; x?: number; y?: number; quest?: number; name?: string;

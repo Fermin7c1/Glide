@@ -770,3 +770,20 @@ they don't spell out.
   answers `replaced` (how many guides the replaced packs held; `RxpImportResult.replaced` optional) and the page says
   "It replaces the N guides you added before". An older addon reads the new file as before (no `drop`). The player
   asked (2026-11-04).
+- **Roleplay: the coach plays a character the player asks for (contracts 2, 4, 5 and 8; all additive).** For long
+  sessions the player can say or type "talk like a pirate", "be my drill sergeant", "you're Thrall now" and the coach
+  plays it with full commitment until told to drop the act. The model takes the request in any wording (a new Roleplay
+  paragraph in `coach_prompts.SYSTEM`, and one line under the style rules lifting "plain and direct" while in
+  character): it answers in character and adds `PERSONA: <brief>` / `VOICE: <voice direction>` lines (or `PERSONA:
+  off`), stripped like WATCH lines (`companion/persona.py`, `Coach._directives`; `EarlySpeech` stops at them). They
+  are kept in three new settings (contract 5): `llm.persona` and `llm.persona_voice` (live text: `tuning.apply` now
+  takes live text keys; the state's `tuning` is unchanged) and `llm.persona_word_factor` (1.6: word limits stretch
+  in character). While one is set, every call gets the persona block as its own cached system block after the
+  memory's, and the request ends with a stay-in-character line. The engine's `speak` event (contract 2) gains an
+  optional `style` (`SpeakEvent.style`), the narrator passes it on as `tts:synth`'s new optional second argument
+  (contract 4), and the OpenAI voice performs it as its `instructions` in place of the configured ones; other voices
+  speak the words as before. Player-visible (contract 8): the in-character lines themselves, an `info` chat line
+  "Coach persona: <start of the brief>" / "Coach persona off", and a Roleplay group under Settings > Coaching
+  (Character, Voice direction, Extra room for the act); `golden.py record desktop` re-recorded for those three
+  fields alone. The reflection prompt tells the memory not to note a role. Offline (no model) there is no persona.
+  Pinned by `tests/test_persona.py`.

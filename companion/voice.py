@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from typing import Callable
 
 import settings
 import log as console
@@ -36,8 +37,10 @@ while ($true) {
 
 
 class HubVoice:
-    """Speech done by the desktop app: each line goes out as a "speak" event ({text, interrupt}) on the dashboard's
-    event stream, and the app speaks it with the voice picked in its settings (voice "output": "app")."""
+    """Speech done by the desktop app: each line goes out as a "speak" event ({text, interrupt, style?}) on the
+    dashboard's event stream, and the app speaks it with the voice picked in its settings (voice "output": "app").
+    style_fn: () -> how to perform the lines (the coach's persona, persona.py), "" for the voice as it is."""
+    style_fn: Callable[[], str] | None = None
 
     @property
     def opt(self):
@@ -60,11 +63,13 @@ class HubVoice:
     def say(self, text, interrupt=False):
         if not self.enabled or not text or self.muted:
             return
+        style = self.style_fn() if self.style_fn else ""      # the character the coach plays: how to perform it
         self.hub.publish("speak", {"text": text.replace("\n", " ").replace("\r", " ").strip(),
-                                   "interrupt": bool(interrupt)})
+                                   "interrupt": bool(interrupt), **({"style": style} if style else {})})
 
 
 class Voice:
+    style_fn: Callable[[], str] | None = None    # unused: Windows speech can't perform a persona
     @property
     def opt(self):
         """The voice settings, read through settings_manifest.json (defaults, ranges)."""

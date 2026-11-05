@@ -19,6 +19,9 @@ import settings
 _LIVE = {k: settings.ENTRIES["llm." + k] for k in settings.live_keys()}
 SETTINGS = {k: (e["default"], e["min"], e["max"]) for k, e in _LIVE.items() if e["kind"] == "int"}  # (default, min, max)
 TOGGLES = {k: e["default"] for k, e in _LIVE.items() if e["kind"] == "bool"}       # on/off features
+MODEL_KEYS = ("fast_model", "deep_model")
+TEXTS = {k for k, e in _LIVE.items() if e["kind"] == "text" and k not in MODEL_KEYS}  # free text (the persona)
+MAX_TEXT = 600
 DEFAULT_TOKENS_PER_STEP = 52.0     # measured on Dun Morogh steps (knowledge layer route_steps)
 DEFAULT_ROUNDS = {"voice": 1.7, "typed": 3.0}
 DEFAULT_RATE = {"voice": 10.6, "typed": 1.0}   # questions per hour from the 10.4 h of logs (before any are asked)
@@ -36,7 +39,6 @@ def input_price(model, catalog=None):
 
 import re  # noqa: E402
 
-MODEL_KEYS = ("fast_model", "deep_model")
 MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]{2,119}$")
 # tokens per hour per model path when this session hasn't measured enough yet (10.4 h of logs, 2026-10-05):
 # fast = callouts (~50/h) + spoken questions (~10.6/h); deep = typed questions (~1/h) + pace reviews (~3.3/h)
@@ -144,6 +146,10 @@ def apply(cfg, changes, config_path=None):
             if not isinstance(v, str) or not MODEL_RE.match(v.strip()):
                 raise ValueError("not a model id: %r" % (v,))
             applied[k] = cfg[k] = v.strip()
+        elif k in TEXTS:
+            if not isinstance(v, str):
+                raise ValueError("%s takes text, not %r" % (k, v))
+            applied[k] = cfg[k] = " ".join(v.split())[:MAX_TEXT]
     if applied and config_path:
         save(config_path, applied)
     return applied

@@ -32,15 +32,17 @@ async function audio(url: string, what: string, init: RequestInit): Promise<Buff
 }
 
 type Online = Exclude<TtsProvider, "windows">;
-type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal) => Promise<Buffer>;
+type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal, style: string) => Promise<Buffer>;
 type VoiceList = (key: string, signal: AbortSignal, region?: string) => Promise<Voice[]>;
 
 const SYNTH: Record<Online, Synth> = {
-  async openai(s, text, key, signal) {
+  async openai(s, text, key, signal, style) {
     const o = s.openai || {};
     const model = o.model || "gpt-4o-mini-tts";
     const body: Record<string, unknown> = { model, voice: o.voice || "coral", input: text, response_format: "mp3" };
-    if (o.instructions && model.includes("gpt")) body.instructions = o.instructions;
+    // the coach's persona (style) is performed instead of the usual instructions: a calm voice note would fight it
+    const instructions = style || o.instructions;
+    if (instructions && model.includes("gpt")) body.instructions = instructions;
     return audio("https://api.openai.com/v1/audio/speech", "OpenAI", {
       method: "POST", signal, headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body) });
@@ -93,12 +95,12 @@ const VOICE_LISTS: Record<Exclude<Online, "openai">, VoiceList> = {
   },
 };
 
-/** MP3 audio for `text` from an online provider. */
-export async function synth(s: SpeechSettings, text: string, key: string): Promise<Buffer> {
+/** MP3 audio for `text` from an online provider; `style` = how to perform it (the coach's persona; OpenAI only). */
+export async function synth(s: SpeechSettings, text: string, key: string, style = ""): Promise<Buffer> {
   const p = s.provider;
   if (!key) throw new Error(`${p}: no ${TTS_KEYS[p as Online]} (Settings > AI models & keys)`);
   const signal = AbortSignal.timeout(TIMEOUT);
-  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal);
+  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal, style);
   throw new Error(`unknown voice provider ${p}`);
 }
 

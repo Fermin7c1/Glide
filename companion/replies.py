@@ -107,7 +107,8 @@ class EarlySpeech:
             self.used += m.end()
             up = sentence.upper()
             n = len(sentence.split())
-            if not sentence or up.startswith(("SKIP", "FACTS", "WATCH:", "UNWATCH:")) or "FACTS:" in up \
+            if not sentence or up.startswith(("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:")) \
+                    or "FACTS:" in up \
                     or self.words + n > self.limit:
                 self.stopped = True
                 return

@@ -130,14 +130,15 @@ class Narrator {
     if (el) el.textContent = voiceLastLine();
   }
 
-  say(text: string, interrupt = false): void {
+  /** A coach line; `style` = how to perform it (the character the coach plays; the OpenAI voice takes it). */
+  say(text: string, interrupt = false, style = ""): void {
     if (!text || this.muted) return;
     if (interrupt) this.stop();
     if (this.provider === "windows") {
       this.windowsSay(text);
       return;
     }
-    this.enqueue(text);
+    this.enqueue(text, undefined, undefined, style);
   }
 
   /** Whether a line would be heard now: not muted, and a voice to speak with. */
@@ -187,8 +188,8 @@ class Narrator {
     this.pump();
   }
 
-  private enqueue(text: string, tag?: string, done?: () => void): void {
-    const audio = glide.invoke("tts:synth", text)
+  private enqueue(text: string, tag?: string, done?: () => void, style = ""): void {
+    const audio = (style ? glide.invoke("tts:synth", text, style) : glide.invoke("tts:synth", text))
       .then((r) => new Blob([r.data as BlobPart], { type: r.mime }))
       .catch((e) => {
         if (Date.now() - this.lastError > 60_000) {             // say why once a minute, not on every line

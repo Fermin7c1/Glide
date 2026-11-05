@@ -136,6 +136,7 @@ class App:
         # the current pack, its api and why there is none: one holder for the app, the coach and the rules,
         # switched by coach.swap_kb after a background rebuild
         self.kb_handle = self.coach.kb_handle
+        self.voice.style_fn = self.coach.persona_voice     # the app's narrator performs the coach's persona
         self.coach.start()
         if not args.sim:
             self.catalog.refresh_if_old()

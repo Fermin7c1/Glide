@@ -99,6 +99,14 @@ export const SCHEMA: Tab[] = [
         { key: "companion.rules.review_minutes", label: "Pace review every (minutes)", type: "number" },
         { key: "companion.rules.stuck_minutes", label: "Stuck callout after (minutes)", type: "number" },
       ] },
+      { title: "Roleplay", intro: "Ask the coach to play anyone (\"talk like a pirate\", \"be my drill sergeant\", \"you're Thrall now\") and it stays in character until you tell it to drop the act. It writes these itself; you can edit them here.", fields: [
+        { key: L + "persona", label: "Character", type: "text", wide: true,
+          help: "Who the coach plays, and how they talk. Empty: the coach's own plain voice." },
+        { key: L + "persona_voice", label: "Voice direction", type: "text", wide: true,
+          help: "How the character sounds out loud: accent, pace, energy. Performed by the OpenAI voice (gpt-4o-mini-tts)." },
+        { key: L + "persona_word_factor", label: "Extra room for the act", type: "number", step: 0.1,
+          help: "In character, lines may be this many times longer than the lengths above." },
+      ] },
       { title: "Quest briefings and step videos", fields: [
         { key: L + "quest_briefings", label: "Quest briefings", type: "bool",
           help: "When you accept a quest, the coach reads RestedXP's instructions for it and explains how to do it." },

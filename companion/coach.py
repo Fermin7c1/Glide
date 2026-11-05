@@ -32,6 +32,7 @@ import coach_tools
 import models as models_mod
 import msg_kinds
 import offline_coach
+import persona as persona_mod
 import prompt_context
 import reminders as reminders_mod
 from coach_briefings import Briefings
@@ -537,6 +538,8 @@ class Coach:
         ctx = self.context(deep=deep, triggers=triggers, lookahead=lookahead)
         kctx = self._turn_kctx
         trigger = self._turn_text(batch, question, voice)
+        if self.persona():
+            trigger += "\n" + persona_mod.REMINDER % persona_mod.short_name(self.persona())
         # out of credits / bad key: no automatic calls at all. A question the player asks tries once more
         # (that's how it resumes after topping up); transient errors back off instead of hammering.
         model = self.cfg.get("deep_model" if deep else "fast_model")
@@ -579,8 +582,8 @@ class Coach:
             text, facts, had_facts = self._directives(text, with_facts=True)
         if text and not question and is_skip(text):
             return None
-        if text:
-            text = trim_words(text, limit)
+        if text:     # (the limit again: a reply that just took on a character may stretch already)
+            text = trim_words(text, max(limit, self._word_limit(question, voice, deep)))
         if not text:
             return None
         self.history.append(text)
@@ -635,8 +638,42 @@ class Coach:
     def _word_limit(self, question, voice, deep):
         """How many words the reply may have: spoken and typed answers, pace reviews, callouts."""
         if question:
-            return self.opt.get("answer_words") if voice else self.opt.get("typed_answer_words")
-        return self.opt.get("review_words") if deep else self.opt.get("callout_words")
+            n = self.opt.get("answer_words") if voice else self.opt.get("typed_answer_words")
+        else:
+            n = self.opt.get("review_words") if deep else self.opt.get("callout_words")
+        return self._stretch(n)
+
+    # ---- roleplay: the character the player asked the coach to play (persona.py) --------------
+    def persona(self):
+        """The brief of the character the coach plays, or "" for its own voice."""
+        return persona_mod.clean(self.cfg.get("persona"))
+
+    def persona_voice(self):
+        """How the narrator performs the character (the OpenAI voice's instructions), or ""."""
+        return persona_mod.clean(self.cfg.get("persona_voice")) if self.persona() else ""
+
+    def _stretch(self, words):
+        """A word limit, longer while a character is played (llm.persona_word_factor): flavour takes words."""
+        return int(round(words * self.opt.get("persona_word_factor"))) if self.persona() else words
+
+    def _set_persona(self, brief, voice):
+        """Take a PERSONA: / VOICE: from a reply: play the new character ("" = drop the act), saved like a setting."""
+        brief = persona_mod.clean(brief)
+        voice = persona_mod.clean(voice) if brief else ""
+        changed = {k: v for k, v in (("persona", brief), ("persona_voice", voice)) if (self.cfg.get(k) or "") != v}
+        if not changed:
+            return
+        self.cfg.update(changed)
+        for k, v in changed.items():
+            if self.deps.on_toggle:
+                try:
+                    self.deps.on_toggle(k, v)
+                except Exception as e:  # noqa: BLE001
+                    log_once("coach.persona_save", e)
+        if "persona" in changed:
+            self.emit({"kind": "info", "speak": False,
+                       "text": "Coach persona: %s" % persona_mod.short_name(brief, 14) if brief else
+                       "Coach persona off"})
 
     def _ask_model(self, model, user, kctx, question, voice, deep, speech):
         """Questions and reviews with the knowledge layer go through the tool-use loop; callouts (and models
@@ -778,12 +815,23 @@ class Coach:
         mem = self.deps.memory.block() if self.deps.memory is not None else ""
         if mem:      # its own cached block: a changed note re-writes only this part of the prompt cache
             blocks.append(dict({"type": "text", "text": mem}, **({"cache_control": cc} if cc else {})))
+        brief = self.persona()
+        if brief:    # last, so its tone overrides the coach rules'; its own block, like the memory's
+            o = self.opt
+            text = persona_mod.block(brief, [self._stretch(o.get(k)) for k in
+                                             ("callout_words", "answer_words", "typed_answer_words")])
+            blocks.append(dict({"type": "text", "text": text}, **({"cache_control": cc} if cc else {})))
         return blocks
 
     def _directives(self, text, with_facts=False):
-        """Strip WATCH:/UNWATCH: lines (applied) and the FACTS: line (machine-only) from a reply.
+        """Strip WATCH:/UNWATCH: and PERSONA:/VOICE: lines (applied) and the FACTS: line (machine-only) from a reply.
         -> text, or (text, fact ids, had_facts_line) with with_facts=True."""
         text, facts, had = split_facts(text)
+        text, brief, voice = persona_mod.split(text)
+        if brief is not None:
+            self._set_persona(brief, voice)
+        elif voice and self.persona():
+            self._set_persona(self.persona(), voice)
         out, watches = split_watch(text)
         d = self.deps
         for name, on in watches:
