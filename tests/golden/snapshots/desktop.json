@@ -496,6 +496,35 @@
        "type": "number"
       },
       {
+       "def": 2.5,
+       "help": "Turning in or picking up several quests at once: the coach waits until nothing new came for this long, then sums it all up in one line.",
+       "key": "companion.llm.settle_s",
+       "label": "Quest burst: wait for quiet (s)",
+       "max": 10,
+       "min": 0,
+       "restart": true,
+       "step": 0.5,
+       "type": "number"
+      },
+      {
+       "def": 8,
+       "key": "companion.llm.settle_max_s",
+       "label": "Quest burst: wait at most (s)",
+       "max": 30,
+       "min": 1,
+       "restart": true,
+       "type": "number"
+      },
+      {
+       "def": 30,
+       "key": "companion.llm.summary_words",
+       "label": "Quest burst summary length (words)",
+       "max": 80,
+       "min": 10,
+       "restart": true,
+       "type": "number"
+      },
+      {
        "def": 30,
        "key": "companion.llm.answer_words",
        "label": "Spoken answer length (words)",

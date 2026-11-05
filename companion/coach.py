@@ -54,6 +54,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 GROUNDING_LOG = os.path.join(ROOT, "data", "live", "grounding.jsonl")
 
+# quest events: they come in bursts (turning in and picking up several at a quest hub), so they wait to settle and are
+# summed up in one callout (Coach._settling); quests_accepted is a burst of pickups the briefings held (Briefings.hold)
+QUEST_KINDS = frozenset(("quest_turned_in", "quest_removed", "quests_accepted", "step_changed", "reward_choice",
+                         "turnin_decay_soon"))
+SUMMARY_NOTE = ("(Several quest events at once: one summary for all of them, at most %d words: what got done, "
+                "the reward to pick if there is a choice, what was picked up, then the one next action.)")
+
 CONVO_LABEL = {"answer": "coach answered", "callout": "coach callout", "review": "coach pace review",
                "briefing": "coach quest briefing", "reminder": "coach reminder"}
 
@@ -175,6 +182,10 @@ class Coach:
         thread."""
         self.state = state
         self.session.observe(state, self._now())
+        self.queue_triggers(triggers)
+
+    def queue_triggers(self, triggers):
+        """Queue triggers for the coach thread (push, and the coach's own: Briefings.hold's quests_accepted)."""
         if not triggers:
             return
         now = self._now()
@@ -269,15 +280,34 @@ class Coach:
 
     def _take_batch(self):
         """The waiting triggers, once at least min_interval has passed since the last call (urgent ones at once),
-        else None."""
+        else None. Quest events wait until they settle (_settling) so a burst of them makes one summary; an urgent
+        trigger meanwhile goes out without them."""
         with self.lock:
-            if self.pending:
-                urgent = any(t.priority == 1 for t in self.pending)
-                gap = time.time() - self.last_call
-                if urgent or gap >= self.opt.get("min_interval"):
-                    batch, self.pending = self.pending, []
-                    return batch
+            if not self.pending:
+                return None
+            now = time.time()
+            if self._settling(now):
+                urgent = [t for t in self.pending if t.priority == 1 and t.kind not in QUEST_KINDS]
+                if not urgent:
+                    return None
+                self.pending = [t for t in self.pending if t not in urgent]
+                return urgent
+            # urgent ones, and a settled quest burst (its summary is due now, not min_interval after the last line)
+            urgent = any(t.priority == 1 for t in self.pending) or self._summary_batch(self.pending)
+            if urgent or now - self.last_call >= self.opt.get("min_interval"):
+                batch, self.pending = self.pending, []
+                return batch
         return None
+
+    def _settling(self, now):
+        """Whether waiting quest events are still coming in: one arrived less than settle_s ago, or accepted quests
+        are still gathering for their briefing (they join the summary as quests_accepted), and the first has waited
+        less than settle_max_s. Called with self.lock held."""
+        quest = [t for t in self.pending if t.kind in QUEST_KINDS]
+        if not quest or now - min(t.t for t in quest) >= self.opt.get("settle_max_s"):
+            return False
+        newest = max((t.t for t in quest if t.kind != "quests_accepted"), default=0.0)
+        return now - newest < self.opt.get("settle_s") or bool(self.briefings.accepted.queue)
 
     def route_view(self, s):
         """The way to the current step for the dashboard (RouteKeeper.view)."""
@@ -538,6 +568,8 @@ class Coach:
         ctx = self.context(deep=deep, triggers=triggers, lookahead=lookahead)
         kctx = self._turn_kctx
         trigger = self._turn_text(batch, question, voice)
+        if self._summary_batch(batch):
+            trigger += "\n" + SUMMARY_NOTE % self._word_limit(question, voice, deep, batch)
         if self.persona():
             trigger += "\n" + persona_mod.REMINDER % persona_mod.short_name(self.persona())
         # out of credits / bad key: no automatic calls at all. A question the player asks tries once more
@@ -561,7 +593,7 @@ class Coach:
             return self._emit_offline(question, text, bool(question), "offline (no %s key)" % prov)
         user = self._user_message(ctx, trigger, question=bool(question), triggers=triggers if batch else None,
                                   cc=llm.ref_marker(model))
-        limit = self._word_limit(question, voice, deep)
+        limit = self._word_limit(question, voice, deep, batch)
         urgent = (bool(batch) and min(t.priority for t in batch) == 1) or voice
         msg_kind = "answer" if question else ("review" if deep else "callout")
         speaks = bool(question) or not deep or self.opt.get("speak_reviews")
@@ -583,7 +615,7 @@ class Coach:
         if text and not question and is_skip(text):
             return None
         if text:     # (the limit again: a reply that just took on a character may stretch already)
-            text = trim_words(text, max(limit, self._word_limit(question, voice, deep)))
+            text = trim_words(text, max(limit, self._word_limit(question, voice, deep, batch)))
         if not text:
             return None
         self.history.append(text)
@@ -635,13 +667,23 @@ class Coach:
         self.emit(msg)
         return msg
 
-    def _word_limit(self, question, voice, deep):
-        """How many words the reply may have: spoken and typed answers, pace reviews, callouts."""
+    def _word_limit(self, question, voice, deep, batch=None):
+        """How many words the reply may have: spoken and typed answers, pace reviews, callouts (a summary of several
+        quest events: summary_words)."""
         if question:
             n = self.opt.get("answer_words") if voice else self.opt.get("typed_answer_words")
+        elif deep:
+            n = self.opt.get("review_words")
         else:
-            n = self.opt.get("review_words") if deep else self.opt.get("callout_words")
+            n = self.opt.get("callout_words")
+            if self._summary_batch(batch):
+                n = max(n, self.opt.get("summary_words"))
         return self._stretch(n)
+
+    @staticmethod
+    def _summary_batch(batch):
+        """Whether a callout batch holds several quest events (one summary line covers them)."""
+        return sum(t.kind in QUEST_KINDS for t in batch or ()) >= 2
 
     # ---- roleplay: the character the player asked the coach to play (persona.py) --------------
     def persona(self):

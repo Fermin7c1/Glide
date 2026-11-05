@@ -787,3 +787,16 @@ they don't spell out.
   (Character, Voice direction, Extra room for the act); `golden.py record desktop` re-recorded for those three
   fields alone. The reflection prompt tells the memory not to note a role. Offline (no model) there is no persona.
   Pinned by `tests/test_persona.py`.
+- **Quest bursts make one summary callout (contracts 5 and 8; additive).** Turning in and picking up several quests
+  at a hub used to come out one by one: the first event fired alone, the rest every `min_interval`, and a shared
+  batch was told to keep only its most important trigger. Quest events (`coach.QUEST_KINDS`: `quest_turned_in`,
+  `quest_removed`, `step_changed`, `reward_choice`, `turnin_decay_soon`, and the new coach-raised
+  `quests_accepted`) now wait in `Coach._take_batch` until none came for `llm.settle_s` (2.5 s; at most
+  `llm.settle_max_s`, 8 s, after the first) and while accepted quests are still gathering for their briefing; an
+  urgent trigger meanwhile goes out alone, and a settled burst of two or more skips `min_interval`. A burst of pickups the briefings hold (`Briefings.hold`, its unspoken
+  chat line unchanged) joins the burst as `quests_accepted` `{count, quests}` (it shows in the state's
+  `recent_triggers`). A batch with two or more quest events gets `llm.summary_words` (30) and a note asking for one
+  summary; the style rule in `coach_prompts.SYSTEM` makes that exception. New settings (contract 5): `llm.settle_s`,
+  `llm.settle_max_s`, `llm.summary_words`, shown under Settings > Coaching > Callouts (contract 8; `golden.py record
+  desktop` re-recorded for those three fields alone). Offline callouts gain "Turned in N quests." and "Picked up N:
+  <names>.". The player asked (2026-11-05). Pinned by `tests/test_quest_burst.py`.

@@ -35,6 +35,12 @@ def callout(batch, ctx):
         lines.append("Level %s. Check new spells at your next trainer stop." % p.get("level"))
     if "low_health_in_combat" in kinds:
         lines.append("Health %s%%. Finish or disengage now." % kinds["low_health_in_combat"].facts.get("hp"))
+    turned = sum(t.kind == "quest_turned_in" for t in batch)
+    if turned >= 2:                                 # a stop at a quest hub, summed up (Coach._settling)
+        lines.append("Turned in %d quests." % turned)
+    if "quests_accepted" in kinds:
+        f = kinds["quests_accepted"].facts
+        lines.append("Picked up %s: %s." % (f.get("count"), ", ".join(f.get("quests") or ()) or "quests"))
     if "step_changed" in kinds or "session_start" in kinds:
         lines.append(step_line(ctx))
     if "stuck_on_step" in kinds:

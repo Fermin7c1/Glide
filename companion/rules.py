@@ -29,7 +29,7 @@ CATEGORY = {
     "hearth_bound": "route",
     "low_health_in_combat": "combat", "died": "combat", "released": "combat", "resurrected": "combat",
     "buff_expiring": "buffs", "buffs_dropped": "buffs",
-    "gear_upgrade": "gear", "reward_choice": "gear",
+    "gear_upgrade": "gear", "reward_choice": "gear", "quests_accepted": "route",
     "pace_review": "pace", "level_up": "pace", "spell_learned": "pace",
     "bags_nearly_full": "upkeep", "low_durability": "upkeep",
     "addon_outdated": None,                      # always reported

@@ -8,6 +8,7 @@ import briefing
 from log import log_once
 from prompt_context import short_json
 from replies import EarlySpeech, is_skip, trim_words
+from rules import Trigger
 
 
 class Briefings:
@@ -54,6 +55,9 @@ class Briefings:
         c.emit({"kind": "info", "speak": False, "t": time.time(),
                 "text": "Picked up %d quests: %s. Each gets its briefing when you get to it." % (
                     len(qids), ", ".join(n for n in names if n) or "names unknown")})
+        # spoken in the callout that sums up this stop at the quest hub (turn-ins, reward pick, what's next)
+        c.queue_triggers([Trigger("quests_accepted", {"count": len(qids), "quests": [n for n in names if n]},
+                                  priority=3)])
 
     def held_tick(self):
         """Brief a held quest once the player gets to it (briefing.HeldBriefs), checked about once a second."""
