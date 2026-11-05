@@ -813,14 +813,15 @@ class Coach:
             self._system = prompts.system_prompt(rows)
         blocks = [dict({"type": "text", "text": self._system}, **({"cache_control": cc} if cc else {}))]
         mem = self.deps.memory.block() if self.deps.memory is not None else ""
-        if mem:      # its own cached block: a changed note re-writes only this part of the prompt cache
-            blocks.append(dict({"type": "text", "text": mem}, **({"cache_control": cc} if cc else {})))
         brief = self.persona()
-        if brief:    # last, so its tone overrides the coach rules'; its own block, like the memory's
+        if brief:    # last, so its tone overrides the coach rules'
             o = self.opt
-            text = persona_mod.block(brief, [self._stretch(o.get(k)) for k in
-                                             ("callout_words", "answer_words", "typed_answer_words")])
-            blocks.append(dict({"type": "text", "text": text}, **({"cache_control": cc} if cc else {})))
+            mem = "\n\n".join(x for x in (mem, persona_mod.block(brief, [
+                self._stretch(o.get(k)) for k in ("callout_words", "answer_words", "typed_answer_words")])) if x)
+        # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
+        # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
+        if mem:
+            blocks.append(dict({"type": "text", "text": mem}, **({"cache_control": cc} if cc else {})))
         return blocks
 
     def _directives(self, text, with_facts=False):

@@ -123,6 +123,24 @@ blocks = c._system_blocks()
 check(blocks[-1]["text"].startswith("YOU ARE IN CHARACTER") and "grizzled dwarf" in blocks[-1]["text"],
       "the persona block comes last")
 check("YOU ARE IN CHARACTER" in system_text(A.bodies[-1]), "it was sent with the question")
+
+
+def markers(o):
+    """cache_control markers anywhere in a request body."""
+    if isinstance(o, dict):
+        return ("cache_control" in o) + sum(markers(v) for v in o.values())
+    return sum(markers(v) for v in o) if isinstance(o, list) else 0
+
+
+# the Claude API takes at most 4 cache_control markers a request (tools, system, user reference): with player memory
+# and a persona the system prompt still carries only two (a third made every call fail with a 400)
+check(markers(A.bodies[-1]) <= 4, "a request carries at most 4 cache markers: %d" % markers(A.bodies[-1]))
+c.deps.memory = type("Mem", (), {"block": lambda self: "WHAT YOU REMEMBER ABOUT THIS PLAYER:\n- m1 Prefers short."})()
+blocks = c._system_blocks({"type": "ephemeral"})
+check(sum("cache_control" in b for b in blocks) == 2, "rules + (memory and persona) are two cached blocks")
+check(blocks[-1]["text"].startswith("WHAT YOU REMEMBER") and "YOU ARE IN CHARACTER" in blocks[-1]["text"],
+      "the persona follows the memory in the last block")
+c.deps.memory = None
 check("Stay fully in character (A grizzled dwarf drill sergeant from Ironforge)" in user_text(A.bodies[-1]),
       "the request ends with the stay-in-character line")
 
