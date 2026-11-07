@@ -18,7 +18,7 @@
     "dist:dir": "npm run build && electron-builder --win dir"
   },
   "devDependencies": {
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "electron": "45.1.0",
     "electron-builder": "26.18.0",
     "typescript": "7.0.2"
