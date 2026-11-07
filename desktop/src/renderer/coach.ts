@@ -67,18 +67,27 @@ function showPtt(state: PttEvent["state"]): void {
   $("sb-ptt-l").textContent = state === "transcribing" ? "Transcribing" : "Listening";
 }
 
+const BARGE_MS = 150;            // as the engine's BARGE_S
+let bargeTimer = 0;
+
 /** The light stream: the session bar's keys of the state, and the speak and push-to-talk events. */
 function connectEvents(url: string): void {
   events = new EventSource(url + "/events?lite=1");
   events.addEventListener("init", (e) => { try { sessionBar((JSON.parse((e as MessageEvent).data) as LiteInitEvent).state); } catch { /* ignore */ } });
   events.addEventListener("state", (e) => { try { sessionBar(JSON.parse((e as MessageEvent).data)); } catch { /* ignore */ } });
   events.addEventListener("ptt", (e) => {
-    try { showPtt((JSON.parse((e as MessageEvent).data) as PttEvent).state); } catch { /* ignore */ }
+    try {
+      const state = (JSON.parse((e as MessageEvent).data) as PttEvent).state;
+      // the player talks over the coach: it stops, like on a call (held BARGE_MS: a brush of the key isn't talking)
+      if (bargeTimer) { clearTimeout(bargeTimer); bargeTimer = 0; }
+      if (state === "listening") bargeTimer = window.setTimeout(() => { bargeTimer = 0; speech.bargeIn(); }, BARGE_MS);
+      showPtt(state);
+    } catch { /* ignore */ }
   });
   events.addEventListener("speak", (e) => {
     try {
       const d: SpeakEvent = JSON.parse((e as MessageEvent).data);
-      speech.say(String(d.text || ""), !!d.interrupt, d.style ? String(d.style) : "");
+      speech.say(String(d.text || ""), !!d.interrupt, d.style ? String(d.style) : "", d.tone ? String(d.tone) : "");
     } catch { /* ignore */ }
   });
 }

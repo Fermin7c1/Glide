@@ -218,6 +218,7 @@
   "OPENAI_VOICES:object",
   "TTS_KEYS:object",
   "synth:function",
+  "v3Text:function",
   "voices:function"
  ],
  "main/updater.js": [

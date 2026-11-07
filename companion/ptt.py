@@ -237,6 +237,7 @@ def beep(freq, ms):
 
 class PushToTalk:
     on_state = None                             # set in __init__; a bare instance (the tests) has no indicator
+    key_down = False                            # the key is held now ("idle" from a previous press may come later)
 
     @property
     def opt(self):
@@ -321,12 +322,14 @@ class PushToTalk:
                     time.sleep(2)
                     continue
                 down_at = time.time()
+                self.key_down = True
                 self._state("listening")
                 if self.opt.get("beep"):
                     threading.Thread(target=beep, args=(880, 60), daemon=True).start()
             elif not held and down_at is not None:
                 dur = time.time() - down_at
                 down_at = None
+                self.key_down = False
                 path = os.path.join(tempfile.gettempdir(), "glide_ptt.wav")
                 try:
                     self.rec.stop(path)

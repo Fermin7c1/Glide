@@ -106,6 +106,19 @@ def load_config():
     return glideconfig.load(ROOT, log=console_log)
 
 
+BARGE_S = 0.15          # push-to-talk held this long is talking over the coach (a brush of the key isn't)
+PTT_STUCK_S = 120       # ... held longer than this: taken as released (a lost key-up never leaves the coach mute)
+
+
+def ptt_talking(app):
+    """Whether the player holds push-to-talk now (App.on_ptt_state); a hold past PTT_STUCK_S counts as released."""
+    if not getattr(app, "_ptt_down", False):
+        return False
+    if time.time() - getattr(app, "_ptt_down_t", 0.0) > PTT_STUCK_S:
+        App._ptt_release(app)
+        return False
+    return True
+
 class App:
     """The running companion: the strip comes in (capture_loop, or sim_loop), on_frame updates the game state and
     runs the rules, the coach answers on its own thread, and the dashboard gets the state every second."""
@@ -182,6 +195,10 @@ class App:
         self.msg_history = []                   # last 10 coach messages (callout/answer/review/info)
         self.trigger_history = []               # last 20 (kind, facts) triggers handed to the coach
         self._hist_lock = threading.Lock()      # on_message runs on the coach, ptt and capture threads
+        self._ptt_down = False                  # push-to-talk held: the player is talking (on_ptt_state)
+        self._ptt_down_t = 0.0
+        self._held = []                         # answers that came while it was held, said when it comes up
+        self._barge_timer = None
         self._ring_primed = False               # set by the first decoded frame (its ring events are old)
         self.log = open(live_path(time.strftime("%Y%m%d-%H%M%S") + ".jsonl"), "a", encoding="utf-8")
         self.last_log = 0
@@ -233,22 +250,73 @@ class App:
         log(m.get("kind"), m.get("text"))
         if m.get("speak") and m.get("kind") != "answer" and self._flags and not self._flags.get("voice", True):
             m = dict(m, speak=False)                 # /coach voice off: text only (answers to questions still speak)
-        if m.get("speak") and m.get("spoken"):
-            # the start of it was said while the reply streamed (speak_early): say only the rest
-            said, full = " ".join(m["spoken"].split()), " ".join(m["text"].split())
-            rest = full[len(said):].strip() if full.startswith(said) else full
-            if rest:
-                self.voice.say(rest, interrupt=False, tone=str(m.get("tone") or ""))
+        if m.get("speak") and ptt_talking(self):
+            # the player is talking (push-to-talk held): an answer waits for the key to come up, the rest is dropped
+            if m.get("kind") == "answer":
+                with self._hist_lock:
+                    self._held.append(m)
         elif m.get("speak"):
-            self.voice.say(m["text"], interrupt=m.get("urgent", False), tone=str(m.get("tone") or ""))
+            App._say(self, m)
         if self.overlay and m.get("kind") in msg_kinds.COACH_SAID:
             self.overlay.set_message(m["text"], "#ff8a95" if m.get("urgent") else "#e6e9ef")
 
-    def speak_early(self, text, kind, urgent=False, tone=""):
-        """The coach's streamed replies: say one finished sentence now (same voice switch rule as on_message)."""
-        if kind != "answer" and self._flags and not self._flags.get("voice", True):
+    def _say(self, m):
+        """Say a message: all of it, or only the rest when its start was said while it streamed (speak_early). The
+        tone goes as its own field with the first sentence only (ElevenLabs v3 acts it as a tag: once a line)."""
+        tone = str(m.get("tone") or "")
+        if m.get("spoken"):
+            said, full = " ".join(m["spoken"].split()), " ".join(m["text"].split())
+            rest = full[len(said):].strip() if full.startswith(said) else full
+            if rest:
+                self.voice.say(rest, interrupt=False, tone=tone, first=False)
+        else:
+            self.voice.say(m["text"], interrupt=m.get("urgent", False), tone=tone)
+
+    def on_ptt_state(self, st):
+        """Push-to-talk as it happens ("listening" | "transcribing" | "idle"): the "ptt" event, and talking over the
+        coach stops it, like on a call: held BARGE_S (a brush of the key is not talking), the line being said stops
+        (the app's narrator on the event; the engine's own speech process here) and so does the reply on its way
+        (Coach.barge); while the key is down an answer waits and the rest is dropped; key up says what waited. "idle"
+        changes nothing (the previous press's can come in the middle of a new one)."""
+        self.hub.publish("ptt", {"state": st})
+        if st == "listening":
+            self._ptt_down, self._ptt_down_t = True, time.time()
+            if self._barge_timer is not None:
+                self._barge_timer.cancel()
+            self._barge_timer = threading.Timer(BARGE_S, self._barge)
+            self._barge_timer.daemon = True
+            self._barge_timer.start()
+        elif st == "transcribing" or not getattr(getattr(self, "ptt", None), "key_down", False):
+            self._ptt_release()       # key up ("idle" too: a tap too short, a failed recording; not a stale one)
+
+    def _ptt_release(self):
+        """The key came up: what waited is said."""
+        self._ptt_down = False
+        if self._barge_timer is not None:
+            self._barge_timer.cancel()
+        with self._hist_lock:
+            held, self._held = self._held, []
+        for m in held:
+            self._say(m)
+
+    def _barge(self):
+        """The key is still down after BARGE_S: the player is talking over the coach."""
+        if not self._ptt_down:
             return
-        self.voice.say(text, interrupt=urgent, tone=tone or "")
+        self.voice.hush()
+        coach = getattr(self, "coach", None)
+        if coach is not None:
+            coach.barge()
+
+    def speak_early(self, text, kind, urgent=False, tone="", first=True):
+        """The coach's streamed replies: say one finished sentence now (same voice switch rule as on_message).
+        -> False when it isn't said (push-to-talk held: the reply then keeps it for on_message)."""
+        if ptt_talking(self):
+            return False
+        if kind != "answer" and self._flags and not self._flags.get("voice", True):
+            return None
+        self.voice.say(text, interrupt=urgent, tone=tone or "", first=first)
+        return True
 
     def set_watch(self, name, on=True):
         self.rules.watch(name, on)
@@ -780,7 +848,7 @@ class App:
             from ptt import PushToTalk
             # the "ptt" event goes out as it happens: the overlay, the session bar and the coach screen show it
             self.ptt = PushToTalk(c, lambda q: self.coach.ask(q, voice=True), self.on_message,
-                                  self.vocabulary, focus, on_state=lambda st: self.hub.publish("ptt", {"state": st}))
+                                  self.vocabulary, focus, on_state=self.on_ptt_state)
         except Exception as e:
             log("ptt", "disabled: %s" % e)
 

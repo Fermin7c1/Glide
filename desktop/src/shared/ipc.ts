@@ -408,7 +408,7 @@ export interface InvokeMap {
   "app:logs": () => string;                   // open the log files' folder (userData/logs): "" or why it couldn't
   "app:changelog": () => Obj;
   "app:mute": (muted: boolean) => boolean;
-  "tts:synth": (text: string, style?: string) => { mime: string; data: Uint8Array };
+  "tts:synth": (text: string, style?: string, tone?: string) => { mime: string; data: Uint8Array };
   "tts:voices": (provider: TtsProvider) => Voice[];
   "res:watch": (on: boolean) => void;
   "update:get": () => UpdateStatus;

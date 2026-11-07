@@ -110,7 +110,7 @@ import app  # noqa: E402
 voice_said = []
 fake = types.SimpleNamespace(_hist_lock=threading.Lock(), msg_history=[], hub=types.SimpleNamespace(publish=lambda *a: None),
                              write_log=lambda o: None, _flags={"voice": True}, overlay=None,
-                             voice=types.SimpleNamespace(say=lambda t, interrupt=False, tone="": voice_said.append((t, interrupt))))
+                             voice=types.SimpleNamespace(say=lambda t, interrupt=False, tone="", first=True: voice_said.append((t, interrupt))))
 app.App.on_message(fake, {"kind": "answer", "text": "Go east.\nKill boars there.", "speak": True, "urgent": True,
                           "spoken": "Go east."})
 app.App.on_message(fake, {"kind": "answer", "text": "Go east.", "speak": True, "spoken": "Go east."})

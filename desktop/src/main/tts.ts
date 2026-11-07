@@ -31,8 +31,21 @@ async function audio(url: string, what: string, init: RequestInit): Promise<Buff
   return Buffer.from(await (await ok(await fetch(url, init), what)).arrayBuffer());
 }
 
+/** The text for ElevenLabs v3, which acts inline audio tags: the line's tone as one ("[dry, amused] Turn in the
+ * quest."). The tag is kept short and plain (four words at most; letters, spaces, commas and hyphens; lower case) so
+ * a stray instruction can't ride in; no tone, no tag. */
+export function v3Text(text: string, tone = ""): string {
+  // letters (any script, accents kept), apostrophes and hyphens; commas and anything else split words; up to 6
+  // words (the coach is asked for 2-6); a longer tone is no tag rather than half of one; brackets never get through
+  const words = String(tone || "").normalize("NFC").toLowerCase().replace(/[’]/g, "'")
+    .replace(/[^\p{L}\p{M}'\s-]+/gu, " ").split(/\s+/)
+    .map((w) => w.replace(/^['-]+|['-]+$/g, "")).filter((w) => /\p{L}/u.test(w));
+  if (!words.length || words.length > 6) return text;
+  return `[${words.join(" ")}] ${text}`;
+}
+
 type Online = Exclude<TtsProvider, "windows">;
-type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal, style: string) => Promise<Buffer>;
+type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal, style: string, tone: string) => Promise<Buffer>;
 type VoiceList = (key: string, signal: AbortSignal, region?: string) => Promise<Voice[]>;
 
 const SYNTH: Record<Online, Synth> = {
@@ -47,12 +60,15 @@ const SYNTH: Record<Online, Synth> = {
       method: "POST", signal, headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body) });
   },
-  async elevenlabs(s, text, key, signal) {
+  async elevenlabs(s, text, key, signal, _style, tone) {
     const e = s.elevenlabs || {};
     const voice = e.voiceId || "JBFqnCBsd6RMkjVDRZzb";     // "George", a default ElevenLabs voice
+    const model = e.model || "eleven_flash_v2_5";
+    // v3 performs the line's tone as an audio tag; the other models would read the tag out, so they get the words
+    const input = /v3/i.test(model) ? v3Text(text, tone) : text;
     return audio(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, "ElevenLabs", {
       method: "POST", signal, headers: { "xi-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify({ text, model_id: e.model || "eleven_flash_v2_5" }) });
+      body: JSON.stringify({ text: input, model_id: model }) });
   },
   async azure(s, text, key, signal) {
     const a = s.azure || {};
@@ -95,12 +111,13 @@ const VOICE_LISTS: Record<Exclude<Online, "openai">, VoiceList> = {
   },
 };
 
-/** MP3 audio for `text` from an online provider; `style` = how to perform it (the coach's persona; OpenAI only). */
-export async function synth(s: SpeechSettings, text: string, key: string, style = ""): Promise<Buffer> {
+/** MP3 audio for `text` from an online provider; `style` = how to perform it (the coach's persona; OpenAI only),
+ * `tone` = how to deliver this one line (in character; an audio tag for ElevenLabs v3, the others don't use it). */
+export async function synth(s: SpeechSettings, text: string, key: string, style = "", tone = ""): Promise<Buffer> {
   const p = s.provider;
   if (!key) throw new Error(`${p}: no ${TTS_KEYS[p as Online]} (Settings > AI models & keys)`);
   const signal = AbortSignal.timeout(TIMEOUT);
-  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal, style);
+  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal, style, tone);
   throw new Error(`unknown voice provider ${p}`);
 }
 

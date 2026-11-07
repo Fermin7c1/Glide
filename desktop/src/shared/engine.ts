@@ -161,6 +161,7 @@ export interface SpeakEvent {
   text: string;
   interrupt: boolean;             // stop what is being said first
   style?: string;                 // the character the coach plays: how to perform the line (the OpenAI voice)
+  tone?: string;                  // in character, how to deliver this one line (also folded into style); ElevenLabs v3 acts it
 }
 
 export interface GuideElement { tag: string; map?: number; x?: number; y?: number; quest?: number; name?: string;

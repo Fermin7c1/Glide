@@ -37,9 +37,11 @@ while ($true) {
 
 
 class HubVoice:
-    """Speech done by the desktop app: each line goes out as a "speak" event ({text, interrupt, style?}) on the
+    """Speech done by the desktop app: each line goes out as a "speak" event ({text, interrupt, style?, tone?}) on the
     dashboard's event stream, and the app speaks it with the voice picked in its settings (voice "output": "app").
-    style_fn: () -> how to perform the lines (the coach's persona, persona.py), "" for the voice as it is."""
+    style_fn: () -> how to perform the lines (the coach's persona, persona.py), "" for the voice as it is.
+    style folds the line's tone in (the OpenAI voice performs it whole); tone also goes alone, for a voice that acts
+    a short cue (ElevenLabs v3's audio tags)."""
     style_fn: Callable[[], str] | None = None
 
     @property
@@ -60,15 +62,25 @@ class HubVoice:
         self.muted = bool(muted)
         return self.muted
 
-    def say(self, text, interrupt=False, tone=""):
-        """tone: how to deliver this one line (the coach's TONE: in character), added to the character's voice."""
+    def hush(self):
+        """The player started talking (push-to-talk): the app's narrator stops on the "ptt" event itself."""
+        return None
+
+    def say(self, text, interrupt=False, tone="", first=True):
+        """tone: how to deliver this one line (the coach's TONE: in character), added to the character's voice; it
+        goes as its own field on a reply's first sentence only (first=False: a later one: ElevenLabs v3 acts it as a
+        tag, once a line), and folded into the style on every sentence (OpenAI performs the whole line with it)."""
         if not self.enabled or not text or self.muted:
             return
         style = self.style_fn() if self.style_fn else ""      # the character the coach plays: how to perform it
+        tone = " ".join(str(tone or "").split())
         if tone:
             style = ("%s. This line: %s." % (style.rstrip(" ."), tone)) if style else "Deliver this line %s." % tone
+        # a tone always comes with a style (folded in above): {style, tone}, {style} or neither
         self.hub.publish("speak", {"text": text.replace("\n", " ").replace("\r", " ").strip(),
-                                   "interrupt": bool(interrupt), **({"style": style} if style else {})})
+                                   "interrupt": bool(interrupt),
+                                   **({"style": style, "tone": tone} if tone and first else
+                                      {"style": style} if style else {})})
 
 
 class Voice:
@@ -119,8 +131,24 @@ class Voice:
                     console.log_once("voice.mute", e)
         return self.muted
 
-    def say(self, text, interrupt=False, tone=""):
-        if not self.enabled or not text or self.muted:     # (tone: Windows speech can't perform it)
+    def hush(self):
+        """The player started talking (push-to-talk): cut off the line being said and what's queued ("!"). Never
+        waits long for the lock (say() may be restarting the speech process): the push-to-talk thread calls it."""
+        if not self.lock.acquire(timeout=0.05):
+            return
+        try:
+            stdin = self.proc.stdin if self.proc is not None else None
+            if stdin is not None:
+                try:
+                    stdin.write("! \n")
+                    stdin.flush()
+                except Exception as e:  # noqa: BLE001 - a dead process is restarted by the next say()
+                    console.log_once("voice.hush", e)
+        finally:
+            self.lock.release()
+
+    def say(self, text, interrupt=False, tone="", first=True):
+        if not self.enabled or not text or self.muted:     # (tone, first: Windows speech can't perform a tone)
             return
         line = text.replace("\n", " ").replace("\r", " ").strip()
         with self.lock:

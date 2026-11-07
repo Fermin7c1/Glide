@@ -9,6 +9,9 @@
 // cancel(tag) silences only those. A tagged Windows line is handed to speechSynthesis only when nothing the narrator
 // gave it is still pending, so cancelling it never drops a coach line: the coach's lines queued behind it are handed
 // over again.
+//
+// The player can talk over it: holding push-to-talk (the "ptt" event's "listening", coach.ts) calls bargeIn(), which
+// stops the line being said and drops the queued ones at once.
 import { call, glide, ipcError } from "./bridge.js";
 import { toast } from "./dom.js";
 import { Obj, SpeechSettings } from "./types.js";
@@ -35,7 +38,8 @@ class Narrator {
   private waiting: { text: string; tag: string; done: () => void }[] = [];   // tagged Windows lines not handed yet
   private pumping = false;
   private muted = false;                      // the narrator is muted (footer button, tray, Ctrl+Alt+M)
-  private gen = 0;                            // bumped by stop(): stale plays don't start
+  private gen = 0;
+  private bargedAt = 0;                       // when the player last talked over it (bargeIn)                            // bumped by stop(): stale plays don't start
   lastVoice = "";                             // the voice the last line asked Windows for (Settings > Voice, Logs)
   lastVoiceAt = 0;
   private lastError = 0;
@@ -130,15 +134,30 @@ class Narrator {
     if (el) el.textContent = voiceLastLine();
   }
 
-  /** A coach line; `style` = how to perform it (the character the coach plays; the OpenAI voice takes it). */
-  say(text: string, interrupt = false, style = ""): void {
+  /** A coach line; `style` = how to perform it (the character the coach plays; the OpenAI voice takes it), `tone` =
+   * how to deliver this one line (in character; ElevenLabs v3 acts it as an audio tag). */
+  say(text: string, interrupt = false, style = "", tone = ""): void {
     if (!text || this.muted) return;
     if (interrupt) this.stop();
     if (this.provider === "windows") {
       this.windowsSay(text);
       return;
     }
-    this.enqueue(text, undefined, undefined, style);
+    this.enqueue(text, undefined, undefined, style, tone);
+  }
+
+  /** The player started talking (push-to-talk is held): stop at once, like someone talked over on a call. The line
+   * being said stops and the queued ones are dropped, the coach's and the tagged ones alike (a page waiting on one
+   * goes on, as with stop()); the lines that come after (the coach's answer) are said as usual. */
+  bargeIn(): void {
+    this.bargedAt = Date.now();
+    this.stop();
+  }
+
+  /** Whether the player talked over the narrator since `t` (Date.now()): a page waiting on a line then pauses
+   * instead of going on to the next (the Guides walk). */
+  bargedSince(t: number): boolean {
+    return this.bargedAt >= t;
   }
 
   /** Whether a line would be heard now: not muted, and a voice to speak with. */
@@ -188,8 +207,9 @@ class Narrator {
     this.pump();
   }
 
-  private enqueue(text: string, tag?: string, done?: () => void, style = ""): void {
-    const audio = (style ? glide.invoke("tts:synth", text, style) : glide.invoke("tts:synth", text))
+  private enqueue(text: string, tag?: string, done?: () => void, style = "", tone = ""): void {
+    const args: [string, string?, string?] = tone ? [text, style, tone] : style ? [text, style] : [text];
+    const audio = glide.invoke("tts:synth", ...args)
       .then((r) => new Blob([r.data as BlobPart], { type: r.mime }))
       .catch((e) => {
         if (Date.now() - this.lastError > 60_000) {             // say why once a minute, not on every line

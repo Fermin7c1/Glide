@@ -133,14 +133,14 @@ class EarlySpeech:
             if not sentence or "FACTS:" in up or self.words + n > self.limit:
                 self.stopped = True
                 return
-            if self.stopped:                       # the words before the directive line, then nothing more
-                self.speak(sentence, self.urgent and not self.words)
-                self.words += n
-                self.spoken = (self.spoken + " " + sentence).strip()
+            last = self.stopped                     # the words before the directive line, then nothing more
+            if self.speak(sentence, self.urgent and not self.words) is False:
+                self.stopped = True                 # not said (push-to-talk held): the final message says it
                 return
-            self.speak(sentence, self.urgent and not self.words)
             self.words += n
             self.spoken = (self.spoken + " " + sentence).strip()
+            if last:
+                return
 
     @property
     def said(self):

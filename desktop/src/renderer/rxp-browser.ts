@@ -1591,14 +1591,18 @@ async function narrateWalk(run: number): Promise<void> {
     if (!narrating()) { walkOn(); return; }
     const at = activeIdx;
     const vs = visibleSteps[at];
+    const from = Date.now();
     if (vs) {
       const line = stepLine(vs.step, narratedActions(vs.step), null);
       if (line) saidVia.add(vs.src);
       await sayLine(line);
     }
     if (run !== walkRun) return;
+    // the player talked over it (push-to-talk): pause on this step, so playing again says it again
+    if (speech.bargedSince(from)) { stopPlay(); return; }
     await sayLine(transitionSpeech(at));            // worked out after the step's line: its route has had time
     if (run !== walkRun) return;
+    if (speech.bargedSince(from)) { stopPlay(); return; }
     await sleep(NARRATION_BEAT_MS);
     if (run !== walkRun) return;
     if (!narrating()) { walkOn(); return; }         // muted mid-step: the timer takes over from this step

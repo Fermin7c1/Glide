@@ -136,6 +136,8 @@ class Coach:
         self.frame_t = None                   # when the last game frame arrived (time.time())
         self.tone = None                      # the last reply's TONE: line (in character: how to deliver it)
         self.said_t = None                    # when the coach last said a line out loud (time.time())
+        self._speech = None                   # the reply being spoken while it streams (EarlySpeech)
+        self._barges = 0                      # how many times the player talked over the coach (barge)
         self.reminder_ticker = ReminderTicker(self)
         self.reflector = Reflector(self)
         self.route = RouteKeeper(self)
@@ -623,10 +625,16 @@ class Coach:
         speak_fn = self.deps.speak_fn
         def say_early(t, u):
             tone, fn = getattr(speech, "tone", None), speak_fn      # tone in character: the reply's TONE line
-            if fn is not None:
-                fn(t, msg_kind, u, tone) if tone else fn(t, msg_kind, u)
+            if fn is None:
+                return None
+            return fn(t, msg_kind, u, tone, not getattr(speech, "words", 0)) if tone else fn(t, msg_kind, u)
         speech = EarlySpeech(say_early, limit, urgent) if speak_fn and speaks else None
-        text, meta = self._ask_model(model, user, kctx, question, voice, deep, speech)
+        barges, self._speech = self._barges, speech
+        try:
+            text, meta = self._ask_model(model, user, kctx, question, voice, deep, speech)
+        finally:
+            self._speech = None
+        barged = self._barges != barges            # the player talked over it (push-to-talk): it isn't said
         self.last_call = time.time()
         if not text and question and llm.suspended and llm.suspended_for == prov:
             msg = {"kind": "answer", "text": self.offline([], ctx, question), "speak": bool(voice),
@@ -652,7 +660,7 @@ class Coach:
             return None
         self.history.append(text)
         self.history = self.history[-10:]
-        msg = {"kind": msg_kind, "text": text, "speak": speaks, "urgent": urgent,
+        msg = {"kind": msg_kind, "text": text, "speak": speaks and not barged, "urgent": urgent,
                "model": self._model_note(model, meta), "t": time.time()}
         if tone:
             msg["tone"] = tone                     # how to deliver it in character (the OpenAI voice performs it)
@@ -702,6 +710,13 @@ class Coach:
         msg = {"kind": "answer" if question else "callout", "text": text, "speak": speak, "model": model_note}
         self.emit(msg)
         return msg
+
+    def barge(self):
+        """The player talks over the coach (push-to-talk held, from the app): the reply on its way says no more."""
+        self._barges += 1
+        sp = self._speech
+        if sp is not None:
+            sp.stopped = True
 
     def _word_limit(self, question, voice, deep, batch=None, chat=False):
         """How many words the reply may have: spoken and typed answers, pace reviews, callouts (a summary of several

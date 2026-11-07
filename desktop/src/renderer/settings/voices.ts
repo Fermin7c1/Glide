@@ -44,7 +44,7 @@ function providerFields(prov: string, sp: SpeechSettings): string {
   if (prov === "elevenlabs") {
     const e = sp.elevenlabs || {};
     return voiceList("Voices in your ElevenLabs account.", e.voiceId || "", e.voiceId || "default (George)")
-      + field("Model", "Flash is fastest; Multilingual sounds best.", `<select id="sv-e-model">${options([["eleven_flash_v2_5", "Flash v2.5 (fast)"], ["eleven_turbo_v2_5", "Turbo v2.5"], ["eleven_multilingual_v2", "Multilingual v2"]], e.model || "eleven_flash_v2_5")}</select>`);
+      + field("Model", "Flash is fastest; Multilingual sounds best.", `<select id="sv-e-model">${options([["eleven_flash_v2_5", "Flash v2.5 (fast)"], ["eleven_turbo_v2_5", "Turbo v2.5"], ["eleven_multilingual_v2", "Multilingual v2"], ["eleven_v3", "v3 (acts the coach's tone; slower)"]], e.model || "eleven_flash_v2_5")}</select>`);
   }
   if (prov === "azure") {
     const a = sp.azure || {};

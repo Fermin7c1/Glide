@@ -875,3 +875,21 @@ they don't spell out.
   BRINGS BACK" section, asides and chats the latest chapters and the open threads, questions what the last lines drew
   on ("why did you bring that up?"). One reflection runs at a time; the goodbye's only when you talked. Pinned by
   `tests/test_story_memory.py`.
+- **Talk over the coach, and each line's tone acted (contracts 2, 4 and 8; additive). Social Phase 3 (voice).**
+  Holding push-to-talk works like talking over someone on a call. Held 150 ms (a brush of the key isn't talking:
+  `app.BARGE_S`, coach.ts `BARGE_MS`), the coach screen's narrator stops the line being said and drops the queued
+  ones (`speech.bargeIn()`), the engine's own speech process does the same (`Voice.hush()`, its "!" cancel-all, never
+  waiting long on its lock), and the reply on its way stops (`Coach.barge()`: its early speech, and the final
+  message's `speak` goes false). While the key is down an answer waits and is said at key-up, anything else is
+  dropped, and a streamed sentence isn't said or counted (`speak_early` -> False); key-up is "transcribing", or
+  "idle" with `PushToTalk.key_down` false (the previous press's "idle" can come mid-press); a hold past 120 s counts
+  as released. The Guides walk pauses on the step talked over (`speech.bargedSince`), a waiting `speakAndWait`
+  resolves. The engine's `speak` event (contract 2) gains an optional `tone` (`SpeakEvent.tone`), the in-character
+  line's delivery, on a reply's first sentence only (it stays folded into every sentence's `style`); a blank tone
+  counts as none. `tts:synth` (contract 4) takes it as an optional third argument (`(text, style?, tone?)`, capped
+  at 200 characters in main). An ElevenLabs model whose id contains "v3" (`eleven_v3`, now in Settings > Voice's
+  ElevenLabs model menu) performs it as an inline audio tag, `[<tone>] <text>` (up to 6 lower-case words of letters
+  of any script, apostrophes and hyphens; a longer tone gets no tag: `tts.v3Text`); other ElevenLabs models, OpenAI
+  (its `instructions` are still `style`), Azure, Google and Windows voices are unchanged. `golden.py record desktop`
+  re-recorded for the new `v3Text` export of main/tts.js. Pinned by `tests/test_voice_barge_in.py` and
+  `tests/test_voice_tone.py`.
