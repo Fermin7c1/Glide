@@ -131,6 +131,8 @@ DOWNTIME = ("flying", "dead", "eating")
 
 ago = recall_mod.ago
 KEEP_CONVO_S = 60          # the conversation is kept (Memory.convo_keep) at most this often
+WARM_S = 600               # recall by meaning: what memory holds is embedded (the new parts) this often
+WARM_RETRY_S = 60          # ... a warm-up that failed (a local model loading, the service down): again after this
 
 
 def openers(lines, n=5):
@@ -182,6 +184,8 @@ class Banter:
         self.recalled = []          # ids of the memories brought up lately (recall's variety penalty)
         self.last_recalled = []     # what the last recall brought up (texts), for "why did you bring that up?"
         self.kept_t = 0.0           # when the conversation was last kept
+        self.warmed_t = -1e9        # when the meaning cache was last warmed (recall by meaning on)
+        self.warming = None
         m = coach.deps.memory
         self.cleared_seen = m.cleared_t if m is not None else 0.0     # the last "forget everything" taken in
 
@@ -299,7 +303,8 @@ class Banter:
             exclude = {recall_mod.diary_id(x) for x in m.diary_recent(8)} | \
                 {recall_mod.story_id(x) for x in m.chapters_recent(2)}
         picks = recall_mod.pick(m, query or "", k=k, recent=set(self.recalled), where=where, exclude=exclude,
-                                before=before, place_alone=place_alone)
+                                before=before, place_alone=place_alone, embedder=c.embedder,
+                                min_similarity=float(c.opt.get("recall_min_similarity")))
         self.recalled = (self.recalled + [p["id"] for p in picks])[-12:]
         self.last_recalled = [p["text"] for p in picks]
         return recall_mod.section(picks)
@@ -348,8 +353,24 @@ class Banter:
         now = time.time()
         self._clock(now)
         self._reaction()
+        self._warm(now)
         if self._due(now):
             self.speak()
+
+    def _warm(self, now):
+        """Recall by meaning on: embed what memory holds (only what isn't embedded yet; what it no longer holds is
+        dropped), on a thread of its own, at start and every WARM_S after (new chapters, moments, notes); a warm-up
+        that failed is tried again after WARM_RETRY_S."""
+        c = self.coach
+        if c.embedder is None or c.deps.memory is None or not c.persona():
+            return
+        wait = WARM_RETRY_S if c.embedder.warm_ok is False else WARM_S
+        if now - self.warmed_t < wait or (self.warming is not None and self.warming.is_alive()):
+            return
+        self.warmed_t = now
+        texts = [it["text"] for it in recall_mod.items(c.deps.memory)]
+        self.warming = threading.Thread(target=c.embedder.warm, args=(texts,), daemon=True, name="coach-embed")
+        self.warming.start()
 
     def _live(self, now):
         c = self.coach
@@ -380,6 +401,8 @@ class Banter:
             self.cleared_seen = m.cleared_t
             c.convo.clear()
             self.recalled, self.last_recalled, self.said = [], [], []
+            if c.embedder is not None:                      # the memories' vectors too, on disk
+                c.embedder.clear()
         if m is not None and now - self.kept_t >= KEEP_CONVO_S:
             self.kept_t = now
             m.convo_keep(list(c.convo))

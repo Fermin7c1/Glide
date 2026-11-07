@@ -5,11 +5,14 @@ diary of shared moments, the chapters and eras of the story so far, the notes ab
 then recency; what was brought up lately stays out while anything else fits, so the same memory doesn't come back
 every line; the moment itself and what the prompt already holds never come back as a memory. Only the player's words
 and the game feed the query, never the character's own lines (they'd loop on themselves); the place counts for a little,
-so a zone alone rarely brings anything back.
+so a zone alone rarely brings anything back. With recall by meaning on (embeddings.py), a memory can also come back
+for what the moment means, with no word in common ("the big dog-man wrecked us" -> the Hogger chapter).
 Pure; the Banter keeps what was recalled lately (and the last line's picks, for "why did you bring that up?")."""
 import math
 import re
 import time
+
+import embeddings
 
 WORD = re.compile(r"[^\W\d_][\w'-]{3,}", re.U)     # words of 4+ letters (any script)
 STOP = frozenset("""this that with from have what when where which there their them they your youre about would could
@@ -19,6 +22,9 @@ level quest quests time today again first last next mine yours ours""".split())
 HALF_LIFE_DAYS = 10.0       # a memory's recency weight halves every this many days
 PHRASE = 3.0                # a topic or zone phrase of the memory said in the moment's words
 WHERE_WORD, WHERE_PHRASE = 0.5, 1.0     # ... in the place (zone, subzone, target) only
+MEANING = 4.0               # recall by meaning: a memory as close as can be counts this much (at the floor, nothing)
+MEANING_MARGIN = 0.1        # ... and it must stand this far above the query's typical closeness to all memories (some
+                            # models score any two leveling sentences 0.5-0.7: what counts is standing out)
 
 
 def words(text):
@@ -58,22 +64,25 @@ def said(phrase, text):
     return bool(phrase) and re.search(r"(?<!\w)%s(?!\w)" % re.escape(phrase.casefold()), text) is not None
 
 
-def pick(memory, query, k=3, recent=(), now=None, where="", exclude=(), before=None, place_alone=False):
+def pick(memory, query, k=3, recent=(), now=None, where="", exclude=(), before=None, place_alone=False,
+         embedder=None, min_similarity=0.3):
     """The k memories this moment brings back (best first), each {"id", "text", "t", "what", "score"}; [] when
     nothing matches. query: the moment's words (a question, the moment an aside reacts to); where: the place (zone,
     subzone, target: weighs little); recent: ids recalled lately (left out while others fit); exclude: ids already in
     the prompt; before: only memories older than this (not the moment itself); place_alone: the place may bring a
-    memory back by itself (a quiet-moment aside); otherwise a memory needs a word of the query."""
+    memory back by itself (a quiet-moment aside); otherwise a memory needs a word of the query, or (embedder:
+    recall by meaning) to mean something close to it: cosine similarity over min_similarity."""
     q, w = words(query), words(where) - words(query)
     ql, wl = (query or "").casefold(), (where or "").casefold()
     if not q and not w:
         return []
     now = time.time() if now is None else now
+    pool = [it for it in items(memory)
+            if it["id"] not in exclude and not (before is not None and (it["t"] or 0) >= before)]
+    meaning = closeness(embedder, query if q else (where if place_alone else ""), pool, min_similarity)
     scored = []
-    for it in items(memory):
-        if it["id"] in exclude or (before is not None and (it["t"] or 0) >= before):
-            continue
-        hit = len(q & it["keys"]) + PHRASE * sum(1 for p in it["phrases"] if said(p, ql))
+    for it in pool:
+        hit = len(q & it["keys"]) + PHRASE * sum(1 for p in it["phrases"] if said(p, ql)) + meaning.get(it["id"], 0.0)
         if hit < 1 and not place_alone:
             continue
         hit += WHERE_WORD * len(w & it["keys"]) + WHERE_PHRASE * sum(1 for p in it["phrases"] if said(p, wl))
@@ -95,6 +104,27 @@ def pick(memory, query, k=3, recent=(), now=None, where="", exclude=(), before=N
         if len(picked) >= k:
             break
     return picked
+
+
+def closeness(embedder, query, pool, floor):
+    """{item id: weight} for the memories that mean something close to the query, or {} (no embedder, no query,
+    nothing embedded yet, the service down). The memories' vectors are the cached ones (Banter._warm embeds them in
+    the background): a line never waits on the whole memory, and asks for its query's vector only when there is
+    something to compare it with. A memory counts when its closeness stands MEANING_MARGIN above the median of this
+    query's closeness to all of them (and over `floor`): MEANING at a similarity of 1, nothing at that bar."""
+    if embedder is None or not (query or "").strip() or not pool:
+        return {}
+    vecs = embedder.cached([it["text"] for it in pool])
+    if not vecs:
+        return {}
+    qv = embedder.query(query)
+    if qv is None:
+        return {}
+    sims = {it["id"]: embeddings.cosine(qv, vecs[embeddings.norm(it["text"])]) for it in pool
+            if embeddings.norm(it["text"]) in vecs}
+    ordered = sorted(sims.values())
+    bar = max(floor, ordered[len(ordered) // 2] + MEANING_MARGIN) if len(ordered) >= 3 else floor
+    return {i: MEANING * (s - bar) / max(1e-6, 1.0 - bar) for i, s in sims.items() if s > bar}
 
 
 def ago(seconds):

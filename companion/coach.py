@@ -30,6 +30,7 @@ from collections import deque
 import banter as banter_mod
 import coach_prompts as prompts
 import coach_tools
+import embeddings
 import models as models_mod
 import msg_kinds
 import offline_coach
@@ -130,6 +131,10 @@ class Coach:
         # the coach thread's background work, each with tick(): quest briefings and step videos, reminders,
         # reflection, and keeping the knowledge block and the way to the step fresh
         self.briefings = Briefings(self)
+        # recall by meaning (llm.recall_meaning: off, openai, gemini, ep:<endpoint>): its vectors beside the memory
+        mem_path = getattr(self.deps.memory, "path", None)
+        self.embedder = embeddings.Embedder.from_settings(self.opt, cfg,
+                                                          os.path.dirname(mem_path) if mem_path else None)
         self.banter = banter_mod.Banter(self)      # asides in character, and the bond they build (banter.py)
         if self.deps.memory is not None:          # the conversation's last lines, kept across restarts
             self.convo.extend(self.deps.memory.convo_kept())

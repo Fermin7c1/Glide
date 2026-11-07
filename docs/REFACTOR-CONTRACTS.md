@@ -900,3 +900,17 @@ they don't spell out.
   the scroll bar); other scrolls and resizes put it back on the newest message; right at the bottom, or pushing down
   there, follows again. The player asked (2026-11-07). Pinned by `tests/test_dashboard_page.py` (resized, read up,
   back down).
+- **Recall by meaning, optional (contracts 5 and 8; additive). Social Phase 1, deeper.** `companion/embeddings.py`:
+  with `llm.recall_meaning` set (`off` by default; `openai` with OPENAI_API_KEY, `gemini` with GEMINI_API_KEY, or
+  `ep:<endpoint id>`, an OpenAI-compatible custom endpoint such as a local Ollama, which needs `llm.recall_embed_model`)
+  recall also brings a memory back for what the moment means (`recall.closeness`: a memory counts when its cosine
+  closeness to the moment stands 0.1 above the median over all memories and over `llm.recall_min_similarity`, 0.3).
+  The memories are embedded in the background (`Banter._warm`: every 10 minutes in character, a minute after a failed
+  one; batches of 16, 45 s each) and kept beside the memory in `coach_embeddings.json` (contract 5, a new file on
+  the player's disk: `{source, model, vectors: {sha1: base64 float32}}`, only the current memories' vectors,
+  dropped with another source or model and by "forget everything"); a line embeds only its own words (4 s at most,
+  kept in memory, never on disk), and only once something is embedded. Gemini gets RETRIEVAL_QUERY / DOCUMENT task
+  types and the key in a header, nomic models their search prefixes. An odd, failing or missing service gives
+  nothing and recall goes by words (a failing query backs off a minute). Settings > Coaching > Roleplay: "Remember by
+  meaning", "Embedding model", "How close in meaning" (contract 8; `golden.py record desktop` re-recorded for them).
+  The player asked (2026-11-07). Pinned by `tests/test_recall_meaning.py` (a fake embeddings server: no paid API).

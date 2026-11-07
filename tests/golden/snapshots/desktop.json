@@ -641,6 +641,33 @@
        "type": "number"
       },
       {
+       "def": "off",
+       "help": "Memories come back for what you mean, not only the words you use (\"the big gnoll that wrecked us\" finds the Hogger story). off; openai (your OpenAI key); gemini (your Gemini key); or ep:<endpoint id> for a local Ollama or LM Studio, free. Each memory is embedded once.",
+       "key": "companion.llm.recall_meaning",
+       "label": "Remember by meaning",
+       "restart": true,
+       "type": "text"
+      },
+      {
+       "def": "",
+       "help": "Empty: text-embedding-3-small (OpenAI), gemini-embedding-001 (Gemini). A local endpoint needs its model, e.g. nomic-embed-text.",
+       "key": "companion.llm.recall_embed_model",
+       "label": "Embedding model",
+       "restart": true,
+       "type": "text"
+      },
+      {
+       "def": 0.3,
+       "help": "0-1: higher brings back only memories very close to the moment.",
+       "key": "companion.llm.recall_min_similarity",
+       "label": "How close in meaning",
+       "max": 0.95,
+       "min": 0,
+       "restart": true,
+       "step": 0.05,
+       "type": "number"
+      },
+      {
        "def": 1.6,
        "help": "In character, lines may be this many times longer than the lengths above.",
        "key": "companion.llm.persona_word_factor",
