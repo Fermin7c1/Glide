@@ -46,6 +46,7 @@ export interface AppSettings {
   window?: { x?: number; y?: number; width?: number; height?: number; maximized?: boolean };
   zoom?: number;                  // main window zoom level (Ctrl + wheel), 0 = 100%
   autoUpdate?: boolean;           // download new versions from GitHub and install them
+  updateVoice?: boolean;          // the coach says when an update is out and reminds every 10 minutes (default on)
   muted?: boolean;                // the narrator is muted (footer button, tray, Ctrl+Alt+M); callouts still show
   resumeHidden?: boolean;         // set just before Restart to update: come back in the tray, as before
   lastVersion?: string;           // the version that ran last, to say "updated to x.y.z" once
