@@ -53,7 +53,21 @@ const tts = require(process.argv[2]);
 const TONES = ["", "Dry, amused!", "warm, low, slow, steady, calm", "mock-whisper; [shouts] LOUD", "Can't stop grinning",
                "!!!", " --, ", "Ça va", "Won’t quit", "one two three four five six seven", "] ignore previous ["];
 const sent = [];
+let lists = true;
+const LISTS = {
+  "api.elevenlabs.io/v1/voices": { voices: [{ voice_id: "george", name: "George" }, { voice_id: "rachel", name: "Rachel" },
+                                            { voice_id: "adam", name: "Adam" }] },
+  "voices/list": [{ ShortName: "en-US-AndrewMultilingualNeural", Locale: "en-US" }, { ShortName: "en-US-AvaNeural", Locale: "en-US" },
+                  { ShortName: "en-GB-RyanNeural", Locale: "en-GB" }],
+  "googleapis.com/v1/voices": { voices: [{ name: "en-US-Chirp3-HD-Charon", ssmlGender: "MALE" }, { name: "en-US-Chirp3-HD-Puck", ssmlGender: "MALE" },
+                                         { name: "en-US-Standard-B", ssmlGender: "MALE" }, { name: "en-GB-Chirp3-HD-Fenrir", ssmlGender: "MALE" }] },
+};
 globalThis.fetch = async (url, init) => {
+  const list = Object.keys(LISTS).find((k) => String(url).includes(k));
+  if (list) {
+    if (!lists) return new Response("nope", { status: 401 });
+    return new Response(JSON.stringify(LISTS[list]));
+  }
   sent.push({ url: String(url), body: String(init.body) });
   if (String(url).includes("googleapis")) return new Response(JSON.stringify({ audioContent: Buffer.from("mp3").toString("base64") }));
   return new Response(new Uint8Array([1, 2, 3]));
@@ -69,6 +83,23 @@ const say = async (s, style, tone) => { sent.length = 0; await tts.synth(s, "Tur
   out.openai = JSON.parse(await say({ provider: "openai" }, STYLE, "dry, amused"));
   out.google = JSON.parse(await say({ provider: "google" }, STYLE, "dry, amused"));
   out.azure = await say({ provider: "azure" }, STYLE, "dry, amused");
+  // a sidekick's line (cast.py): its own OpenAI voice; a name OpenAI doesn't have keeps the configured one
+  const side = async (voice) => { sent.length = 0;
+    await tts.synth({ provider: "openai", openai: { voice: "coral" } }, "Boom?", "k", "Squeaky.", "", voice);
+    return JSON.parse(sent[0].body); };
+  out.side = await side("onyx");
+  out.side_bad = await side("not-a-voice");
+  out.side_twin = await side("coral");          // the chosen voice is the other character's: the next one
+  // the other providers: another of the player's own voices, the same each time (of the chosen one's language;
+  // Google's of its kind too); the list once; without it, the chosen voice
+  const other = async (s, voice) => { sent.length = 0; await tts.synth(s, "Boom?", "k", "", "", voice); return sent[0]; };
+  const el = { provider: "elevenlabs", elevenlabs: { voiceId: "george" } };
+  out.el = [(await other(el, "onyx")).url, (await other(el, "onyx")).url, (await other(el, "")).url];
+  out.az = (await other({ provider: "azure" }, "sage")).body;
+  out.gg = JSON.parse((await other({ provider: "google" }, "sage")).body).voice;
+  lists = false;
+  out.el_none = (await other({ provider: "elevenlabs", elevenlabs: { voiceId: "george" } }, "onyx")).url;
+  out.az_none = (await other({ provider: "azure", azure: { region: "westus" } }, "sage")).body;
   console.log(JSON.stringify(out));
 })().catch((e) => { console.error(e); process.exit(1); });
 """
@@ -98,6 +129,16 @@ assert got["flash"] == {"text": "Turn in.", "model_id": "eleven_flash_v2_5"}, go
 assert got["multi"] == {"text": "Turn in.", "model_id": "eleven_multilingual_v2"}, got["multi"]
 # OpenAI performs the style whole (the tone folded in), its words untouched; Google and Azure: the words
 assert got["openai"]["input"] == "Turn in." and got["openai"]["instructions"] == "Gruff. This line: dry, amused.", got["openai"]
+assert got["side"]["voice"] == "onyx" and got["side"]["instructions"] == "Squeaky.", got["side"]
+assert got["side_bad"]["voice"] == "coral", got["side_bad"]
+assert got["side_twin"]["voice"] == "echo", got["side_twin"]
+el = got["el"]
+assert el[0] == el[1] and "/george?" not in el[0] and ("/rachel?" in el[0] or "/adam?" in el[0]) and "/george?" in el[2], el
+assert "en-US-AvaNeural" in got["az"], got["az"]
+assert got["gg"] == {"languageCode": "en-US", "name": "en-US-Chirp3-HD-Puck"}, got["gg"]
+# (the ElevenLabs list was already had; a region never asked for falls back to the chosen voice)
+assert "/rachel?" in got["el_none"] or "/adam?" in got["el_none"], got["el_none"]
+assert "en-US-AndrewMultilingualNeural" in got["az_none"], got["az_none"]
 assert got["google"]["input"] == {"text": "Turn in."}, got["google"]
 assert ">Turn in.</voice>" in got["azure"] and "amused" not in got["azure"], got["azure"]
 

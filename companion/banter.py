@@ -143,6 +143,7 @@ WARM_S = 600               # recall by meaning: what memory holds is embedded (t
 MAX_LEVEL = 60             # the top of the climb (the_end: the road so far)
 BIG = {"milestone": 2, "the_end": 4}     # these moments get this many times banter_words
 IGNORED, IGNORED_MAX = 1.5, 4.0          # each aside let pass in a row: the wait x1.5, at most x4
+DUET_CHANCE = 0.5                        # a quiet-moment aside in downtime with a sidekick along: a duet this often
 WARM_RETRY_S = 60          # ... a warm-up that failed (a local model loading, the service down): again after this
 
 
@@ -656,6 +657,13 @@ class Banter:
                           for x in (m.diary_recent(8) if m is not None else ())) or "(nothing yet)"
         recent = "; ".join('"%s"' % t for t in self.said[-5:]) or "(none yet)"
         shape = "a reaction to that moment, in whatever shape fits it" if moment else self.shape()
+        side = self.coach.sidekick()
+        if side:
+            if moment and moment["kind"] in ("milestone", "the_end", "greeting", "goodbye"):
+                shape += "; %s reacts too, on a line of their own starting with [%s]" % (side, side)
+            elif not moment and act in DOWNTIME and random.random() < DUET_CHANCE:
+                shape = ("a short back-and-forth between you and %s (2-4 lines; theirs each on a line of its own "
+                         "starting with [%s])" % (side, side))
         story = self.story_section()
         brings = self.recall(moment["text"] if moment else "", before=(moment["t"] - 5) if moment else None,
                              shown=True, place_alone=moment is None)
@@ -694,6 +702,7 @@ class Banter:
                "model": c._model_note(model, meta), "t": time.time()}
         if tone:
             msg["tone"] = tone
+        c._cast(msg)                       # the sidekick's lines: its own, in its own voice
         c.emit(msg)
         if moment is None or moment["kind"] != "goodbye":
             self.awaiting = (c._now(), act, text, c.persona_name())

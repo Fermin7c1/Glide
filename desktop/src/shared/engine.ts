@@ -123,6 +123,7 @@ export interface CoachMessage {
   text: string;
   speak?: boolean;
   tone?: string;                  // in character: how to deliver this line (added to the speak event's style)
+  parts?: { who: string; text: string; side?: boolean }[];   // a reply with the sidekick's lines: who says what
   chat?: boolean;                 // an answer that keeps a chat with the coach going (the player answered an aside)
   urgent?: boolean;
   model?: string;                 // which model (or "offline", "local", "step video") said it
@@ -162,6 +163,7 @@ export interface SpeakEvent {
   interrupt: boolean;             // stop what is being said first
   style?: string;                 // the character the coach plays: how to perform the line (the OpenAI voice)
   tone?: string;                  // in character, how to deliver this one line (also folded into style); ElevenLabs v3 acts it
+  voice?: string;                 // the sidekick's line: its own voice (an OpenAI voice; Windows: another one)
 }
 
 export interface GuideElement { tag: string; map?: number; x?: number; y?: number; quest?: number; name?: string;

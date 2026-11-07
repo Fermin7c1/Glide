@@ -41,8 +41,11 @@ class HubVoice:
     dashboard's event stream, and the app speaks it with the voice picked in its settings (voice "output": "app").
     style_fn: () -> how to perform the lines (the coach's persona, persona.py), "" for the voice as it is.
     style folds the line's tone in (the OpenAI voice performs it whole); tone also goes alone, for a voice that acts
-    a short cue (ElevenLabs v3's audio tags)."""
+    a short cue (ElevenLabs v3's audio tags). cast_fn: (who) -> (style, voice id) for a line (cast.py): who None the
+    character played, else the sidekick's; each its own direction and its own voice (the "voice" field, when it has
+    one: the app's voice otherwise)."""
     style_fn: Callable[[], str] | None = None
+    cast_fn: Callable[[str | None], tuple] | None = None
 
     @property
     def opt(self):
@@ -66,25 +69,32 @@ class HubVoice:
         """The player started talking (push-to-talk): the app's narrator stops on the "ptt" event itself."""
         return None
 
-    def say(self, text, interrupt=False, tone="", first=True):
+    def say(self, text, interrupt=False, tone="", first=True, who=None):
         """tone: how to deliver this one line (the coach's TONE: in character), added to the character's voice; it
         goes as its own field on a reply's first sentence only (first=False: a later one: ElevenLabs v3 acts it as a
-        tag, once a line), and folded into the style on every sentence (OpenAI performs the whole line with it)."""
+        tag, once a line), and folded into the style on every sentence (OpenAI performs the whole line with it).
+        who: the sidekick's line (cast.py): its own style and voice (the "voice" field), its own tone none."""
         if not self.enabled or not text or self.muted:
             return
         style = self.style_fn() if self.style_fn else ""      # the character the coach plays: how to perform it
+        voice_id = ""
+        if self.cast_fn:                                      # each character's own voice (who None: the one played)
+            style, voice_id = self.cast_fn(who)
+            if who:
+                tone = ""                                     # (the reply's TONE is the main character's)
         tone = " ".join(str(tone or "").split())
         if tone:
             style = ("%s. This line: %s." % (style.rstrip(" ."), tone)) if style else "Deliver this line %s." % tone
         # a tone always comes with a style (folded in above): {style, tone}, {style} or neither
-        self.hub.publish("speak", {"text": text.replace("\n", " ").replace("\r", " ").strip(),
-                                   "interrupt": bool(interrupt),
-                                   **({"style": style, "tone": tone} if tone and first else
-                                      {"style": style} if style else {})})
+        # text and interrupt always; style, tone (a reply's first sentence only) and voice (a sidekick's) when set
+        self.hub.publish("speak", {k: v for k, v in {
+            "text": text.replace("\n", " ").replace("\r", " ").strip(), "interrupt": bool(interrupt),
+            "style": style, "tone": tone if first else "", "voice": voice_id}.items() if v or k in ("text", "interrupt")})
 
 
 class Voice:
     style_fn: Callable[[], str] | None = None    # unused: Windows speech can't perform a persona
+    cast_fn: Callable[[str | None], tuple] | None = None
     @property
     def opt(self):
         """The voice settings, read through settings_manifest.json (defaults, ranges)."""
@@ -147,8 +157,8 @@ class Voice:
         finally:
             self.lock.release()
 
-    def say(self, text, interrupt=False, tone="", first=True):
-        if not self.enabled or not text or self.muted:     # (tone, first: Windows speech can't perform a tone)
+    def say(self, text, interrupt=False, tone="", first=True, who=None):
+        if not self.enabled or not text or self.muted:     # (tone, first, who: one voice for this process)
             return
         line = text.replace("\n", " ").replace("\r", " ").strip()
         with self.lock:

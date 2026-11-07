@@ -1013,8 +1013,12 @@ function showMessage(m) {
   const web = (m.web_sources || []).length
     ? `<span class="facts">Web: ${m.web_sources.filter((w) => /^https?:\/\//.test(w.url)).map(source).join(', ')}</span>` : '';
   const speaker = SPEAKER[m.kind] || m.kind;
+  // a reply with the sidekick's lines in it (the engine's cast.py): each part on its own line, the sidekick's by name
+  const said = (m.parts || []).length
+    ? m.parts.map((p) => (p.side ? `<span class="by sidekick">${esc(p.who)}:</span>` : '') + esc(p.text)).join('<br>')
+    : esc(m.text);
   el.title = m.model ? `${speaker}, ${m.model}` : '';
-  el.innerHTML = `<span class="ts">${clockTime(m.t * 1000)}</span><span class="by">${esc(speaker)}:</span>${esc(m.text)}${video}${web}${facts}`;
+  el.innerHTML = `<span class="ts">${clockTime(m.t * 1000)}</span><span class="by">${esc(speaker)}:</span>${said}${video}${web}${facts}`;
   const feed = $('feed');
   feed.appendChild(el);
   while (feed.children.length > FEED_MAX) feed.firstElementChild.remove();

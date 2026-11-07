@@ -108,6 +108,8 @@ export const SCHEMA: Tab[] = [
       { title: "Roleplay", intro: "Ask the coach to play anyone (\"talk like a pirate\", \"be my drill sergeant\", \"you're Thrall now\") and it stays in character until you tell it to drop the act. It writes these itself; you can edit them here.", fields: [
         { key: L + "persona", label: "Character", type: "text", wide: true,
           help: "Who the coach plays, and how they talk. Empty: the coach's own plain voice." },
+        { key: L + "sidekick", label: "Sidekick", type: "text",
+          help: "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines and voice, now and then. The name of one the coach has played; empty: none. \"Let me talk to Fizzle\" swaps them." },
         { key: L + "persona_voice", label: "Voice direction", type: "text", wide: true,
           help: "How the character sounds out loud: accent, pace, energy. Performed by the OpenAI voice (gpt-4o-mini-tts)." },
         { key: L + "banter", label: "Speak up unprompted", type: "bool",

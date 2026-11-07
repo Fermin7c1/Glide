@@ -30,10 +30,13 @@ When you make up something about yourself (your past, scars, family, opinions, h
 captain, your apprentice, your rival), add a final line "ROLE: <that, and what you call them>" (once; again only if
 it changes). When the player sets up a scene to play together ("let's be bounty hunters after Hogger"), play it and
 add a final line "SCENE: <the premise, 1-2 sentences>" (once; again only if it changes), and "SCENE: end" when it's
-over or they drop it.%s
+over or they drop it. When the player wants a second character along (a sidekick, a rival, a pet: "bring Fizzle
+along", "add a gnome tinker"), add a final line "SIDEKICK: <its name> | <a vivid brief of it, 1-3 sentences>" (just
+"SIDEKICK: <its name>" for one CHARACTERS YOU HAVE PLAYED lists), and "SIDEKICK: off" when they send it away.%s
 The coaching underneath stays exact: the same single most useful point, real names, numbers and directions from
 the data, nothing invented. Lengths may stretch for flavour: callouts up to about %d words, spoken answers %d,
-typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE, ROLE, SCENE) keep their exact plain format."""
+typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE, ROLE, SCENE, SIDEKICK) keep their exact plain
+format."""
 
 LORE_HEAD = "\nYOUR OWN STORY SO FAR (what you have told them about yourself: never contradict it, build on it):\n"
 SAMPLES_HEAD = "\nHOW YOU SOUND (lines in your own voice: keep this voice, never reuse them word for word):\n"
@@ -47,8 +50,8 @@ REMINDER = "Stay fully in character (%s): say it the way they would."
 
 # PERSONA in any case ("persona: off"); the others only as written, upper-case: an answer's own "Role: tank or
 # healer" or "Name: Hogger" line is the answer's
-_LINE = re.compile(r"^\s*(?:((?i:PERSONA))|(VOICE|NAME|LORE|TONE|ROLE|SCENE))\s*:\s*(.*)$")
-_MIDLINE = re.compile(r"(?<=\S)\s+(?=(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|PERSONA)\s*:\s)")
+_LINE = re.compile(r"^\s*(?:((?i:PERSONA))|(VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK))\s*:\s*(.*)$")
+_MIDLINE = re.compile(r"(?<=\S)\s+(?=(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK|PERSONA)\s*:\s)")
 _SCENE_END = re.compile(r"^(?:end(?:ed|s)?|over|off|none|done|finished|stop(?:ped)?)\b", re.I)
 _OFF = re.compile(r"^(?:off|none|normal|default|clear|no(?:ne)? persona|-)\W*$", re.I)
 _RECALL = re.compile(r"^(?:recall|restore)\b[\s:]+(.+?)\W*$", re.I)     # "recall Sarge" (not "Recalling...")
@@ -68,7 +71,7 @@ def split(text):
     <name>); "name", "voice", "tone", "role": the line's text; "lore": [facts]; "scene": None, "" (SCENE: end) or the
     premise."""
     keep, found = [], {"persona": None, "recall": None, "name": None, "voice": None, "tone": None, "lore": [],
-                       "role": None, "scene": None}
+                       "role": None, "scene": None, "sidekick": None}
     for line in _MIDLINE.sub("\n", text or "").splitlines():     # one written mid-line is a line of its own
         m = _LINE.match(line)
         if not m:
@@ -86,6 +89,13 @@ def split(text):
                 found["lore"].append(clean(value))
         elif what == "scene":
             found["scene"] = "" if _SCENE_END.match(value) else clean(value)
+        elif what == "sidekick":
+            # "SIDEKICK: off" -> ("", ""); "SIDEKICK: <name> | <brief>" a new one; "SIDEKICK: <name>" one played before
+            if _OFF.match(value) or _SCENE_END.match(value):
+                found["sidekick"] = ("", "")
+            else:
+                name, _, brief = value.partition("|")
+                found["sidekick"] = (clean(name).strip(" .")[:60], clean(brief))
         elif value:
             found[what] = clean(value).strip(" .")[:80] if what in ("name", "tone") else clean(value)
     return "\n".join(keep).strip(), found
@@ -96,6 +106,25 @@ def short_name(brief, words=8):
     first = re.split(r"(?<=[.!?;:])\s", brief or "", maxsplit=1)[0].strip().rstrip(".!?;:")
     w = first.split()
     return " ".join(w[:words]) + ("…" if len(w) > words else "")
+
+
+COMPANION = """YOUR COMPANION ON THE ROAD: %(name)s, a second character along with you: %(brief)s%(more)s
+Now and then (mostly in your unprompted asides, at big moments, or when the player speaks to them) give them a line
+of their own: on a line of its own that starts with "[%(name)s]", in their voice, not yours; they can tease you, argue,
+chime in. At most two of their lines in a reply, never in plain directions (the coaching is yours). When the player
+wants %(name)s to take the lead ("let me talk to %(name)s"), add a final line "PERSONA: recall %(name)s": you swap
+places, and you come along as theirs."""
+
+
+def companion(name, ch):
+    """The block's part for the sidekick (cast.py): who it is, how it sounds, its story."""
+    ch = ch or {}
+    more = ""
+    if ch.get("samples"):
+        more += "\nHow they sound: " + " / ".join('"%s"' % x for x in (ch["samples"] or [])[:3])
+    if ch.get("lore"):
+        more += "\nTheir story so far: " + "; ".join((ch["lore"] or [])[:8])
+    return COMPANION % {"name": name, "brief": clean(ch.get("brief") or ""), "more": more}
 
 
 def seed_request(brief, lore=(), role=""):

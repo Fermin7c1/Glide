@@ -22,6 +22,7 @@ interface Line {
   tag?: string;               // a tagged line (speakAndWait); the coach's lines have none
   done?: () => void;          // resolves its speakAndWait
   cancelled?: boolean;        // cancel(tag) while it was the line being spoken
+  voice?: string;             // the sidekick's line: its own voice (the Windows fallback picks another one too)
 }
 /** An utterance the narrator handed to speechSynthesis and that hasn't ended. */
 interface Handed { u: SpeechSynthesisUtterance; tag: string; resolve: () => void }
@@ -80,17 +81,29 @@ class Narrator {
     return list.find((x) => x.name.toLowerCase().startsWith(stem));
   }
 
-  private async windowsSay(text: string, tag = ""): Promise<void> {
+  private async windowsSay(text: string, tag = "", other = ""): Promise<void> {
     if (!window.speechSynthesis) return;
     const gen = this.gen;
     const list = await this.voicesReady();
     if (gen !== this.gen) return;                 // stopped or interrupted while the voices loaded
-    return new Promise((resolve) => this.handOver(this.utterance(text, list), tag, resolve));
+    return new Promise((resolve) => this.handOver(this.utterance(text, list, other), tag, resolve));
   }
 
-  private utterance(text: string, list: SpeechSynthesisVoice[]): SpeechSynthesisUtterance {
+  /** Another Windows voice than the chosen one (else the default), the same each time for `key` (a character's own
+   * voice: the engine's cast.py). */
+  private otherVoice(list: SpeechSynthesisVoice[], key: string): SpeechSynthesisVoice | undefined {
+    const mine = this.pickVoice(list) ?? list.find((x) => x.default);
+    const lang = (mine?.lang || "en").slice(0, 2);
+    const pool = list.filter((x) => x !== mine && (x.lang || "").startsWith(lang));
+    if (!pool.length) return mine;
+    let h = 0;
+    for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return pool[h % pool.length];
+  }
+
+  private utterance(text: string, list: SpeechSynthesisVoice[], other = ""): SpeechSynthesisUtterance {
     const u = new SpeechSynthesisUtterance(text);
-    const v = this.pickVoice(list);
+    const v = other ? this.otherVoice(list, other) : this.pickVoice(list);
     if (v) u.voice = v;
     this.noteVoice(v ? v.name : `the Windows default${this.voiceName ? ` (${this.voiceName} not found among ${list.length} voices)` : ""}`);
     u.rate = this.rate;
@@ -136,14 +149,14 @@ class Narrator {
 
   /** A coach line; `style` = how to perform it (the character the coach plays; the OpenAI voice takes it), `tone` =
    * how to deliver this one line (in character; ElevenLabs v3 acts it as an audio tag). */
-  say(text: string, interrupt = false, style = "", tone = ""): void {
+  say(text: string, interrupt = false, style = "", tone = "", voice = ""): void {
     if (!text || this.muted) return;
     if (interrupt) this.stop();
     if (this.provider === "windows") {
-      this.windowsSay(text);
+      this.windowsSay(text, "", voice);
       return;
     }
-    this.enqueue(text, undefined, undefined, style, tone);
+    this.enqueue(text, undefined, undefined, style, tone, voice);
   }
 
   /** The player started talking (push-to-talk is held): stop at once, like someone talked over on a call. The line
@@ -207,8 +220,9 @@ class Narrator {
     this.pump();
   }
 
-  private enqueue(text: string, tag?: string, done?: () => void, style = "", tone = ""): void {
-    const args: [string, string?, string?] = tone ? [text, style, tone] : style ? [text, style] : [text];
+  private enqueue(text: string, tag?: string, done?: () => void, style = "", tone = "", voice = ""): void {
+    const args: [string, string?, string?, string?] = voice ? [text, style, tone, voice] : tone ? [text, style, tone]
+      : style ? [text, style] : [text];
     const audio = glide.invoke("tts:synth", ...args)
       .then((r) => new Blob([r.data as BlobPart], { type: r.mime }))
       .catch((e) => {
@@ -218,7 +232,7 @@ class Narrator {
         }
         return null;
       });
-    this.queue.push({ text, audio, tag, done });
+    this.queue.push({ text, audio, tag, done, voice });
     if (this.queue.length === 1 && !this.playing) this.next();
   }
 
@@ -230,7 +244,7 @@ class Narrator {
     const blob = await line.audio;
     if (gen !== this.gen) return;
     if (line.cancelled) { /* cancelled while its audio was coming */ }
-    else if (!blob) await this.windowsSay(line.text, line.tag);
+    else if (!blob) await this.windowsSay(line.text, line.tag, line.voice || "");
     else { this.playingLine = line; await this.play(blob); this.playingLine = null; }
     if (gen !== this.gen) return;
     line.done?.();

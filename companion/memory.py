@@ -226,7 +226,8 @@ class Memory:
                     "last": as_float(v.get("last"), 0.0, finite=True, bool_ok=False),
                     "role": v.get("role") if isinstance(v.get("role"), str) else "",
                     "scene": v.get("scene") if isinstance(v.get("scene"), str) else "",
-                    "scene_t": as_float(v.get("scene_t"), 0.0, finite=True, bool_ok=False)}
+                    "scene_t": as_float(v.get("scene_t"), 0.0, finite=True, bool_ok=False),
+                    "tts_voice": v.get("tts_voice") if isinstance(v.get("tts_voice"), str) else ""}
                 for field, cap in CHARACTER_LISTS.items():
                     ch[field] = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
         zones = _typed(d, "zones", list)
@@ -545,6 +546,14 @@ class Memory:
         """Add to one of a character's lists (CHARACTER_LISTS: sample lines, favourite lines, its story threads, its
         recent lines), keeping the newest; or set its "role" (who the player is to it) or "scene" (the scene being
         played; "" ends it): one like the one kept already changes nothing. -> whether it changed."""
+        if field == "tts_voice":                    # the voice a sidekick speaks with (cast.voice_for)
+            with self.lock:
+                ch = self.characters.get(self._key(name))
+                if ch is None or ch.get("tts_voice") == items:
+                    return False
+                ch["tts_voice"] = str(items)[:40]
+                self._save_bond()
+                return True
         if field not in ("role", "scene") and field not in CHARACTER_LISTS:
             raise ValueError("no character field %r" % field)
         key = self._key(name)

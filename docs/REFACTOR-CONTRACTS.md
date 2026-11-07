@@ -946,3 +946,21 @@ they don't spell out.
   lets pass in a row stretch the wait between quiet-moment asides (x1.5 each, x4 at most; a reply resets it:
   `Banter.unanswered`). Greetings say how long the two have been at it (days, sessions; a week to the day is marked).
   The player asked (2026-11-07). Pinned by `tests/test_presence.py`.
+- **The cast: a sidekick along (contracts 2, 3, 4, 5 and 8; additive). Social Phase 5.** A second character can
+  come along with the one the coach plays (`llm.sidekick`, a saved character's name, live; "Sidekick" in Settings'
+  Roleplay group): a reply's `SIDEKICK: <name> | <brief>` (a new one, saved) / `SIDEKICK: <name>` (one played
+  before) / `SIDEKICK: off` sets it ("Sidekick: <name>" / "Sidekick gone" in the chat; "No saved character called
+  <name>"); "PERSONA: recall <sidekick>" (or playing it anew by its name) swaps the two; dropping the act sends it
+  away too. The persona block gets "YOUR COMPANION ON THE ROAD"; the sidekick's lines start with `[Name]` (at most
+  two a reply, never in plain directions), and a message with them gains `parts` `[{who, text, side?}]` (contract 3,
+  `CoachMessage.parts`), its text showing them as "Name: line" (the coach screen: each part on its own line, the
+  sidekick's name in its own colour); the conversation the model reads back keeps `[Name]`. Each part is spoken in
+  its speaker's voice: the speak event gains `voice` (contract 2; a character's own voice, `tts_voice` in
+  `coach_bond.json`, contract 5: given when it first comes along and kept wherever it plays; one without speaks in
+  the app's voice), `tts:synth` a 4th argument `voice` (contract 4; OpenAI's voice of that name, the next one when it
+  is the chosen one; ElevenLabs, Azure and Google another of the player's voices, the same each time, from the voice
+  list asked once), and Windows speech picks another installed voice of the same language. The sidekick's lines are
+  performed with its own voice direction, else its brief. Early speech stops at a `[Name]` line or a SIDEKICK line.
+  In downtime half the asides are a short back-and-forth; the milestones, the end, greetings and goodbyes get both.
+  The player asked (2026-11-07). Pinned by `tests/test_cast.py`, `tests/test_voice_tone.py` and
+  `tests/test_voice_barge_in.py`.

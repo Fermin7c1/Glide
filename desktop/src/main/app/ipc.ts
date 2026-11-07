@@ -128,10 +128,11 @@ function appChannels(d: IpcDeps): void {
     const env = TTS_KEYS[provider as keyof typeof TTS_KEYS];
     return env ? keyValue(env) : "";
   };
-  handle("tts:synth", async (text: string, style?: string, tone?: string) => {
+  handle("tts:synth", async (text: string, style?: string, tone?: string, voice?: string) => {
     const s = settings.current.speech || {};
     return { mime: "audio/mpeg", data: await synth(s, String(text || "").slice(0, 4000), ttsKey(s.provider),
-                                                   String(style || "").slice(0, 1000), String(tone || "").slice(0, 200)) };
+                                                   String(style || "").slice(0, 1000), String(tone || "").slice(0, 200),
+                                                   String(voice || "").slice(0, 40)) };
   });
   handle("tts:voices", (provider) => ttsVoices(provider, ttsKey(provider), settings.current.speech?.azure?.region));
 

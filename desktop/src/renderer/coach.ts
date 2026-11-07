@@ -87,7 +87,8 @@ function connectEvents(url: string): void {
   events.addEventListener("speak", (e) => {
     try {
       const d: SpeakEvent = JSON.parse((e as MessageEvent).data);
-      speech.say(String(d.text || ""), !!d.interrupt, d.style ? String(d.style) : "", d.tone ? String(d.tone) : "");
+      speech.say(String(d.text || ""), !!d.interrupt, d.style ? String(d.style) : "", d.tone ? String(d.tone) : "",
+                 d.voice ? String(d.voice) : "");
     } catch { /* ignore */ }
   });
 }

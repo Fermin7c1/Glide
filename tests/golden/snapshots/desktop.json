@@ -602,6 +602,13 @@
       },
       {
        "def": "",
+       "help": "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines and voice, now and then. The name of one the coach has played; empty: none. \"Let me talk to Fizzle\" swaps them.",
+       "key": "companion.llm.sidekick",
+       "label": "Sidekick",
+       "type": "text"
+      },
+      {
+       "def": "",
        "help": "How the character sounds out loud: accent, pace, energy. Performed by the OpenAI voice (gpt-4o-mini-tts).",
        "key": "companion.llm.persona_voice",
        "label": "Voice direction",

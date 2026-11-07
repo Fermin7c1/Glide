@@ -194,6 +194,18 @@ fire("speak", { text: "tap", interrupt: false });
 await sleep(20); fire("ptt", { state: "listening" }); await sleep(50); fire("ptt", { state: "idle" });
 await sleep(DUR * 2); take("tap");
 out.barged = { before: speech.bargedSince(0), tap: speech.bargedSince(t) };
+
+// a sidekick's line (the engine's cast.py): its own voice goes to tts:synth after the tone; a Windows voice picks
+// another installed one of the same language, the same each time
+fire("speak", { text: "boom", interrupt: false, style: "Squeaky.", voice: "onyx" });
+await sleep(DUR * 2); take("side");
+const list = [{ name: "Microsoft Zira", lang: "en-US" }, { name: "Microsoft David", lang: "en-US" },
+              { name: "Microsoft Mark", lang: "en-GB" }, { name: "Microsoft Hortense", lang: "fr-FR" }];
+const pick = (l, k) => (speech["otherVoice"](l, k) || {}).name;
+out.other = { a: pick(list, "onyx"), again: pick(list, "onyx"), only: pick([list[0]], "onyx") ?? null,
+              // no voice chosen: never the default one
+              dflt: ["onyx", "sage", "ash", "nova"].map((k) => pick([{ name: "Microsoft Mark", lang: "en-US", default: true },
+                                                                    { name: "Microsoft Guy", lang: "en-US" }], k)) };
 console.log(JSON.stringify(out));
 """
 
@@ -247,4 +259,11 @@ assert got["win_after"] == ["speak:c", "start:c", "end:c"], got["win_after"]
 c = online("tap")
 assert c == ["synth:tap", "play:tap", "ended:tap"], c
 assert got["barged"] == {"before": True, "tap": False}, got["barged"]
+
+# the sidekick's own voice: to tts:synth (text|style|tone|voice); on Windows another English voice, always the same
+assert online("side")[:1] == ["synth:boom|Squeaky.||onyx"], got["side"]
+o = got["other"]
+assert o["a"] in ("Microsoft Zira", "Microsoft David", "Microsoft Mark") and o["a"] == o["again"], o
+assert o["only"] == "Microsoft Zira", "one voice only: that one: %r" % o
+assert o["dflt"] == ["Microsoft Guy"] * 4, o
 print("OK")

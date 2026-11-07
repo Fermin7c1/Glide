@@ -150,6 +150,7 @@ class App:
         # switched by coach.swap_kb after a background rebuild
         self.kb_handle = self.coach.kb_handle
         self.voice.style_fn = self.coach.persona_voice     # the app's narrator performs the coach's persona
+        self.voice.cast_fn = self.coach.cast_voice         # ... and its sidekick, in a voice of its own
         self.coach.start()
         if not args.sim:
             self.catalog.refresh_if_old()
@@ -264,7 +265,23 @@ class App:
         """Say a message: all of it, or only the rest when its start was said while it streamed (speak_early). The
         tone goes as its own field with the first sentence only (ElevenLabs v3 acts it as a tag: once a line)."""
         tone = str(m.get("tone") or "")
-        if m.get("spoken"):
+        if m.get("parts"):
+            # a reply with the sidekick's lines (cast.py): each part in its speaker's voice; the start said early
+            # is the main character's first part's
+            said = " ".join(str(m.get("spoken") or "").split())
+            first, toned = True, bool(said)       # (the tone went with the start said early)
+            for p in m["parts"]:
+                text = " ".join(str(p.get("text") or "").split())
+                if said and first and text.startswith(said):
+                    text = text[len(said):].strip()
+                main = not p.get("side")
+                if text:
+                    self.voice.say(text, interrupt=bool(m.get("urgent")) and first and not said,
+                                   tone=tone if main else "", first=main and not toned,
+                                   **({} if main else {"who": p["who"]}))
+                    toned = toned or main
+                first = False
+        elif m.get("spoken"):
             said, full = " ".join(m["spoken"].split()), " ".join(m["text"].split())
             rest = full[len(said):].strip() if full.startswith(said) else full
             if rest:

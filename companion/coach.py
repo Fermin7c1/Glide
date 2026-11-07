@@ -28,6 +28,7 @@ import time
 from collections import deque
 
 import banter as banter_mod
+import cast as cast_mod
 import coach_prompts as prompts
 import coach_tools
 import embeddings
@@ -195,17 +196,21 @@ class Coach:
             return time.time()
 
     def _emit(self, msg):
+        # the model reads back what it wrote: a sidekick's lines as "[<name>] <line>" (cast.script)
+        said = cast_mod.script(msg["parts"]) if msg.get("parts") else msg.get("text")
         if msg.get("kind") in msg_kinds.COACH_SAID and msg.get("text"):
             self.convo.append({"t": self._now(), "who": "coach", "kind": msg["kind"],
-                               "text": msg["text"], **({"chat": True} if msg.get("chat") else {})})
+                               "text": said, **({"chat": True} if msg.get("chat") else {})})
             if msg.get("speak"):
                 self.said_t = time.time()        # the coach spoke (asides wait for quiet after any line)
             # its worn phrases (Banter.worn): the character's own lines (asides, chat replies), not the coaching's
             if self.persona() and self.deps.memory is not None and (msg["kind"] == "banter" or msg.get("chat")):
-                self.deps.memory.character_add(self.persona_name(), "lines", msg["text"])
+                own = [p["text"] for p in msg.get("parts") or () if p["who"] != self.sidekick()]
+                self.deps.memory.character_add(self.persona_name(), "lines",
+                                               " ".join(own) if msg.get("parts") else msg["text"])
         if msg.get("kind") in msg_kinds.RECENT and msg.get("text"):
             self.recent.append({"t": msg.get("t") or self._now(), "type": "message", "kind": msg["kind"],
-                                "text": msg["text"]})
+                                "text": said})
         self._emit_raw(msg)
 
     def push(self, triggers, state):
@@ -684,6 +689,7 @@ class Coach:
                "model": self._model_note(model, meta), "t": time.time()}
         if tone:
             msg["tone"] = tone                     # how to deliver it in character (the OpenAI voice performs it)
+        self._cast(msg)
         if chatting:
             msg["chat"] = True                     # an answer that keeps a chat going (Banter.in_chat)
         if speech is not None and speech.said:
@@ -772,7 +778,21 @@ class Coach:
                "model": "update notice" if not text else self._model_note(model, {}), "t": time.time()}
         if text and self.tone:
             msg["tone"] = self.tone
+        if text:
+            self._cast(msg)
         self.emit(msg)
+        return msg
+
+    def _cast(self, msg):
+        """A reply with the sidekick's lines in it: its parts (who says what: the app speaks each in its own voice)
+        and the chat's text with the sidekick's lines as "<name>: <line>"."""
+        side = self.sidekick()
+        if not side or "[" not in (msg.get("text") or ""):
+            return msg
+        rows = cast_mod.parts(msg["text"], self.persona_name(), side)
+        if cast_mod.has_side(rows, side):
+            msg["parts"] = rows
+            msg["text"] = cast_mod.display(rows, self.persona_name())
         return msg
 
     def barge(self):
@@ -830,6 +850,67 @@ class Coach:
                 name = ""
         return name or persona_mod.short_name(brief, 4)
 
+    def sidekick(self):
+        """The name of the second character along (llm.sidekick: one kept in the memory), or "" (none, or no persona)."""
+        name = persona_mod.clean(self.cfg.get("sidekick"))[:60]
+        m = self.deps.memory
+        if not name or not self.persona() or m is None or cast_mod.same(name, self.persona_name()):
+            return ""
+        ch = m.character(name)
+        return ch["name"] if ch else ""
+
+    def cast_voice(self, who=None):
+        """(style, voice id) a line is spoken with: `who` the sidekick's, None the character played. Each character
+        keeps its own voice wherever it plays (tts_voice, given when it first came along; one without speaks in the
+        app's voice, but never the same as the other's), the sidekick its own voice direction, else its brief."""
+        main = str((self._character() or {}).get("tts_voice") or "")
+        side = self.sidekick()
+        if not (who and side and cast_mod.same(who, side)):
+            return self.persona_voice(), main
+        ch = (self.deps.memory.character(side) if self.deps.memory is not None else None) or {}
+        brief = persona_mod.clean(ch.get("brief"))
+        style = persona_mod.clean(ch.get("voice")) or (("Perform this character: " + brief) if brief else "")
+        own = str(ch.get("tts_voice") or "")
+        if own == main:                   # (neither has one, or one voice for both)
+            own = cast_mod.voice_for(side, avoid=main)
+        return style[:persona_mod.MAX_CHARS], own
+
+    def _set_sidekick(self, name):
+        """Take `name` along as the sidekick ("" sends it away), saved like a setting."""
+        name = persona_mod.clean(name)[:60]
+        if (self.cfg.get("sidekick") or "") == name:
+            return False
+        self.cfg["sidekick"] = name
+        if self.deps.on_toggle:
+            try:
+                self.deps.on_toggle("sidekick", name)
+            except Exception as e:  # noqa: BLE001
+                log_once("coach.sidekick_save", e)
+        self.emit({"kind": "info", "speak": False, "text": ("Sidekick: %s" % name) if name else "Sidekick gone"})
+        return True
+
+    def _apply_sidekick(self, found):
+        """A reply's SIDEKICK line: a new character along (kept with its own voice), one played before, or none."""
+        m = self.deps.memory
+        name, brief = found
+        if not name:
+            self._set_sidekick("")
+            return
+        if m is None or not self.persona() or cast_mod.same(name, self.persona_name()):
+            return
+        if brief:
+            ch = m.character_save(name, brief)
+            if ch is not None and not ch.get("tts_voice"):
+                main = str((self._character() or {}).get("tts_voice") or "")
+                m.character_add(name, "tts_voice", cast_mod.voice_for(name, avoid=main))
+        ch = m.character(name)
+        if ch is None:
+            self.emit({"kind": "info", "speak": False, "text": "No saved character called %s" % name})
+            return
+        if cast_mod.same(ch["name"], self.persona_name()):     # ("Grimbeard" for "Sergeant Grimbeard": the one played)
+            return
+        self._set_sidekick(ch["name"])
+
     def _character(self):
         """The saved character being played (Memory.characters), or None."""
         m = self.deps.memory
@@ -838,6 +919,7 @@ class Coach:
     def _apply_persona(self, found):
         """A reply's persona lines (persona.split): play, recall, rename or drop a character, keep its lore."""
         m = self.deps.memory
+        was, side = self.persona_name(), self.sidekick()
         if found["recall"]:
             ch = m.character(found["recall"]) if m is not None else None
             if ch:
@@ -848,12 +930,18 @@ class Coach:
             self._set_persona(found["persona"], found["voice"] or "", found["name"])
         elif self.persona() and (found["voice"] or found["name"]):
             self._set_persona(self.persona(), found["voice"] or self.persona_voice(), found["name"] or self.persona_name())
+        if side and self.persona() and cast_mod.same(side, self.persona_name()):
+            # the sidekick takes over (recalled, or played anew by its name): the old one comes along as theirs
+            keep = was and not cast_mod.same(was, side) and m is not None and m.character(was)
+            self._set_sidekick(was if keep else "")
         if found["lore"] and m is not None and self.persona():
             m.character_save(self.persona_name(), self.persona(), self.persona_voice())
             for fact in found["lore"]:
                 m.character_lore(self.persona_name(), fact)
         if found["role"] and m is not None and self.persona():
             m.character_add(self.persona_name(), "role", found["role"])
+        if found["sidekick"] is not None:
+            self._apply_sidekick(found["sidekick"])
         if found["scene"] is not None and m is not None and self.persona():
             # the character's scene (Memory: a new one or its end; said again, or near enough, changes nothing)
             if m.character_add(self.persona_name(), "scene", found["scene"]):
@@ -870,8 +958,6 @@ class Coach:
             self.deps.memory.character_save(name, brief, voice)
         changed = {k: v for k, v in (("persona", brief), ("persona_voice", voice), ("persona_name", name))
                    if (self.cfg.get(k) or "") != v}
-        if not changed:
-            return
         self.cfg.update(changed)
         for k, v in changed.items():
             if self.deps.on_toggle:
@@ -883,6 +969,8 @@ class Coach:
             self.emit({"kind": "info", "speak": False,
                        "text": "Coach persona: %s" % persona_mod.short_name(brief, 14) if brief else
                        "Coach persona off"})
+        if not brief:
+            self._set_sidekick("")          # the act dropped: the sidekick goes with it
 
     def _ask_model(self, model, user, kctx, question, voice, deep, speech):
         """Questions and reviews with the knowledge layer go through the tool-use loop; callouts (and models
@@ -1032,6 +1120,9 @@ class Coach:
                 ch.get("lore") or (), (ch.get("samples") or []) + (ch.get("favorites") or [])[-3:],
                 ch.get("plot") or (), ch.get("role") or "",
                 str(ch.get("scene") or "") if time.time() - (ch.get("scene_t") or 0) < SCENE_S else "")) if x)
+            side = self.sidekick()
+            if side and m is not None:
+                mem = mem + "\n\n" + persona_mod.companion(side, m.character(side))
         # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
         # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
         if mem:

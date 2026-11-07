@@ -263,6 +263,7 @@ body { background: radial-gradient(1200px 800px at 45% 35%, #151821 0%, var(--ni
 .msg .ts { color: var(--ink-3); font-size: 12px; margin-right: 8px; }
 .msg.question .by { color: #8fc0ff; }
 .msg.review .by { color: #c9a6ff; }
+.msg .by.sidekick { color: #86d6b4; }
 .msg.error .by, .msg.urgent .by { color: var(--behind); }
 .msg.urgent { color: var(--ink); }
 .msg .facts { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }

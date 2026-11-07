@@ -84,10 +84,12 @@ def split_watch(text):
 
 # the lines a reply ends with that are never spoken (the coach strips and applies them)
 DIRECTIVES = ("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:", "BANTER:", "CHAT:", "NAME:", "LORE:",
-              "TONE:", "ROLE:", "SCENE:")
+              "TONE:", "ROLE:", "SCENE:", "SIDEKICK:")
 
 
-MIDLINE_DIRECTIVE = re.compile(r"(?<=\S)\s+(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|PERSONA|BANTER|CHAT)\s*:\s")
+MIDLINE_DIRECTIVE = re.compile(r"(?<=\S)\s+(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK|PERSONA|BANTER|CHAT)\s*:\s")
+# a line of the sidekick's written mid-line ("...east. [Fizzle] Boom?", cast.py; a cut-off "[Mr." too), not a link
+MIDLINE_SPEAKER = re.compile(r"(?<=\S)\s+\[[^\]\n]{0,40}(?:\](?!\()|$)")
 
 
 class EarlySpeech:
@@ -127,12 +129,15 @@ class EarlySpeech:
             self.used += m.end()
             # a line that doesn't end in . ! ? runs on into the next: a directive line there ends what is said
             lines = raw.split("\n")
-            cut = next((i for i, ln in enumerate(lines) if ln.strip().upper().startswith(DIRECTIVES)), None)
+            cut = next((i for i, ln in enumerate(lines) if ln.strip().upper().startswith(DIRECTIVES)
+                        or ln.strip().startswith("[")), None)      # (a sidekick's line: its own voice, later)
             if cut is not None:
                 raw, self.stopped = "\n".join(lines[:cut]), True
-            mid = MIDLINE_DIRECTIVE.search(raw)    # one written mid-line ("...east. SCENE: we're hunters")
-            if mid:
-                raw, self.stopped = raw[:mid.start()], True
+            # one written mid-line ("...east. SCENE: we're hunters"), or a line of the sidekick's ("... [Fizzle] Boom?")
+            mid = min((x.start() for x in (MIDLINE_DIRECTIVE.search(raw), MIDLINE_SPEAKER.search(raw)) if x),
+                      default=None)
+            if mid is not None:
+                raw, self.stopped = raw[:mid], True
             sentence = " ".join(raw.split())
             up = sentence.upper()
             n = len(sentence.split())

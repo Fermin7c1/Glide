@@ -123,6 +123,7 @@ class Briefings:
             msg["spoken"] = speech.spoken          # the head (and any streamed sentences) was said already
         if c.pack is not None and facts:
             c._ground(msg, facts, True)
+        c._cast(msg)
         c.emit(msg)
         return msg
 

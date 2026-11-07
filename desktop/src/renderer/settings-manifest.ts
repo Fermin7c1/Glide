@@ -43,6 +43,7 @@ export const MANIFEST: Record<string, ManifestEntry> = {
   "llm.review_words": {"default":70,"min":10,"max":400,"kind":"number"},
   "llm.persona": {"default":"","kind":"text","live":true},
   "llm.persona_name": {"default":"","kind":"text","live":true},
+  "llm.sidekick": {"default":"","kind":"text","live":true},
   "llm.persona_voice": {"default":"","kind":"text","live":true},
   "llm.banter": {"default":true,"kind":"bool","live":true},
   "llm.banter_minutes": {"default":8,"min":2,"max":60,"kind":"int","live":true},

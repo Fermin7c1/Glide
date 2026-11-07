@@ -9,6 +9,8 @@ export const TTS_KEYS: Record<Exclude<TtsProvider, "windows">, string> = {
 };
 
 export const OPENAI_VOICES = ["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"];
+// the ones every OpenAI voice model has (ballad and verse are gpt-4o-mini-tts's only)
+const SHARED_VOICES = OPENAI_VOICES.filter((v) => v !== "ballad" && v !== "verse");
 
 const TIMEOUT = 15000;
 
@@ -45,14 +47,20 @@ export function v3Text(text: string, tone = ""): string {
 }
 
 type Online = Exclude<TtsProvider, "windows">;
-type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal, style: string, tone: string) => Promise<Buffer>;
+type Synth = (s: SpeechSettings, text: string, key: string, signal: AbortSignal, style: string, tone: string,
+               voice: string) => Promise<Buffer>;
 type VoiceList = (key: string, signal: AbortSignal, region?: string) => Promise<Voice[]>;
 
 const SYNTH: Record<Online, Synth> = {
-  async openai(s, text, key, signal, style) {
+  async openai(s, text, key, signal, style, _tone, voice) {
     const o = s.openai || {};
     const model = o.model || "gpt-4o-mini-tts";
-    const body: Record<string, unknown> = { model, voice: o.voice || "coral", input: text, response_format: "mp3" };
+    // a character's own voice (the engine's cast.py: one of OpenAI's); the chosen voice is the other one's, so a
+    // character given the same one takes the next
+    const mine = o.voice || "coral";
+    const who = !voice || !OPENAI_VOICES.includes(voice) ? mine
+      : voice !== mine ? voice : SHARED_VOICES[(SHARED_VOICES.indexOf(voice) + 1) % SHARED_VOICES.length];
+    const body: Record<string, unknown> = { model, voice: who, input: text, response_format: "mp3" };
     // the coach's persona (style) is performed instead of the usual instructions: a calm voice note would fight it
     const instructions = style || o.instructions;
     if (instructions && model.includes("gpt")) body.instructions = instructions;
@@ -60,9 +68,10 @@ const SYNTH: Record<Online, Synth> = {
       method: "POST", signal, headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify(body) });
   },
-  async elevenlabs(s, text, key, signal, _style, tone) {
+  async elevenlabs(s, text, key, signal, _style, tone, who) {
     const e = s.elevenlabs || {};
-    const voice = e.voiceId || "JBFqnCBsd6RMkjVDRZzb";     // "George", a default ElevenLabs voice
+    const mine = e.voiceId || "JBFqnCBsd6RMkjVDRZzb";      // "George", a default ElevenLabs voice
+    const voice = who ? await castVoice("elevenlabs", key, mine, who) : mine;
     const model = e.model || "eleven_flash_v2_5";
     // v3 performs the line's tone as an audio tag; the other models would read the tag out, so they get the words
     const input = /v3/i.test(model) ? v3Text(text, tone) : text;
@@ -70,18 +79,20 @@ const SYNTH: Record<Online, Synth> = {
       method: "POST", signal, headers: { "xi-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({ text: input, model_id: model }) });
   },
-  async azure(s, text, key, signal) {
+  async azure(s, text, key, signal, _style, _tone, who) {
     const a = s.azure || {};
     const region = (a.region || "eastus").trim();
-    const voice = a.voice || "en-US-AndrewMultilingualNeural";
+    const mine = a.voice || "en-US-AndrewMultilingualNeural";
+    const voice = who ? await castVoice("azure", key, mine, who, region) : mine;
     const ssml = `<speak version="1.0" xml:lang="en-US"><voice name="${xml(voice)}">${xml(text)}</voice></speak>`;
     return audio(`https://${encodeURIComponent(region)}.tts.speech.microsoft.com/cognitiveservices/v1`, "Azure", {
       method: "POST", signal, headers: { "Ocp-Apim-Subscription-Key": key, "content-type": "application/ssml+xml",
                                          "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3", "user-agent": "glide" },
       body: ssml });
   },
-  async google(s, text, key, signal) {
-    const voice = s.google?.voice || "en-US-Chirp3-HD-Charon";
+  async google(s, text, key, signal, _style, _tone, who) {
+    const mine = s.google?.voice || "en-US-Chirp3-HD-Charon";
+    const voice = who ? await castVoice("google", key, mine, who) : mine;
     const lang = voice.split("-").slice(0, 2).join("-");
     const d = await json<{ audioContent?: string }>(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, "Google", {
       method: "POST", signal, headers: { "content-type": "application/json" },
@@ -111,13 +122,43 @@ const VOICE_LISTS: Record<Exclude<Online, "openai">, VoiceList> = {
   },
 };
 
+// a character's own voice (the engine names it by OpenAI's: cast.py) on a provider with voices of its own: another of
+// the player's voices than the chosen one (Azure's and Google's of its language, Google's of its kind too), the same
+// each time; the list is asked for once (again CAST_RETRY after it failed: the chosen voice meanwhile)
+const CAST_RETRY = 10 * 60 * 1000;
+const castLists = new Map<string, { t: number; list: Voice[] }>();
+
+async function castVoice(provider: Exclude<Online, "openai">, key: string, mine: string, who: string,
+                                region?: string): Promise<string> {
+  const k = `${provider}|${region || ""}|${key.slice(-6)}`;
+  let got = castLists.get(k);
+  if (!got || (!got.list.length && Date.now() - got.t > CAST_RETRY)) {
+    let list: Voice[] = [];
+    try {
+      list = await VOICE_LISTS[provider](key, AbortSignal.timeout(TIMEOUT), region);
+    } catch { /* the chosen voice, until it's asked again */ }
+    got = { t: Date.now(), list };
+    castLists.set(k, got);
+  }
+  const lang = (id: string) => id.split("-").slice(0, 2).join("-");
+  const kind = (id: string) => id.split("-").slice(2, -1).join("-");      // Google's "Chirp3-HD", "Neural2"
+  const pool = got.list.filter((v) => v.id !== mine && (provider === "elevenlabs" || lang(v.id) === lang(mine))
+    && (provider !== "google" || kind(v.id) === kind(mine)));
+  if (!pool.length) return mine;
+  let i = OPENAI_VOICES.indexOf(who);
+  if (i < 0) for (const c of who) i = Math.abs((i * 31 + c.charCodeAt(0)) | 0);
+  return pool[i % pool.length].id;
+}
+
 /** MP3 audio for `text` from an online provider; `style` = how to perform it (the coach's persona; OpenAI only),
- * `tone` = how to deliver this one line (in character; an audio tag for ElevenLabs v3, the others don't use it). */
-export async function synth(s: SpeechSettings, text: string, key: string, style = "", tone = ""): Promise<Buffer> {
+ * `tone` = how to deliver this one line (in character; an audio tag for ElevenLabs v3, the others don't use it),
+ * `voice` = a character's own voice (the engine's cast.py, by OpenAI's names; "" the chosen one). */
+export async function synth(s: SpeechSettings, text: string, key: string, style = "", tone = "",
+                            voice = ""): Promise<Buffer> {
   const p = s.provider;
   if (!key) throw new Error(`${p}: no ${TTS_KEYS[p as Online]} (Settings > AI models & keys)`);
   const signal = AbortSignal.timeout(TIMEOUT);
-  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal, style, tone);
+  if (p && Object.hasOwn(SYNTH, p)) return SYNTH[p as Online](s, text, key, signal, style, tone, voice);
   throw new Error(`unknown voice provider ${p}`);
 }
 

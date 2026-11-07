@@ -34,6 +34,7 @@
     "llm.review_words": {"default": 70, "min": 10, "max": 400, "kind": "number"},
     "llm.persona": {"default": "", "kind": "text", "live": true, "note": "the character the coach plays (roleplay); empty: its own voice. Set by asking the coach, kept until it is told to drop the act"},
     "llm.persona_name": {"default": "", "kind": "text", "live": true, "note": "the name of the character the coach plays (its NAME: line), the key of its saved lore"},
+    "llm.sidekick": {"default": "", "kind": "text", "live": true, "note": "a second character along with the one the coach plays (a saved character's name: its SIDEKICK: line); empty: none"},
     "llm.persona_voice": {"default": "", "kind": "text", "live": true, "note": "how the narrator performs the persona (the OpenAI voice's instructions)"},
     "llm.banter": {"default": true, "kind": "bool", "live": true, "note": "in character, the coach speaks up unprompted now and then (asides)"},
     "llm.banter_minutes": {"default": 8, "min": 2, "max": 60, "kind": "int", "live": true, "note": "about this often (randomised); BANTER: less / more scale it"},
