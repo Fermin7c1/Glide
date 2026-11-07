@@ -176,9 +176,14 @@ def memory_command(memory, question, emit):
 def reflection_events(events, marks):
     """The reflection prompt's "since last reflection" lines: the last 60 exchanges, then the feedback marks."""
     lines = []
-    for e in events[-60:]:
+    events = events[-60:]
+    for i, e in enumerate(events):
         who = "player asked" if e["who"] == "player" else "you (%s)" % e.get("kind", "coach")
-        lines.append("- %s: %s" % (who, " ".join(str(e["text"]).split())[:300]))
+        line = "- %s: %s" % (who, " ".join(str(e["text"]).split())[:300])
+        if e.get("kind") == "banter" and not any(x["who"] == "player" and 0 < x["t"] - e["t"] <= 180
+                                                  for x in events[i + 1:]):
+            line += " (no reply)"
+        lines.append(line)
     for x in marks:
         lines.append("- player flagged your line \"%s\" as wrong/unhelpful%s" % (
             x["coach_said"][:200], ": " + x["note"] if x["note"] else ""))

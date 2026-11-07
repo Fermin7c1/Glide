@@ -4,7 +4,7 @@ import { glide as g } from "./bridge.js";
 import { $ } from "./dom.js";
 import { AppSettings, CoachMessage, LiteInitEvent, LiteState, PttEvent } from "./types.js";
 
-const SHOWN = new Set(["callout", "answer", "review", "briefing", "reminder"]);
+const SHOWN = new Set(["callout", "answer", "banter", "review", "briefing", "reminder"]);   // msg_kinds.COACH_SAID
 let es: EventSource | null = null;
 let url: string | null = null;
 let settings: AppSettings = {};

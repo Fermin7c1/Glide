@@ -800,3 +800,60 @@ they don't spell out.
   `llm.settle_max_s`, `llm.summary_words`, shown under Settings > Coaching > Callouts (contract 8; `golden.py record
   desktop` re-recorded for those three fields alone). Offline callouts gain "Turned in N quests." and "Picked up N:
   <names>.". The player asked (2026-11-05). Pinned by `tests/test_quest_burst.py`.
+- **The quest log holds 40 on WoW Forever, not Classic's 20 (contracts 6 and 8; kb.db content).** The coach kept
+  telling players their log was full at 20. The 20 came from the knowledge files, never updated after the community
+  note n:20261021-quest-log-40: heuristics `route.quest-log-near-cap` (now 38+, was 18+) and `route.quest-log-full`
+  (now 40, was 20) with new rationales, the glossary's "quest log cap" (40 on Forever; it went into the coach's
+  system prompt), `quest_log_count`'s meaning, and two evals that expected 20. And the model only ever saw 20
+  quests: `prompt_context` cut them at `[:20]`; now `QUEST_LOG_CAP + 5` (a full log plus the step's), and the
+  player section says `quest_log: "<n> of 40 quests"`. rules.json and glossary.json are hashed kb.db inputs, so
+  kb.db rebuilds with them. The addon was right all along (its pages carry the whole log). The player asked
+  (2026-11-05). Pinned by `tests/test_quest_log_cap.py`.
+- **In character, the coach speaks up unprompted and builds a bond with the player (contracts 2, 3, 5 and 8; all
+  additive).** While a persona is set, `companion/banter.py` (a coach-thread ticker) has the fast model say one aside
+  about every `llm.banter_minutes` (8, randomised x0.6-1.4), only in a calm moment: a live frame, no pending
+  trigger, question or briefing, nothing said for 60 s, not in combat or dead; the model may answer SKIP. Asides are
+  a new feed message kind `banter` (spoken, never urgent; in `msg_kinds.COACH_SAID`/`RECENT` and the knowledge
+  side's `vocab.COACH_SAID`; the coach screen labels it "Coach"). The bond: the memory gains a sixth kind,
+  `rapport` ("Your bond with them"), and `coach_memory.json` a `bond` object `{hours, sessions, asides, replied}`
+  (contract 5, files on disk: an older engine ignores it); the request carries the bond's line and stage (new,
+  getting to know each other, familiar, old friends: 3 / 15 / 50 hours) with the memory's rapport notes.
+  Reflection learns rapport from how the player reacts (`REFLECT_PROMPT`; unanswered asides are marked "(no
+  reply)", and four asides are enough to start a reflection). The player's say: a reply's `BANTER: less / more /
+  off / on` line (the Roleplay paragraph of `coach_prompts.SYSTEM`) scales `banter_minutes` by 1.6 or switches
+  `llm.banter`. New settings (contract 5): `llm.banter` (live; the state's `tuning.toggles` gains it, contract 3),
+  `llm.banter_minutes` (live), `llm.banter_words` (25), under Settings > Coaching > Roleplay (contract 8;
+  `golden.py record desktop` re-recorded for those three fields alone). Chatting: a question within 180 s of an
+  aside or a chat reply (the coach's last line) is a chat (`Banter.in_chat`): the fast model, the voice lookahead,
+  no "max 25 words, answer first" note but `banter.CHAT_NOTE` (react, encourage, end on a hook; answer a game
+  question first), `llm.banter_reply_words` (35) and kind `banter`, so the player's next reply carries it on; a
+  reply's `CHAT: end` line (the player wrapped up) makes it a plain `answer` again. Answers and banter both count as
+  the conversation's replies (`coach.REPLIES`: RECENT CONVERSATION keeps the whole chat, `answer_once` returns
+  either). The player asked (2026-11-06). Pinned by `tests/test_banter.py`.
+- **The character feels there: moments, a diary, a mood, its own story, per-line delivery, learned timing (contracts
+  2, 3, 5 and 8; all additive).** `companion/banter.py`: asides now come mostly from moments `Banter.observe` sees
+  in every frame (`Coach.push`): deaths and death streaks (3 in 30 min), level-ups, close calls (a fight survived at
+  15% health or less), elite / rare kills, first visits to a zone, long grinds, flights, the hearth, each with a
+  chance and a cooldown (`MOMENTS`), spoken 8 s after the coach's own line; a greeting at the first live frame of a
+  session (picking up from the diary and the time since `bond.last_seen`) and a goodbye when frames stop for 45 s
+  after 10+ minutes together; between moments the timer, 0.4x in downtime (flying, dead, eating or drinking) and
+  scaled by the replies per activity (`bond.by_activity`: >=50% answered 0.7x, <15% 2x, after 4 asides). The mood
+  (moments push it, it settles after 20 min) rides on every request's stay-in-character line; each aside asks for
+  a weighted shape (`SHAPES`) and names overused openers and question endings (`variety_note`), chat replies too.
+  `coach_memory.json` gains `diary` (newest 80 moments with their session) and `characters` (by name: brief,
+  voice, lore, newest 12), `bond.last_seen` and `bond.by_activity` (contract 5, files on disk; an older engine
+  ignores them). Persona lines: `NAME:` (setting `llm.persona_name`, live text), `LORE:` (kept per character and
+  sent as "YOUR OWN STORY SO FAR"), `PERSONA: recall <name>` (the memory block lists "CHARACTERS YOU HAVE PLAYED"),
+  and a leading `TONE:` line on every reply in character: stripped, read early by `EarlySpeech.tone`, put on the
+  message as `tone` (`CoachMessage.tone`, contract 3) and added to the speak event's `style` ("<voice>. This line:
+  <tone>."). Reflection also sees the diary. Pinned by `tests/test_banter_moments.py` (and test_banter, test_persona).
+- **The coach says when a Glide update is out, and reminds every 10 minutes (contracts 5 and 8; additive).**
+  `desktop/src/renderer/update-voice.ts` (`UpdateVoice`, wired in `updates.ts`): on `update:status` turning
+  `available` the narrator says "A Glide update is out: version X. Download it from the footer button when it suits
+  you.", on `ready` "Glide X is downloaded. Restart to update from the footer button when it suits you."; while it
+  waits, every 10 minutes "Reminder: Glide X is still waiting to be downloaded, footer button." / "Reminder: restart
+  Glide to finish updating to X, footer button." (paused while downloading; cleared on none, idle, disabled, error
+  or checking; a newer version starts over), in the character's voice when one is played. The app setting
+  `updateVoice` (app-settings.json, default on; Settings > General "Say when an update is out") switches the spoken
+  lines off; the toasts and the footer button stay. The player asked (2026-11-06). Pinned by
+  `tests/test_update_voice.py`; `golden.py record desktop` re-recorded for the new field.

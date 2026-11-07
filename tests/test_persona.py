@@ -19,6 +19,7 @@ from glidedb import GlideDB  # noqa: E402
 from replies import EarlySpeech  # noqa: E402
 from state import GameState  # noqa: E402
 import coach  # noqa: E402
+import memory as memory_mod  # noqa: E402
 import persona  # noqa: E402
 import tuning  # noqa: E402
 import voice  # noqa: E402
@@ -30,12 +31,18 @@ def check(cond, what):
 
 
 # ---- parsing the directive lines ---------------------------------------------------------------
-text, brief, vdir = persona.split("Arr, turn in Supplies to Tannok, matey!\nPERSONA: A salty pirate captain.\n"
-                                  "VOICE: Gravelly, booming, rolling R's.")
+text, found = persona.split("TONE: booming, gleeful\nArr, turn in Supplies to Tannok, matey!\n"
+                             "PERSONA: A salty pirate captain.\nNAME: Captain Redbeard\n"
+                             "VOICE: Gravelly, booming, rolling R's.\nLORE: Lost an eye to a murloc in '98.")
 check(text == "Arr, turn in Supplies to Tannok, matey!", "directive lines stripped: %r" % text)
-check(brief == "A salty pirate captain." and vdir == "Gravelly, booming, rolling R's.", "brief and voice read")
-check(persona.split("Fine, back to normal.\npersona: OFF")[1] == "", "PERSONA: off clears")
-check(persona.split("Go east.")[1:] == (None, None), "no directive: nothing changes")
+check(found["persona"] == "A salty pirate captain." and found["voice"] == "Gravelly, booming, rolling R's.",
+      "brief and voice read")
+check(found["name"] == "Captain Redbeard" and found["tone"] == "booming, gleeful", "name and tone read")
+check(found["lore"] == ["Lost an eye to a murloc in '98."], "lore read")
+check(persona.split("Fine, back to normal.\npersona: OFF")[1]["persona"] == "", "PERSONA: off clears")
+check(persona.split("Aye!\nPERSONA: recall Sarge")[1]["recall"] == "Sarge", "PERSONA: recall <name>")
+f = persona.split("Go east.")[1]
+check(f["persona"] is None and f["voice"] is None and not f["lore"], "no directive: nothing changes")
 check(len(persona.clean("x" * 2000)) == persona.MAX_CHARS, "a brief is capped")
 check(persona.short_name("A grizzled dwarf drill sergeant from Ironforge. Barks.") ==
       "A grizzled dwarf drill sergeant from Ironforge", "short name is the first sentence")
@@ -135,7 +142,8 @@ def markers(o):
 # the Claude API takes at most 4 cache_control markers a request (tools, system, user reference): with player memory
 # and a persona the system prompt still carries only two (a third made every call fail with a 400)
 check(markers(A.bodies[-1]) <= 4, "a request carries at most 4 cache markers: %d" % markers(A.bodies[-1]))
-c.deps.memory = type("Mem", (), {"block": lambda self: "WHAT YOU REMEMBER ABOUT THIS PLAYER:\n- m1 Prefers short."})()
+c.deps.memory = memory_mod.Memory(None)
+c.deps.memory.add("Prefers short callouts.", "preference")
 blocks = c._system_blocks({"type": "ephemeral"})
 check(sum("cache_control" in b for b in blocks) == 2, "rules + (memory and persona) are two cached blocks")
 check(blocks[-1]["text"].startswith("WHAT YOU REMEMBER") and "YOU ARE IN CHARACTER" in blocks[-1]["text"],

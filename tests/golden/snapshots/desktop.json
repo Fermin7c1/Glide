@@ -253,6 +253,13 @@
        "type": "bool"
       },
       {
+       "def": true,
+       "help": "The coach says so out loud, and reminds you every 10 minutes until you update. Off: only the footer button and a note.",
+       "key": "app:updateVoice",
+       "label": "Say when an update is out",
+       "type": "bool"
+      },
+      {
        "def": false,
        "help": "Off: closing the window quits Glide, the coach included. On: the window only hides, and the overlay, voice and push-to-talk keep working; quit from the tray icon.",
        "key": "app:closeToTray",
@@ -596,6 +603,41 @@
        "label": "Voice direction",
        "type": "text",
        "wide": true
+      },
+      {
+       "def": true,
+       "help": "In character, the coach says something now and then on its own: a quip, a callback, a question about you. It learns what lands with you and grows closer the more you play together.",
+       "key": "companion.llm.banter",
+       "label": "Speak up unprompted",
+       "type": "bool"
+      },
+      {
+       "def": 8,
+       "help": "Or just tell it: \"talk less\", \"more\", \"stop the chatter\".",
+       "key": "companion.llm.banter_minutes",
+       "label": "About every (minutes)",
+       "max": 60,
+       "min": 2,
+       "type": "number"
+      },
+      {
+       "def": 25,
+       "key": "companion.llm.banter_words",
+       "label": "Aside length (words)",
+       "max": 80,
+       "min": 8,
+       "restart": true,
+       "type": "number"
+      },
+      {
+       "def": 35,
+       "help": "Answer an aside and the coach keeps the conversation going, for as long as you keep answering.",
+       "key": "companion.llm.banter_reply_words",
+       "label": "Chat reply length (words)",
+       "max": 120,
+       "min": 10,
+       "restart": true,
+       "type": "number"
       },
       {
        "def": 1.6,

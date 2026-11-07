@@ -30,7 +30,8 @@ c = Coach({"fast_model": "F", "deep_model": "D"}, GlideDB("/x.db"), msgs.append,
           deps=CoachDeps(reminders=rem, speak_fn=lambda t, kind, urgent: said.append(t)))
 assert not coach_threads(), "the coach thread waits for start()"
 assert c.deps.reminders is rem and c.deps.speak_fn is not None
-assert [t.__self__ for t in c._jobs if hasattr(t, "__self__")] == [c.briefings, c.reminder_ticker, c.reflector, c, c.route]
+assert [t.__self__ for t in c._jobs if hasattr(t, "__self__")] == [c.briefings, c.reminder_ticker, c.reflector, c, c.route,
+                                                                    c.banter]
 
 # started: questions are answered on the coach thread (offline here: no API key)
 c.state = GameState()

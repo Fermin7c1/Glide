@@ -60,10 +60,13 @@ class HubVoice:
         self.muted = bool(muted)
         return self.muted
 
-    def say(self, text, interrupt=False):
+    def say(self, text, interrupt=False, tone=""):
+        """tone: how to deliver this one line (the coach's TONE: in character), added to the character's voice."""
         if not self.enabled or not text or self.muted:
             return
         style = self.style_fn() if self.style_fn else ""      # the character the coach plays: how to perform it
+        if tone:
+            style = ("%s. This line: %s." % (style.rstrip(" ."), tone)) if style else "Deliver this line %s." % tone
         self.hub.publish("speak", {"text": text.replace("\n", " ").replace("\r", " ").strip(),
                                    "interrupt": bool(interrupt), **({"style": style} if style else {})})
 
@@ -116,8 +119,8 @@ class Voice:
                     console.log_once("voice.mute", e)
         return self.muted
 
-    def say(self, text, interrupt=False):
-        if not self.enabled or not text or self.muted:
+    def say(self, text, interrupt=False, tone=""):
+        if not self.enabled or not text or self.muted:     # (tone: Windows speech can't perform it)
             return
         line = text.replace("\n", " ").replace("\r", " ").strip()
         with self.lock:

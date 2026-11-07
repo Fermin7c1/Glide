@@ -16,25 +16,44 @@ engine home and the plain start-glide.cmd companion alike. A dated copy is kept 
 
 block() is the prompt section every coach call carries (a system block of its own, so it stays in the prompt cache
 until a note changes). Pure stdlib; thread-safe; a missing or broken file starts an empty memory.
+
+The bond with the player (banter.py: hours together, sessions, how the asides went, the diary of shared moments, the
+zones visited together, the characters played with their lore) lives beside it in coach_bond.json, a file older
+engines never read or write, so going back to an older version keeps it. "rapport" notes are written to
+coach_memory.json as kind "fact" with "rapport": true (older engines keep and show them as facts), and notes of a kind
+or top-level keys this engine doesn't know are written back as they were.
 """
 import json
 import os
 import re
+import sys
 import threading
 import time
 
 import jsonfile
 from log import log
 
-KINDS = ("preference", "request", "goal", "feedback", "fact")
+ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+if ROOT not in sys.path:
+    sys.path.append(ROOT)       # the knowledge package: its values module (stdlib only) reads stored numbers
+from knowledge.values import as_float, as_int  # noqa: E402
+
+KINDS = ("preference", "request", "goal", "feedback", "fact", "rapport")
 KIND_LABEL = {"preference": "How they like to be coached", "request": "Standing requests",
               "goal": "Goals", "feedback": "Corrections (don't repeat these mistakes)",
-              "fact": "About the player"}
+              "fact": "About the player",
+              "rapport": "Your bond with them (what lands, inside jokes, nicknames, shared moments)"}
 BACKUPS = 14                  # daily copies kept beside the file
 MAX_NOTES = 200               # oldest unpinned notes beyond this are dropped
 MAX_TEXT = 300                # characters per note
 BLOCK_CHARS = 2400            # the prompt block's budget (about 600 tokens)
-PER_KIND = {"preference": 12, "request": 10, "goal": 6, "feedback": 10, "fact": 10}
+PER_KIND = {"preference": 12, "request": 10, "goal": 6, "feedback": 10, "fact": 10, "rapport": 12}
+BOND_SAVE_S = 300             # the bond clock is saved at most this often (asides and replies at once)
+# how long the coach and the player have played together -> the stage of their bond (banter.py speaks to it)
+BOND_STAGES = ((3, "new"), (15, "getting to know each other"), (50, "familiar"), (None, "old friends"))
+MAX_DIARY = 80                # shared moments kept (newest)
+MAX_LORE = 24                 # facts a character told about itself, per character
+MAX_CHARACTERS = 12           # characters kept (most recently played)
 
 
 def memory_dir():
@@ -48,6 +67,12 @@ def memory_dir():
 
 def default_path():
     return os.path.join(memory_dir(), "coach_memory.json")
+
+
+def _typed(d, key, kind):
+    """d[key] when it is a `kind` (list, dict), else an empty one: a stored file's part, checked."""
+    v = d.get(key)
+    return v if isinstance(v, kind) else kind()
 
 
 def _norm(text):
@@ -89,40 +114,132 @@ class Memory:
         self.learning = True               # reflection on (the app's Memory page switch; saved with the notes)
         self.last_reflect = 0.0
         self.version = 0                   # bumped on every change (the prompt block is rebuilt then)
+        self.bond_path = os.path.join(os.path.dirname(path), "coach_bond.json") if path else None
+        self._foreign = []                 # notes of kinds this engine doesn't know: written back untouched
+        self._extra = {}                   # top-level keys this engine doesn't know: written back untouched
+        self.zones = set()                 # the zones visited together (not capped like the diary)
+        # time played together and how the coach's asides went (banter.py): {"hours", "sessions", "asides", "replied"}
+        self.bond = {"hours": 0.0, "sessions": 0, "asides": 0, "replied": 0, "last_seen": 0.0, "by_activity": {}}
+        # the diary of shared moments: [{"t", "kind", "text", "session"}] (banter.py writes it, the asides recall it)
+        self.diary = []
+        # the characters the coach played for them, by key: {"name", "brief", "voice", "lore": [...], "last"}
+        self.characters = {}
+        self._bond_saved = 0.0
         self._load()
 
     # ---- storage --------------------------------------------------------------------------------------------------
-    def _load(self):
-        if not self.path or not os.path.exists(self.path):
-            return
+    _KNOWN = ("notes", "next_id", "learning", "last_reflect")
+
+    @staticmethod
+    def _read(path):
+        """A JSON object from `path`, or {} (missing, unreadable, not an object)."""
+        if not path or not os.path.exists(path):
+            return {}
         try:
-            with open(self.path, encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 d = json.load(fh)
         except (OSError, ValueError):
-            return
-        self.notes = [n for n in d.get("notes") or () if isinstance(n, dict) and n.get("text") and n.get("kind") in KINDS]
-        self.next_id = max([int(d.get("next_id") or 1)] + [int(n.get("id", 0)) + 1 for n in self.notes])
+            return {}
+        return d if isinstance(d, dict) else {}
+
+    def _load(self):
+        d = self._read(self.path)
+        notes = _typed(d, "notes", list)
+        for n in notes:
+            if not isinstance(n, dict) or not isinstance(n.get("text"), str) or not n["text"].strip():
+                continue
+            if n.get("kind") == "fact" and n.get("rapport"):
+                n = {k: v for k, v in n.items() if k != "rapport"}
+                n["kind"] = "rapport"
+            if n.get("kind") not in KINDS:
+                self._foreign.append(n)
+                continue
+            try:
+                n["id"], n["updated"] = int(n.get("id") or 0), float(n.get("updated") or n.get("created") or 0)
+            except (TypeError, ValueError):
+                continue
+            self.notes.append(n)
+        ids = [n["id"] for n in self.notes] + [x.get("id") for x in self._foreign if isinstance(x.get("id"), int)]
+        self.next_id = max([as_int(d.get("next_id"), 1, bool_ok=False)] + [i + 1 for i in ids])
         self.learning = bool(d.get("learning", True))
-        self.last_reflect = float(d.get("last_reflect") or 0)
+        self.last_reflect = as_float(d.get("last_reflect"), 0.0, finite=True, bool_ok=False)
+        self._extra = {k: v for k, v in d.items() if k not in self._KNOWN}
+        # the bond: coach_bond.json (an earlier build of this engine kept it in coach_memory.json: read from there once)
+        b = self._read(self.bond_path) or {k: d.get(k) for k in ("bond", "diary", "characters", "zones")}
+        for k in ("bond", "diary", "characters", "zones"):
+            self._extra.pop(k, None)
+        self._load_bond(b)
+
+    def _load_bond(self, d):
+        """The bond's parts from a parsed coach_bond.json, each checked: a bad entry is dropped, never fatal."""
+        bond = _typed(d, "bond", dict)
+        for k in ("hours", "last_seen"):
+            self.bond[k] = as_float(bond.get(k), 0.0, finite=True, bool_ok=False)
+        for k in ("sessions", "asides", "replied"):
+            self.bond[k] = as_int(bond.get(k), 0, bool_ok=False)
+        acts = _typed(bond, "by_activity", dict)
+        for a, r in acts.items():
+            if isinstance(a, str) and isinstance(r, list) and len(r) == 2:
+                self.bond["by_activity"][a] = [as_int(r[0], 0, bool_ok=False), as_int(r[1], 0, bool_ok=False)]
+        diary = _typed(d, "diary", list)
+        self.diary = []
+        for x in diary:
+            if not isinstance(x, dict) or not isinstance(x.get("text"), str) or isinstance(x.get("t"), bool) \
+                    or not isinstance(x.get("t"), (int, float)):
+                continue
+            row = {"t": float(x["t"]), "kind": str(x.get("kind") or "moment"), "text": x["text"][:200],
+                   "session": as_int(x.get("session"), 0, bool_ok=False)}
+            if isinstance(x.get("zone"), str):
+                row["zone"] = x["zone"]
+            self.diary.append(row)
+        del self.diary[:-MAX_DIARY]
+        chars = _typed(d, "characters", dict)
+        for k, v in chars.items():
+            if isinstance(v, dict) and isinstance(v.get("name"), str) and isinstance(v.get("brief"), str) \
+                    and v["name"].strip() and v["brief"].strip():
+                lore = _typed(v, "lore", list)
+                self.characters[self._key(v["name"]) or str(k)] = {
+                    "name": v["name"][:60], "brief": v["brief"], "voice": v.get("voice") if isinstance(
+                        v.get("voice"), str) else "", "lore": [x for x in lore if isinstance(x, str)][-MAX_LORE:],
+                    "last": as_float(v.get("last"), 0.0, finite=True, bool_ok=False)}
+        zones = _typed(d, "zones", list)
+        self.zones = {z for z in zones if isinstance(z, str)} | {x["zone"] for x in self.diary if "zone" in x}
 
     def _save(self):
+        """coach_memory.json: the notes ("rapport" ones as facts with "rapport": true, so older engines keep them),
+        then the notes and keys this engine doesn't know, as they were."""
         self.version += 1
         if not self.path:
             return
+        notes = [dict(n, kind="fact", rapport=True) if n["kind"] == "rapport" else n for n in self.notes]
         try:
-            jsonfile.write_atomic(self.path, {"notes": self.notes, "next_id": self.next_id, "learning": self.learning,
-                                              "last_reflect": self.last_reflect}, ensure_ascii=False, indent=1)
-            self._backup()
+            jsonfile.write_atomic(self.path, dict(self._extra, notes=notes + self._foreign, next_id=self.next_id,
+                                                  learning=self.learning, last_reflect=self.last_reflect),
+                                  ensure_ascii=False, indent=1)
+            self._backup(self.path)
         except OSError as e:
             log("memory", "could not save %s: %s" % (self.path, e))
 
-    def _backup(self):
-        """One dated copy a day (coach_memory.YYYYMMDD.json), the newest BACKUPS kept."""
-        folder, base = os.path.dirname(self.path), os.path.splitext(os.path.basename(self.path))[0]
+    def _save_bond(self):
+        """coach_bond.json: the bond, the diary, the zones and the characters."""
+        self.version += 1
+        if not self.bond_path:
+            return
+        try:
+            jsonfile.write_atomic(self.bond_path, {"bond": self.bond, "diary": self.diary, "zones": sorted(self.zones),
+                                                   "characters": self.characters}, ensure_ascii=False, indent=1)
+            self._backup(self.bond_path)
+        except OSError as e:
+            log("memory", "could not save %s: %s" % (self.bond_path, e))
+
+    @staticmethod
+    def _backup(path):
+        """One dated copy a day (coach_memory.YYYYMMDD.json, coach_bond.YYYYMMDD.json), the newest BACKUPS kept."""
+        folder, base = os.path.dirname(path), os.path.splitext(os.path.basename(path))[0]
         day = os.path.join(folder, "%s.%s.json" % (base, time.strftime("%Y%m%d")))
         if not os.path.exists(day):
             try:
-                with open(self.path, "rb") as src, open(day, "wb") as dst:
+                with open(path, "rb") as src, open(day, "wb") as dst:
                     dst.write(src.read())
             except OSError:
                 return
@@ -188,6 +305,11 @@ class Memory:
                 ids = {n["id"] for n in gone}
                 self.notes = [n for n in self.notes if n["id"] not in ids]
                 self._save()
+            if str(which).strip().lower() in ("all", "everything"):      # and the history together, all of it
+                self.bond = {"hours": 0.0, "sessions": 0, "asides": 0, "replied": 0, "last_seen": 0.0,
+                             "by_activity": {}}
+                self.diary, self.zones, self.characters = [], set(), {}
+                self._save_bond()
             return gone
 
     def set_learning(self, on):
@@ -233,6 +355,136 @@ class Memory:
                 "\nFollow their preferences and standing requests in every callout and answer, use goals and facts to "
                 "tailor advice, and never repeat a corrected mistake. Don't recite this list unless they ask what you "
                 "remember.")
+
+    # ---- the bond: time together and how the asides went (banter.py) ----------------------------------------------
+    def bond_add(self, hours=0.0, sessions=0, asides=0, replied=0, activity=None):
+        """Count time played together and asides (and, with `activity`, per what the player was doing then); saved at
+        once for a session, aside or reply, the clock every BOND_SAVE_S."""
+        with self.lock:
+            b = self.bond
+            b["hours"] = round(b["hours"] + hours, 4)
+            b["sessions"] += sessions
+            b["asides"] += asides
+            b["replied"] += replied
+            if hours:
+                b["last_seen"] = time.time()
+            if activity and (asides or replied):
+                row = b["by_activity"].setdefault(activity, [0, 0])
+                row[0] += asides
+                row[1] += replied
+            if sessions or asides or replied or time.time() - self._bond_saved >= BOND_SAVE_S:
+                self._bond_saved = time.time()
+                self._save_bond()
+
+    def bond_stage(self):
+        """'new', 'getting to know each other', 'familiar' or 'old friends', from the hours played together."""
+        h = self.bond["hours"]
+        return next(name for top, name in BOND_STAGES if top is None or h < top)
+
+    def bond_line(self):
+        """The bond for the aside request: time together, how the asides landed, the stage."""
+        b = self.bond
+        return ("You and this player: %.0f hours played together over %d sessions; %d of your %d asides got a reply. "
+                "Your bond: %s." % (b["hours"], max(1, b["sessions"]), b["replied"], b["asides"], self.bond_stage()))
+
+    def reply_rate(self, activity, least=4):
+        """How often the player answers an aside while doing `activity` (0..1), or None before `least` asides."""
+        row = self.bond["by_activity"].get(activity) or [0, 0]
+        return row[1] / float(row[0]) if row[0] >= least else None
+
+    def activity_line(self):
+        """When they answer the asides: 'flying 4 of 5, questing 1 of 9', or ''."""
+        rows = sorted(self.bond["by_activity"].items(), key=lambda kv: -kv[1][0])
+        return ", ".join("%s %d of %d" % (k, v[1], v[0]) for k, v in rows if v[0])
+
+    # ---- the diary of shared moments (banter.py) --------------------------------------------------------------
+    def diary_add(self, kind, text, now=None):
+        """A moment worth remembering together (a death, a ding, a close call, a new zone): kept, newest MAX_DIARY."""
+        with self.lock:
+            self.diary.append({"t": time.time() if now is None else now, "kind": kind,
+                               "text": " ".join(str(text).split())[:200], "session": self.bond["sessions"]})
+            del self.diary[:-MAX_DIARY]
+            self._save_bond()
+
+    def diary_since(self, t):
+        with self.lock:
+            return [dict(x) for x in self.diary if x["t"] > t]
+
+    def diary_recent(self, n=8):
+        with self.lock:
+            return [dict(x) for x in self.diary[-n:]]
+
+    def zones_seen(self):
+        """The zones visited together."""
+        with self.lock:
+            return set(self.zones)
+
+    def zone_seen(self, zone, now=None):
+        """Note a zone first visited together (a diary moment of its own). -> True the first time."""
+        if not zone:
+            return False
+        with self.lock:
+            if zone in self.zones:
+                return False
+            self.zones.add(zone)
+            self.diary.append({"t": time.time() if now is None else now, "kind": "zone", "zone": zone,
+                               "text": "First time in %s together" % zone, "session": self.bond["sessions"]})
+            del self.diary[:-MAX_DIARY]
+            self._save_bond()
+        return True
+
+    # ---- the characters played for them (persona.py) ----------------------------------------------------------
+    @staticmethod
+    def _key(name):
+        """A character's key: its name casefolded, letters (any script), digits and spaces only."""
+        return " ".join(re.sub(r"[^\w ]", "", str(name or "").casefold()).replace("_", " ").split())[:40]
+
+    def character_save(self, name, brief, voice=""):
+        """Keep the character being played (by name) so "bring back <name>" restores it, its lore and all."""
+        key = self._key(name)
+        if not key or not brief:
+            return None
+        with self.lock:
+            ch = self.characters.setdefault(key, {"name": name, "lore": []})
+            ch.update({"name": name, "brief": brief, "voice": voice or ch.get("voice") or "", "last": time.time()})
+            if len(self.characters) > MAX_CHARACTERS:
+                for k in sorted(self.characters, key=lambda k: self.characters[k].get("last") or 0)[:-MAX_CHARACTERS]:
+                    del self.characters[k]
+            self._save_bond()
+            return dict(ch)
+
+    def character(self, name):
+        """A saved character by name (exact, else the one whose name contains it), or None."""
+        key = self._key(name)
+        if not key:
+            return None
+        with self.lock:
+            ch = self.characters.get(key) or (next((v for k, v in self.characters.items()
+                                                     if key in k or (len(k) >= 3 and k in key)), None)
+                                               if len(key) >= 3 else None)
+            return dict(ch, lore=list(ch.get("lore") or ())) if ch else None
+
+    def character_lore(self, name, fact):
+        """A fact the character made up about itself: kept so it never contradicts itself."""
+        key = self._key(name)
+        fact = " ".join(str(fact or "").split())[:200]
+        with self.lock:
+            ch = self.characters.get(key)
+            if ch is None or not fact or any(_similar(fact, x) for x in ch.get("lore") or ()):
+                return False
+            ch.setdefault("lore", []).append(fact)
+            del ch["lore"][:-MAX_LORE]
+            self._save_bond()
+            return True
+
+    def characters_block(self):
+        """The prompt's list of characters played before ('' when none): what "bring back <name>" can recall."""
+        with self.lock:
+            rows = sorted(self.characters.values(), key=lambda v: -(v.get("last") or 0))
+        if not rows:
+            return ""
+        return "CHARACTERS YOU HAVE PLAYED FOR THIS PLAYER (bring one back with PERSONA: recall <name>):\n" + "\n".join(
+            "- %s: %s" % (v["name"], v["brief"][:160]) for v in rows)
 
     def mentioned(self, ids):
         """Count notes the coach cited (used), for the Memory page."""

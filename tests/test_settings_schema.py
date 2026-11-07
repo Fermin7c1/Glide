@@ -39,7 +39,7 @@ assert "rxp" not in glide_app.DEFAULTS            # the knowledge layer tells "n
 # the dashboard's live settings are the manifest's live ones, with its ranges
 live = set(settings.live_keys())
 assert live == set(tuning.SETTINGS) | set(tuning.TOGGLES) | set(tuning.MODEL_KEYS) | tuning.TEXTS, live
-assert tuning.TEXTS == {"persona", "persona_voice"}, tuning.TEXTS
+assert tuning.TEXTS == {"persona", "persona_name", "persona_voice"}, tuning.TEXTS
 for k, (d, lo, hi) in tuning.SETTINGS.items():
     e = M["llm." + k]
     assert (d, lo, hi) == (e["default"], e["min"], e["max"]), k

@@ -995,7 +995,7 @@ function renderSession(d) {
 
 // who speaks, by the kind of message
 const SPEAKER = {
-  callout: 'Coach', answer: 'Coach', review: 'Pace review', briefing: 'Briefing', reminder: 'Reminder', info: 'Glide',
+  callout: 'Coach', answer: 'Coach', banter: 'Coach', review: 'Pace review', briefing: 'Briefing', reminder: 'Reminder', info: 'Glide',
   error: 'Problem', question: 'You',
 };
 const FEED_MAX = 80;

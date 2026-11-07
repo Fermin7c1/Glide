@@ -301,8 +301,8 @@ briefs, rest = app.split_briefings(trig, {"quest_briefings": False})
 assert briefs == [] and rest == trig, "switched off, an accepted quest stays a callout"
 assert app.split_briefings([], {"quest_briefings": True}) == ([], [])
 snap = tuning.snapshot(c)
-assert snap["toggles"] == {"quest_briefings": True, "step_videos": True, "video_tips": True, "web_search": True,
-                           "web_search_voice": False}, snap["toggles"]
+assert snap["toggles"] == {"banter": True, "quest_briefings": True, "step_videos": True, "video_tips": True,
+                           "web_search": True, "web_search_voice": False}, snap["toggles"]
 srv.shutdown()
 
 # the app's Settings page has both switches (the schema as the page gets it)

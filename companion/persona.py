@@ -1,10 +1,13 @@
 """Roleplay: the character the coach plays when the player asks for one ("talk like a pirate", "be a grumpy dwarf
 drill sergeant", "you're Thrall now"). The model takes the request in any wording: it answers already in character
-and adds a PERSONA: line (a brief of the character, for itself) and a VOICE: line (how a voice actor would perform
-it), which the engine strips, applies and saves (llm.persona, llm.persona_voice). While one is set, every call gets
-the PERSONA block as its own system block, and every spoken line carries the VOICE direction to the narrator (the
-OpenAI voice performs it). "Drop the act" -> PERSONA: off. Offline (no model) there is no persona: the rule-based
-lines stay plain."""
+and adds a PERSONA: line (a brief of the character, for itself), a NAME: line (what the player can call it back by)
+and a VOICE: line (how a voice actor would perform it), which the engine strips, applies and saves (llm.persona,
+llm.persona_name, llm.persona_voice; and the character in the player memory, Memory.characters). "PERSONA: recall
+<name>" brings a character played before back, with everything it said about itself (LORE: lines, kept so it never
+contradicts itself). While one is set, every call gets the PERSONA block as part of the memory's system block, every
+reply starts with a TONE: line (how to deliver this line, performed by the OpenAI voice with the VOICE direction),
+and every spoken line carries the voice direction to the narrator. "Drop the act" -> PERSONA: off. Offline (no
+model) there is no persona: the rule-based lines stay plain."""
 import re
 
 MAX_CHARS = 600            # a brief or a voice direction longer than this is cut (they ride along on every call)
@@ -20,15 +23,24 @@ like the genuine article, never a polite imitation: no hedging, no winking at th
 never step out of character or mention that you are playing one.
 Everything is spoken aloud: express it in words alone (interjections, sounds spelled out like "Arrr" or "Hmph",
 dialect spellings, pauses with "..."); no stage directions, asterisks, brackets or emoji.
+Start every reply (except SKIP) with a line "TONE: <2-6 words: how to deliver this line, e.g. muttering, bellowing,
+mock-whisper, laughing, choked up>" (not spoken; vary it with the moment and your mood).
+When you make up something about yourself (your past, scars, family, opinions, habits), add a final line "LORE:
+<that fact, one short sentence>" so you remember it.%s
 The coaching underneath stays exact: the same single most useful point, real names, numbers and directions from
 the data, nothing invented. Lengths may stretch for flavour: callouts up to about %d words, spoken answers %d,
-typed answers %d. The directive lines (FACTS, WATCH, SKIP, PERSONA) keep their exact plain format."""
+typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE) keep their exact plain format."""
+
+LORE_HEAD = "\nYOUR OWN STORY SO FAR (what you have told them about yourself: never contradict it, build on it):\n"
 
 # the last line of each request while a persona is set: small models drift back to the plain voice without it
 REMINDER = "Stay fully in character (%s): say it the way they would."
 
-_LINE = re.compile(r"^\s*(PERSONA|VOICE)\s*:\s*(.*)$", re.I)
+_LINE = re.compile(r"^\s*(PERSONA|VOICE|NAME|LORE|TONE)\s*:\s*(.*)$", re.I)
 _OFF = re.compile(r"^(?:off|none|normal|default|clear|no(?:ne)? persona|-)\W*$", re.I)
+_RECALL = re.compile(r"^(?:recall|restore)\b[\s:]+(.+?)\W*$", re.I)     # "recall Sarge" (not "Recalling...")
+# a reply that takes on a character (or recalls one): its persona lines are read even before one is played
+STARTS = re.compile(r"^\s*PERSONA\s*:", re.I | re.M)
 
 
 def clean(text):
@@ -38,20 +50,28 @@ def clean(text):
 
 
 def split(text):
-    """Pull the PERSONA: / VOICE: lines out of a reply -> (the rest of the text, persona, voice). persona: None (no
-    line), "" (PERSONA: off) or the brief; voice: None or the direction."""
-    keep, persona, voice = [], None, None
+    """Pull the PERSONA: / NAME: / VOICE: / LORE: / TONE: lines out of a reply -> (the rest of the text, found):
+    found["persona"]: None (no line), "" (PERSONA: off) or the brief; "recall": a name (PERSONA: recall <name>);
+    "name", "voice", "tone": the line's text; "lore": [facts]."""
+    keep, found = [], {"persona": None, "recall": None, "name": None, "voice": None, "tone": None, "lore": []}
     for line in (text or "").splitlines():
         m = _LINE.match(line)
         if not m:
             keep.append(line)
             continue
-        value = m.group(2).strip()
-        if m.group(1).upper() == "PERSONA":
-            persona = "" if _OFF.match(value) else clean(value)
+        what, value = m.group(1).lower(), m.group(2).strip()
+        if what == "persona":
+            r = _RECALL.match(value)
+            if r:
+                found["recall"] = r.group(1).strip()
+            else:
+                found["persona"] = "" if _OFF.match(value) else clean(value)
+        elif what == "lore":
+            if value:
+                found["lore"].append(clean(value))
         elif value:
-            voice = clean(value)
-    return "\n".join(keep).strip(), persona, voice
+            found[what] = clean(value).strip(" .")[:80] if what in ("name", "tone") else clean(value)
+    return "\n".join(keep).strip(), found
 
 
 def short_name(brief, words=8):
@@ -61,6 +81,8 @@ def short_name(brief, words=8):
     return " ".join(w[:words]) + ("…" if len(w) > words else "")
 
 
-def block(brief, limits):
-    """The system block for a set persona; limits = (callout, spoken answer, typed answer) words."""
-    return BLOCK % ((clean(brief),) + tuple(int(x) for x in limits))
+def block(brief, limits, lore=()):
+    """The system block for a set persona; limits = (callout, spoken answer, typed answer) words; lore = the facts
+    the character told about itself before."""
+    story = (LORE_HEAD + "\n".join("- " + x for x in lore)) if lore else ""
+    return BLOCK % ((clean(brief), story) + tuple(int(x) for x in limits))

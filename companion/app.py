@@ -238,17 +238,17 @@ class App:
             said, full = " ".join(m["spoken"].split()), " ".join(m["text"].split())
             rest = full[len(said):].strip() if full.startswith(said) else full
             if rest:
-                self.voice.say(rest, interrupt=False)
+                self.voice.say(rest, interrupt=False, tone=str(m.get("tone") or ""))
         elif m.get("speak"):
-            self.voice.say(m["text"], interrupt=m.get("urgent", False))
+            self.voice.say(m["text"], interrupt=m.get("urgent", False), tone=str(m.get("tone") or ""))
         if self.overlay and m.get("kind") in msg_kinds.COACH_SAID:
             self.overlay.set_message(m["text"], "#ff8a95" if m.get("urgent") else "#e6e9ef")
 
-    def speak_early(self, text, kind, urgent=False):
+    def speak_early(self, text, kind, urgent=False, tone=""):
         """The coach's streamed replies: say one finished sentence now (same voice switch rule as on_message)."""
         if kind != "answer" and self._flags and not self._flags.get("voice", True):
             return
-        self.voice.say(text, interrupt=urgent)
+        self.voice.say(text, interrupt=urgent, tone=tone or "")
 
     def set_watch(self, name, on=True):
         self.rules.watch(name, on)
@@ -664,6 +664,9 @@ class App:
         cap = WowCapture(self.cfg["capture"]["width"], self.cfg["capture"]["height"],
                          self.cfg["capture"]["window_title"])
         self.cap = cap
+        coach = getattr(self, "coach", None)
+        if coach is not None:
+            coach.banter.window_gone = lambda: not cap.hwnd     # the game closed: the character says goodbye
         base = (self.cfg["capture"]["width"], self.cfg["capture"]["height"])
         g = self.cfg["grid"]
         loc = None

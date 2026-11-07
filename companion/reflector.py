@@ -34,7 +34,8 @@ class Reflector:
         since = max(m.last_reflect, self.reflect_t)
         events = [e for e in list(c.convo) if e["t"] > since]
         asked = [e for e in events if e["who"] == "player"]
-        if len(asked) < int(c.opt.get("reflect_min_questions")) and not self.marks_since(since):
+        asides = [e for e in events if e.get("kind") == "banter"]     # how they take the asides teaches rapport
+        if len(asked) < int(c.opt.get("reflect_min_questions")) and len(asides) < 4 and not self.marks_since(since):
             return
         self.reflect_t = now
         threading.Thread(target=self.reflect, args=(events,), daemon=True, name="coach-reflect").start()
@@ -63,6 +64,8 @@ class Reflector:
         since = max(m.last_reflect, 0)
         events = events if events is not None else [e for e in list(c.convo) if e["t"] > since]
         lines = coach_tools.reflection_events(events, self.marks_since(since))
+        # what happened together (the diary: deaths, dings, close calls), for the rapport notes' shared moments
+        lines += ["- shared moment: %s" % d["text"] for d in m.diary_since(since)[-20:]]
         if not lines:
             return None
         notes = "\n".join("[%d] (%s) %s" % (n["id"], n["kind"], n["text"]) for n in m.list()) or "(none yet)"

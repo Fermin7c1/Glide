@@ -27,6 +27,7 @@ import threading
 import time
 from collections import deque
 
+import banter as banter_mod
 import coach_prompts as prompts
 import coach_tools
 import models as models_mod
@@ -61,8 +62,11 @@ QUEST_KINDS = frozenset(("quest_turned_in", "quest_removed", "quests_accepted", 
 SUMMARY_NOTE = ("(Several quest events at once: one summary for all of them, at most %d words: what got done, "
                 "the reward to pick if there is a choice, what was picked up, then the one next action.)")
 
+# the coach's lines in a conversation with the player: answers, and asides and the chat replies after them
+REPLIES = frozenset(("answer", "banter"))
+
 CONVO_LABEL = {"answer": "coach answered", "callout": "coach callout", "review": "coach pace review",
-               "briefing": "coach quest briefing", "reminder": "coach reminder"}
+               "briefing": "coach quest briefing", "reminder": "coach reminder", "banter": "coach aside"}
 
 
 class Coach:
@@ -126,12 +130,16 @@ class Coach:
         # the coach thread's background work, each with tick(): quest briefings and step videos, reminders,
         # reflection, and keeping the knowledge block and the way to the step fresh
         self.briefings = Briefings(self)
+        self.banter = banter_mod.Banter(self)      # asides in character, and the bond they build (banter.py)
+        self.frame_t = None                   # when the last game frame arrived (time.time())
+        self.tone = None                      # the last reply's TONE: line (in character: how to deliver it)
+        self.said_t = None                    # when the coach last said a line out loud (time.time())
         self.reminder_ticker = ReminderTicker(self)
         self.reflector = Reflector(self)
         self.route = RouteKeeper(self)
         # one round of the coach thread after the questions, in this order
         self._jobs = (self.briefings.tick, self.reminder_ticker.tick, self.reflector.tick, self._callouts,
-                      self.route.tick)
+                      self.route.tick, self.banter.tick)
         self._thread = None
 
     def start(self):
@@ -171,7 +179,9 @@ class Coach:
     def _emit(self, msg):
         if msg.get("kind") in msg_kinds.COACH_SAID and msg.get("text"):
             self.convo.append({"t": self._now(), "who": "coach", "kind": msg["kind"],
-                               "text": msg["text"]})
+                               "text": msg["text"], **({"chat": True} if msg.get("chat") else {})})
+            if msg.get("speak"):
+                self.said_t = time.time()        # the coach spoke (asides wait for quiet after any line)
         if msg.get("kind") in msg_kinds.RECENT and msg.get("text"):
             self.recent.append({"t": msg.get("t") or self._now(), "type": "message", "kind": msg["kind"],
                                 "text": msg["text"]})
@@ -181,8 +191,10 @@ class Coach:
         """A new frame's game state and the triggers it raised (from the capture thread): queue them for the coach
         thread."""
         self.state = state
+        self.frame_t = time.time()
         self.session.observe(state, self._now())
         self.queue_triggers(triggers)
+        self.banter.observe(triggers or (), state)     # moments the character reacts to, the diary, its mood
 
     def queue_triggers(self, triggers):
         """Queue triggers for the coach thread (push, and the coach's own: Briefings.hold's quests_accepted)."""
@@ -558,6 +570,9 @@ class Coach:
             done = self._answer_locally(question, voice)
             if done:
                 return done
+        # the player answering an aside: a chat, kept going in character (banter.py); the question keeps its model
+        # and lookahead, so a game question mid-chat still gets a full answer
+        chat = bool(question) and self.banter.in_chat(self._convo_before)
         # spoken questions mid-play go to the fast model with a short spoken answer, unless configured
         deep = (bool(question) and not (voice and self.opt.get("voice_question_model") == "fast")) \
             or any(t.deep for t in batch)
@@ -567,11 +582,13 @@ class Coach:
             (self.opt.get("lookahead_steps") if (question or deep) else None)
         ctx = self.context(deep=deep, triggers=triggers, lookahead=lookahead)
         kctx = self._turn_kctx
-        trigger = self._turn_text(batch, question, voice)
+        trigger = self._turn_text(batch, question, voice and not chat)
+        if chat:
+            trigger += "\n" + self.banter.chat_note(self._word_limit(question, voice, deep, chat=True))
         if self._summary_batch(batch):
             trigger += "\n" + SUMMARY_NOTE % self._word_limit(question, voice, deep, batch)
         if self.persona():
-            trigger += "\n" + persona_mod.REMINDER % persona_mod.short_name(self.persona())
+            trigger += "\n" + self.banter.reminder()
         # out of credits / bad key: no automatic calls at all. A question the player asks tries once more
         # (that's how it resumes after topping up); transient errors back off instead of hammering.
         model = self.cfg.get("deep_model" if deep else "fast_model")
@@ -593,13 +610,16 @@ class Coach:
             return self._emit_offline(question, text, bool(question), "offline (no %s key)" % prov)
         user = self._user_message(ctx, trigger, question=bool(question), triggers=triggers if batch else None,
                                   cc=llm.ref_marker(model))
-        limit = self._word_limit(question, voice, deep, batch)
+        limit = self._word_limit(question, voice, deep, batch, chat)
         urgent = (bool(batch) and min(t.priority for t in batch) == 1) or voice
         msg_kind = "answer" if question else ("review" if deep else "callout")
         speaks = bool(question) or not deep or self.opt.get("speak_reviews")
         speak_fn = self.deps.speak_fn
-        speech = EarlySpeech(lambda t, u: speak_fn(t, msg_kind, u), limit, urgent) \
-            if speak_fn and speaks else None
+        def say_early(t, u):
+            tone, fn = getattr(speech, "tone", None), speak_fn      # tone in character: the reply's TONE line
+            if fn is not None:
+                fn(t, msg_kind, u, tone) if tone else fn(t, msg_kind, u)
+        speech = EarlySpeech(say_early, limit, urgent) if speak_fn and speaks else None
         text, meta = self._ask_model(model, user, kctx, question, voice, deep, speech)
         self.last_call = time.time()
         if not text and question and llm.suspended and llm.suspended_for == prov:
@@ -610,18 +630,28 @@ class Coach:
         if question and text:
             self._count_rounds("voice" if voice else "typed", meta)
         facts, had_facts = [], False
+        ended = False
         if text:
+            text, ended = banter_mod.split_chat(text)
             text, facts, had_facts = self._directives(text, with_facts=True)
         if text and not question and is_skip(text):
             return None
+        tone = self.tone or (speech.tone if speech is not None else None)
+        chatting = chat and not ended              # still chatting: the player's next reply carries it on
+        if chatting:
+            self.banter.chatted(text)
         if text:     # (the limit again: a reply that just took on a character may stretch already)
-            text = trim_words(text, max(limit, self._word_limit(question, voice, deep, batch)))
+            text = trim_words(text, max(limit, self._word_limit(question, voice, deep, batch, chat)))
         if not text:
             return None
         self.history.append(text)
         self.history = self.history[-10:]
         msg = {"kind": msg_kind, "text": text, "speak": speaks, "urgent": urgent,
                "model": self._model_note(model, meta), "t": time.time()}
+        if tone:
+            msg["tone"] = tone                     # how to deliver it in character (the OpenAI voice performs it)
+        if chatting:
+            msg["chat"] = True                     # an answer that keeps a chat going (Banter.in_chat)
         if speech is not None and speech.said:
             msg["spoken"] = speech.spoken          # already said while it streamed: the app says only the rest
         if meta.get("tool_calls"):
@@ -667,11 +697,13 @@ class Coach:
         self.emit(msg)
         return msg
 
-    def _word_limit(self, question, voice, deep, batch=None):
+    def _word_limit(self, question, voice, deep, batch=None, chat=False):
         """How many words the reply may have: spoken and typed answers, pace reviews, callouts (a summary of several
-        quest events: summary_words)."""
+        quest events: summary_words), chat replies (banter_reply_words)."""
         if question:
             n = self.opt.get("answer_words") if voice else self.opt.get("typed_answer_words")
+            if chat:
+                n = max(n, self.opt.get("banter_reply_words"))
         elif deep:
             n = self.opt.get("review_words")
         else:
@@ -698,11 +730,53 @@ class Coach:
         """A word limit, longer while a character is played (llm.persona_word_factor): flavour takes words."""
         return int(round(words * self.opt.get("persona_word_factor"))) if self.persona() else words
 
-    def _set_persona(self, brief, voice):
-        """Take a PERSONA: / VOICE: from a reply: play the new character ("" = drop the act), saved like a setting."""
+    def persona_name(self):
+        """What the player calls the character (its NAME: line, else the start of its brief), or "". A saved name
+        whose character has another brief is stale (the Character was edited in Settings, which leaves the name):
+        the start of the brief is the name then, so one character's lore never goes to another."""
+        brief = self.persona()
+        if not brief:
+            return ""
+        name = persona_mod.clean(self.cfg.get("persona_name"))
+        m = self.deps.memory
+        if name and m is not None:
+            ch = m.character(name)
+            if ch is not None and persona_mod.clean(ch["brief"]) != brief:
+                name = ""
+        return name or persona_mod.short_name(brief, 4)
+
+    def _character(self):
+        """The saved character being played (Memory.characters), or None."""
+        m = self.deps.memory
+        return m.character(self.persona_name()) if m is not None and self.persona() else None
+
+    def _apply_persona(self, found):
+        """A reply's persona lines (persona.split): play, recall, rename or drop a character, keep its lore."""
+        m = self.deps.memory
+        if found["recall"]:
+            ch = m.character(found["recall"]) if m is not None else None
+            if ch:
+                self._set_persona(ch["brief"], ch.get("voice") or "", ch["name"])
+            else:
+                self.emit({"kind": "info", "speak": False, "text": "No saved character called %s" % found["recall"]})
+        elif found["persona"] is not None:
+            self._set_persona(found["persona"], found["voice"] or "", found["name"])
+        elif self.persona() and (found["voice"] or found["name"]):
+            self._set_persona(self.persona(), found["voice"] or self.persona_voice(), found["name"] or self.persona_name())
+        if found["lore"] and m is not None and self.persona():
+            m.character_save(self.persona_name(), self.persona(), self.persona_voice())
+            for fact in found["lore"]:
+                m.character_lore(self.persona_name(), fact)
+
+    def _set_persona(self, brief, voice, name=None):
+        """Play the new character ("" = drop the act), saved like a setting and kept in the memory by name."""
         brief = persona_mod.clean(brief)
         voice = persona_mod.clean(voice) if brief else ""
-        changed = {k: v for k, v in (("persona", brief), ("persona_voice", voice)) if (self.cfg.get(k) or "") != v}
+        name = (persona_mod.clean(name) or persona_mod.short_name(brief, 4))[:60] if brief else ""
+        if brief and self.deps.memory is not None:
+            self.deps.memory.character_save(name, brief, voice)
+        changed = {k: v for k, v in (("persona", brief), ("persona_voice", voice), ("persona_name", name))
+                   if (self.cfg.get(k) or "") != v}
         if not changed:
             return
         self.cfg.update(changed)
@@ -769,11 +843,11 @@ class Coach:
         start = qs[-turns] if len(qs) >= turns else (qs[0] if qs else len(win))
         keep = []
         for i, e in enumerate(win):
-            if i >= start and (e["who"] == "player" or e["kind"] == "answer"):
+            if i >= start and (e["who"] == "player" or e["kind"] in REPLIES):
                 keep.append(e)
             elif e["who"] == "coach" and e["kind"] != "answer" and now - e["t"] <= 300:
-                keep.append(e)                 # other things the coach said in the last 5 minutes
-        others = [e for e in keep if e["who"] == "coach" and e["kind"] != "answer"]
+                keep.append(e)                 # other things the coach said in the last 5 minutes (asides too)
+        others = [e for e in keep if e["who"] == "coach" and e["kind"] not in REPLIES]
         drop = {id(e) for e in others[:-4]}     # at most the 4 latest callouts / briefings / reminders
         lines = []
         for e in keep:
@@ -854,12 +928,15 @@ class Coach:
                     rows = []
             self._system = prompts.system_prompt(rows)
         blocks = [dict({"type": "text", "text": self._system}, **({"cache_control": cc} if cc else {}))]
-        mem = self.deps.memory.block() if self.deps.memory is not None else ""
+        m = self.deps.memory
+        mem = "\n\n".join(x for x in ((m.block(), m.characters_block()) if m is not None else ()) if x)
         brief = self.persona()
         if brief:    # last, so its tone overrides the coach rules'
             o = self.opt
+            ch = self._character()
             mem = "\n\n".join(x for x in (mem, persona_mod.block(brief, [
-                self._stretch(o.get(k)) for k in ("callout_words", "answer_words", "typed_answer_words")])) if x)
+                self._stretch(o.get(k)) for k in ("callout_words", "answer_words", "typed_answer_words")],
+                (ch or {}).get("lore") or ())) if x)
         # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
         # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
         if mem:
@@ -867,14 +944,19 @@ class Coach:
         return blocks
 
     def _directives(self, text, with_facts=False):
-        """Strip WATCH:/UNWATCH: and PERSONA:/VOICE: lines (applied) and the FACTS: line (machine-only) from a reply.
-        -> text, or (text, fact ids, had_facts_line) with with_facts=True."""
+        """Strip WATCH:/UNWATCH:, the persona lines (PERSONA, NAME, VOICE, LORE, TONE) and BANTER: (applied) and the
+        FACTS: line (machine-only) from a reply. The line's TONE: is left in self.tone for the caller. -> text, or
+        (text, fact ids, had_facts_line) with with_facts=True."""
         text, facts, had = split_facts(text)
-        text, brief, voice = persona_mod.split(text)
-        if brief is not None:
-            self._set_persona(brief, voice)
-        elif voice and self.persona():
-            self._set_persona(self.persona(), voice)
+        if self.persona() or persona_mod.STARTS.search(text or ""):
+            text, found = persona_mod.split(text)
+        else:
+            found = persona_mod.split("")[1]
+        self.tone = found["tone"] if self.persona() or found["persona"] else None
+        text, chatter = banter_mod.split(text)
+        if chatter:
+            self.banter.adjust(chatter)
+        self._apply_persona(found)
         out, watches = split_watch(text)
         d = self.deps
         for name, on in watches:
@@ -929,5 +1011,5 @@ class Coach:
         finally:
             self.emit = emit0
         delta = {k: self.stats.get(k, 0) - before.get(k, 0) for k in self.stats}
-        return {"answer": msg if msg and msg.get("kind") == "answer" else None, "messages": got,
+        return {"answer": msg if msg and msg.get("kind") in REPLIES else None, "messages": got,
                 "latency_s": round(time.time() - t0, 2), "stats": delta, "usage": dict(self.llm.last_usage)}

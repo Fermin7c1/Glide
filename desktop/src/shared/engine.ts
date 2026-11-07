@@ -119,9 +119,11 @@ export interface RxpSettings { ssf: boolean; group_quests: boolean }
 /** event: message: a line of the coach's feed. The dashboard also shows its own lines in the same shape (kind
  * "question" for what you asked, "error" when it couldn't send it). */
 export interface CoachMessage {
-  kind: string;                   // callout, answer, review, briefing, reminder, info, error
+  kind: string;                   // callout, answer, banter, review, briefing, reminder, info, error
   text: string;
   speak?: boolean;
+  tone?: string;                  // in character: how to deliver this line (added to the speak event's style)
+  chat?: boolean;                 // an answer that keeps a chat with the coach going (the player answered an aside)
   urgent?: boolean;
   model?: string;                 // which model (or "offline", "local", "step video") said it
   t: number;                      // seconds since the epoch

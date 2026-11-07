@@ -82,35 +82,61 @@ def split_watch(text):
     return "\n".join(keep).strip(), found
 
 
+# the lines a reply ends with that are never spoken (the coach strips and applies them)
+DIRECTIVES = ("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:", "BANTER:", "CHAT:", "NAME:", "LORE:",
+              "TONE:")
+
+
 class EarlySpeech:
     """Speaks a streamed reply sentence by sentence while it arrives, instead of after the whole reply (and its
     FACTS line) is done. Stops at SKIP / FACTS / WATCH lines and at the word limit the reply will be trimmed to, so it
     never says what the final text won't contain. `spoken` (text already said, from the start of the reply, after
-    `prefix`) goes on the final message; the app then says only the rest."""
+    `prefix`) goes on the final message; the app then says only the rest. A reply in character starts with a
+    "TONE: <delivery>" line: it is read into `tone` (the lines are spoken with it) and never said."""
     _END = re.compile(r"[.!?](?=\s)")
+    _TONE = re.compile(r"\s*TONE\s*:\s*([^\n]*)\n", re.I)
 
     def __init__(self, speak, limit_words, urgent=False, prefix=""):
         self.speak, self.limit, self.urgent = speak, limit_words, urgent
         self.buf, self.used, self.words, self.stopped = "", 0, 0, False
         self.spoken = prefix.strip()
+        self.tone = None                  # the reply's TONE: line, once read ("" when it has none)
 
     def __call__(self, chunk):
         if self.stopped:
             return
         self.buf += chunk
+        if self.tone is None:
+            head = self.buf.lstrip()
+            if head.upper().startswith("TONE:") or "TONE:".startswith(head.upper()):
+                m = self._TONE.match(self.buf)
+                if not m:
+                    return                 # the TONE line hasn't ended yet
+                self.tone, self.used = m.group(1).strip(), m.end()
+            else:
+                self.tone = ""
         while not self.stopped:
             rest = self.buf[self.used:]
             m = self._END.search(rest)
             if not m:
                 return
-            sentence = " ".join(rest[:m.end()].split())
+            raw = rest[:m.end()]
             self.used += m.end()
+            # a line that doesn't end in . ! ? runs on into the next: a directive line there ends what is said
+            lines = raw.split("\n")
+            cut = next((i for i, ln in enumerate(lines) if ln.strip().upper().startswith(DIRECTIVES)), None)
+            if cut is not None:
+                raw, self.stopped = "\n".join(lines[:cut]), True
+            sentence = " ".join(raw.split())
             up = sentence.upper()
             n = len(sentence.split())
-            if not sentence or up.startswith(("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:")) \
-                    or "FACTS:" in up \
-                    or self.words + n > self.limit:
+            if not sentence or "FACTS:" in up or self.words + n > self.limit:
                 self.stopped = True
+                return
+            if self.stopped:                       # the words before the directive line, then nothing more
+                self.speak(sentence, self.urgent and not self.words)
+                self.words += n
+                self.spoken = (self.spoken + " " + sentence).strip()
                 return
             self.speak(sentence, self.urgent and not self.words)
             self.words += n

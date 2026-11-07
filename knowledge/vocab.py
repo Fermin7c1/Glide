@@ -12,7 +12,7 @@ UNDEAD, UNDEAD_TOKEN = "Undead", "Scourge"
 # what the coach said to the player, as the engine's feed messages name it ({"kind": ...}): the line a feedback mark
 # is stored with (sources/flags.py) and the coach lines an eval replays (eval/run_eval.py). The engine's own copy is
 # companion/msg_kinds.COACH_SAID (the knowledge layer doesn't import the engine); tests/test_helpers.py keeps them equal.
-COACH_SAID = frozenset(("callout", "answer", "review", "briefing", "reminder"))
+COACH_SAID = frozenset(("callout", "answer", "review", "briefing", "reminder", "banter"))
 
 # class / race bits: bit (id - 1) of ChrClasses / ChrRaces; a mask with no bits set means "everyone"
 CLASS_BITS = {"WARRIOR": 1, "PALADIN": 2, "HUNTER": 4, "ROGUE": 8, "PRIEST": 16, "SHAMAN": 64, "MAGE": 128,

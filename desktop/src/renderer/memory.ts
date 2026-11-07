@@ -7,7 +7,8 @@ import { Obj } from "./types.js";
 const MEM_SOURCE: Record<string, [string, string]> = { player: ["user", "You told me"], coach: ["bot", "The coach noted"],
   reflection: ["lightbulb", "Learned from your sessions"], mark: ["flag", "From your feedback mark"] };
 const MEM_TITLE: Record<string, string> = { preference: "How you like to be coached", request: "Standing requests",
-  goal: "Your goals", feedback: "Corrections the coach won't repeat", fact: "About you" };
+  goal: "Your goals", feedback: "Corrections the coach won't repeat", fact: "About you",
+  rapport: "What we share: jokes, nicknames, moments" };
 let memory: Obj | null = null;
 let editing: number | null = null;
 

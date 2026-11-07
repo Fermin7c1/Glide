@@ -486,6 +486,15 @@ class GameState:
             return None
         return ((g["x"] - x) ** 2 + (g["y"] - y) ** 2) ** 0.5
 
+    def vitals(self):
+        """The few summary keys read on every frame (banter.py's close calls and big kills), without the whole
+        summary: combat, dead, hp and the target's name, level, classification and whether it died."""
+        c = self.core
+        t = self.pages.get("T", {})
+        return {"combat": c.get("c") == "1", "dead": as_int(c.get("d"), 0), "hp": self._gauge("h", "hp"),
+                "target": {"name": t.get("tn"), "level": as_int(c.get("tl")), "dead": c.get("td") == "1",
+                           "classification": t.get("tc") or None} if c.get("tg") is not None else None}
+
     def summary(self):
         c = self.core
         b = self.pages.get("B", {})
