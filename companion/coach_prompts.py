@@ -184,11 +184,23 @@ themselves. Rapport notes are about the player and you, whatever character you p
 Be conservative: only what clearly recurs or the player said outright; no guesses about one-off moments; at most 5
 changes; short third-person notes. Roleplay (a character the player asked you to play) is kept elsewhere: never
 note it.
+Then the story so far, for your own memory of this time together:
+- "chapter": 2-4 sentences, written for yourself, of this stretch together: what happened (deaths, dings, places),
+  what you talked about, the jokes and running gags, the mood, anything they shared about themselves or their life.
+  Concrete names, not summaries of summaries. "" when nothing happened worth a chapter.
+- "topics": up to 8 keywords that would bring this chapter back: places, NPCs, quests, mobs, items, and the things
+  the player talked about (their job, their dog, a bet).
+- "threads_add": up to 3 open threads between you: a promise you made ("I'll tell you how I lost my beard"), a question
+  of yours they never answered, a plan or a wish they mentioned ("wants to hit 40 before Friday"). Short.
+- "threads_done": the ids of OPEN THREADS that got resolved or no longer apply.
 Reply with ONLY a JSON object, no other text:
-{"add": [{"kind": "preference|request|goal|feedback|fact", "text": "..."}], "update": [{"id": 12, "text": "..."}],
- "remove": [12]}
+{"add": [{"kind": "preference|request|goal|feedback|fact|rapport", "text": "..."}], "update": [{"id": 12, "text": "..."}],
+ "remove": [12], "chapter": "...", "topics": ["..."], "threads_add": ["..."], "threads_done": ["t3"]}
 
 CURRENT NOTES:
+%s
+
+OPEN THREADS:
 %s
 
 SINCE LAST REFLECTION:
@@ -196,7 +208,8 @@ SINCE LAST REFLECTION:
 
 # the reply shape REFLECT_PROMPT asks for, enforced with structured outputs on the Claude API
 REFLECT_SCHEMA = {
-    "type": "object", "additionalProperties": False, "required": ["add", "update", "remove"],
+    "type": "object", "additionalProperties": False,
+    "required": ["add", "update", "remove", "chapter", "topics", "threads_add", "threads_done"],
     "properties": {
         "add": {"type": "array", "items": {
             "type": "object", "additionalProperties": False, "required": ["kind", "text"],
@@ -204,7 +217,11 @@ REFLECT_SCHEMA = {
         "update": {"type": "array", "items": {
             "type": "object", "additionalProperties": False, "required": ["id", "text"],
             "properties": {"id": {"type": "integer"}, "text": {"type": "string"}}}},
-        "remove": {"type": "array", "items": {"type": "integer"}}}}
+        "remove": {"type": "array", "items": {"type": "integer"}},
+        "chapter": {"type": "string"},
+        "topics": {"type": "array", "items": {"type": "string"}},
+        "threads_add": {"type": "array", "items": {"type": "string"}},
+        "threads_done": {"type": "array", "items": {"type": "string"}}}}
 
 
 def glossary_lines(rows, width=200):

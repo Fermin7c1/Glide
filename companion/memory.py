@@ -24,6 +24,7 @@ coach_memory.json as kind "fact" with "rapport": true (older engines keep and sh
 or top-level keys this engine doesn't know are written back as they were.
 """
 import json
+import math
 import os
 import re
 import sys
@@ -54,6 +55,13 @@ BOND_STAGES = ((3, "new"), (15, "getting to know each other"), (50, "familiar"),
 MAX_DIARY = 80                # shared moments kept (newest)
 MAX_LORE = 24                 # facts a character told about itself, per character
 MAX_CHARACTERS = 12           # characters kept (most recently played)
+MAX_CHAPTERS = 16             # session chapters kept whole; past this the oldest FOLD fold into one era
+FOLD = 8
+MAX_ERAS = 24                 # eras kept (the oldest stretches of the climb, in brief)
+MAX_THREADS = 12              # open threads (promises, questions, plans); the oldest goes when it's full
+KEEP_CONVO = 60               # conversation lines kept across restarts
+CHARACTER_LISTS = {"samples": 6, "favorites": 6, "plot": 4, "lines": 60}   # per character: kept, newest
+BOND_KEYS = ("bond", "diary", "zones", "characters", "chapters", "eras", "threads", "next_thread", "convo", "cleared_t")
 
 
 def memory_dir():
@@ -67,6 +75,13 @@ def memory_dir():
 
 def default_path():
     return os.path.join(memory_dir(), "coach_memory.json")
+
+
+def _when(v):
+    """A stored time: a finite number of seconds, not more than a day in the future; else None."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v > time.time() + 86400:
+        return None
+    return float(v)
 
 
 def _typed(d, key, kind):
@@ -119,7 +134,14 @@ class Memory:
         self._extra = {}                   # top-level keys this engine doesn't know: written back untouched
         self.zones = set()                 # the zones visited together (not capped like the diary)
         # time played together and how the coach's asides went (banter.py): {"hours", "sessions", "asides", "replied"}
-        self.bond = {"hours": 0.0, "sessions": 0, "asides": 0, "replied": 0, "last_seen": 0.0, "by_activity": {}}
+        self.bond = {"hours": 0.0, "sessions": 0, "asides": 0, "replied": 0, "last_seen": 0.0, "first_seen": 0.0,
+                     "by_activity": {}}
+        # the story so far: chapters (one per reflection: what happened, the jokes, what they shared) folded into
+        # eras when old; the open threads between you; the conversation's last lines (kept across restarts)
+        self.chapters, self.eras, self.threads, self.convo = [], [], [], []
+        self.next_thread = 1
+        self.cleared_t = 0.0                # "forget everything" happened then: nothing older comes back
+        self._bond_extra = {}               # coach_bond.json keys this engine doesn't know: written back untouched
         # the diary of shared moments: [{"t", "kind", "text", "session"}] (banter.py writes it, the asides recall it)
         self.diary = []
         # the characters the coach played for them, by key: {"name", "brief", "voice", "lore": [...], "last"}
@@ -173,7 +195,7 @@ class Memory:
     def _load_bond(self, d):
         """The bond's parts from a parsed coach_bond.json, each checked: a bad entry is dropped, never fatal."""
         bond = _typed(d, "bond", dict)
-        for k in ("hours", "last_seen"):
+        for k in ("hours", "last_seen", "first_seen"):
             self.bond[k] = as_float(bond.get(k), 0.0, finite=True, bool_ok=False)
         for k in ("sessions", "asides", "replied"):
             self.bond[k] = as_int(bond.get(k), 0, bool_ok=False)
@@ -184,10 +206,9 @@ class Memory:
         diary = _typed(d, "diary", list)
         self.diary = []
         for x in diary:
-            if not isinstance(x, dict) or not isinstance(x.get("text"), str) or isinstance(x.get("t"), bool) \
-                    or not isinstance(x.get("t"), (int, float)):
+            if not isinstance(x, dict) or not isinstance(x.get("text"), str) or _when(x.get("t")) is None:
                 continue
-            row = {"t": float(x["t"]), "kind": str(x.get("kind") or "moment"), "text": x["text"][:200],
+            row = {"t": _when(x["t"]), "kind": str(x.get("kind") or "moment"), "text": x["text"][:200],
                    "session": as_int(x.get("session"), 0, bool_ok=False)}
             if isinstance(x.get("zone"), str):
                 row["zone"] = x["zone"]
@@ -198,12 +219,44 @@ class Memory:
             if isinstance(v, dict) and isinstance(v.get("name"), str) and isinstance(v.get("brief"), str) \
                     and v["name"].strip() and v["brief"].strip():
                 lore = _typed(v, "lore", list)
-                self.characters[self._key(v["name"]) or str(k)] = {
+                ch = self.characters[self._key(v["name"]) or str(k)] = {
                     "name": v["name"][:60], "brief": v["brief"], "voice": v.get("voice") if isinstance(
                         v.get("voice"), str) else "", "lore": [x for x in lore if isinstance(x, str)][-MAX_LORE:],
-                    "last": as_float(v.get("last"), 0.0, finite=True, bool_ok=False)}
+                    "last": as_float(v.get("last"), 0.0, finite=True, bool_ok=False),
+                    "role": v.get("role") if isinstance(v.get("role"), str) else ""}
+                for field, cap in CHARACTER_LISTS.items():
+                    ch[field] = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
         zones = _typed(d, "zones", list)
         self.zones = {z for z in zones if isinstance(z, str)} | {x["zone"] for x in self.diary if "zone" in x}
+        for x in _typed(d, "chapters", list):
+            if isinstance(x, dict) and isinstance(x.get("text"), str) and x["text"].strip():
+                self.chapters.append({"t0": as_float(x.get("t0"), 0.0, finite=True, bool_ok=False),
+                                      "t1": as_float(x.get("t1"), 0.0, finite=True, bool_ok=False),
+                                      "text": x["text"][:1200], "topics": [t for t in _typed(x, "topics", list)
+                                                                           if isinstance(t, str)][:12]})
+        for x in _typed(d, "eras", list):
+            if isinstance(x, dict) and isinstance(x.get("text"), str) and x["text"].strip():
+                self.eras.append({"t0": as_float(x.get("t0"), 0.0, finite=True, bool_ok=False),
+                                  "t1": as_float(x.get("t1"), 0.0, finite=True, bool_ok=False),
+                                  "text": x["text"][:1200], "topics": [t for t in _typed(x, "topics", list)
+                                                                       if isinstance(t, str)][:24]})
+        for x in _typed(d, "threads", list):
+            if isinstance(x, dict) and isinstance(x.get("text"), str) and isinstance(x.get("id"), str):
+                self.threads.append({"id": x["id"], "text": x["text"][:200],
+                                     "t": as_float(x.get("t"), 0.0, finite=True, bool_ok=False)})
+        self.next_thread = max([as_int(d.get("next_thread"), 1, bool_ok=False)] +
+                               [as_int(x["id"][1:], 0, bool_ok=False) + 1 for x in self.threads])
+        self.cleared_t = as_float(d.get("cleared_t"), 0.0, finite=True, bool_ok=False)
+        for x in _typed(d, "convo", list):
+            if isinstance(x, dict) and x.get("who") in ("player", "coach") and isinstance(x.get("text"), str) \
+                    and isinstance(x.get("kind"), str) and _when(x.get("t")) is not None \
+                    and x["t"] > self.cleared_t:
+                row = {"t": _when(x["t"]), "who": x["who"], "kind": x["kind"], "text": x["text"]}
+                if x.get("chat") is True:
+                    row["chat"] = True
+                self.convo.append(row)
+        del self.convo[:-KEEP_CONVO]
+        self._bond_extra = {k: v for k, v in d.items() if k not in BOND_KEYS}
 
     def _save(self):
         """coach_memory.json: the notes ("rapport" ones as facts with "rapport": true, so older engines keep them),
@@ -226,8 +279,10 @@ class Memory:
         if not self.bond_path:
             return
         try:
-            jsonfile.write_atomic(self.bond_path, {"bond": self.bond, "diary": self.diary, "zones": sorted(self.zones),
-                                                   "characters": self.characters}, ensure_ascii=False, indent=1)
+            jsonfile.write_atomic(self.bond_path, dict(
+                self._bond_extra, bond=self.bond, diary=self.diary, zones=sorted(self.zones), characters=self.characters,
+                chapters=self.chapters, eras=self.eras, threads=self.threads, next_thread=self.next_thread,
+                convo=self.convo, cleared_t=self.cleared_t), ensure_ascii=False, indent=1)
             self._backup(self.bond_path)
         except OSError as e:
             log("memory", "could not save %s: %s" % (self.bond_path, e))
@@ -308,7 +363,10 @@ class Memory:
             if str(which).strip().lower() in ("all", "everything"):      # and the history together, all of it
                 self.bond = {"hours": 0.0, "sessions": 0, "asides": 0, "replied": 0, "last_seen": 0.0,
                              "by_activity": {}}
+                self.bond["first_seen"] = 0.0
                 self.diary, self.zones, self.characters = [], set(), {}
+                self.chapters, self.eras, self.threads, self.convo = [], [], [], []
+                self.cleared_t = time.time()
                 self._save_bond()
             return gone
 
@@ -368,6 +426,7 @@ class Memory:
             b["replied"] += replied
             if hours:
                 b["last_seen"] = time.time()
+                b["first_seen"] = b["first_seen"] or time.time()
             if activity and (asides or replied):
                 row = b["by_activity"].setdefault(activity, [0, 0])
                 row[0] += asides
@@ -476,6 +535,110 @@ class Memory:
             del ch["lore"][:-MAX_LORE]
             self._save_bond()
             return True
+
+    def character_add(self, name, field, items):
+        """Add to one of a character's lists (CHARACTER_LISTS: sample lines, favourite lines, its story threads, its
+        recent lines), keeping the newest; or set its "role" (who the player is to it). -> whether it changed."""
+        if field != "role" and field not in CHARACTER_LISTS:
+            raise ValueError("no character field %r" % field)
+        key = self._key(name)
+        with self.lock:
+            ch = self.characters.get(key)
+            if ch is None:
+                return False
+            if field == "role":
+                role = " ".join(str(items or "").split())[:200]
+                if role == ch.get("role"):
+                    return False
+                ch["role"] = role
+            else:
+                rows = ch.setdefault(field, [])
+                new = [" ".join(str(x).split())[:300] for x in (items if isinstance(items, (list, tuple)) else [items])]
+                new = [x for x in new if x and (field == "lines" or not any(_similar(x, y) for y in rows))]
+                if not new:
+                    return False
+                rows.extend(new)
+                del rows[:-CHARACTER_LISTS[field]]
+            if field != "lines":                    # its recent lines are saved with the next other change
+                self._save_bond()
+            return True
+
+    # ---- the story so far: chapters, eras, threads, the conversation ----------------------------------------
+    def chapter_add(self, text, topics=(), t0=None, t1=None):
+        """A chapter of the time together (written at reflection). Past MAX_CHAPTERS the oldest FOLD fold into an
+        era: their texts' first sentences and their topics."""
+        text = " ".join(str(text or "").split())[:1200]
+        if not text:
+            return None
+        now = time.time()
+        row = {"t0": float(t0 if t0 is not None else now), "t1": float(t1 if t1 is not None else now), "text": text,
+               "topics": [" ".join(str(t).split())[:60] for t in topics or () if str(t).strip()][:12]}
+        with self.lock:
+            self.chapters.append(row)
+            if len(self.chapters) > MAX_CHAPTERS:
+                old, self.chapters = self.chapters[:FOLD], self.chapters[FOLD:]
+                share = 1200 // len(old) - 1
+                firsts = [re.split(r"(?<=[.!?])\s", c["text"], maxsplit=1)[0][:share] for c in old]
+                topics = []
+                for i in range(max((len(c["topics"]) for c in old), default=0)):     # round-robin: each its share
+                    topics += [c["topics"][i] for c in old if i < len(c["topics"])]
+                self.eras.append({"t0": old[0]["t0"], "t1": old[-1]["t1"], "text": " ".join(firsts)[:1200],
+                                  "topics": list(dict.fromkeys(topics))[:24]})
+                del self.eras[:-MAX_ERAS]
+            self._save_bond()
+        return dict(row)
+
+    def chapters_recent(self, n=3):
+        with self.lock:
+            return [dict(x) for x in self.chapters[-n:]]
+
+    def story(self):
+        """Every chapter and era (oldest first), for recall and the road-so-far recap."""
+        with self.lock:
+            return [dict(x, era=True) for x in self.eras] + [dict(x) for x in self.chapters]
+
+    def thread_add(self, text, now=None):
+        """An open thread between you (a promise, a question left hanging, a plan): kept until closed; the oldest
+        goes past MAX_THREADS. -> its id ("t7"), or None (empty, or one like it is open)."""
+        text = " ".join(str(text or "").split())[:200]
+        with self.lock:
+            if not text or any(_similar(text, x["text"]) for x in self.threads):
+                return None
+            tid = "t%d" % self.next_thread
+            self.next_thread += 1
+            self.threads.append({"id": tid, "text": text, "t": time.time() if now is None else now})
+            del self.threads[:-MAX_THREADS]
+            self._save_bond()
+            return tid
+
+    def thread_done(self, ids):
+        """Close threads by id ("t7"). -> the texts closed."""
+        ids = {str(i).strip().lower() for i in ids or ()}
+        with self.lock:
+            gone = [x["text"] for x in self.threads if x["id"].lower() in ids]
+            if gone:
+                self.threads = [x for x in self.threads if x["id"].lower() not in ids]
+                self._save_bond()
+            return gone
+
+    def threads_open(self):
+        with self.lock:
+            return [dict(x) for x in self.threads]
+
+    def convo_keep(self, entries):
+        """The conversation's last lines, kept across restarts (Coach restores them at start)."""
+        with self.lock:
+            rows = [{k: e[k] for k in ("t", "who", "kind", "text", "chat") if k in e}
+                    for e in list(entries) if e.get("t", 0) > self.cleared_t][-KEEP_CONVO:]
+            if rows == self.convo:
+                return False
+            self.convo = rows
+            self._save_bond()
+            return True
+
+    def convo_kept(self):
+        with self.lock:
+            return [dict(x) for x in self.convo]
 
     def characters_block(self):
         """The prompt's list of characters played before ('' when none): what "bring back <name>" can recall."""

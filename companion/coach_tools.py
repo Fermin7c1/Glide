@@ -190,15 +190,21 @@ def reflection_events(events, marks):
     return lines
 
 
-def apply_reflection(memory, text, emit):
-    """Apply a reflection reply ({"add", "update", "remove"}, at most 5 of each) to the memory and say what
-    changed. -> {"add": [texts], "update": [texts], "remove": [texts]}."""
+def apply_reflection(memory, text, emit, since=None, now=None):
+    """Apply a reflection reply ({"add", "update", "remove"}, at most 5 of each; the story so far: "chapter" with its
+    "topics", "threads_add", "threads_done") to the memory and say what changed. -> {"add": [texts], "update":
+    [texts], "remove": [texts]}, plus "chapter" (its text), "threads_add" (ids), "threads_done" (texts) when any."""
     mt = re.search(r"\{.*\}", text or "", re.S)
     try:
         d = json.loads(mt.group(0)) if mt else {}
     except ValueError:
         d = {}
-    done = {"add": [], "update": [], "remove": []}
+    if not isinstance(d, dict):
+        d = {}
+    done: dict = {"add": [], "update": [], "remove": []}
+    for key in ("add", "update", "remove"):          # a model without structured outputs may send one, not a list
+        if not isinstance(d.get(key), list):
+            d[key] = []
     for a in (d.get("add") or [])[:5]:
         if isinstance(a, dict):
             n, created = memory.add(a.get("text"), a.get("kind"), source="reflection")
@@ -213,6 +219,19 @@ def apply_reflection(memory, text, emit):
         if str(rid).isdigit():
             for n in memory.remove(int(rid)):
                 done["remove"].append(n["text"])
+    # the story so far: a chapter of this stretch together, and the threads left open or closed
+    chapter = d.get("chapter")
+    chapter = chapter.strip() if isinstance(chapter, str) else ""
+    topics = d.get("topics")
+    topics = [t for t in topics if isinstance(t, str)][:8] if isinstance(topics, list) else []
+    if chapter and memory.chapter_add(chapter, topics, t0=since, t1=now):
+        done["chapter"] = chapter
+    closed = d.get("threads_done")
+    if isinstance(closed, list):
+        done["threads_done"] = memory.thread_done([t for t in closed if isinstance(t, str)])
+    opened = d.get("threads_add")
+    if isinstance(opened, list):
+        done["threads_add"] = [t for t in (memory.thread_add(x) for x in opened[:3] if isinstance(x, str)) if t]
     for t in done["add"]:
         emit({"kind": "info", "text": "Learned: %s" % t, "speak": False})
     for t in done["update"]:

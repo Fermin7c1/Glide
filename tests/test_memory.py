@@ -102,7 +102,8 @@ def fake_call(model, user, max_tokens, deep=False, tools=None, **kw):
 c.llm.call_once = fake_call
 done = c.reflect()
 assert "REFLECTION" in seen["prompt"] and "shorter please" in seen["prompt"] and "wrong turn-in NPC" in seen["prompt"]
-assert seen["schema"] is c.reflector.REFLECT_SCHEMA and seen["schema"]["required"] == ["add", "update", "remove"], seen
+assert seen["schema"] is c.reflector.REFLECT_SCHEMA and seen["schema"]["required"] == [
+    "add", "update", "remove", "chapter", "topics", "threads_add", "threads_done"], seen     # (the story so far too)
 assert seen["schema"]["properties"]["add"]["items"]["properties"]["kind"]["enum"] == list(memory.KINDS), seen
 assert done["add"] == ["Wants directions only, no explanations."] and done["update"], done
 assert any(x["text"].startswith("Learned:") for x in msgs)

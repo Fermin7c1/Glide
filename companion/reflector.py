@@ -19,6 +19,8 @@ class Reflector:
         self.coach = coach
         self.reflect_t = 0.0                  # when the last reflection started (this process)
         self.marks = []                       # recent "/glide mark" feedback, for reflection
+        self.soon = False                     # reflect at the next tick (the session just ended: its chapter)
+        self.thread = None                    # the reflection running (on its own thread)
 
     def tick(self):
         """Now and then (enough new exchanges, or a feedback mark, and 20 minutes since the last), let the deep model
@@ -28,17 +30,24 @@ class Reflector:
         llm = c.llm
         if m is None or not m.learning or not llm.enabled or llm.suspended or time.time() < llm.backoff_until:
             return
+        if self.thread is not None and self.thread.is_alive():
+            return                   # one reflection at a time (they'd write the same stretch twice)
         now = c._now()
-        if now - max(m.last_reflect, self.reflect_t) < float(c.opt.get("reflect_minutes")) * 60:
+        soon, self.soon = self.soon, False
+        if not soon and now - max(m.last_reflect, self.reflect_t) < float(c.opt.get("reflect_minutes")) * 60:
             return
         since = max(m.last_reflect, self.reflect_t)
         events = [e for e in list(c.convo) if e["t"] > since]
         asked = [e for e in events if e["who"] == "player"]
         asides = [e for e in events if e.get("kind") == "banter"]     # how they take the asides teaches rapport
-        if len(asked) < int(c.opt.get("reflect_min_questions")) and len(asides) < 4 and not self.marks_since(since):
+        if soon:                     # the session ended (banter.py's goodbye): its chapter, if you talked at all
+            if not asked and not asides:
+                return
+        elif len(asked) < int(c.opt.get("reflect_min_questions")) and len(asides) < 4 and not self.marks_since(since):
             return
         self.reflect_t = now
-        threading.Thread(target=self.reflect, args=(events,), daemon=True, name="coach-reflect").start()
+        self.thread = threading.Thread(target=self.reflect, args=(events,), daemon=True, name="coach-reflect")
+        self.thread.start()
 
     def marks_since(self, since):
         return [x for x in self.marks if x["t"] > since]
@@ -69,12 +78,14 @@ class Reflector:
         if not lines:
             return None
         notes = "\n".join("[%d] (%s) %s" % (n["id"], n["kind"], n["text"]) for n in m.list()) or "(none yet)"
+        threads = "\n".join("[%s] %s" % (x["id"], x["text"]) for x in m.threads_open()) or "(none)"
         model = c.cfg.get("deep_model")
         try:
-            text, _meta = c.llm.call_once(model, prompts.REFLECT_PROMPT % (notes, "\n".join(lines)), 1200, deep=True,
+            text, _meta = c.llm.call_once(model, prompts.REFLECT_PROMPT % (notes, threads, "\n".join(lines)), 1600,
+                                          deep=True,
                                           schema=self.REFLECT_SCHEMA)
         except Exception as e:  # noqa: BLE001 - learning is a background extra
             log("memory", "reflection failed: %s" % e)
             return None
         m.mark_reflected(c._now())
-        return coach_tools.apply_reflection(m, text, c.emit)
+        return coach_tools.apply_reflection(m, text, c.emit, since=since or None, now=c._now())

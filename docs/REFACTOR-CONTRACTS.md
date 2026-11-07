@@ -857,3 +857,21 @@ they don't spell out.
   `updateVoice` (app-settings.json, default on; Settings > General "Say when an update is out") switches the spoken
   lines off; the toasts and the footer button stay. The player asked (2026-11-06). Pinned by
   `tests/test_update_voice.py`; `golden.py record desktop` re-recorded for the new field.
+- **The coach remembers like a friend: the story so far (contracts 5 and 8; additive). Social Phase 1.**
+  Reflection (`Reflector`, `coach_prompts.REFLECT_PROMPT` and its schema, `coach_tools.apply_reflection`) also
+  writes a "chapter" of each stretch together (what happened, the jokes, what the player shared) with its topics,
+  and opens or closes "threads" (promises, questions left hanging, plans); a session's end (the goodbye) asks for
+  one at once (`Reflector.soon`). `coach_bond.json` gains `chapters` (16 kept whole; past that the oldest 8 fold
+  into an era: their first sentences and topics), `eras` (24), `threads` (12, ids `t<n>`, `next_thread`) and
+  `convo` (the conversation's last 60 lines, kept every minute and at the goodbye, restored into `Coach.convo` at
+  start); characters gain storage for the next phase (`samples`, `favorites`, `plot`, `lines`, `role`). Every part
+  is checked on load (times finite and not in the future), keys of the file this engine doesn't know are written back
+  as they were; "forget everything" clears them, the coach's live conversation and what it recalled, and sets
+  `cleared_t` (nothing older is kept again). In character, `companion/recall.py` picks what the moment brings back
+  (the diary, the chapters and eras, the fact / goal / rapport notes; matched on whole words of the player's words or
+  the moment, never the coach's own lines; the place and the target weigh a little, and bring a memory back alone
+  only in a quiet-moment aside; relevance, then recency with a 10-day half-life; what came up lately only when
+  nothing else fits; never the moment itself or what the prompt already holds): asides and questions get a "THIS
+  BRINGS BACK" section, asides and chats the latest chapters and the open threads, questions what the last lines drew
+  on ("why did you bring that up?"). One reflection runs at a time; the goodbye's only when you talked. Pinned by
+  `tests/test_story_memory.py`.

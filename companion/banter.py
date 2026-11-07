@@ -25,6 +25,7 @@ from typing import Callable, Optional
 
 import models as models_mod
 import persona as persona_mod
+import recall as recall_mod
 from replies import is_skip, trim_words
 from log import log_once
 
@@ -72,7 +73,7 @@ How close to be: "new" = curious, sizing them up, still a bit formal in the char
 other" = first nicknames and teasing, recalling things they told you; "familiar" = easy banter, inside jokes, honest
 opinions; "old friends" = warm, shorthand, shared history, ribbing only friends get away with.
 YOUR DIARY (moments you shared, oldest first):
-%s
+%s%s
 This time, the shape: %s.%s
 Your recent lines (don't repeat or rephrase them): %s
 No route advice unless it is the joke, and never contradict the guide. At most %d words. If nothing fits this
@@ -128,16 +129,8 @@ def activity(s):
 DOWNTIME = ("flying", "dead", "eating")
 
 
-def ago(seconds):
-    """'just now', '25 minutes ago', '3 hours ago', '2 days ago'."""
-    s = max(0, int(seconds))
-    if s < 120:
-        return "just now"
-    for unit, size in (("day", 86400), ("hour", 3600), ("minute", 60)):
-        if s >= size * (2 if unit != "minute" else 1):
-            n = s // size
-            return "%d %s%s ago" % (n, unit, "" if n == 1 else "s")
-    return "just now"
+ago = recall_mod.ago
+KEEP_CONVO_S = 60          # the conversation is kept (Memory.convo_keep) at most this often
 
 
 def openers(lines, n=5):
@@ -186,6 +179,11 @@ class Banter:
         # () -> True when no WoW window exists (the app's capture sets it; None: unknown)
         self.window_gone: Optional[Callable[[], bool]] = None
         self.lock = threading.Lock()    # self.moment: set on the capture thread, taken on the coach thread
+        self.recalled = []          # ids of the memories brought up lately (recall's variety penalty)
+        self.last_recalled = []     # what the last recall brought up (texts), for "why did you bring that up?"
+        self.kept_t = 0.0           # when the conversation was last kept
+        m = coach.deps.memory
+        self.cleared_seen = m.cleared_t if m is not None else 0.0     # the last "forget everything" taken in
 
     # ---- the frame: moments, the diary, the mood --------------------------------------------------------------
     def observe(self, triggers, state):
@@ -283,6 +281,55 @@ class Banter:
             moment, self.moment = self.moment, None
             return moment
 
+    def recall(self, query, k=3, before=None, shown=False, place_alone=False):
+        """What this moment brings back (recall.py): the request's section, or ''. The query is the moment's words
+        (a question, the moment an aside reacts to); the place and the target weigh a little. before: only memories
+        older than this (not the moment itself); shown: the request already holds the diary's last 8 moments and the
+        last 2 chapters (they don't come back as memories); place_alone: the place may bring a memory back by
+        itself (a quiet-moment aside: "back in Goldshire..."), else it only adds to the query's words."""
+        c = self.coach
+        m = c.deps.memory
+        if m is None:
+            return ""
+        s = c._summary()
+        tg = s.get("target") or {}
+        where = " ".join(str(x) for x in (s.get("zone"), s.get("subzone"), tg.get("name")) if x)
+        exclude = set()
+        if shown:
+            exclude = {recall_mod.diary_id(x) for x in m.diary_recent(8)} | \
+                {recall_mod.story_id(x) for x in m.chapters_recent(2)}
+        picks = recall_mod.pick(m, query or "", k=k, recent=set(self.recalled), where=where, exclude=exclude,
+                                before=before, place_alone=place_alone)
+        self.recalled = (self.recalled + [p["id"] for p in picks])[-12:]
+        self.last_recalled = [p["text"] for p in picks]
+        return recall_mod.section(picks)
+
+    def story_section(self):
+        """The story so far for an aside or a chat: the latest chapters and the open threads ('' when none)."""
+        m = self.coach.deps.memory
+        if m is None:
+            return ""
+        out = []
+        chapters = m.chapters_recent(2)
+        if chapters:
+            out.append("LATELY (your last chapters together):\n" + "\n".join(
+                "- %s: %s" % (ago(time.time() - x["t1"]), x["text"]) for x in chapters))
+        threads = m.threads_open()
+        if threads:
+            out.append("OPEN THREADS between you (pick one up now and then, naturally):\n" + "\n".join(
+                "- %s" % x["text"] for x in threads[-6:]))
+        drew = self.drew_on()
+        if drew:
+            out.append(drew)
+        return "\n".join(out)
+
+    def drew_on(self):
+        """What the last recall brought up, for "why did you bring that up?" ('' when nothing)."""
+        if not self.last_recalled:
+            return ""
+        return ("(Your recent lines drew on: %s. If they ask why you brought something up, that's why.)" %
+                "; ".join(t[:80] for t in self.last_recalled))
+
     def mood_line(self):
         """'Your mood right now: proud (Reached level 12 in Westfall).', or '' once it has settled."""
         if self.mood is None or time.time() - self.mood[2] > MOOD_S:
@@ -329,12 +376,22 @@ class Banter:
                 self._greeting(now, self.last_frame)
         if m is not None and live and self.clock_t is not None:
             m.bond_add(hours=min(now - self.clock_t, 5.0) / 3600.0)
+        if m is not None and m.cleared_t > self.cleared_seen:      # "forget everything": the live part too
+            self.cleared_seen = m.cleared_t
+            c.convo.clear()
+            self.recalled, self.last_recalled, self.said = [], [], []
+        if m is not None and now - self.kept_t >= KEEP_CONVO_S:
+            self.kept_t = now
+            m.convo_keep(list(c.convo))
         if live:
             self.last_frame = c.frame_t
         elif self.counted and not self.gone and not self.said_goodbye and self.last_frame \
                 and self.session_t and self.last_frame - self.session_t >= MIN_SESSION_S \
                 and now - self.last_frame > (CLOSED_S if self._closed() else GONE_S):
             self.gone = self.said_goodbye = True
+            c.reflector.soon = True                       # the session's last chapter, while it's fresh
+            if m is not None:
+                m.convo_keep(list(c.convo))
             self._offer({"kind": "goodbye", "t": now, "text": "The player just left the game (%s) after %d minutes "
                          "together" % ("closed it" if self._closed() else "logged out or went away",
                                        (self.last_frame - self.session_t) // 60)})
@@ -448,7 +505,12 @@ class Banter:
                           for x in (m.diary_recent(8) if m is not None else ())) or "(nothing yet)"
         recent = "; ".join('"%s"' % t for t in self.said[-5:]) or "(none yet)"
         shape = "a reaction to that moment, in whatever shape fits it" if moment else self.shape()
-        return REQUEST % (what, bond, diary, shape, variety_note(self.said), recent, limit)
+        story = self.story_section()
+        brings = self.recall(moment["text"] if moment else "", before=(moment["t"] - 5) if moment else None,
+                             shown=True, place_alone=moment is None)
+        extra = "\n".join(x for x in (story, brings) if x)
+        return REQUEST % (what, bond, diary, ("\n" + extra) if extra else "", shape, variety_note(self.said), recent,
+                          limit)
 
     def speak(self):
         """One aside (fast model, no tools): emitted as a spoken "banter" message, or nothing (SKIP, no answer)."""
@@ -499,8 +561,9 @@ class Banter:
             and c._now() - last["t"] <= REPLY_S
 
     def chat_note(self, limit):
-        """The request note for a chat reply (CHAT_NOTE, with what the recent lines overused)."""
-        return CHAT_NOTE % (limit, variety_note(self.said))
+        """The request note for a chat reply (CHAT_NOTE, with what the recent lines overused, and the story so far)."""
+        story = self.story_section()
+        return CHAT_NOTE % (limit, variety_note(self.said)) + (("\n" + story) if story else "")
 
     def chatted(self, text=None):
         """A chat reply went out: kept for variety, and the next unprompted aside is counted from now."""

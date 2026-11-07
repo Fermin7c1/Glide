@@ -131,6 +131,8 @@ class Coach:
         # reflection, and keeping the knowledge block and the way to the step fresh
         self.briefings = Briefings(self)
         self.banter = banter_mod.Banter(self)      # asides in character, and the bond they build (banter.py)
+        if self.deps.memory is not None:          # the conversation's last lines, kept across restarts
+            self.convo.extend(self.deps.memory.convo_kept())
         self.frame_t = None                   # when the last game frame arrived (time.time())
         self.tone = None                      # the last reply's TONE: line (in character: how to deliver it)
         self.said_t = None                    # when the coach last said a line out loud (time.time())
@@ -587,6 +589,10 @@ class Coach:
             trigger += "\n" + self.banter.chat_note(self._word_limit(question, voice, deep, chat=True))
         if self._summary_batch(batch):
             trigger += "\n" + SUMMARY_NOTE % self._word_limit(question, voice, deep, batch)
+        if self.persona() and question:
+            drew = "" if chat else self.banter.drew_on()     # (a chat's note has it already)
+            brings = self.banter.recall(question)
+            trigger += "".join("\n" + x for x in (drew, brings) if x)
         if self.persona():
             trigger += "\n" + self.banter.reminder()
         # out of credits / bad key: no automatic calls at all. A question the player asks tries once more
