@@ -181,6 +181,9 @@
   "userModelsDir:function",
   "whisperDirs:function"
  ],
+ "main/release-notes.js": [
+  "releaseNotes:function"
+ ],
  "main/resources.js": [
   "ResourceSampler:function"
  ],

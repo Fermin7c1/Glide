@@ -914,3 +914,15 @@ they don't spell out.
   nothing and recall goes by words (a failing query backs off a minute). Settings > Coaching > Roleplay: "Remember by
   meaning", "Embedding model", "How close in meaning" (contract 8; `golden.py record desktop` re-recorded for them).
   The player asked (2026-11-07). Pinned by `tests/test_recall_meaning.py` (a fake embeddings server: no paid API).
+- **A new Glide, told with what's in it (contracts 2, 4, 5 and 8; additive).** release.yml writes the version's
+  What's new (its changelog.json entry, from next-release.js) into the release's notes: "Glide <v>: <title>", the
+  items as a list, then "source: <sha>" as the last line (the workflow and next-release.js still read it back). The
+  app reads them from electron-updater's releaseNotes (`desktop/src/main/release-notes.ts`: GitHub's HTML, markdown
+  or a list per version) into `UpdateStatus.title` / `.notes` (contract 4, `update:status`). The update notice hands
+  its announcement to the engine's new `POST /announce` `{what: "available" | "ready", version, title, notes}`
+  (contract 2; token-checked like every POST; `dashboard.announce_route`): `Coach.announce_update` queues it on the
+  coach thread (never over another line), where the fast model says it in the coach's own voice (in character when
+  it plays one), the one to three things the player would care about, in `llm.announce_words` (45, contract 5);
+  without a model, or with no notes, a plain line names the first items. Without the engine, the window says that
+  plain line itself (`whatsNew`). The 10-minute reminders stay short; "Say when an update is out" off silences all
+  of it. The player asked (2026-11-07). Pinned by `tests/test_update_notes.py` and `tests/test_update_voice.py`.

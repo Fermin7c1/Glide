@@ -34,7 +34,7 @@ if ROOT not in sys.path:
 import calibration  # noqa: E402
 import protocol  # noqa: E402
 from coach import Coach, CoachDeps  # noqa: E402
-from dashboard import Hub, Route, ask_route, get_json, post_json, serve  # noqa: E402
+from dashboard import Hub, Route, announce_route, ask_route, get_json, post_json, serve  # noqa: E402
 from feedback import Feedback  # noqa: E402
 import glideconfig  # noqa: E402
 from log import log, log_once  # noqa: E402
@@ -864,6 +864,7 @@ class App:
 
         return {
             ("POST", "/ask"): ask_route(self.coach.ask),
+            ("POST", "/announce"): announce_route(self.coach.announce_update),
             ("POST", "/settings"): post_json(self.on_settings, lambda applied: {"applied": applied}),  # + "saved"
             ("GET", "/models"): Route(get_json(models, on_error=lambda e: {"error": str(e)}), token=True),
             ("POST", "/reminders"): post_json(self.on_reminder),

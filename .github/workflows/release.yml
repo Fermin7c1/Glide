@@ -154,7 +154,14 @@ jobs:
           VER: ${{ steps.ver.outputs.version }}
         run: |
           $v = $env:VER
-          $notes = "Glide $v`n`nsource: $env:GITHUB_SHA"
+          # this version's What's new (next-release.js wrote its changelog.json entry): the installed app reads it from
+          # the release (electron-updater's releaseNotes) and the coach tells the player what's in it; "source:" stays
+          # the last line (this workflow and next-release.js read it back)
+          $entry = (Get-Content changelog.json -Raw | ConvertFrom-Json).versions | Where-Object { $_.version -eq $v } |
+            Select-Object -First 1
+          $head = if ($entry -and $entry.title) { "Glide ${v}: $($entry.title)" } else { "Glide $v" }
+          $items = if ($entry) { ($entry.items | ForEach-Object { "- $_" }) -join "`n" } else { "" }
+          $notes = if ($items) { "$head`n`n$items`n`nsource: $env:GITHUB_SHA" } else { "$head`n`nsource: $env:GITHUB_SHA" }
           gh release view "v$v" --repo Fermin7c1/Glide-releases *> $null
           if ($LASTEXITCODE -ne 0) {
             gh release create "v$v" --repo Fermin7c1/Glide-releases --draft --title $v --notes $notes

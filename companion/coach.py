@@ -66,6 +66,14 @@ SUMMARY_NOTE = ("(Several quest events at once: one summary for all of them, at 
 # the coach's lines in a conversation with the player: answers, and asides and the chat replies after them
 REPLIES = frozenset(("answer", "banter"))
 
+ANNOUNCE = object()          # the coach thread's queue: an update notice, not a question (announce_update)
+# a new Glide (Coach.announce_update): what the model is asked to say
+ANNOUNCE_REQUEST = """GLIDE UPDATE (not a callout; nothing in the game asked for this). Glide, the app you coach the player
+through, has a new version: %s %s%s. What's new in it:
+%s
+Tell the player in your own voice: that it's out, the one to three things in it they'd care about most (what it means
+for their play, not how it was built), and this: %s At most %d words. No list, no version history, no "SKIP"."""
+
 CONVO_LABEL = {"answer": "coach answered", "callout": "coach callout", "review": "coach pace review",
                "briefing": "coach quest briefing", "reminder": "coach reminder", "banter": "coach aside"}
 
@@ -283,6 +291,9 @@ class Coach:
             try:
                 while not self.asks.empty():
                     q, voice = self.asks.get_nowait()
+                    if q is ANNOUNCE:                 # the update notice (announce_update), in its turn
+                        self._announce(*voice)
+                        continue
                     self._respond([], question=q, voice=voice)
                 for job in self._jobs:
                     job()
@@ -713,6 +724,50 @@ class Coach:
         if not text:
             return None
         msg = {"kind": "answer" if question else "callout", "text": text, "speak": speak, "model": model_note}
+        self.emit(msg)
+        return msg
+
+    # ---- a new Glide: the coach tells the player what's in it (the desktop app's update notice, POST /announce) ----
+    def announce_update(self, what, version, title="", notes=()):
+        """Glide `version` is out (what="available") or downloaded ("ready"): say so, and what's new, in the coach's
+        own voice (in character when it plays one: the fast model, picking what the player would care about), else the
+        first items read out. On the coach thread (a question's queue): never in the middle of another line."""
+        self.asks.put((ANNOUNCE, (what, version, title, list(notes or ()))))
+        self.wake.set()
+
+    def _announce(self, what, version, title, notes):
+        """The update line (announce_update): the model's, or ANNOUNCE_PLAIN with the first items."""
+        how = "Download it from the footer button when it suits you." if what == "available" else \
+            "Restart Glide to update, from the footer button, when it suits you."
+        plain = ("A Glide update is out: version %s." if what == "available" else "Glide %s is downloaded.") % version
+        firsts = [re.split(r"(?<=[.!?:;])\s", n, maxsplit=1)[0].rstrip(".:;") for n in notes[:2]]
+        if firsts:
+            plain += " What's new: %s%s." % ("; ".join(firsts), " and more" if len(notes) > 2 else "")
+        plain += " " + how
+        model = self.cfg.get("fast_model")
+        llm = self.llm
+        text = None
+        if notes and llm.enabled and llm.keys.get(models_mod.provider(model)) and \
+                not llm.suspension_for(models_mod.provider(model)) and time.time() >= llm.backoff_until:
+            request = ANNOUNCE_REQUEST % (version, "is out" if what == "available" else "is downloaded and ready",
+                                          (" (%s)" % title) if title else "", "\n".join("- " + n for n in notes), how,
+                                          self._stretch(int(self.opt.get("announce_words"))))
+            if self.persona():
+                request += "\n" + self.banter.reminder()
+            try:
+                got, _meta = llm.call_once(model, request, 500)
+                text = self._directives(got or "")
+            except Exception as e:  # noqa: BLE001 - the plain line instead
+                log_once("coach.announce", e)
+                text = None
+            if text and is_skip(text):
+                text = None
+        if text:
+            text = trim_words(text, self._stretch(int(self.opt.get("announce_words"))))
+        msg = {"kind": "callout", "text": text or plain, "speak": True, "urgent": False,
+               "model": "update notice" if not text else self._model_note(model, {}), "t": time.time()}
+        if text and self.tone:
+            msg["tone"] = self.tone
         self.emit(msg)
         return msg
 

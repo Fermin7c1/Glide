@@ -27,7 +27,8 @@ if not node or not desktop_ts.available():
     sys.exit(77)
 
 STUBS = {"types.ts": """
-export interface UpdateStatus { state: string; current: string; version?: string }
+export interface UpdateStatus { state: string; current: string; version?: string; title?: string;
+  notes?: string[] }
 """}
 
 RUN = r"""
@@ -86,6 +87,20 @@ out.error = await run(() => "", [[0, A("0.4.0")], [15, S("error")], [45, A("0.4.
   for (const r of pending) r("");
   await flush();
   out.stale = log;
+}
+// the coach says it with what's new (deps.announce, the engine's /announce): when it takes it, the line isn't read
+// here (the reminders are); when it can't (no engine), the plain line with the first items is
+const NOTES = ["The coach remembers your story: the jokes, the deaths.", "Talk over the coach.", "Fixed: the chat."];
+for (const [name, took] of [["announced", true], ["fallback", false]]) {
+  const log = [], asked = [];
+  now = 0; timers.clear();
+  const v = new UpdateVoice({ say: (text) => log.push({ t: Math.round(now / MIN), text }), style: () => "",
+                              announce: async (...a) => { asked.push(a); return took; },
+                              setInterval: setI, clearInterval: clearI });
+  v.onStatus({ state: "available", current: "0.3.40", version: "0.4.0", title: "Remembering you", notes: NOTES });
+  await flush(); await flush();
+  await advance(10 * MIN);
+  out[name] = { log, asked };
 }
 console.log(JSON.stringify(out));
 """
@@ -146,4 +161,14 @@ assert said == [(0, ANNOUNCE), (10, REMIND_DL), (55, REMIND_DL)], said
 
 # a line whose style was still being looked up when the download started is dropped, not said late
 assert got["stale"] == [], got["stale"]
+
+# with what's new: the coach says it (the engine took it), only the reminder is read here; without the engine, the
+# plain line names the first items
+a = got["announced"]
+assert a["asked"] == [["available", "0.4.0", "Remembering you", ["The coach remembers your story: the jokes, the "
+                       "deaths.", "Talk over the coach.", "Fixed: the chat."]]], a["asked"]
+assert [x["text"] for x in a["log"]] == [REMIND_DL], a["log"]
+f = got["fallback"]
+assert [x["text"] for x in f["log"]] == [ANNOUNCE + " What's new: The coach remembers your story; Talk over the coach, "
+                                         "and more.", REMIND_DL], f["log"]
 print("OK")

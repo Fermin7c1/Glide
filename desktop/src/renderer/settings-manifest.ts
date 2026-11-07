@@ -51,6 +51,7 @@ export const MANIFEST: Record<string, ManifestEntry> = {
   "llm.recall_meaning": {"default":"off","kind":"text"},
   "llm.recall_embed_model": {"default":"","kind":"text"},
   "llm.recall_min_similarity": {"default":0.3,"min":0,"max":0.95,"kind":"number"},
+  "llm.announce_words": {"default":45,"min":15,"max":120,"kind":"int"},
   "llm.persona_word_factor": {"default":1.6,"min":1,"max":4,"kind":"number"},
   "llm.quest_briefings": {"default":true,"kind":"bool","live":true},
   "llm.briefing_words": {"default":40,"min":10,"max":150,"kind":"int"},

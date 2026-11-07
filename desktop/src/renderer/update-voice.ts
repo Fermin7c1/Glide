@@ -7,6 +7,8 @@ export const REMIND_MS = 10 * 60 * 1000;
 
 export interface UpdateVoiceDeps {
   say(text: string, style: string): void;
+  /** the coach says it in its own voice, with what's new (the engine's POST /announce): true when it took it */
+  announce?(what: Waiting, version: string, title: string, notes: string[]): Promise<boolean>;
   /** the voice's acting direction when the coach plays a character, else "" (read each time a line is said) */
   style(): string | Promise<string>;
   setInterval(fn: () => void, ms: number): unknown;
@@ -21,6 +23,12 @@ export const updateLines = {
   remindAvailable: (v: string) => `Reminder: Glide ${v} is still waiting to be downloaded, footer button.`,
   remindReady: (v: string) => `Reminder: restart Glide to finish updating to ${v}, footer button.`,
 };
+
+/** " What's new: <first item>; <second item>, and more." from the notes ('' without any). */
+export function whatsNew(notes: string[]): string {
+  const firsts = notes.slice(0, 2).map((n) => n.split(/(?<=[.!?:;])\s/)[0].replace(/[.:;]+$/, ""));
+  return firsts.length ? ` What's new: ${firsts.join("; ")}${notes.length > 2 ? ", and more" : ""}.` : "";
+}
 
 export class UpdateVoice {
   private state = "";                  // the last state seen
@@ -62,10 +70,18 @@ export class UpdateVoice {
     const ver = this.version;
     if (!this.said.has(st)) {
       this.said.add(st);
-      this.speak(updateLines[st](ver));
+      this.announce(st, ver, s.title || "", s.notes || []);
     }
     const remind = st === "available" ? updateLines.remindAvailable : updateLines.remindReady;
     this.timer = this.deps.setInterval(() => this.speak(remind(ver)), REMIND_MS);
+  }
+
+  /** The announcement: the coach's, with what's new (deps.announce), else the plain line with its first items. */
+  private announce(st: Waiting, ver: string, title: string, notes: string[]): void {
+    const gen = this.gen;
+    const plain = () => { if (gen === this.gen) this.speak(updateLines[st](ver) + whatsNew(notes)); };
+    if (!this.deps.announce) { plain(); return; }
+    void this.deps.announce(st, ver, title, notes).catch(() => false).then((took) => { if (!took) plain(); });
   }
 
   private speak(text: string): void {

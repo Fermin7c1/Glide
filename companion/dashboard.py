@@ -243,6 +243,26 @@ def ask_route(on_ask):
     return handle
 
 
+def announce_route(on_announce):
+    """POST /announce {"what": "available" | "ready", "version", "title", "notes": [what's new]}: the desktop app's
+    update notice; the coach tells the player, in its own voice (Coach.announce_update). Always {"ok":true} (a body
+    without a version says nothing)."""
+    def handle(req):
+        try:
+            d = req.json()
+            d = d if isinstance(d, dict) else {}
+        except Exception:  # noqa: BLE001 - a bad body is the caller's; it says nothing
+            d = {}
+        version = str(d.get("version") or "").strip()[:40]
+        if version:
+            notes = d.get("notes")
+            notes = notes if isinstance(notes, list) else []
+            on_announce("ready" if d.get("what") == "ready" else "available", version,
+                        str(d.get("title") or "").strip()[:120], [str(x)[:400] for x in notes if str(x).strip()][:12])
+        return 200, '{"ok":true}'
+    return handle
+
+
 def _layout_post(layout_path):
     """POST /layout: save the panel layout (cleaned); a body that isn't a layout answers 400."""
     def handle(req):

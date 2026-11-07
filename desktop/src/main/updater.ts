@@ -11,6 +11,7 @@ import { app } from "electron";
 import { autoUpdater, UpdateInfo } from "electron-updater";
 import { EventEmitter } from "events";
 import type { UpdateStatus } from "../shared/ipc";
+import { releaseNotes } from "./release-notes";
 
 const CHECK_EVERY_MS = 30 * 60 * 1000;
 
@@ -32,12 +33,13 @@ export class Updater extends EventEmitter {
     autoUpdater.on("update-available", (i: UpdateInfo) => {
       if (this.status.state === "downloading" || this.status.state === "ready") return;
       const fresh = this.status.version !== i.version || this.status.state !== "available";
-      this.set({ state: "available", version: i.version, percent: undefined, checkedAt: Date.now() });
+      this.set({ state: "available", version: i.version, percent: undefined, checkedAt: Date.now(),
+                 ...releaseNotes(i.releaseNotes, i.version) });
       if (fresh) log(`[update] Glide ${i.version} is available: Download gets it`);
     });
     autoUpdater.on("download-progress", (p) => this.set({ state: "downloading", percent: Math.round(p.percent) }));
     autoUpdater.on("update-downloaded", (i: UpdateInfo) => {
-      this.set({ state: "ready", version: i.version, percent: 100 });
+      this.set({ state: "ready", version: i.version, percent: 100, ...releaseNotes(i.releaseNotes, i.version) });
       log(`[update] Glide ${i.version} is ready: Restart to update installs it`);
     });
     autoUpdater.on("error", (e) => {

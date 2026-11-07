@@ -78,6 +78,8 @@ export interface UpdateStatus {
   state: UpdateState;
   current: string;
   version?: string;        // the newer version found / downloaded
+  title?: string;          // its What's new title, from the release's notes ("" when they have none)
+  notes?: string[];        // its What's new items, from the release's notes (the coach tells the player about them)
   percent?: number;
   error?: string;
   checkedAt?: number;

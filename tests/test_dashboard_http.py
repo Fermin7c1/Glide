@@ -131,7 +131,7 @@ fake = AnyApp()
 table = glide_app.App.http_routes(fake)
 assert {p for _, p in table} | {"/", "/events", "/api/state", "/layout"} == {
     "/", "/events", "/api/state", "/ask", "/settings", "/models", "/memory", "/reminders", "/layout", "/health",
-    "/refresh", "/calibrate", "/mute", "/xph", "/community/seen"}, sorted(table)
+    "/refresh", "/calibrate", "/mute", "/xph", "/community/seen", "/announce"}, sorted(table)
 needs = {k for k, r in table.items() if (r.token if isinstance(r, dashboard.Route) and r.token is not None
                                          else k[0] == "POST")}
 assert {k for k in needs if k[0] == "GET"} == {("GET", "/models"), ("GET", "/memory"), ("GET", "/calibrate")}, needs

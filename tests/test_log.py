@@ -75,6 +75,7 @@ QUIET = {
     ("app.py", "version_info", "nav = None"),             # nor wowfiles
     ("capture.py", None, "try:"),                         # Windows before 8.1: the older DPI call, which logs
     ("dashboard.py", "handle", "q = ''"),                 # POST /ask with a bad body asks nothing
+    ("dashboard.py", "handle", "d = {}"),                 # POST /announce with a bad body says nothing
 }
 
 

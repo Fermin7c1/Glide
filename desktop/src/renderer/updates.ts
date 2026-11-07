@@ -5,7 +5,7 @@ import { call, glide, quiet } from "./bridge.js";
 import { $, toast } from "./dom.js";
 import { speech } from "./narrator.js";
 import { getPath } from "./settings/fields.js";
-import { live } from "./state.js";
+import { enginePost, JSON_HEADERS, live } from "./state.js";
 import { refreshStatus } from "./status.js";
 import { Obj, UpdateStatus } from "./types.js";
 import { UpdateVoice } from "./update-voice.js";
@@ -21,6 +21,17 @@ function personaStyle(cfg: Obj): string {
 // player switched that off (Settings > General > "Say when an update is out": app settings updateVoice)
 const voice = new UpdateVoice({
   say: (text, style) => { if (live.appSettings.updateVoice !== false) speech.say(text, false, style); },
+  // the coach says it, with what's new, in its own voice (in character when it plays one): the engine's /announce
+  announce: async (what, version, title, notes) => {
+    if (live.appSettings.updateVoice === false) return true;          // switched off: nothing said, either way
+    if (!live.engineUrl) return false;
+    try {
+      await enginePost("/announce", { what, version, title, notes }, JSON_HEADERS);
+      return true;
+    } catch {
+      return false;
+    }
+  },
   style: async () => personaStyle((await quiet("config:get")) || live.config),
   setInterval: (fn, ms) => window.setInterval(fn, ms),
   clearInterval: (h) => window.clearInterval(h as number),
