@@ -1015,11 +1015,36 @@ function showMessage(m) {
   const speaker = SPEAKER[m.kind] || m.kind;
   el.title = m.model ? `${speaker}, ${m.model}` : '';
   el.innerHTML = `<span class="ts">${clockTime(m.t * 1000)}</span><span class="by">${esc(speaker)}:</span>${esc(m.text)}${video}${web}${facts}`;
-  // follow the newest message, unless you've scrolled up to read
-  const feed = $('feed'), atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
+  const feed = $('feed');
   feed.appendChild(el);
   while (feed.children.length > FEED_MAX) feed.firstElementChild.remove();
-  if (atBottom) feed.scrollTop = feed.scrollHeight;
+  followFeed();
+}
+
+// The chat follows the newest message unless you've scrolled up to read. Whether it follows is kept, and only your own
+// scrolling changes it (the wheel, a touch, the keys, the scroll bar): the feed's size and scroll also change under it
+// (the window or the app's frame resized, longer lines wrapping, old messages trimmed off the top), and taking those
+// for "scrolled up" used to leave it short of the bottom for good.
+let feedFollows = true, feedTouched = -1e9, feedHeld = false;
+const FEED_USER_MS = 800;              // a scroll this soon after your wheel, touch or key is yours
+const feedGap = (/** @type {HTMLElement} */ f) => f.scrollHeight - f.scrollTop - f.clientHeight;
+function followFeed() {
+  const f = $('feed');
+  if (feedGap(f) <= 2) feedFollows = true;        // right at the bottom (or all of it in view) is following
+  if (feedFollows) f.scrollTop = f.scrollHeight;
+}
+function initFeedFollow() {
+  const f = $('feed'), touched = () => { feedTouched = performance.now(); };
+  for (const ev of ['wheel', 'touchmove', 'keydown']) f.addEventListener(ev, touched, { passive: true });
+  // pushing down at the bottom scrolls nothing (no scroll event), and still means: follow
+  f.addEventListener('wheel', (e) => { if (e.deltaY > 0 && feedGap(f) < 40) feedFollows = true; }, { passive: true });
+  f.addEventListener('pointerdown', () => { feedHeld = true; touched(); }, { passive: true });
+  addEventListener('pointerup', () => { if (feedHeld) { feedHeld = false; touched(); } }, { passive: true });
+  f.addEventListener('scroll', () => {
+    if (feedHeld || performance.now() - feedTouched < FEED_USER_MS) feedFollows = feedGap(f) < 40;   // you scrolled
+    else followFeed();                 // the layout moved it: back to the newest, if it follows
+  }, { passive: true });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(followFeed).observe(f);
 }
 
 // the engine's messages once each: a reconnect replays its recent ones in "init" (the page's own "You:" lines stay)
@@ -1920,3 +1945,4 @@ dock();
 initArrangeMode();
 connectToEngine();
 initAskForm();
+initFeedFollow();

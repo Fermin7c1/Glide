@@ -6,6 +6,8 @@
 - outside arrange mode a panel moves by its header with the mouse and a top-bar piece by itself (a stat dropped on
   the character frame moves its whole block), all saved, while a drag in a panel's text moves nothing;
 - a dropped event stream ends, the page reconnects, and the replayed chat isn't shown twice;
+- the chat follows the newest message (after a resize too), stays where you read when you scroll up, follows again at
+  the bottom;
 - when the game goes away, only the community notes stay on show (no docked section left open under them).
 
 Skipped without Edge (or Chrome) and node. Run: python3 tests/test_dashboard_page.py   (prints OK)
@@ -77,6 +79,12 @@ try:
                 hub.clients.clear()        # as publish() does to a client whose queue is full
         elif name == "reconnected":
             hub.publish("message", {"kind": "info", "text": "after the reconnect", "t": 1791300100})
+        elif name in ("resized", "read-up", "back-down"):
+            word, n = {"resized": ("follow", 10), "read-up": ("reading", 5), "back-down": ("again", 3)}[name]
+            for i in range(n):
+                hub.publish("message", {"kind": "callout", "speak": True, "t": 1791300200 + i,
+                                        "text": "%s %d: turn in Supplies to Tannok, twenty yards east of the inn." % (
+                                            word, i)})
         elif name == "header-drag":
             with open(os.path.join(tmp, "layout.json"), encoding="utf-8") as fh:
                 saved = json.load(fh).get("arrange", {})
@@ -110,6 +118,12 @@ assert seen["saved-lists"].get("top") == ["auras", "pace", "unit"], "the bar ord
 assert len(connects) >= 2, "the page reconnected after its stream ended"
 assert seen["reconnected"] == seen["drop"], "the replayed chat was added again: %d -> %d" % (seen["drop"], seen["reconnected"])
 assert seen["after-message"] == seen["drop"] + 1, "a new message after the reconnect shows"
+# the chat follows the newest message even after the window shrank; scrolled up, it stays where you read; back at the
+# bottom it follows again
+assert seen["followed"] <= 2, "after a resize the newest message is in view: %d px below" % seen["followed"]
+assert seen["read-up"] > 40 and seen["kept"] > seen["read-up"], "reading up: new messages don't pull it down: %s" % (
+    [seen["read-up"], seen["kept"]])
+assert seen["refollowed"] <= 2, "back at the bottom it follows again: %d px below" % seen["refollowed"]
 assert seen["wide"] > 0
 assert seen["waiting"]["waiting"] and seen["waiting"]["shown"] == ["community"], seen["waiting"]
 print("OK")

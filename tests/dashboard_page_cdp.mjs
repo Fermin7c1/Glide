@@ -123,6 +123,30 @@ try {
   await until("document.getElementById('feed').textContent.includes('after the reconnect')");
   await step("after-message", await feed());
 
+  // the chat follows the newest message: after the window shrinks (its resize scrolls the feed by itself), while you
+  // scroll up with the wheel it stays where you read, and back at the bottom it follows again
+  const gap = "(() => { const f = document.getElementById('feed'); return Math.round(f.scrollHeight - f.scrollTop - f.clientHeight); })()";
+  const has = (text) => `document.getElementById('feed').textContent.includes(${JSON.stringify(text)})`;
+  const wheel = async (dy) => { const [x, y] = await centre("#feed");
+    await send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY: dy }); await frames(); };
+  // (the drags above scrolled it, as yours would): back at the bottom it follows again; then the window shrinks
+  await js("(() => { const f = document.getElementById('feed'); f.scrollTop = f.scrollHeight; })()");
+  await frames();
+  await sleep(900);                                          // (a scroll within 800 ms of your wheel is yours)
+  await size(1280, 720);
+  await until("innerWidth === 1280");
+  await step("resized", await js(gap));
+  await until(has("follow 9"));
+  await step("followed", await js(gap));
+  await wheel(-400);
+  await step("read-up", await js(gap));
+  await until(has("reading 4"));
+  await step("kept", await js(gap));
+  await wheel(100000);
+  await step("back-down", await js(gap));
+  await until(has("again 2"));
+  await step("refollowed", await js(gap));
+
   // wide again (sections docked into the wing), then the game goes away: only the community notes stay on show
   await size(2560, 1440);
   await until("innerWidth === 2560 && document.querySelectorAll('#wing section').length > 0");

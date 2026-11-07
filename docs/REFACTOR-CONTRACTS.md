@@ -893,3 +893,10 @@ they don't spell out.
   (its `instructions` are still `style`), Azure, Google and Windows voices are unchanged. `golden.py record desktop`
   re-recorded for the new `v3Text` export of main/tts.js. Pinned by `tests/test_voice_barge_in.py` and
   `tests/test_voice_tone.py`.
+- **The coach chat follows the newest message again (contract 8, what the player sees; a fix).** It followed only
+  when the scroll stood at the bottom as a message came, so once the feed's size changed under it (the window or the
+  app's frame resized, longer lines wrapping, old messages trimmed) it stayed short of the bottom for good. Whether it
+  follows is now kept (`feedFollows` in dashboard.js) and only the player's scrolling changes it (wheel, touch, keys,
+  the scroll bar); other scrolls and resizes put it back on the newest message; right at the bottom, or pushing down
+  there, follows again. The player asked (2026-11-07). Pinned by `tests/test_dashboard_page.py` (resized, read up,
+  back down).
