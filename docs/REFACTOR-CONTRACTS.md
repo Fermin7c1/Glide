@@ -940,3 +940,9 @@ they don't spell out.
   dropped; greetings no longer ask for new lore. `coach_bond.json` characters fill `samples`, `favorites`, `plot`,
   `lines`, `role` and gain `scene`, `scene_t` (contract 5). The player asked (2026-11-07). Pinned by
   `tests/test_character_depth.py`.
+- **Presence across the climb (contract 8; additive). Social Phase 4.** Every 10 levels is a milestone (an aside
+  with twice the words, looking back on the stretch: `MOMENTS["milestone"]`); level 60 is the end of the climb, told
+  with THE ROAD SO FAR (every era and chapter, oldest first, each in brief) in four times the words. Asides the player
+  lets pass in a row stretch the wait between quiet-moment asides (x1.5 each, x4 at most; a reply resets it:
+  `Banter.unanswered`). Greetings say how long the two have been at it (days, sessions; a week to the day is marked).
+  The player asked (2026-11-07). Pinned by `tests/test_presence.py`.

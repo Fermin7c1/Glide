@@ -50,6 +50,7 @@ BIG_KILLS = ("elite", "rare", "rareelite", "worldboss")
 # moment kind -> (chance the character speaks up, cooldown seconds, mood, mood strength)
 MOMENTS = {"died": (0.75, 120, "frustrated", 2), "death_streak": (0.95, 600, "exasperated", 3),
            "level_up": (0.9, 60, "proud", 3), "close_call": (0.8, 300, "rattled but thrilled", 2),
+           "milestone": (1.0, 0, "moved, proud as can be", 4), "the_end": (1.0, 0, "overjoyed, a little wistful", 5),
            "big_kill": (0.7, 300, "fired up", 2), "new_zone": (0.6, 300, "curious", 1),
            "long_grind": (0.5, 900, "restless", 1), "flight": (0.5, 600, "relaxed", 1),
            "hearth": (0.3, 900, "glad to be heading back", 1), "greeting": (1.0, 0, "glad to see them", 2),
@@ -139,6 +140,9 @@ what so up out not no go get got just like""".split())       # phrases made only
 COACHING = frozenset("""turn turned accept quest quests kill loot collect talk yards yard north south east west
 northeast northwest southeast southwest step level trainer vendor flight fly hearth inn grind mob mobs pull""".split())
 WARM_S = 600               # recall by meaning: what memory holds is embedded (the new parts) this often
+MAX_LEVEL = 60             # the top of the climb (the_end: the road so far)
+BIG = {"milestone": 2, "the_end": 4}     # these moments get this many times banter_words
+IGNORED, IGNORED_MAX = 1.5, 4.0          # each aside let pass in a row: the wait x1.5, at most x4
 WARM_RETRY_S = 60          # ... a warm-up that failed (a local model loading, the service down): again after this
 
 
@@ -196,6 +200,7 @@ class Banter:
         m = coach.deps.memory
         self.cleared_seen = m.cleared_t if m is not None else 0.0     # the last "forget everything" taken in
         self.seeded = set()         # characters whose sample lines and story threads were asked for this run
+        self.unanswered = 0         # asides in a row the player let pass (each stretches the wait: IGNORED)
 
     # ---- the frame: moments, the diary, the mood --------------------------------------------------------------
     def observe(self, triggers, state):
@@ -236,7 +241,10 @@ class Banter:
                     self._moment("died", "Died%s at level %s in %s" % (
                         " to %s" % by if by else "", s.get("level"), zone), diary=True)
             elif k == "level_up":
-                self._moment("level_up", "Reached level %s in %s" % (s.get("level"), where), diary=True)
+                lvl = s.get("level")
+                kind = "the_end" if lvl == MAX_LEVEL else ("milestone" if isinstance(lvl, int) and lvl % 10 == 0
+                                                           else "level_up")
+                self._moment(kind, "Reached level %s in %s" % (lvl, where), diary=True)
             elif k == "zone_changed":
                 m = self.coach.deps.memory
                 if m is not None and s.get("zone") and m.zone_seen(s["zone"]):
@@ -335,6 +343,15 @@ class Banter:
         if drew:
             out.append(drew)
         return "\n".join(out)
+
+    def road_so_far(self):
+        """THE ROAD SO FAR: every era and chapter of the climb, oldest first (the end of the climb looks back)."""
+        m = self.coach.deps.memory
+        rows = m.story() if m is not None else []
+        if not rows:
+            return ""
+        return "THE ROAD SO FAR (oldest first):\n" + "\n".join(       # (each in brief: a recap, not a re-read)
+            "- %s%s" % ("(long ago) " if x.get("era") else "", x["text"][:400]) for x in rows)
 
     def drew_on(self):
         """What the last recall brought up, for "why did you bring that up?" ('' when nothing)."""
@@ -521,6 +538,14 @@ class Banter:
         """A login: greet them like someone you know, picking up from the diary."""
         m = self.coach.deps.memory
         when = ("you last played together %s" % ago(now - last)) if last else "this is your first session together"
+        first = m.bond.get("first_seen") if m is not None else 0
+        if first and last and m is not None:
+            days = int((now - first) // 86400)
+            if days >= 1:
+                when += "; you've been at this together for %d day%s, %d sessions" % (
+                    days, "" if days == 1 else "s", m.bond.get("sessions", 0))
+                if days % 7 == 0:
+                    when += " (%d week%s to the day: mark it)" % (days // 7, "" if days == 7 else "s")
         before = [x["text"] for x in (m.diary_recent(5) if m is not None else ())]
         self._offer({"kind": "greeting", "t": now, "text": "The player just logged in; %s.%s" % (
             when, (" Last time: " + "; ".join(before) + ".") if before else "")})
@@ -534,6 +559,7 @@ class Banter:
             return
         at, act, line, who = self.awaiting
         if any(e["who"] == "player" and e["t"] >= at for e in list(c.convo)):    # (>=: one 15 ms clock tick)
+            self.unanswered = 0
             m = c.deps.memory
             if m is not None:
                 m.bond_add(replied=1, activity=act)
@@ -542,12 +568,13 @@ class Banter:
             self.awaiting = None
         elif c._now() - at > REPLY_S:
             self.awaiting = None
+            self.unanswered += 1               # let pass: the next one waits longer (_factor)
 
     # ---- when -----------------------------------------------------------------------------------------------------
     def _factor(self, act):
         """How much sooner or later than banter_minutes, for what the player is doing: downtime sooner, and what
         the replies taught (they chat while flying, ignore it mid-grind)."""
-        f = 0.4 if act in DOWNTIME else 1.0
+        f = (0.4 if act in DOWNTIME else 1.0) * min(IGNORED_MAX, IGNORED ** self.unanswered)
         m = self.coach.deps.memory
         rate = m.reply_rate(act) if m is not None else None
         if rate is not None:
@@ -612,6 +639,13 @@ class Banter:
             what = ("THE PLAYER JUST LOGGED IN: %s Greet them in character like someone you know, at your bond's stage; "
                     "pick up from last time if there is one. Mention in passing something you did or thought about "
                     "while they were away, true to your story threads." % moment["text"])
+        elif moment["kind"] == "the_end":
+            what = ("THE CLIMB IS DONE: %s. Level 60, the top. This is the moment of the whole journey: look back on the "
+                    "road so far, from the first chapter to now (THE ROAD SO FAR below), the people and places, the "
+                    "deaths and the wins, what it meant, the two of you. Make it count." % moment["text"])
+        elif moment["kind"] == "milestone":
+            what = ("A MILESTONE: %s. Make it a moment, not a quip: look back at the stretch since the last ten levels "
+                    "(your chapters and diary), what it took, and what's ahead." % moment["text"])
         elif moment["kind"] == "goodbye":
             what = ("THE PLAYER JUST LEFT: %s. One short goodbye in character, about something from today." %
                     moment["text"])
@@ -625,7 +659,8 @@ class Banter:
         story = self.story_section()
         brings = self.recall(moment["text"] if moment else "", before=(moment["t"] - 5) if moment else None,
                              shown=True, place_alone=moment is None)
-        extra = "\n".join(x for x in (story, brings) if x)
+        road = self.road_so_far() if moment and moment["kind"] == "the_end" else ""
+        extra = "\n".join(x for x in (story, brings, road) if x)
         return REQUEST % (what, bond, diary, ("\n" + extra) if extra else "", shape, variety_note(self.said), recent,
                           limit)
 
@@ -637,7 +672,7 @@ class Banter:
             self.cooldown[moment["kind"]] = time.time()
         self.since = self.wait_s = None
         model = c.cfg.get("fast_model")
-        limit = c._stretch(int(c.opt.get("banter_words")))
+        limit = c._stretch(int(c.opt.get("banter_words")) * BIG.get(moment["kind"] if moment else "", 1))
         act = activity(c._summary())
         try:
             ctx = c.context(triggers=["banter"])
