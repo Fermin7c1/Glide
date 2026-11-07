@@ -11,7 +11,7 @@ import { keyStatus, KNOWN_KEYS, setKey } from "../secrets";
 import { listWhisperModels, Speech } from "../speech";
 import type { AppSettingsPatch, EventChannel, EventMap, InvokeArgs, InvokeChannel, InvokeResult, RxpGuideDetail, RxpGuideFacts, RxpImport, RxpImportResult, RxpRoutes, RxpRoutesRequest } from "../../shared/ipc";
 import { appSettingsProblem, Obj } from "../store";
-import { synth, TTS_KEYS, voices as ttsVoices } from "../tts";
+import { castChoice, synth, TTS_KEYS, voices as ttsVoices } from "../tts";
 import { Updater } from "../updater";
 import { configPath, endpointKeyEnvs, engineHome, engineOptions, keyValue, readConfig, saveConfig } from "./config";
 import { isOwnPage } from "./assets";
@@ -132,9 +132,13 @@ function appChannels(d: IpcDeps): void {
     const s = settings.current.speech || {};
     return { mime: "audio/mpeg", data: await synth(s, String(text || "").slice(0, 4000), ttsKey(s.provider),
                                                    String(style || "").slice(0, 1000), String(tone || "").slice(0, 200),
-                                                   String(voice || "").slice(0, 40)) };
+                                                   String(voice || "").slice(0, 120)) };
   });
   handle("tts:voices", (provider) => ttsVoices(provider, ttsKey(provider), settings.current.speech?.azure?.region));
+  handle("tts:cast", (voice: string) => {
+    const s = settings.current.speech || {};
+    return castChoice(s, s.provider && s.provider !== "windows" ? ttsKey(s.provider) : "", String(voice || "").slice(0, 120));
+  });
 
   handle("res:watch", (on: boolean) => (on ? sampler.start() : sampler.stop()));
   handle("update:get", () => updater.status);

@@ -7,7 +7,7 @@ code { font-family: "Cascadia Mono", Consolas, monospace; font-size: 13px; backg
 .icon.inline { width: 14px; height: 14px; vertical-align: -2px; }
 
 /* the two recurring surfaces: a tooltip panel, and the parchment leaf for the one current thing on a page */
-.checks, .sgroup .fields, .block, #checks, #mem-notes, .wn-card {
+.checks, .sgroup .fields, .block, #checks, #mem-notes, #mem-chars, .wn-card {
   background: linear-gradient(180deg, var(--tip-2), var(--tip) 90px); box-shadow: var(--tip-shadow); border-radius: var(--radius-l);
 }
 .status-plate, .refresh, .addon-hero {
@@ -254,6 +254,23 @@ main { flex: 1; min-width: 0; position: relative; display: block; }
 .note .acts { display: flex; gap: 2px; }
 .note .acts .btn { width: 32px; height: 32px; }
 .note .acts .btn.on { color: var(--gold); }
+#mem-notes mark, #mem-chars mark { background: rgba(242, 194, 79, 0.3); color: inherit; border-radius: 3px; padding: 0 1px; }
+#mem-notes:empty, #mem-chars:empty { display: none; }
+#mem-chars { margin-top: 24px; padding: 2px 20px 10px; }
+#mem-chars .mem-group { margin: 0; padding: 14px 0 0; }
+#mem-chars .mem-group > h2 { font-size: 15px; color: var(--gold); margin: 0 0 2px; }
+#mem-chars .mem-list { background: none; box-shadow: none; border-radius: 0; padding: 0; }
+.mem-intro { margin: 0 0 6px; font-size: 13.5px; color: var(--ink-3); }
+.char { padding: 12px 0 6px; border-top: 1px solid var(--edge); }
+.char > h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 2px; font-size: 17px; font-weight: 600; color: var(--ink); }
+.char > h3 .grow { flex: 1; }
+.char > h3 .btn.armed { color: var(--behind); }
+.char-tag { padding: 2px 9px; border-radius: 10px; background: var(--gold); color: var(--on-gold); font-size: 11.5px; font-weight: 650; }
+.note .lab { margin-bottom: 2px; font-size: 12px; color: var(--ink-3); }
+.note .unset { color: var(--ink-3); font-style: italic; }
+.char-add { margin: 6px 0 4px; }
+.note .acts .acts-gap { width: 32px; }
+.voice-pick select { width: min(460px, 100%); margin-top: 2px; }
 .mem-empty { padding: 26px 20px; background: var(--tip); border: 1px dashed var(--edge); border-radius: var(--radius-l); color: var(--ink-2); }
 .reminders-block { margin-top: 34px; }
 .rem-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--edge-soft); }

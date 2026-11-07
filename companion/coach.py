@@ -135,6 +135,9 @@ class Coach:
         self._attach_knowledge(kb, pack)
         self.grounding_path = self.opt.get("grounding_log") or GROUNDING_LOG
         self._glock = threading.Lock()
+        # the cast (the character played, the sidekick, their memory): a reply's persona lines and the Memory page's
+        # changes take turns, so neither sees the other half done (the act changed, its memory not yet)
+        self._cast_lock = threading.RLock()
         self._system = None                   # cached system blocks (stable text keeps the prompt cache warm)
         self._turn_kctx = None                # knowledge ctx of the turn being answered (tools use it)
         self._convo_before = None             # the conversation before the question being answered
@@ -916,7 +919,42 @@ class Coach:
         m = self.deps.memory
         return m.character(self.persona_name()) if m is not None and self.persona() else None
 
-    def _main_name(self, save=False):
+    def character_edit(self, name, field, text, index=None, other="", was=None):
+        """The player changed a character on the Memory page (Memory.character_edit; the page names it exactly); the
+        one played keeps playing as changed: its description and voice are also the act's (llm.persona,
+        llm.persona_voice), changed with it (_set_persona keeps both)."""
+        m = self.deps.memory
+        if m is None:
+            raise ValueError("no memory")
+        with self._cast_lock:
+            if not (self.persona() and field in ("brief", "voice") and m.same_character(name, self.main_name())):
+                return m.character_edit(name, field, text, index, other, was)
+            ch = m.character(name) or {}
+            new = " ".join(str(text or "").split())
+            if field == "brief" and not new:
+                raise ValueError("a character needs a description")
+            if new == (ch.get(field) or ""):
+                return False
+            brief, voice = (new, ch.get("voice") or "") if field == "brief" else (ch.get("brief") or self.persona(), new)
+            self._set_persona(brief, voice, ch.get("name") or name)
+            if field == "voice" and not new:
+                m.character_edit(name, "voice", "")    # (_set_persona keeps a saved voice when given none)
+            return True
+
+    def character_forget(self, name):
+        """The player forgot a character on the Memory page: the sidekick goes too, along or only named in Settings
+        (else it would be made up again); the one played plays on, its memory starting over."""
+        m = self.deps.memory
+        if m is None:
+            return False
+        with self._cast_lock:
+            along = self.sidekick() or persona_mod.clean(self.cfg.get("sidekick"))
+            gone = m.character_forget(name)
+            if gone and along and m.same_character(name, along):
+                self._set_sidekick("")
+            return gone
+
+    def main_name(self, save=False):
         """The saved name of the character played, as the memory finds it (what its ties are kept under: the sidekick
         seed's too); save: kept first when it isn't yet (a Character set in Settings). "" without one."""
         ch = self._character()
@@ -926,6 +964,10 @@ class Coach:
 
     def _apply_persona(self, found):
         """A reply's persona lines (persona.split): play, recall, rename or drop a character, keep its lore."""
+        with self._cast_lock:
+            self._apply_cast(found)
+
+    def _apply_cast(self, found):
         m = self.deps.memory
         was, side = self.persona_name(), self.sidekick()
         if found["recall"]:
@@ -960,7 +1002,7 @@ class Coach:
             if found["side_role"]:
                 m.character_add(along, "role", found["side_role"])
         if found["ties"] and m is not None and self.sidekick():
-            m.character_tie(self._main_name(save=True), self.sidekick(), found["ties"])
+            m.character_tie(self.main_name(save=True), self.sidekick(), found["ties"])
         if found["scene"] is not None and m is not None and self.persona():
             # the character's scene (Memory: a new one or its end; said again, or near enough, changes nothing)
             if m.character_add(self.persona_name(), "scene", found["scene"]):
@@ -1141,7 +1183,7 @@ class Coach:
                 str(ch.get("scene") or "") if time.time() - (ch.get("scene_t") or 0) < SCENE_S else "")) if x)
             side = self.sidekick()
             if side and m is not None:
-                mem = mem + "\n\n" + persona_mod.companion(side, m.character(side), m.tie(self._main_name(), side))
+                mem = mem + "\n\n" + persona_mod.companion(side, m.character(side), m.tie(self.main_name(), side))
         # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
         # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
         if mem:

@@ -55,12 +55,7 @@ const SYNTH: Record<Online, Synth> = {
   async openai(s, text, key, signal, style, _tone, voice) {
     const o = s.openai || {};
     const model = o.model || "gpt-4o-mini-tts";
-    // a character's own voice (the engine's cast.py: one of OpenAI's); the chosen voice is the other one's, so a
-    // character given the same one takes the next
-    const mine = o.voice || "coral";
-    const who = !voice || !OPENAI_VOICES.includes(voice) ? mine
-      : voice !== mine ? voice : SHARED_VOICES[(SHARED_VOICES.indexOf(voice) + 1) % SHARED_VOICES.length];
-    const body: Record<string, unknown> = { model, voice: who, input: text, response_format: "mp3" };
+    const body: Record<string, unknown> = { model, voice: openaiVoice(o, voice), input: text, response_format: "mp3" };
     // the coach's persona (style) is performed instead of the usual instructions: a calm voice note would fight it
     const instructions = style || o.instructions;
     if (instructions && model.includes("gpt")) body.instructions = instructions;
@@ -70,7 +65,7 @@ const SYNTH: Record<Online, Synth> = {
   },
   async elevenlabs(s, text, key, signal, _style, tone, who) {
     const e = s.elevenlabs || {};
-    const mine = e.voiceId || "JBFqnCBsd6RMkjVDRZzb";      // "George", a default ElevenLabs voice
+    const mine = chosenVoice("elevenlabs", s);
     const voice = who ? await castVoice("elevenlabs", key, mine, who) : mine;
     const model = e.model || "eleven_flash_v2_5";
     // v3 performs the line's tone as an audio tag; the other models would read the tag out, so they get the words
@@ -82,7 +77,7 @@ const SYNTH: Record<Online, Synth> = {
   async azure(s, text, key, signal, _style, _tone, who) {
     const a = s.azure || {};
     const region = (a.region || "eastus").trim();
-    const mine = a.voice || "en-US-AndrewMultilingualNeural";
+    const mine = chosenVoice("azure", s);
     const voice = who ? await castVoice("azure", key, mine, who, region) : mine;
     const ssml = `<speak version="1.0" xml:lang="en-US"><voice name="${xml(voice)}">${xml(text)}</voice></speak>`;
     return audio(`https://${encodeURIComponent(region)}.tts.speech.microsoft.com/cognitiveservices/v1`, "Azure", {
@@ -91,7 +86,7 @@ const SYNTH: Record<Online, Synth> = {
       body: ssml });
   },
   async google(s, text, key, signal, _style, _tone, who) {
-    const mine = s.google?.voice || "en-US-Chirp3-HD-Charon";
+    const mine = chosenVoice("google", s);
     const voice = who ? await castVoice("google", key, mine, who) : mine;
     const lang = voice.split("-").slice(0, 2).join("-");
     const d = await json<{ audioContent?: string }>(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, "Google", {
@@ -122,14 +117,33 @@ const VOICE_LISTS: Record<Exclude<Online, "openai">, VoiceList> = {
   },
 };
 
-// a character's own voice (the engine names it by OpenAI's: cast.py) on a provider with voices of its own: another of
-// the player's voices than the chosen one (Azure's and Google's of its language, Google's of its kind too), the same
-// each time; the list is asked for once (again CAST_RETRY after it failed: the chosen voice meanwhile)
+// a character's own voice: the engine names it by OpenAI's (cast.py), or by the voice picked for it on the Memory page
+// (one of the provider's own, or a Windows voice's name)
+const hashOf = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+
+/** The voice the player chose for the coach on an online provider. */
+function chosenVoice(p: Exclude<Online, "openai">, s: SpeechSettings): string {
+  if (p === "elevenlabs") return s.elevenlabs?.voiceId || "JBFqnCBsd6RMkjVDRZzb";     // "George", a default voice
+  if (p === "azure") return s.azure?.voice || "en-US-AndrewMultilingualNeural";
+  return s.google?.voice || "en-US-Chirp3-HD-Charon";
+}
+
+/** OpenAI: one of its voices as it is, another provider's (a pick made there) one of its by the name; the chosen voice
+ * is the other character's, so one given it takes the next; none: the chosen one. */
+function openaiVoice(o: NonNullable<SpeechSettings["openai"]>, voice: string): string {
+  const mine = o.voice || "coral";
+  if (!voice) return mine;
+  const own = OPENAI_VOICES.includes(voice) ? voice : SHARED_VOICES[hashOf(voice) % SHARED_VOICES.length];
+  return own !== mine ? own : SHARED_VOICES[(SHARED_VOICES.indexOf(own) + 1) % SHARED_VOICES.length];
+}
+
+// the other providers: the one picked when it's theirs, else another of the player's voices than the chosen one
+// (Azure's and Google's of its language, Google's of its kind too), the same each time; the list is asked for once
+// (again CAST_RETRY after it failed: the chosen voice meanwhile)
 const CAST_RETRY = 10 * 60 * 1000;
 const castLists = new Map<string, { t: number; list: Voice[] }>();
 
-async function castVoice(provider: Exclude<Online, "openai">, key: string, mine: string, who: string,
-                                region?: string): Promise<string> {
+async function castList(provider: Exclude<Online, "openai">, key: string, region?: string): Promise<Voice[]> {
   const k = `${provider}|${region || ""}|${key.slice(-6)}`;
   let got = castLists.get(k);
   if (!got || (!got.list.length && Date.now() - got.t > CAST_RETRY)) {
@@ -140,19 +154,47 @@ async function castVoice(provider: Exclude<Online, "openai">, key: string, mine:
     got = { t: Date.now(), list };
     castLists.set(k, got);
   }
+  return got.list;
+}
+
+async function castVoice(provider: Exclude<Online, "openai">, key: string, mine: string, who: string,
+                         region?: string): Promise<string> {
+  const list = await castList(provider, key, region);
+  if (who !== mine && list.some((v) => v.id === who)) return who;
   const lang = (id: string) => id.split("-").slice(0, 2).join("-");
   const kind = (id: string) => id.split("-").slice(2, -1).join("-");      // Google's "Chirp3-HD", "Neural2"
-  const pool = got.list.filter((v) => v.id !== mine && (provider === "elevenlabs" || lang(v.id) === lang(mine))
+  const pool = list.filter((v) => v.id !== mine && (provider === "elevenlabs" || lang(v.id) === lang(mine))
     && (provider !== "google" || kind(v.id) === kind(mine)));
   if (!pool.length) return mine;
-  let i = OPENAI_VOICES.indexOf(who);
-  if (i < 0) for (const c of who) i = Math.abs((i * 31 + c.charCodeAt(0)) | 0);
-  return pool[i % pool.length].id;
+  const i = OPENAI_VOICES.indexOf(who);
+  return pool[(i >= 0 ? i : hashOf(who)) % pool.length].id;
+}
+
+/** A character's voice on the provider in use, for the Memory page: the voice its lines are spoken with (`voice` as
+ * synth resolves it; "" the chosen one), the one chosen for the coach, and the provider's voices to pick from (OpenAI's
+ * for its model; Windows: none here, the window has them). */
+export async function castChoice(s: SpeechSettings, key: string, voice: string):
+    Promise<{ provider: TtsProvider; id: string; mine: string; list: Voice[] }> {
+  const p = (s.provider || "windows") as TtsProvider;
+  if (p === "openai") {
+    const o = s.openai || {};
+    const ids = (o.model || "gpt-4o-mini-tts").includes("gpt") ? OPENAI_VOICES : SHARED_VOICES;
+    return { provider: p, id: openaiVoice(o, voice), mine: o.voice || "coral", list: ids.map((v) => ({ id: v, name: v })) };
+  }
+  if (p === "elevenlabs" || p === "azure" || p === "google") {
+    const mine = chosenVoice(p, s);
+    const region = p === "azure" ? (s.azure?.region || "eastus").trim() : undefined;
+    if (!key) return { provider: p, id: mine, mine, list: [] };
+    return { provider: p, id: voice ? await castVoice(p, key, mine, voice, region) : mine, mine,
+             list: await castList(p, key, region) };
+  }
+  return { provider: p, id: "", mine: "", list: [] };
 }
 
 /** MP3 audio for `text` from an online provider; `style` = how to perform it (the coach's persona; OpenAI only),
  * `tone` = how to deliver this one line (in character; an audio tag for ElevenLabs v3, the others don't use it),
- * `voice` = a character's own voice (the engine's cast.py, by OpenAI's names; "" the chosen one). */
+ * `voice` = a character's own voice (the engine's cast.py, by OpenAI's names, or the one picked for it on the Memory
+ * page; "" the chosen one). */
 export async function synth(s: SpeechSettings, text: string, key: string, style = "", tone = "",
                             voice = ""): Promise<Buffer> {
   const p = s.provider;

@@ -89,10 +89,18 @@ class Narrator {
     return new Promise((resolve) => this.handOver(this.utterance(text, list, other), tag, resolve));
   }
 
-  /** Another Windows voice than the chosen one (else the default), the same each time for `key` (a character's own
-   * voice: the engine's cast.py). */
+  /** The Windows voice a character's lines are spoken with, by name (`key`: its own voice; "" the chosen one). */
+  castVoiceName(key: string): string {
+    const list = this.voices();
+    return (key ? this.otherVoice(list, key) : this.pickVoice(list) ?? list.find((x) => x.default))?.name || "";
+  }
+
+  /** Another Windows voice than the chosen one (else the default) for a character's own voice (`key`): the one of that
+   * name (picked on the Memory page), else one the same each time for it (the engine's cast.py names it). */
   private otherVoice(list: SpeechSynthesisVoice[], key: string): SpeechSynthesisVoice | undefined {
     const mine = this.pickVoice(list) ?? list.find((x) => x.default);
+    const named = list.find((x) => x.name === key && x !== mine);
+    if (named) return named;
     const lang = (mine?.lang || "en").slice(0, 2);
     const pool = list.filter((x) => x !== mine && (x.lang || "").startsWith(lang));
     if (!pool.length) return mine;

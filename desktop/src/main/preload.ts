@@ -10,7 +10,7 @@ const INVOKE = new Set<InvokeChannel>([
   "engine:get", "engine:log", "engine:start", "engine:stop", "engine:restart",
   // the app: its info and settings, the voice, the resource meter, updates and release notes
   "app:info", "app:settings:get", "app:settings:set", "app:note", "app:logs", "app:changelog", "app:mute",
-  "tts:synth", "tts:voices", "res:watch", "update:get", "update:check", "update:install", "update:download",
+  "tts:synth", "tts:voices", "tts:cast", "res:watch", "update:get", "update:check", "update:install", "update:download",
   // config.json, API keys and custom endpoints
   "config:get", "config:set", "keys:list", "keys:set", "endpoint:test", "keys:test",
   // the addon and folders

@@ -412,6 +412,9 @@ export interface InvokeMap {
   "app:mute": (muted: boolean) => boolean;
   "tts:synth": (text: string, style?: string, tone?: string, voice?: string) => { mime: string; data: Uint8Array };
   "tts:voices": (provider: TtsProvider) => Voice[];
+  // a character's voice on the provider in use (the Memory page): what its lines are spoken with, the coach's own, and
+  // the provider's voices to pick from (Windows: none: the window has them)
+  "tts:cast": (voice: string) => { provider: TtsProvider; id: string; mine: string; list: Voice[] };
   "res:watch": (on: boolean) => void;
   "update:get": () => UpdateStatus;
   "update:check": () => void;

@@ -203,6 +203,7 @@ const list = [{ name: "Microsoft Zira", lang: "en-US" }, { name: "Microsoft Davi
               { name: "Microsoft Mark", lang: "en-GB" }, { name: "Microsoft Hortense", lang: "fr-FR" }];
 const pick = (l, k) => (speech["otherVoice"](l, k) || {}).name;
 out.other = { a: pick(list, "onyx"), again: pick(list, "onyx"), only: pick([list[0]], "onyx") ?? null,
+              named: pick(list, "Microsoft Hortense"),        // one picked on the Memory page: that one
               // no voice chosen: never the default one
               dflt: ["onyx", "sage", "ash", "nova"].map((k) => pick([{ name: "Microsoft Mark", lang: "en-US", default: true },
                                                                     { name: "Microsoft Guy", lang: "en-US" }], k)) };
@@ -266,4 +267,5 @@ o = got["other"]
 assert o["a"] in ("Microsoft Zira", "Microsoft David", "Microsoft Mark") and o["a"] == o["again"], o
 assert o["only"] == "Microsoft Zira", "one voice only: that one: %r" % o
 assert o["dflt"] == ["Microsoft Guy"] * 4, o
+assert o["named"] == "Microsoft Hortense", "a voice picked by its name: that one, whatever its language: %r" % o
 print("OK")

@@ -74,6 +74,7 @@
    "speech:install",
    "speech:models",
    "speech:status",
+   "tts:cast",
    "tts:synth",
    "tts:voices",
    "update:check",
@@ -220,6 +221,7 @@
  "main/tts.js": [
   "OPENAI_VOICES:object",
   "TTS_KEYS:object",
+  "castChoice:function",
   "synth:function",
   "v3Text:function",
   "voices:function"

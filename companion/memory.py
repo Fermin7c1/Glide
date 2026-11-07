@@ -554,6 +554,96 @@ class Memory:
             self._save_bond()
             return True
 
+    # ---- the app's Memory page: the characters, to read, change and forget -------------------------------------
+    def characters_view(self):
+        """The characters kept, most recently played first: who each is, its voice, who the player is to it, its
+        scene, its past (lore), its own story threads and how it's tied to the others kept."""
+        with self.lock:
+            names = {k: v["name"] for k, v in self.characters.items()}
+            rows = sorted(self.characters.values(), key=lambda v: -(v.get("last") or 0))
+            return [{"name": v["name"], "brief": v.get("brief") or "", "voice": v.get("voice") or "",
+                     "role": v.get("role") or "", "scene": v.get("scene") or "", "lore": list(v.get("lore") or ()),
+                     "plot": list(v.get("plot") or ()), "last": v.get("last") or 0, "tts_voice": v.get("tts_voice") or "",
+                     "ties": [{"with": names[o], "text": t} for o, t in (v.get("ties") or {}).items() if o in names]}
+                    for v in rows]
+
+    def same_character(self, a, b):
+        """Whether two names are one kept character's: exactly (its key), never the loose match of character()."""
+        return bool(self._key(a)) and self._key(a) == self._key(b)
+
+    def character_edit(self, name, field, text, index=None, other="", was=None):
+        """The player's change on the Memory page. field "brief" (never empty), "voice", "role", "scene", "tts_voice"
+        (the voice it speaks with: an OpenAI voice's name, another provider's voice id, a Windows voice's name; ""
+        its default): its text ("" clears it); "lore" (its past) or "plot" (its story threads): the item at index, the one that read `was`
+        when the page was drawn (found by it if the list moved since; refused if it's gone) (text "" removes it;
+        index None adds one, unless one like it is there); "ties": how it and `other` are tied (on both; ""
+        unties them). -> whether it changed."""
+        text = " ".join(str(text or "").split())
+        key = self._key(name)
+        with self.lock:
+            ch = self.characters.get(key)
+            if ch is None:
+                raise ValueError("no character called %s" % name)
+            if field in ("brief", "voice", "role", "scene", "tts_voice"):
+                if field == "brief" and not text:
+                    raise ValueError("a character needs a description")
+                value = text[:200 if field == "role" else 120 if field == "tts_voice" else 600]
+                if (ch.get(field) or "") == value:
+                    return False
+                ch[field] = value
+                if field == "scene":
+                    ch["scene_t"] = time.time() if value else 0.0
+            elif field in ("lore", "plot"):
+                rows = ch.setdefault(field, [])
+                text = text[:200 if field == "lore" else 300]
+                if index is None:
+                    if not text or any(_similar(text, y) for y in rows):
+                        return False
+                    rows.append(text)
+                    cap = MAX_LORE if field == "lore" else CHARACTER_LISTS["plot"]
+                    while len(rows) > cap:
+                        del rows[LORE_KEPT if field == "lore" else 0]
+                else:
+                    i = int(index)
+                    if was is not None and not (0 <= i < len(rows) and rows[i] == was):
+                        i = rows.index(was) if was in rows else -1      # (the coach added to it since)
+                    if not 0 <= i < len(rows):
+                        raise ValueError("it changed meanwhile: here it is as it is now")
+                    if text:
+                        rows[i] = text
+                    else:
+                        del rows[i]
+            elif field == "ties":
+                ko = self._key(other)
+                y = self.characters.get(ko)
+                if y is None or ko == key:
+                    raise ValueError("no character called %s" % other)
+                old = (ch.get("ties") or {}).get(ko) or (y.get("ties") or {}).get(key) or ""
+                if old == text[:400]:
+                    return False
+                for c, o in ((ch, ko), (y, key)):
+                    ties = c.setdefault("ties", {})
+                    ties.pop(o, None)
+                    if text:
+                        ties[o] = text[:400]
+                    while len(ties) > MAX_TIES:
+                        del ties[next(iter(ties))]
+            else:
+                raise ValueError("no character field %r" % field)
+            self._save_bond()
+            return True
+
+    def character_forget(self, name):
+        """Forget a character (its past, its ties with the others too). -> whether there was one."""
+        key = self._key(name)
+        with self.lock:
+            if self.characters.pop(key, None) is None:
+                return False
+            for v in self.characters.values():
+                (v.get("ties") or {}).pop(key, None)
+            self._save_bond()
+            return True
+
     def tie(self, a, b):
         """How two characters are tied (character_tie), or ""."""
         ka, kb = self._key(a), self._key(b)
@@ -585,7 +675,7 @@ class Memory:
                 ch = self.characters.get(self._key(name))
                 if ch is None or ch.get("tts_voice") == items:
                     return False
-                ch["tts_voice"] = str(items)[:40]
+                ch["tts_voice"] = str(items)[:120]
                 self._save_bond()
                 return True
         if field not in ("role", "scene") and field not in CHARACTER_LISTS:

@@ -489,7 +489,10 @@ class App:
                                               **options).start()
 
     def on_memory(self, body=None):
-        """The app's Memory page. GET (body None): the notes. POST {"op": "add"|"update"|"remove"|"learning"|"reflect"}."""
+        """The app's Memory page. GET (body None): the notes, and the characters the coach played ("characters", each
+        with "voice_id": the voice its lines go out with now, "" the app's own; "playing", "along": the one played and
+        the sidekick, by name). POST {"op": "add"|"update"|"remove"|"learning"|"reflect"|"character"|
+        "character_forget"}."""
         m = self.memory
         if body:
             op = body.get("op")
@@ -505,9 +508,20 @@ class App:
                 m.set_learning(bool(body.get("on")))
             elif op == "reflect":
                 threading.Thread(target=self.coach.reflect, daemon=True).start()
+            elif op == "character":
+                self.coach.character_edit(str(body.get("name") or ""), str(body.get("field") or ""),
+                                          body.get("text"), body.get("index"), str(body.get("other") or ""),
+                                          body.get("was"))
+            elif op == "character_forget":
+                self.coach.character_forget(str(body.get("name") or ""))
             else:
                 raise ValueError("unknown op %r" % op)
-        return m.snapshot()
+        playing, along = self.coach.main_name(), self.coach.sidekick()
+        cast = m.characters_view()
+        for ch in cast:     # (the one played and the sidekick: as cast_voice gives them; the others: their own)
+            ch["voice_id"] = (self.coach.cast_voice(None)[1] if playing and ch["name"] == playing else
+                              self.coach.cast_voice(along)[1] if along and ch["name"] == along else ch["tts_voice"])
+        return dict(m.snapshot(), characters=cast, playing=playing, along=along)
 
     def on_reminder(self, body):
         """Dashboard Reminders panel: {"done": id} closes one."""

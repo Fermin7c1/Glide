@@ -83,7 +83,7 @@ const say = async (s, style, tone) => { sent.length = 0; await tts.synth(s, "Tur
   out.openai = JSON.parse(await say({ provider: "openai" }, STYLE, "dry, amused"));
   out.google = JSON.parse(await say({ provider: "google" }, STYLE, "dry, amused"));
   out.azure = await say({ provider: "azure" }, STYLE, "dry, amused");
-  // a sidekick's line (cast.py): its own OpenAI voice; a name OpenAI doesn't have keeps the configured one
+  // a sidekick's line (cast.py): its own OpenAI voice; a name OpenAI doesn't have: one of its, not the configured one
   const side = async (voice) => { sent.length = 0;
     await tts.synth({ provider: "openai", openai: { voice: "coral" } }, "Boom?", "k", "Squeaky.", "", voice);
     return JSON.parse(sent[0].body); };
@@ -100,6 +100,14 @@ const say = async (s, style, tone) => { sent.length = 0; await tts.synth(s, "Tur
   lists = false;
   out.el_none = (await other({ provider: "elevenlabs", elevenlabs: { voiceId: "george" } }, "onyx")).url;
   out.az_none = (await other({ provider: "azure", azure: { region: "westus" } }, "sage")).body;
+  // a voice picked on the Memory page: the provider's own as it is; another provider's on OpenAI: one of its, not mine
+  lists = true;
+  out.el_pick = (await other({ provider: "elevenlabs", elevenlabs: { voiceId: "george" } }, "rachel")).url;
+  out.oa_foreign = JSON.parse((await other({ provider: "openai", openai: { voice: "coral" } }, "rachel")).body).voice;
+  out.choice_oa = await tts.castChoice({ provider: "openai", openai: { voice: "coral", model: "tts-1" } }, "", "onyx");
+  out.choice_el = await tts.castChoice({ provider: "elevenlabs", elevenlabs: { voiceId: "george" } }, "k", "rachel");
+  out.choice_auto = await tts.castChoice({ provider: "elevenlabs", elevenlabs: { voiceId: "george" } }, "k", "");
+  out.choice_win = await tts.castChoice({ provider: "windows" }, "", "Microsoft Mark");
   console.log(JSON.stringify(out));
 })().catch((e) => { console.error(e); process.exit(1); });
 """
@@ -130,7 +138,8 @@ assert got["multi"] == {"text": "Turn in.", "model_id": "eleven_multilingual_v2"
 # OpenAI performs the style whole (the tone folded in), its words untouched; Google and Azure: the words
 assert got["openai"]["input"] == "Turn in." and got["openai"]["instructions"] == "Gruff. This line: dry, amused.", got["openai"]
 assert got["side"]["voice"] == "onyx" and got["side"]["instructions"] == "Squeaky.", got["side"]
-assert got["side_bad"]["voice"] == "coral", got["side_bad"]
+# a name OpenAI doesn't have (another provider's, picked there): one of OpenAI's all the same, never the chosen one
+assert got["side_bad"]["voice"] not in ("coral", "not-a-voice", "ballad", "verse"), got["side_bad"]
 assert got["side_twin"]["voice"] == "echo", got["side_twin"]
 el = got["el"]
 assert el[0] == el[1] and "/george?" not in el[0] and ("/rachel?" in el[0] or "/adam?" in el[0]) and "/george?" in el[2], el
@@ -139,6 +148,15 @@ assert got["gg"] == {"languageCode": "en-US", "name": "en-US-Chirp3-HD-Puck"}, g
 # (the ElevenLabs list was already had; a region never asked for falls back to the chosen voice)
 assert "/rachel?" in got["el_none"] or "/adam?" in got["el_none"], got["el_none"]
 assert "en-US-AndrewMultilingualNeural" in got["az_none"], got["az_none"]
+assert "/rachel?" in got["el_pick"], got["el_pick"]
+assert got["oa_foreign"] not in ("coral", "rachel", "ballad", "verse"), got["oa_foreign"]
+co = got["choice_oa"]
+assert co["provider"] == "openai" and co["id"] == "onyx" and co["mine"] == "coral" and len(co["list"]) == 9 and \
+    "ballad" not in [v["id"] for v in co["list"]], co
+assert got["choice_el"]["id"] == "rachel" and got["choice_el"]["mine"] == "george" and \
+    [v["id"] for v in got["choice_el"]["list"]] == ["george", "rachel", "adam"], got["choice_el"]
+assert got["choice_auto"]["id"] == "george", "none: the chosen one"
+assert got["choice_win"] == {"provider": "windows", "id": "", "mine": "", "list": []}, got["choice_win"]
 assert got["google"]["input"] == {"text": "Turn in."}, got["google"]
 assert ">Turn in.</voice>" in got["azure"] and "amused" not in got["azure"], got["azure"]
 

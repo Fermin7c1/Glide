@@ -120,7 +120,7 @@ m4.character_save("Fizzle", "A twitchy gnome tinker.")
 c4.cfg["sidekick"] = "Fizzle"
 check(c4.sidekick() == "Fizzle", c4.sidekick())
 c4._directives("Lok'tar.\nTIES: Thrall freed Fizzle from a Horde cage; Fizzle has followed him since.")
-check(m4.tie(c4._main_name(), "Fizzle").startswith("Thrall freed Fizzle") and
+check(m4.tie(c4.main_name(), "Fizzle").startswith("Thrall freed Fizzle") and
       "You and Fizzle: Thrall freed Fizzle" in c4._system_blocks()[-1]["text"], m4.characters)
 
 

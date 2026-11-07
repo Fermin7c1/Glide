@@ -974,3 +974,24 @@ they don't spell out.
   made up whole (who it is too, a voice of its own; "Sidekick: <name>" in the chat). The companion's part of the
   block carries its past, its threads, "You and <name>: <tie>" and who the player is to it. The Sidekick help
   (contract 8) says so. The player asked (2026-11-07). Pinned by `tests/test_sidekick_story.py`.
+- **The Memory page: search, the characters and their voices (contracts 2, 4, 5 and 8; additive).** `GET /memory`
+  (and every `POST /memory` answer) also carries `characters` (each kept character: `name`, `brief`, `voice`, `role`,
+  `scene`, `lore`, `plot`, `ties` `[{with, text}]`, `tts_voice` (its own voice, "" none), `voice_id` (the voice its
+  lines go out with now: the one played's and the sidekick's as the coach casts them; "" the app's own), `last`; most
+  recently played first), `playing` and `along` (the one played and the sidekick, by name, or ""); `POST /memory`
+  gains `{"op": "character", name (exactly), field: "brief"|"voice"|"tts_voice"|"role"|"scene"|"lore"|"plot"|"ties",
+  text, index?, was?, other?}` (one line: "" clears it or removes the item; `index` null adds to its past or its
+  threads (one like it there already: nothing); `was`: the item's words when the page was drawn, found by them if the
+  list moved, else refused; `other` names the tie's other character; the played character's description and voice
+  change the act too) and `{"op": "character_forget", name}` (its ties with the others go too; the sidekick, along or
+  only named in Settings, is sent away). A character's `tts_voice` (contract 5) may now be any provider's voice id or
+  a Windows voice's name (120 characters), and so may the speak event's `voice` and `tts:synth`'s 4th argument
+  (contracts 2 and 4): OpenAI takes one of its own as it is and maps another to one of its own (never the chosen one);
+  ElevenLabs, Azure and Google take theirs as it is; Windows takes a voice by its name. New invoke channel `tts:cast`
+  (contract 4): `(voice) -> {provider, id, mine, list}`, a character's voice on the provider in use and the voices to
+  pick from. The Memory page (contract 8) gains "Search memories" (Ctrl+F; every word typed, in the notes and the
+  characters' lines, marked; Esc clears) and "Characters the coach has played": each one's lines to edit or clear,
+  "Their voice" (the provider's voices but the coach's own; "Automatic" for the sidekick, "The coach's own voice"
+  otherwise; Hear), "Add to <name>'s past", Forget (pressed twice). The player asked (2026-11-07). Pinned by
+  `tests/test_memory_characters.py`, `tests/test_memory_page.py`, `tests/test_voice_tone.py` and
+  `tests/test_voice_barge_in.py`.
