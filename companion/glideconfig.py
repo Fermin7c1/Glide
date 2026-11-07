@@ -4,6 +4,7 @@ knowledge build and the tools (knowledge/ and tools/ put companion/ on sys.path 
     glideconfig.load()                                 the engine's settings ("companion"): defaults merged, clamped
     glideconfig.wow_dir()                              the WoW client folder ("wow_dir"), or None
     glideconfig.patch(("companion", "llm"), {...})     merge values into one section and save
+    glideconfig.drop_retired()                         take the settings no longer used out of the file
 
 Readers never raise: a missing or unreadable file reads as empty (so the defaults). A writer re-reads the file first,
 merges, and writes it whole through a temporary file; it leaves a file it can't read alone (saving over it would
@@ -52,7 +53,33 @@ def load(root=None, log=None):
             cfg[k].update(v)
         else:
             cfg[k] = v
+    for key in settings.RETIRED:               # (settings no longer used: nothing of them is read)
+        *where, name = key.split(".")
+        node = cfg
+        for p in where:
+            node = node.get(p) if isinstance(node, dict) else None
+        if isinstance(node, dict):
+            node.pop(name, None)
     return settings.clamp_config(cfg)          # a hand edit out of range reads as the nearest end of it
+
+
+def drop_retired(root=None):
+    """Take the settings no longer used (settings.RETIRED) out of config.json's "companion" sections, if it has any
+    (written only then). -> the keys taken out. A file that can't be read is left alone."""
+    data, bad = read(root)
+    if bad:
+        return []
+    user = data.get("companion")
+    gone = []
+    for key in settings.RETIRED:
+        *where, name = key.split(".")
+        node = user
+        for p in where:
+            node = node.get(p) if isinstance(node, dict) else None
+        if isinstance(node, dict) and name in node:
+            patch(("companion",) + tuple(where), {name: None}, root)
+            gone.append(key)
+    return gone
 
 
 def wow_dir(root=None):

@@ -60,6 +60,16 @@ MAX_CHAPTERS = 16             # session chapters kept whole; past this the oldes
 FOLD = 8
 MAX_ERAS = 24                 # eras kept (the oldest stretches of the climb, in brief)
 MAX_THREADS = 12              # open threads (promises, questions, plans); the oldest goes when it's full
+# a line given another speaker ("[Name] ..."), as an older version kept some replies: never the coach's own words,
+# taken out of what is kept so the coach never reads the form back
+_OTHER_SPEAKER = re.compile(r"^[ \t]*\[[^\]\n]{1,40}\][ \t]+.*(?:\n|$)", re.M)
+
+
+def _own_words(text):
+    """The text without its lines given another speaker ("[Name] ...")."""
+    return _OTHER_SPEAKER.sub("", text).strip()
+
+
 KEEP_CONVO = 60               # conversation lines kept across restarts
 CHARACTER_LISTS = {"samples": 6, "favorites": 6, "plot": 4, "lines": 60}   # per character: kept, newest
 BOND_KEYS = ("bond", "diary", "zones", "characters", "chapters", "eras", "threads", "next_thread", "convo", "cleared_t")
@@ -148,6 +158,7 @@ class Memory:
         # the characters the coach played for them, by key: {"name", "brief", "voice", "lore": [...], "last"}
         self.characters = {}
         self._bond_saved = 0.0
+        self._tidied = False                # what an older version kept was taken out on load: saved once, at once
         self._load()
 
     # ---- storage --------------------------------------------------------------------------------------------------
@@ -192,6 +203,8 @@ class Memory:
         for k in ("bond", "diary", "characters", "zones"):
             self._extra.pop(k, None)
         self._load_bond(b)
+        if self._tidied:
+            self._save_bond()
 
     def _load_bond(self, d):
         """The bond's parts from a parsed coach_bond.json, each checked: a bad entry is dropped, never fatal."""
@@ -217,6 +230,12 @@ class Memory:
         del self.diary[:-MAX_DIARY]
         chars = _typed(d, "characters", dict)
         for k, v in chars.items():
+            if isinstance(v, dict) and any(f in v for f in ("tts_voice", "ties")):
+                self._tidied = True         # (fields only an older version kept)
+                # a second character an older version kept beside the one played (a voice of its own) and never
+                # played itself (not a line of its own): not one the coach played
+                if v.get("tts_voice") and not (v.get("lines") or v.get("favorites") or v.get("scene")):
+                    continue
             if isinstance(v, dict) and isinstance(v.get("name"), str) and isinstance(v.get("brief"), str) \
                     and v["name"].strip() and v["brief"].strip():
                 lore = _typed(v, "lore", list)
@@ -228,7 +247,10 @@ class Memory:
                     "scene": v.get("scene") if isinstance(v.get("scene"), str) else "",
                     "scene_t": as_float(v.get("scene_t"), 0.0, finite=True, bool_ok=False)}
                 for field, cap in CHARACTER_LISTS.items():
-                    ch[field] = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
+                    rows = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
+                    own = [y for y in (_own_words(x) for x in rows) if y]
+                    self._tidied = self._tidied or own != rows
+                    ch[field] = own
         zones = _typed(d, "zones", list)
         self.zones = {z for z in zones if isinstance(z, str)} | {x["zone"] for x in self.diary if "zone" in x}
         for x in _typed(d, "chapters", list):
@@ -254,7 +276,12 @@ class Memory:
             if isinstance(x, dict) and x.get("who") in ("player", "coach") and isinstance(x.get("text"), str) \
                     and isinstance(x.get("kind"), str) and _when(x.get("t")) is not None \
                     and x["t"] > self.cleared_t:
-                row = {"t": _when(x["t"]), "who": x["who"], "kind": x["kind"], "text": x["text"]}
+                text = _own_words(x["text"]) if x["who"] == "coach" else x["text"]
+                if text != x["text"]:
+                    self._tidied = True
+                    if not text:
+                        continue
+                row = {"t": _when(x["t"]), "who": x["who"], "kind": x["kind"], "text": text}
                 if x.get("chat") is True:
                     row["chat"] = True
                 self.convo.append(row)
@@ -525,6 +552,73 @@ class Memory:
                                                      if key in k or (len(k) >= 3 and k in key)), None)
                                                if len(key) >= 3 else None)
             return dict(ch, lore=list(ch.get("lore") or ())) if ch else None
+
+    # ---- the app's Memory page: the characters, to read, change and forget -------------------------------------
+    def characters_view(self):
+        """The characters kept, most recently played first: who each is, its voice, who the player is to it, its
+        scene, its past (lore) and its own story threads."""
+        with self.lock:
+            rows = sorted(self.characters.values(), key=lambda v: -(v.get("last") or 0))
+            return [{"name": v["name"], "brief": v.get("brief") or "", "voice": v.get("voice") or "",
+                     "role": v.get("role") or "", "scene": v.get("scene") or "", "lore": list(v.get("lore") or ()),
+                     "plot": list(v.get("plot") or ()), "last": v.get("last") or 0} for v in rows]
+
+    def same_character(self, a, b):
+        """Whether two names are one kept character's: exactly (its key), never the loose match of character()."""
+        return bool(self._key(a)) and self._key(a) == self._key(b)
+
+    def character_edit(self, name, field, text, index=None, was=None):
+        """The player's change on the Memory page. field "brief" (never empty), "voice", "role", "scene": its text
+        ("" clears it); "lore" (its past) or "plot" (its story threads): the item at index, the one that read `was`
+        when the page was drawn (found by it if the list moved since; refused if it's gone) (text "" removes it;
+        index None adds one, unless one like it is there). -> whether it changed."""
+        text = " ".join(str(text or "").split())
+        key = self._key(name)
+        with self.lock:
+            ch = self.characters.get(key)
+            if ch is None:
+                raise ValueError("no character called %s" % name)
+            if field in ("brief", "voice", "role", "scene"):
+                if field == "brief" and not text:
+                    raise ValueError("a character needs a description")
+                value = text[:200 if field == "role" else 600]
+                if (ch.get(field) or "") == value:
+                    return False
+                ch[field] = value
+                if field == "scene":
+                    ch["scene_t"] = time.time() if value else 0.0
+            elif field in ("lore", "plot"):
+                rows = ch.setdefault(field, [])
+                text = text[:200 if field == "lore" else 300]
+                if index is None:
+                    if not text or any(_similar(text, y) for y in rows):
+                        return False
+                    rows.append(text)
+                    cap = MAX_LORE if field == "lore" else CHARACTER_LISTS["plot"]
+                    while len(rows) > cap:
+                        del rows[LORE_KEPT if field == "lore" else 0]
+                else:
+                    i = int(index)
+                    if was is not None and not (0 <= i < len(rows) and rows[i] == was):
+                        i = rows.index(was) if was in rows else -1      # (the coach added to it since)
+                    if not 0 <= i < len(rows):
+                        raise ValueError("it changed meanwhile: here it is as it is now")
+                    if text:
+                        rows[i] = text
+                    else:
+                        del rows[i]
+            else:
+                raise ValueError("no character field %r" % field)
+            self._save_bond()
+            return True
+
+    def character_forget(self, name):
+        """Forget a character (its past and all). -> whether there was one."""
+        with self.lock:
+            if self.characters.pop(self._key(name), None) is None:
+                return False
+            self._save_bond()
+            return True
 
     def character_lore(self, name, fact):
         """A fact the character made up about itself: kept so it never contradicts itself."""

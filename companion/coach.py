@@ -134,6 +134,9 @@ class Coach:
         self._attach_knowledge(kb, pack)
         self.grounding_path = self.opt.get("grounding_log") or GROUNDING_LOG
         self._glock = threading.Lock()
+        # the character played and its memory: a reply's persona lines and the Memory page's changes take turns, so
+        # neither sees the other half done (the act changed, its memory not yet)
+        self._persona_lock = threading.RLock()
         self._system = None                   # cached system blocks (stable text keeps the prompt cache warm)
         self._turn_kctx = None                # knowledge ctx of the turn being answered (tools use it)
         self._convo_before = None             # the conversation before the question being answered
@@ -835,8 +838,47 @@ class Coach:
         m = self.deps.memory
         return m.character(self.persona_name()) if m is not None and self.persona() else None
 
+    def main_name(self):
+        """The saved name of the character played, as the memory finds it, or "" (none, or not kept yet)."""
+        ch = self._character()
+        return ch["name"] if ch else ""
+
+    def character_edit(self, name, field, text, index=None, was=None):
+        """The player changed a character on the Memory page (Memory.character_edit; the page names it exactly); the
+        one played keeps playing as changed: its description and voice are also the act's (llm.persona,
+        llm.persona_voice), changed with it (_set_persona keeps both)."""
+        m = self.deps.memory
+        if m is None:
+            raise ValueError("no memory")
+        with self._persona_lock:
+            if not (self.persona() and field in ("brief", "voice") and m.same_character(name, self.main_name())):
+                return m.character_edit(name, field, text, index, was)
+            ch = m.character(name) or {}
+            new = " ".join(str(text or "").split())
+            if field == "brief" and not new:
+                raise ValueError("a character needs a description")
+            if new == (ch.get(field) or ""):
+                return False
+            brief, voice = (new, ch.get("voice") or "") if field == "brief" else (ch.get("brief") or self.persona(), new)
+            self._set_persona(brief, voice, ch.get("name") or name)
+            if field == "voice" and not new:
+                m.character_edit(name, "voice", "")    # (_set_persona keeps a saved voice when given none)
+            return True
+
+    def character_forget(self, name):
+        """The player forgot a character on the Memory page; the one played plays on, its memory starting over."""
+        m = self.deps.memory
+        if m is None:
+            return False
+        with self._persona_lock:
+            return m.character_forget(name)
+
     def _apply_persona(self, found):
         """A reply's persona lines (persona.split): play, recall, rename or drop a character, keep its lore."""
+        with self._persona_lock:
+            self._apply_persona_now(found)
+
+    def _apply_persona_now(self, found):
         m = self.deps.memory
         if found["recall"]:
             ch = m.character(found["recall"]) if m is not None else None

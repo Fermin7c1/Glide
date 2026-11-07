@@ -472,7 +472,9 @@ class App:
                                               **options).start()
 
     def on_memory(self, body=None):
-        """The app's Memory page. GET (body None): the notes. POST {"op": "add"|"update"|"remove"|"learning"|"reflect"}."""
+        """The app's Memory page. GET (body None): the notes, and the characters the coach played ("characters";
+        "playing": the one played, by name, or ""). POST {"op": "add"|"update"|"remove"|"learning"|"reflect"|
+        "character"|"character_forget"}."""
         m = self.memory
         if body:
             op = body.get("op")
@@ -488,9 +490,14 @@ class App:
                 m.set_learning(bool(body.get("on")))
             elif op == "reflect":
                 threading.Thread(target=self.coach.reflect, daemon=True).start()
+            elif op == "character":
+                self.coach.character_edit(str(body.get("name") or ""), str(body.get("field") or ""),
+                                          body.get("text"), body.get("index"), body.get("was"))
+            elif op == "character_forget":
+                self.coach.character_forget(str(body.get("name") or ""))
             else:
                 raise ValueError("unknown op %r" % op)
-        return m.snapshot()
+        return dict(m.snapshot(), characters=m.characters_view(), playing=self.coach.main_name())
 
     def on_reminder(self, body):
         """Dashboard Reminders panel: {"done": id} closes one."""
@@ -997,6 +1004,11 @@ if __name__ == "__main__":
             sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
         except AttributeError:
             pass
+    if not a.sim:
+        try:
+            glideconfig.drop_retired(ROOT)     # (settings no longer used: out of the player's config.json)
+        except (OSError, ValueError) as e:
+            console_log("[config] couldn't tidy %s: %s" % (glideconfig.path(ROOT), e))
     c = load_config()
     if a.calibrate:
         calibration.save_snapshot(c, live_path("capture.png"))

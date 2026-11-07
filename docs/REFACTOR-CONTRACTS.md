@@ -946,3 +946,20 @@ they don't spell out.
   lets pass in a row stretch the wait between quiet-moment asides (x1.5 each, x4 at most; a reply resets it:
   `Banter.unanswered`). Greetings say how long the two have been at it (days, sessions; a week to the day is marked).
   The player asked (2026-11-07). Pinned by `tests/test_presence.py`.
+- **The Memory page: search, and the characters (contracts 2 and 8; additive).** `GET /memory` (and every `POST
+  /memory` answer) also carries `characters` (each kept character: `name`, `brief`, `voice`, `role`, `scene`, `lore`,
+  `plot`, `last`; most recently played first) and `playing` (the one played, by name, or ""); `POST /memory` gains
+  `{"op": "character", name (exactly), field: "brief"|"voice"|"role"|"scene"|"lore"|"plot", text, index?, was?}` (one
+  line: "" clears it or removes the item; `index` null adds to its past or its threads (one like it there already:
+  nothing); `was`: the item's words when the page was drawn, found by them if the list moved, else refused; the played
+  character's description and voice change the act too) and `{"op": "character_forget", name}`. The Memory page
+  (contract 8) gains "Search memories" (Ctrl+F; every word typed, in the notes and the characters' lines, marked; Esc
+  clears) and "Characters the coach has played": each one's lines to edit or clear, "Add to <name>'s past", Forget
+  (pressed twice). The player asked (2026-11-07). Pinned by `tests/test_memory_characters.py` and
+  `tests/test_memory_page.py`.
+- **What an older version left is taken out at start (contract 5).** Settings no longer used (`settings.RETIRED`)
+  are dropped from the config the engine reads and taken out of config.json when the engine starts (written only
+  then; never in sim). `coach_bond.json` is read without fields this version doesn't keep, without a second character
+  that version kept beside the one played and that was never played itself, and without lines its replies gave
+  another speaker (`[Name] ...`, out of the characters' lines and the kept conversation); it is saved once, cleaned,
+  and a clean one is never rewritten. The player asked (2026-11-07). Pinned by `tests/test_older_leftovers.py`.

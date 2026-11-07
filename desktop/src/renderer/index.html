@@ -61,6 +61,7 @@
   <section id="page-memory" class="page">
     <header class="pagehead">
       <div><h1>Memory</h1><p class="lede">What the coach has learned about you and keeps between sessions. It's stored on this PC, outside the app, so it survives updates and reinstalls.</p></div>
+      <label class="set-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="mem-search" placeholder="Search memories" aria-label="Search memories" autocomplete="off" spellcheck="false"><kbd>Ctrl+F</kbd></label>
       <div class="grow"></div>
       <label class="switch" title="Every so often the coach reviews your recent questions and feedback and updates its notes"><input type="checkbox" id="mem-learning"><span class="track"></span><span class="state">Learn from our sessions</span></label>
       <button id="mem-reflect" class="btn"><svg class="icon"><use href="#i-sparkles"/></svg>Reflect now</button>
@@ -72,6 +73,7 @@
         <button class="btn primary" type="submit"><svg class="icon"><use href="#i-plus"/></svg>Remember</button>
       </form>
       <div id="mem-notes"></div>
+      <div id="mem-chars"></div>
       <div class="sgroup reminders-block">
         <h2>Reminders</h2>
         <p>Things to do later: the coach says each one when its moment comes (near a vendor, in a place, at a level, after some minutes). Say "remind me to…" while playing, or add one here.</p>

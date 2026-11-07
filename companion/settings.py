@@ -16,6 +16,11 @@ with open(MANIFEST_PATH, encoding="utf-8") as _fh:
     ENTRIES = json.load(_fh)["settings"]       # "llm.lookahead_steps" -> {"default", "min", "max", "kind", ...}
 
 
+# settings an older version had and this one doesn't: dropped from a loaded config, and from config.json when the
+# engine starts (glideconfig.drop_retired), so nothing of them is left to read
+RETIRED = ("llm.sidekick",)
+
+
 def default(key):
     return ENTRIES[key]["default"]
 
