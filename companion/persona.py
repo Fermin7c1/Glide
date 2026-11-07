@@ -31,8 +31,9 @@ captain, your apprentice, your rival), add a final line "ROLE: <that, and what y
 it changes). When the player sets up a scene to play together ("let's be bounty hunters after Hogger"), play it and
 add a final line "SCENE: <the premise, 1-2 sentences>" (once; again only if it changes), and "SCENE: end" when it's
 over or they drop it. When the player wants a second character along (a sidekick, a rival, a pet: "bring Fizzle
-along", "add a gnome tinker"), add a final line "SIDEKICK: <its name> | <a vivid brief of it, 1-3 sentences>" (just
-"SIDEKICK: <its name>" for one CHARACTERS YOU HAVE PLAYED lists), and "SIDEKICK: off" when they send it away.%s
+along", "add a gnome tinker"), add a final line "SIDEKICK: <its name> | <a vivid brief of it, 1-3 sentences, with
+all the player said of it: its past, how it and you are tied, who the player is to it>" (just "SIDEKICK: <its name>"
+for one CHARACTERS YOU HAVE PLAYED lists), and "SIDEKICK: off" when they send it away.%s
 The coaching underneath stays exact: the same single most useful point, real names, numbers and directions from
 the data, nothing invented. Lengths may stretch for flavour: callouts up to about %d words, spoken answers %d,
 typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE, ROLE, SCENE, SIDEKICK) keep their exact plain
@@ -50,8 +51,11 @@ REMINDER = "Stay fully in character (%s): say it the way they would."
 
 # PERSONA in any case ("persona: off"); the others only as written, upper-case: an answer's own "Role: tank or
 # healer" or "Name: Hogger" line is the answer's
-_LINE = re.compile(r"^\s*(?:((?i:PERSONA))|(VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK))\s*:\s*(.*)$")
-_MIDLINE = re.compile(r"(?<=\S)\s+(?=(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK|PERSONA)\s*:\s)")
+# (the sidekick's: SIDEKICK LORE, SIDEKICK ROLE, and TIES between the two characters)
+_LINE = re.compile(r"^\s*(?:((?i:PERSONA))|(VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK\s+LORE|SIDEKICK\s+ROLE|SIDEKICK|"
+                   r"TIES))\s*:\s*(.*)$")
+_MIDLINE = re.compile(r"(?<=\S)(?<!SIDEKICK)\s+(?=(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK|TIES|PERSONA)\s*:\s"
+                      r"|SIDEKICK\s+(?:LORE|ROLE)\s*:\s)")
 _SCENE_END = re.compile(r"^(?:end(?:ed|s)?|over|off|none|done|finished|stop(?:ped)?)\b", re.I)
 _OFF = re.compile(r"^(?:off|none|normal|default|clear|no(?:ne)? persona|-)\W*$", re.I)
 _RECALL = re.compile(r"^(?:recall|restore)\b[\s:]+(.+?)\W*$", re.I)     # "recall Sarge" (not "Recalling...")
@@ -69,24 +73,28 @@ def split(text):
     """Pull the PERSONA: / NAME: / VOICE: / LORE: / TONE: / ROLE: / SCENE: lines out of a reply -> (the rest of the
     text, found): found["persona"]: None (no line), "" (PERSONA: off) or the brief; "recall": a name (PERSONA: recall
     <name>); "name", "voice", "tone", "role": the line's text; "lore": [facts]; "scene": None, "" (SCENE: end) or the
-    premise."""
+    premise; "sidekick" (SIDEKICK: below); the sidekick's "side_lore": [facts], "side_role" and the two characters'
+    "ties": the line's text."""
     keep, found = [], {"persona": None, "recall": None, "name": None, "voice": None, "tone": None, "lore": [],
-                       "role": None, "scene": None, "sidekick": None}
+                       "role": None, "scene": None, "sidekick": None, "side_lore": [], "side_role": None, "ties": None}
     for line in _MIDLINE.sub("\n", text or "").splitlines():     # one written mid-line is a line of its own
         m = _LINE.match(line)
         if not m:
             keep.append(line)
             continue
-        what, value = (m.group(1) or m.group(2)).lower(), m.group(3).strip()
+        what, value = " ".join((m.group(1) or m.group(2)).split()).lower(), m.group(3).strip()
         if what == "persona":
             r = _RECALL.match(value)
             if r:
                 found["recall"] = r.group(1).strip()
             else:
                 found["persona"] = "" if _OFF.match(value) else clean(value)
-        elif what == "lore":
+        elif what in ("lore", "sidekick lore"):
             if value:
-                found["lore"].append(clean(value))
+                found["side_lore" if what == "sidekick lore" else "lore"].append(clean(value))
+        elif what in ("sidekick role", "ties"):
+            if value:
+                found["side_role" if what == "sidekick role" else "ties"] = clean(value)
         elif what == "scene":
             found["scene"] = "" if _SCENE_END.match(value) else clean(value)
         elif what == "sidekick":
@@ -111,20 +119,51 @@ def short_name(brief, words=8):
 COMPANION = """YOUR COMPANION ON THE ROAD: %(name)s, a second character along with you: %(brief)s%(more)s
 Now and then (mostly in your unprompted asides, at big moments, or when the player speaks to them) give them a line
 of their own: on a line of its own that starts with "[%(name)s]", in their voice, not yours; they can tease you, argue,
-chime in. At most two of their lines in a reply, never in plain directions (the coaching is yours). When the player
-wants %(name)s to take the lead ("let me talk to %(name)s"), add a final line "PERSONA: recall %(name)s": you swap
-places, and you come along as theirs."""
+chime in, bring up their past or yours. At most two of their lines in a reply, never in plain directions (the coaching
+is yours). When the player wants %(name)s to take the lead ("let me talk to %(name)s"), add a final line "PERSONA:
+recall %(name)s": you swap places, and you come along as theirs.
+Their past and your history together are real to both of you: never contradict them, build on them. When %(name)s
+reveals something new about their past (or the player gives them one), add a final line "SIDEKICK LORE: <that fact,
+one short sentence>". When the player says how the two of you are tied (your history, what you feel about each other,
+a debt, a rivalry), add a final line "TIES: <that, 1-2 sentences, by name>"; when it's clear who the player is to
+%(name)s, add "SIDEKICK ROLE: <that, and what they call them>" (each once; again only if it changes). Those lines
+keep their exact plain format."""
 
 
-def companion(name, ch):
-    """The block's part for the sidekick (cast.py): who it is, how it sounds, its story."""
+def companion(name, ch, ties=""):
+    """The block's part for the sidekick (cast.py): who it is, how it sounds, its past and its own story, how it and
+    the character played are tied (ties: Memory.tie), who the player is to it."""
     ch = ch or {}
     more = ""
     if ch.get("samples"):
         more += "\nHow they sound: " + " / ".join('"%s"' % x for x in (ch["samples"] or [])[:3])
-    if ch.get("lore"):
-        more += "\nTheir story so far: " + "; ".join((ch["lore"] or [])[:8])
+    lore = list(ch.get("lore") or ())
+    if lore:      # its past first (kept for good: Memory.LORE_KEPT), then the newest
+        more += "\nTheir past and their story so far: " + "; ".join(lore if len(lore) <= 12 else lore[:6] + lore[-6:])
+    if ch.get("plot"):
+        more += "\nTheir own story threads: " + "; ".join(ch["plot"])
+    if ties:
+        more += "\nYou and %s: %s" % (name, clean(ties))
+    if ch.get("role"):
+        more += "\nWho the player is to them: " + clean(ch["role"])
     return COMPANION % {"name": name, "brief": clean(ch.get("brief") or ""), "more": more}
+
+
+def side_seed_request(name, ch, main, main_ch, ties=""):
+    """The SIDE_SEED request for a sidekick: who it is and what is known of it, the character it travels with, and
+    how they are tied when that is known already (stay consistent). ch None: only its name is known (one named in
+    Settings): who it is is asked for too ("brief", SIDE_SEED_NEW_SCHEMA)."""
+    new = not (ch or {}).get("brief")
+    ch, main_ch = ch or {}, main_ch or {}
+    known = list(ch.get("lore") or ())[:24] + (["Who the player is to them: " + ch["role"]] if ch.get("role") else [])
+    main_known = (["Who the player is to %s: %s" % (main, main_ch["role"])] if main_ch.get("role") else []) + \
+        (["How the two are tied: " + ties] if ties else [])
+    return SIDE_SEED % {
+        "name": name, "main": main, "main_brief": clean(main_ch.get("brief")),
+        "brief": ("(only the name is known: make them up, someone who fits beside %s)" % main) if new else
+        clean(ch.get("brief")), "ask_brief": ('"brief": "who %s is, 1-3 vivid sentences", ' % name) if new else "",
+        "known": ("\nWhat is known of them already:\n" + "\n".join("- " + x for x in known)) if known else "",
+        "main_known": ("\n" + "\n".join("- " + x for x in main_known)) if main_known else ""}
 
 
 def seed_request(brief, lore=(), role=""):
@@ -157,3 +196,27 @@ it's hiding or working on]}. Spoken lines only: no stage directions, no emoji.""
 SEED_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["samples", "plot"],
                "properties": {"samples": {"type": "array", "items": {"type": "string"}},
                               "plot": {"type": "array", "items": {"type": "string"}}}}
+
+# the request that gives a sidekick its past, its sample lines, its own story threads, its tie to the character played
+# and who the player is to it (once, when it first comes along beside that character; only what it lacks is kept)
+SIDE_SEED = """You write for a second character who travels with the one a World of Warcraft leveling coach plays for
+the player.
+The second character, %(name)s: %(brief)s%(known)s
+They travel with %(main)s: %(main_brief)s%(main_known)s
+Reply with ONLY a JSON object: {%(ask_brief)s"backstory": [3 facts of %(name)s's past, one short sentence each: where they come
+from, what shaped them, something they never talk about], "samples": [5 short lines %(name)s would say while the player
+levels, each a different kind: a jab at %(main)s, a reaction to the player, a scrap of their past, a worry, a boast],
+"plot": [2 of %(name)s's own story threads that can move forward slowly over a long climb to level 60], "ties": "how
+%(name)s and %(main)s are tied, 1-2 sentences, by name: their history, what each feels about the other, a sore spot",
+"role": "who the player is to %(name)s, and what %(name)s calls them, one short sentence"}. Stay consistent with
+everything known above, their brief above all (what the player said of them). Spoken lines only in samples: no stage
+directions, no emoji."""
+
+SIDE_SEED_SCHEMA = {"type": "object", "additionalProperties": False,
+                    "required": ["backstory", "samples", "plot", "ties", "role"],
+                    "properties": {"backstory": {"type": "array", "items": {"type": "string"}},
+                                   "samples": {"type": "array", "items": {"type": "string"}},
+                                   "plot": {"type": "array", "items": {"type": "string"}},
+                                   "ties": {"type": "string"}, "role": {"type": "string"}}}
+SIDE_SEED_NEW_SCHEMA = dict(SIDE_SEED_SCHEMA, required=["brief"] + SIDE_SEED_SCHEMA["required"],
+                            properties=dict(SIDE_SEED_SCHEMA["properties"], brief={"type": "string"}))

@@ -109,7 +109,7 @@ export const SCHEMA: Tab[] = [
         { key: L + "persona", label: "Character", type: "text", wide: true,
           help: "Who the coach plays, and how they talk. Empty: the coach's own plain voice." },
         { key: L + "sidekick", label: "Sidekick", type: "text",
-          help: "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines and voice, now and then. The name of one the coach has played; empty: none. \"Let me talk to Fizzle\" swaps them." },
+          help: "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines, voice and past, and a history with yours (\"Fizzle is your old apprentice\", \"Fizzle calls me boss\"). One the coach has played, or a new name it makes up; empty: none. \"Let me talk to Fizzle\" swaps them." },
         { key: L + "persona_voice", label: "Voice direction", type: "text", wide: true,
           help: "How the character sounds out loud: accent, pace, energy. Performed by the OpenAI voice (gpt-4o-mini-tts)." },
         { key: L + "banter", label: "Speak up unprompted", type: "bool",

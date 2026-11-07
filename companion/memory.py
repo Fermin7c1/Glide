@@ -56,6 +56,7 @@ MAX_DIARY = 80                # shared moments kept (newest)
 MAX_LORE = 24                 # facts a character told about itself, per character
 LORE_KEPT = 8                 # ... its first ones are never dropped (who it is); the oldest of the rest go first
 MAX_CHARACTERS = 12           # characters kept (most recently played)
+MAX_TIES = 8                  # per character: how it is tied to the others it travelled with (newest kept)
 MAX_CHAPTERS = 16             # session chapters kept whole; past this the oldest FOLD fold into one era
 FOLD = 8
 MAX_ERAS = 24                 # eras kept (the oldest stretches of the climb, in brief)
@@ -227,7 +228,9 @@ class Memory:
                     "role": v.get("role") if isinstance(v.get("role"), str) else "",
                     "scene": v.get("scene") if isinstance(v.get("scene"), str) else "",
                     "scene_t": as_float(v.get("scene_t"), 0.0, finite=True, bool_ok=False),
-                    "tts_voice": v.get("tts_voice") if isinstance(v.get("tts_voice"), str) else ""}
+                    "tts_voice": v.get("tts_voice") if isinstance(v.get("tts_voice"), str) else "",
+                    "ties": dict([(a, b[:400]) for a, b in _typed(v, "ties", dict).items()
+                                  if isinstance(a, str) and isinstance(b, str) and b.strip()][-MAX_TIES:])}
                 for field, cap in CHARACTER_LISTS.items():
                     ch[field] = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
         zones = _typed(d, "zones", list)
@@ -525,7 +528,38 @@ class Memory:
             ch = self.characters.get(key) or (next((v for k, v in self.characters.items()
                                                      if key in k or (len(k) >= 3 and k in key)), None)
                                                if len(key) >= 3 else None)
-            return dict(ch, lore=list(ch.get("lore") or ())) if ch else None
+            return dict(ch, lore=list(ch.get("lore") or ()), ties=dict(ch.get("ties") or {})) if ch else None
+
+    def character_tie(self, a, b, text, fill=False):
+        """How two characters are tied (their history, what each feels about the other: a reply's TIES line, or made
+        up when one first comes along beside the other), kept on both; fill: only when there is none yet. Said again,
+        or in nearly the same words, changes nothing; with new words to it, it replaces it (a tie can change: "old
+        rivals" -> "old rivals, now friends"). -> whether it changed."""
+        ka, kb = self._key(a), self._key(b)
+        text = " ".join(str(text or "").split())[:400]
+        with self.lock:
+            x, y = self.characters.get(ka), self.characters.get(kb)
+            if x is None or y is None or ka == kb or not text:
+                return False
+            old = (x.get("ties") or {}).get(kb) or (y.get("ties") or {}).get(ka) or ""
+            wa, wb = set(_norm(text).split()), set(_norm(old).split())
+            if (fill and old) or text == old or (wa and wb and len(wa & wb) / max(len(wa), len(wb)) >= 0.8):
+                return False
+            for ch, other in ((x, kb), (y, ka)):
+                ties = ch.setdefault("ties", {})
+                ties.pop(other, None)
+                ties[other] = text                  # (the newest last: past MAX_TIES the oldest go)
+                while len(ties) > MAX_TIES:
+                    del ties[next(iter(ties))]
+            self._save_bond()
+            return True
+
+    def tie(self, a, b):
+        """How two characters are tied (character_tie), or ""."""
+        ka, kb = self._key(a), self._key(b)
+        with self.lock:
+            x, y = self.characters.get(ka) or {}, self.characters.get(kb) or {}
+            return (x.get("ties") or {}).get(kb) or (y.get("ties") or {}).get(ka) or ""
 
     def character_lore(self, name, fact):
         """A fact the character made up about itself: kept so it never contradicts itself."""

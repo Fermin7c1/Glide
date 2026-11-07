@@ -24,6 +24,7 @@ import threading
 import time
 from typing import Callable, Optional
 
+import cast as cast_mod
 import models as models_mod
 import persona as persona_mod
 import recall as recall_mod
@@ -143,6 +144,7 @@ WARM_S = 600               # recall by meaning: what memory holds is embedded (t
 MAX_LEVEL = 60             # the top of the climb (the_end: the road so far)
 BIG = {"milestone": 2, "the_end": 4}     # these moments get this many times banter_words
 IGNORED, IGNORED_MAX = 1.5, 4.0          # each aside let pass in a row: the wait x1.5, at most x4
+SEED_RETRY_S = 600                      # a sidekick seed that failed is asked again after this
 DUET_CHANCE = 0.5                        # a quiet-moment aside in downtime with a sidekick along: a duet this often
 WARM_RETRY_S = 60          # ... a warm-up that failed (a local model loading, the service down): again after this
 
@@ -201,6 +203,7 @@ class Banter:
         m = coach.deps.memory
         self.cleared_seen = m.cleared_t if m is not None else 0.0     # the last "forget everything" taken in
         self.seeded = set()         # characters whose sample lines and story threads were asked for this run
+        self.side_seeded = {}       # (sidekick, character played) -> when its sidekick seed may be asked (again)
         self.unanswered = 0         # asides in a row the player let pass (each stretches the wait: IGNORED)
 
     # ---- the frame: moments, the diary, the mood --------------------------------------------------------------
@@ -420,14 +423,89 @@ class Banter:
         if ch.get("samples"):
             self.seeded.add(name)
             return
-        llm = c.llm
-        model = c.cfg.get("fast_model")
-        if not llm.enabled or llm.suspension_for(models_mod.provider(model)) or time.time() < llm.backoff_until \
-                or not llm.keys.get(models_mod.provider(model)):
+        if not self._ready():
             return
         self.seeded.add(name)
         threading.Thread(target=self.seed, args=(name, ch["brief"], ch.get("lore") or (), ch.get("role") or ""),
                          daemon=True, name="coach-seed").start()
+
+    def _ready(self):
+        """Whether the fast model can be asked now (on, its key set, not suspended or backing off)."""
+        llm = self.coach.llm
+        prov = models_mod.provider(self.coach.cfg.get("fast_model"))
+        return bool(llm.enabled and not llm.suspension_for(prov) and time.time() >= llm.backoff_until
+                    and llm.keys.get(prov))
+
+    def _seed_side(self):
+        """A sidekick first along beside this character gets what it lacks of its past, its sample lines, its own
+        story threads, its tie to the character played and who the player is to it (persona.SIDE_SEED); one named in
+        Settings that was never played is made up whole. Once a pair a run, on a thread of its own."""
+        c = self.coach
+        m = c.deps.memory
+        mc = m.character(c.persona_name()) if m is not None and c.persona() else None
+        side = c.sidekick() or persona_mod.clean(c.cfg.get("sidekick"))[:60]
+        if m is None or mc is None or not side or cast_mod.same(side, mc["name"]) or \
+                self.side_seeded.get((side, mc["name"]), 0) > time.time():
+            return
+        ch = m.character(side)
+        if ch is not None and not c.sidekick():
+            return                          # (the one played, under another name)
+        if ch is not None and ch.get("samples") and ch.get("lore") and ch.get("role") and m.tie(mc["name"], side):
+            self.side_seeded[(side, mc["name"])] = float("inf")
+            return
+        if not self._ready():
+            return
+        self.side_seeded[(side, mc["name"])] = float("inf")
+        threading.Thread(target=self.seed_side, args=(side, mc["name"]), daemon=True, name="coach-seed-side").start()
+
+    def seed_side(self, side, main):
+        """Ask for the sidekick's past, sample lines, story threads, tie and role (consistent with what is known);
+        keep only what it still lacks (a reply may have given some meanwhile); one never played (named in Settings)
+        is kept first, with who it is and a voice of its own ("Sidekick: <name>" in the chat). -> what came, or None."""
+        c = self.coach
+        m = c.deps.memory
+        if m is None:
+            return None
+        new = m.character(side) is None
+        try:
+            text, _meta = c.llm.call_once(c.cfg.get("fast_model"), persona_mod.side_seed_request(
+                side, m.character(side), main, m.character(main), m.tie(main, side)), 1000,
+                schema=persona_mod.SIDE_SEED_NEW_SCHEMA if new else persona_mod.SIDE_SEED_SCHEMA)
+            mt = re.search(r"\{.*\}", text or "", re.S)
+            d = json.loads(mt.group(0)) if mt else {}
+        except Exception as e:  # noqa: BLE001 - an extra: the sidekick plays on without it (asked again later)
+            log_once("banter.seed_side", e)
+            self.side_seeded[(side, main)] = time.time() + SEED_RETRY_S
+            return None
+        d = d if isinstance(d, dict) else {}
+
+        def rows(k, n):
+            v = d.get(k)
+            return [" ".join(x.split()) for x in v if isinstance(x, str) and x.strip()][:n] if isinstance(v, list) else []
+
+        got = {"backstory": rows("backstory", 4), "samples": rows("samples", 5), "plot": rows("plot", 2),
+               **{k: " ".join(d[k].split()) if isinstance(d.get(k), str) else "" for k in ("ties", "role", "brief")}}
+        if new:
+            # still the one asked for (Settings unchanged, still in character), and still not kept
+            if persona_mod.clean(c.cfg.get("sidekick"))[:60] != side or not c.persona() or \
+                    m.character(side) is not None:
+                return None
+            if not got["brief"] or m.character_save(side, got["brief"]) is None:
+                self.side_seeded[(side, main)] = time.time() + SEED_RETRY_S
+                return None
+            main_voice = str((m.character(main) or {}).get("tts_voice") or "")
+            m.character_add(side, "tts_voice", cast_mod.voice_for(side, avoid=main_voice))
+            c.emit({"kind": "info", "speak": False, "text": "Sidekick: %s" % side})
+        now = m.character(side) or {}
+        if got["backstory"] and not now.get("lore"):       # its past: its first facts, kept for good
+            for fact in got["backstory"]:
+                m.character_lore(side, fact)
+        for k in ("samples", "plot", "role"):
+            if got[k] and not now.get(k):
+                m.character_add(side, k, got[k])
+        if got["ties"]:
+            m.character_tie(main, side, got["ties"], fill=True)
+        return got
 
     def seed(self, name, brief, lore=(), role=""):
         """Ask for the character's sample lines and story threads (consistent with what it already said about
@@ -460,6 +538,7 @@ class Banter:
         self._clock(now)
         self._reaction()
         self._seed()
+        self._seed_side()
         self._warm(now)
         if self._due(now):
             self.speak()

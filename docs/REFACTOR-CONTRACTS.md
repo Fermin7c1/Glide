@@ -964,3 +964,13 @@ they don't spell out.
   In downtime half the asides are a short back-and-forth; the milestones, the end, greetings and goodbyes get both.
   The player asked (2026-11-07). Pinned by `tests/test_cast.py`, `tests/test_voice_tone.py` and
   `tests/test_voice_barge_in.py`.
+- **The sidekick's own story (contracts 5 and 8; additive).** A reply's `SIDEKICK LORE: <fact>` (its past, kept as
+  its lore), `SIDEKICK ROLE: <who the player is to it>` (its `role`) and `TIES: <how the two characters are tied>`
+  lines (upper-case, never spoken; nothing without a sidekick along) keep the sidekick's story; the tie is kept on
+  both characters (`coach_bond.json` characters gain `ties` `{other character's key: text}`, at most 8, contract 5),
+  so it holds after a swap. A sidekick first along beside a character gets what it lacks of them made up once, in the
+  background (`persona.SIDE_SEED`, the fast model: three facts of its past as its first lore, sample lines, two story
+  threads, the tie, who the player is to it; never over what was said); a new name typed in Settings' Sidekick is
+  made up whole (who it is too, a voice of its own; "Sidekick: <name>" in the chat). The companion's part of the
+  block carries its past, its threads, "You and <name>: <tie>" and who the player is to it. The Sidekick help
+  (contract 8) says so. The player asked (2026-11-07). Pinned by `tests/test_sidekick_story.py`.

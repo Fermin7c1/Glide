@@ -916,6 +916,14 @@ class Coach:
         m = self.deps.memory
         return m.character(self.persona_name()) if m is not None and self.persona() else None
 
+    def _main_name(self, save=False):
+        """The saved name of the character played, as the memory finds it (what its ties are kept under: the sidekick
+        seed's too); save: kept first when it isn't yet (a Character set in Settings). "" without one."""
+        ch = self._character()
+        if ch is None and save and self.deps.memory is not None and self.persona():
+            ch = self.deps.memory.character_save(self.persona_name(), self.persona(), self.persona_voice())
+        return ch["name"] if ch else ""
+
     def _apply_persona(self, found):
         """A reply's persona lines (persona.split): play, recall, rename or drop a character, keep its lore."""
         m = self.deps.memory
@@ -930,7 +938,8 @@ class Coach:
             self._set_persona(found["persona"], found["voice"] or "", found["name"])
         elif self.persona() and (found["voice"] or found["name"]):
             self._set_persona(self.persona(), found["voice"] or self.persona_voice(), found["name"] or self.persona_name())
-        if side and self.persona() and cast_mod.same(side, self.persona_name()):
+        swapped = bool(side and self.persona() and cast_mod.same(side, self.persona_name()))
+        if swapped:
             # the sidekick takes over (recalled, or played anew by its name): the old one comes along as theirs
             keep = was and not cast_mod.same(was, side) and m is not None and m.character(was)
             self._set_sidekick(was if keep else "")
@@ -942,6 +951,16 @@ class Coach:
             m.character_add(self.persona_name(), "role", found["role"])
         if found["sidekick"] is not None:
             self._apply_sidekick(found["sidekick"])
+        # the sidekick's past, who the player is to it, the tie: the one the model had along (in a reply that swapped
+        # them, the one now played), else the one this reply leaves along
+        along = side if swapped else self.sidekick()
+        if along and m is not None and (found["side_lore"] or found["side_role"]):
+            for fact in found["side_lore"]:
+                m.character_lore(along, fact)
+            if found["side_role"]:
+                m.character_add(along, "role", found["side_role"])
+        if found["ties"] and m is not None and self.sidekick():
+            m.character_tie(self._main_name(save=True), self.sidekick(), found["ties"])
         if found["scene"] is not None and m is not None and self.persona():
             # the character's scene (Memory: a new one or its end; said again, or near enough, changes nothing)
             if m.character_add(self.persona_name(), "scene", found["scene"]):
@@ -1122,7 +1141,7 @@ class Coach:
                 str(ch.get("scene") or "") if time.time() - (ch.get("scene_t") or 0) < SCENE_S else "")) if x)
             side = self.sidekick()
             if side and m is not None:
-                mem = mem + "\n\n" + persona_mod.companion(side, m.character(side))
+                mem = mem + "\n\n" + persona_mod.companion(side, m.character(side), m.tie(self._main_name(), side))
         # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
         # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
         if mem:

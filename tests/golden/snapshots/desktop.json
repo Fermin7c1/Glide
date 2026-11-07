@@ -602,7 +602,7 @@
       },
       {
        "def": "",
-       "help": "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines and voice, now and then. The name of one the coach has played; empty: none. \"Let me talk to Fizzle\" swaps them.",
+       "help": "A second character along with yours (\"bring Fizzle along\", \"add a gnome tinker\"): its own lines, voice and past, and a history with yours (\"Fizzle is your old apprentice\", \"Fizzle calls me boss\"). One the coach has played, or a new name it makes up; empty: none. \"Let me talk to Fizzle\" swaps them.",
        "key": "companion.llm.sidekick",
        "label": "Sidekick",
        "type": "text"

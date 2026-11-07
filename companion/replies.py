@@ -84,10 +84,14 @@ def split_watch(text):
 
 # the lines a reply ends with that are never spoken (the coach strips and applies them)
 DIRECTIVES = ("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:", "BANTER:", "CHAT:", "NAME:", "LORE:",
-              "TONE:", "ROLE:", "SCENE:", "SIDEKICK:")
+              "TONE:", "ROLE:", "SCENE:", "SIDEKICK:", "SIDEKICK LORE:", "SIDEKICK ROLE:", "TIES:")
 
 
-MIDLINE_DIRECTIVE = re.compile(r"(?<=\S)\s+(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK|PERSONA|BANTER|CHAT)\s*:\s")
+MIDLINE_DIRECTIVE = re.compile(r"(?<=\S)(?<!SIDEKICK)\s+(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK\s+(?:LORE|ROLE)|"
+                               r"SIDEKICK|TIES|PERSONA|BANTER|CHAT)\s*:\s")
+# a directive's own line, spaced as persona.split reads it too ("TIES : ...", "SIDEKICK  LORE: ...")
+DIRECTIVE_LINE = re.compile(r"^\s*(?:PERSONA|VOICE|NAME|LORE|TONE|ROLE|SCENE|SIDEKICK(?:\s+(?:LORE|ROLE))?|TIES|BANTER|"
+                            r"CHAT|WATCH|UNWATCH)\s*:", re.I)
 # a line of the sidekick's written mid-line ("...east. [Fizzle] Boom?", cast.py; a cut-off "[Mr." too), not a link
 MIDLINE_SPEAKER = re.compile(r"(?<=\S)\s+\[[^\]\n]{0,40}(?:\](?!\()|$)")
 
@@ -130,6 +134,7 @@ class EarlySpeech:
             # a line that doesn't end in . ! ? runs on into the next: a directive line there ends what is said
             lines = raw.split("\n")
             cut = next((i for i, ln in enumerate(lines) if ln.strip().upper().startswith(DIRECTIVES)
+                        or DIRECTIVE_LINE.match(ln)
                         or ln.strip().startswith("[")), None)      # (a sidekick's line: its own voice, later)
             if cut is not None:
                 raw, self.stopped = "\n".join(lines[:cut]), True
