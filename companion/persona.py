@@ -26,17 +26,30 @@ dialect spellings, pauses with "..."); no stage directions, asterisks, brackets 
 Start every reply (except SKIP) with a line "TONE: <2-6 words: how to deliver this line, e.g. muttering, bellowing,
 mock-whisper, laughing, choked up>" (not spoken; vary it with the moment and your mood).
 When you make up something about yourself (your past, scars, family, opinions, habits), add a final line "LORE:
-<that fact, one short sentence>" so you remember it.%s
+<that fact, one short sentence>" so you remember it. Once it's clear who the player is to you (your recruit, your
+captain, your apprentice, your rival), add a final line "ROLE: <that, and what you call them>" (once; again only if
+it changes). When the player sets up a scene to play together ("let's be bounty hunters after Hogger"), play it and
+add a final line "SCENE: <the premise, 1-2 sentences>" (once; again only if it changes), and "SCENE: end" when it's
+over or they drop it.%s
 The coaching underneath stays exact: the same single most useful point, real names, numbers and directions from
 the data, nothing invented. Lengths may stretch for flavour: callouts up to about %d words, spoken answers %d,
-typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE) keep their exact plain format."""
+typed answers %d. The directive lines (TONE, FACTS, WATCH, SKIP, PERSONA, LORE, ROLE, SCENE) keep their exact plain format."""
 
 LORE_HEAD = "\nYOUR OWN STORY SO FAR (what you have told them about yourself: never contradict it, build on it):\n"
+SAMPLES_HEAD = "\nHOW YOU SOUND (lines in your own voice: keep this voice, never reuse them word for word):\n"
+PLOT_HEAD = ("\nYOUR OWN STORY THREADS (what you want, what's going on with you: let it move forward slowly as they "
+             "level, now and then):\n")
+ROLE_HEAD = "\nWHO THEY ARE TO YOU: "
+SCENE_HEAD = "\nTHE SCENE YOU'RE PLAYING TOGETHER (keep it going; tie it to their real quests and fights): "
 
 # the last line of each request while a persona is set: small models drift back to the plain voice without it
 REMINDER = "Stay fully in character (%s): say it the way they would."
 
-_LINE = re.compile(r"^\s*(PERSONA|VOICE|NAME|LORE|TONE)\s*:\s*(.*)$", re.I)
+# PERSONA in any case ("persona: off"); the others only as written, upper-case: an answer's own "Role: tank or
+# healer" or "Name: Hogger" line is the answer's
+_LINE = re.compile(r"^\s*(?:((?i:PERSONA))|(VOICE|NAME|LORE|TONE|ROLE|SCENE))\s*:\s*(.*)$")
+_MIDLINE = re.compile(r"(?<=\S)\s+(?=(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|PERSONA)\s*:\s)")
+_SCENE_END = re.compile(r"^(?:end(?:ed|s)?|over|off|none|done|finished|stop(?:ped)?)\b", re.I)
 _OFF = re.compile(r"^(?:off|none|normal|default|clear|no(?:ne)? persona|-)\W*$", re.I)
 _RECALL = re.compile(r"^(?:recall|restore)\b[\s:]+(.+?)\W*$", re.I)     # "recall Sarge" (not "Recalling...")
 # a reply that takes on a character (or recalls one): its persona lines are read even before one is played
@@ -50,16 +63,18 @@ def clean(text):
 
 
 def split(text):
-    """Pull the PERSONA: / NAME: / VOICE: / LORE: / TONE: lines out of a reply -> (the rest of the text, found):
-    found["persona"]: None (no line), "" (PERSONA: off) or the brief; "recall": a name (PERSONA: recall <name>);
-    "name", "voice", "tone": the line's text; "lore": [facts]."""
-    keep, found = [], {"persona": None, "recall": None, "name": None, "voice": None, "tone": None, "lore": []}
-    for line in (text or "").splitlines():
+    """Pull the PERSONA: / NAME: / VOICE: / LORE: / TONE: / ROLE: / SCENE: lines out of a reply -> (the rest of the
+    text, found): found["persona"]: None (no line), "" (PERSONA: off) or the brief; "recall": a name (PERSONA: recall
+    <name>); "name", "voice", "tone", "role": the line's text; "lore": [facts]; "scene": None, "" (SCENE: end) or the
+    premise."""
+    keep, found = [], {"persona": None, "recall": None, "name": None, "voice": None, "tone": None, "lore": [],
+                       "role": None, "scene": None}
+    for line in _MIDLINE.sub("\n", text or "").splitlines():     # one written mid-line is a line of its own
         m = _LINE.match(line)
         if not m:
             keep.append(line)
             continue
-        what, value = m.group(1).lower(), m.group(2).strip()
+        what, value = (m.group(1) or m.group(2)).lower(), m.group(3).strip()
         if what == "persona":
             r = _RECALL.match(value)
             if r:
@@ -69,6 +84,8 @@ def split(text):
         elif what == "lore":
             if value:
                 found["lore"].append(clean(value))
+        elif what == "scene":
+            found["scene"] = "" if _SCENE_END.match(value) else clean(value)
         elif value:
             found[what] = clean(value).strip(" .")[:80] if what in ("name", "tone") else clean(value)
     return "\n".join(keep).strip(), found
@@ -81,8 +98,33 @@ def short_name(brief, words=8):
     return " ".join(w[:words]) + ("…" if len(w) > words else "")
 
 
-def block(brief, limits, lore=()):
+def seed_request(brief, lore=(), role=""):
+    """The SEED request for a character: its brief, and what it already said about itself (stay consistent)."""
+    known = list(lore or ()) + (["Who the player is to it: " + role] if role else [])
+    return SEED % (clean(brief), ("\nStay consistent with what it has already said about itself:\n" +
+                                  "\n".join("- " + x for x in known[:24])) if known else "")
+
+
+def block(brief, limits, lore=(), samples=(), plot=(), role="", scene=""):
     """The system block for a set persona; limits = (callout, spoken answer, typed answer) words; lore = the facts
-    the character told about itself before."""
+    the character told about itself before; samples = lines in its voice (its sample lines and the ones the player
+    liked); plot = its own story threads; role = who the player is to it; scene = the premise being played."""
     story = (LORE_HEAD + "\n".join("- " + x for x in lore)) if lore else ""
+    story += (SAMPLES_HEAD + "\n".join("- " + x for x in samples)) if samples else ""
+    story += (PLOT_HEAD + "\n".join("- " + x for x in plot)) if plot else ""
+    story += (ROLE_HEAD + clean(role)) if role else ""
+    story += (SCENE_HEAD + clean(scene)) if scene else ""
     return BLOCK % ((clean(brief), story) + tuple(int(x) for x in limits))
+
+
+# the request that gives a new character its sample lines and its own story threads (once, when first played)
+SEED = """You write for a character the player asked their World of Warcraft leveling coach to play:
+%s%s
+Reply with ONLY a JSON object: {"samples": [5 short lines this character would say to the player while they level,
+each a different kind: a quip, a scolding, praise, a scrap of its own story, a question about them], "plot": [2 of the
+character's own story threads that can move forward slowly over a long climb to level 60: something it wants, something
+it's hiding or working on]}. Spoken lines only: no stage directions, no emoji."""
+
+SEED_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["samples", "plot"],
+               "properties": {"samples": {"type": "array", "items": {"type": "string"}},
+                              "plot": {"type": "array", "items": {"type": "string"}}}}

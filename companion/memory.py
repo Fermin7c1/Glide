@@ -54,6 +54,7 @@ BOND_SAVE_S = 300             # the bond clock is saved at most this often (asid
 BOND_STAGES = ((3, "new"), (15, "getting to know each other"), (50, "familiar"), (None, "old friends"))
 MAX_DIARY = 80                # shared moments kept (newest)
 MAX_LORE = 24                 # facts a character told about itself, per character
+LORE_KEPT = 8                 # ... its first ones are never dropped (who it is); the oldest of the rest go first
 MAX_CHARACTERS = 12           # characters kept (most recently played)
 MAX_CHAPTERS = 16             # session chapters kept whole; past this the oldest FOLD fold into one era
 FOLD = 8
@@ -223,7 +224,9 @@ class Memory:
                     "name": v["name"][:60], "brief": v["brief"], "voice": v.get("voice") if isinstance(
                         v.get("voice"), str) else "", "lore": [x for x in lore if isinstance(x, str)][-MAX_LORE:],
                     "last": as_float(v.get("last"), 0.0, finite=True, bool_ok=False),
-                    "role": v.get("role") if isinstance(v.get("role"), str) else ""}
+                    "role": v.get("role") if isinstance(v.get("role"), str) else "",
+                    "scene": v.get("scene") if isinstance(v.get("scene"), str) else "",
+                    "scene_t": as_float(v.get("scene_t"), 0.0, finite=True, bool_ok=False)}
                 for field, cap in CHARACTER_LISTS.items():
                     ch[field] = [x for x in _typed(v, field, list) if isinstance(x, str)][-cap:]
         zones = _typed(d, "zones", list)
@@ -531,26 +534,34 @@ class Memory:
             ch = self.characters.get(key)
             if ch is None or not fact or any(_similar(fact, x) for x in ch.get("lore") or ()):
                 return False
-            ch.setdefault("lore", []).append(fact)
-            del ch["lore"][:-MAX_LORE]
+            lore = ch.setdefault("lore", [])
+            lore.append(fact)
+            while len(lore) > MAX_LORE:
+                del lore[LORE_KEPT]                 # the oldest after the first ones (who it is stays)
             self._save_bond()
             return True
 
     def character_add(self, name, field, items):
         """Add to one of a character's lists (CHARACTER_LISTS: sample lines, favourite lines, its story threads, its
-        recent lines), keeping the newest; or set its "role" (who the player is to it). -> whether it changed."""
-        if field != "role" and field not in CHARACTER_LISTS:
+        recent lines), keeping the newest; or set its "role" (who the player is to it) or "scene" (the scene being
+        played; "" ends it): one like the one kept already changes nothing. -> whether it changed."""
+        if field not in ("role", "scene") and field not in CHARACTER_LISTS:
             raise ValueError("no character field %r" % field)
         key = self._key(name)
         with self.lock:
             ch = self.characters.get(key)
             if ch is None:
                 return False
-            if field == "role":
-                role = " ".join(str(items or "").split())[:200]
-                if role == ch.get("role"):
+            if field in ("role", "scene"):
+                value = " ".join(str(items or "").split())[:600 if field == "scene" else 200]
+                old = ch.get(field) or ""
+                if value == old or (value and old and _similar(value, old)):
+                    if field == "scene" and value:
+                        ch["scene_t"] = time.time()     # said again: still being played
                     return False
-                ch["role"] = role
+                ch[field] = value
+                if field == "scene":
+                    ch["scene_t"] = time.time()
             else:
                 rows = ch.setdefault(field, [])
                 new = [" ".join(str(x).split())[:300] for x in (items if isinstance(items, (list, tuple)) else [items])]

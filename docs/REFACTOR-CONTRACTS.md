@@ -926,3 +926,17 @@ they don't spell out.
   without a model, or with no notes, a plain line names the first items. Without the engine, the window says that
   plain line itself (`whatsNew`). The 10-minute reminders stay short; "Say when an update is out" off silences all
   of it. The player asked (2026-11-07). Pinned by `tests/test_update_notes.py` and `tests/test_update_voice.py`.
+- **A character that stays itself (contracts 5 and 8; additive). Social Phase 2.** A new character gets its own
+  sample lines and two story threads once, in the background, consistent with what it already said about itself
+  (`banter.Banter._seed`, `persona.seed_request`, the fast model; retried when a character set in Settings is first
+  kept); an aside the player answered becomes one of its favourites (only while that character is still played).
+  They ride in the persona block as "HOW YOU SOUND", with "YOUR OWN STORY THREADS", "WHO THEY ARE TO YOU" (a reply's
+  `ROLE:` line) and "THE SCENE YOU'RE PLAYING TOGETHER" (`SCENE: <premise>` / `SCENE: end`: the character's own,
+  lapsing after 6 hours unplayed; a role or scene said again in other words changes nothing; "Scene: <premise>" /
+  "Scene ended" in the chat on a real change). The phrases the character keeps saying (3 words in 3 or more of its
+  last 60 asides and chat replies; never the coaching's words or a name) are named to rest on every request in
+  character. Persona directive keywords other than PERSONA must be upper-case (an answer's "Role:" line stays the
+  answer's); one written mid-line is split off and never spoken. A character's first 8 LORE facts are never
+  dropped; greetings no longer ask for new lore. `coach_bond.json` characters fill `samples`, `favorites`, `plot`,
+  `lines`, `role` and gain `scene`, `scene_t` (contract 5). The player asked (2026-11-07). Pinned by
+  `tests/test_character_depth.py`.

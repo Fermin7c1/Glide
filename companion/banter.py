@@ -17,6 +17,7 @@ The bond (Memory.bond: hours together, sessions, asides answered) sets the stage
 learns "rapport" notes from how the player reacts. Answering an aside starts a chat (in_chat, CHAT_NOTE) that goes on
 while the player does. "BANTER: less / more / off / on" in a reply sets banter_minutes or banter. One of the coach
 thread's tickers (Coach._loop calls tick about once a second; Coach.push hands every frame to observe)."""
+import json
 import random
 import re
 import threading
@@ -131,6 +132,12 @@ DOWNTIME = ("flying", "dead", "eating")
 
 ago = recall_mod.ago
 KEEP_CONVO_S = 60          # the conversation is kept (Memory.convo_keep) at most this often
+WORN_LINES = 3             # a 3-word phrase in this many of the character's last lines is worn out
+COMMON = frozenset("""the a an and or but to of in on at for with you your ye yer i me my it is are was be that this
+what so up out not no go get got just like""".split())       # phrases made only of these are not catchphrases
+# the coaching's own words: a phrase with one of them is an instruction said again, not a stock phrase to rest
+COACHING = frozenset("""turn turned accept quest quests kill loot collect talk yards yard north south east west
+northeast northwest southeast southwest step level trainer vendor flight fly hearth inn grind mob mobs pull""".split())
 WARM_S = 600               # recall by meaning: what memory holds is embedded (the new parts) this often
 WARM_RETRY_S = 60          # ... a warm-up that failed (a local model loading, the service down): again after this
 
@@ -164,7 +171,7 @@ class Banter:
         self.wait_s = None          # how long this round of quiet lasts before an aside (randomised banter_minutes)
         self.since = None           # when it started (time.time())
         self.said = []              # the character's last lines (asides and chat replies): no repeats, variety
-        self.awaiting = None        # (coach clock time, activity) of the last aside the player hasn't answered yet
+        self.awaiting = None        # (coach clock time, activity, the line, who said it) of the last aside unanswered
         self.clock_t = None         # when the bond clock last ran
         self.counted = False        # this run counted as a session
         self.session_t = None       # when this session started (first live frame)
@@ -188,6 +195,7 @@ class Banter:
         self.warming = None
         m = coach.deps.memory
         self.cleared_seen = m.cleared_t if m is not None else 0.0     # the last "forget everything" taken in
+        self.seeded = set()         # characters whose sample lines and story threads were asked for this run
 
     # ---- the frame: moments, the diary, the mood --------------------------------------------------------------
     def observe(self, triggers, state):
@@ -342,17 +350,98 @@ class Banter:
         return "Your mood right now: %s (%s)." % (self.mood[0], self.mood[1])
 
     def reminder(self):
-        """The stay-in-character line every request ends with, with the mood."""
+        """The stay-in-character line every request ends with, with the mood and the phrases worn out."""
         c = self.coach
         line = persona_mod.REMINDER % persona_mod.short_name(c.persona())
         mood = self.mood_line()
-        return line + (" " + mood if mood else "")
+        worn = self.worn()
+        rest = " Worn out, give them a rest: %s." % ", ".join('"%s"' % w for w in worn) if worn else ""
+        return line + (" " + mood if mood else "") + rest
+
+    def worn(self, top=6):
+        """The phrases (3 words) the character keeps saying: in WORN_LINES or more of its last lines, most used
+        first (a Character.AI complaint: the same stock phrases over and over)."""
+        c = self.coach
+        m = c.deps.memory
+        ch = m.character(c.persona_name()) if m is not None and c.persona() else None
+        counts, where = {}, {}      # phrase -> lines it is in; its earliest place in a sentence (catchphrases lead)
+        for text in (ch or {}).get("lines") or ():
+            grams = {}
+            for sentence in re.split(r"(?<=[.!?])\s+", text):
+                ws = re.findall(r"[^\W\d_][\w']*", sentence)
+                for i in range(len(ws) - 2):
+                    # a capitalised word past the sentence's first is a name (a quest, an NPC, a place): never worn
+                    if any(w[0].isupper() for j, w in enumerate(ws[i:i + 3]) if i + j > 0 and w != "I"):
+                        continue
+                    g = " ".join(ws[i:i + 3]).casefold()
+                    grams[g] = min(i, grams.get(g, i))
+            for g, i in grams.items():
+                counts[g] = counts.get(g, 0) + 1
+                where[g] = min(i, where.get(g, i))
+        worn = []
+        for g, n in sorted(counts.items(), key=lambda kv: (-kv[1], where[kv[0]], kv[0])):
+            ws = set(g.split())
+            if n < WORN_LINES or ws <= COMMON or ws & COACHING:      # plain words, or the coaching's own words
+                continue
+            if any((ws & set(c.split())) - COMMON for c in worn):     # "by my beard" / "beard recruit ye": one
+                continue
+            worn.append(g)
+        return worn[:top]
+
+    def _seed(self):
+        """A character played for the first time gets its sample lines and its own story threads (persona.SEED),
+        once, on a thread of its own: its voice anchors every call from then on."""
+        c = self.coach
+        m = c.deps.memory
+        name = c.persona_name()
+        if m is None or not name or name in self.seeded:
+            return
+        ch = m.character(name)
+        if ch is None:
+            return                          # not kept yet (set in Settings): seeded once it is
+        if ch.get("samples"):
+            self.seeded.add(name)
+            return
+        llm = c.llm
+        model = c.cfg.get("fast_model")
+        if not llm.enabled or llm.suspension_for(models_mod.provider(model)) or time.time() < llm.backoff_until \
+                or not llm.keys.get(models_mod.provider(model)):
+            return
+        self.seeded.add(name)
+        threading.Thread(target=self.seed, args=(name, ch["brief"], ch.get("lore") or (), ch.get("role") or ""),
+                         daemon=True, name="coach-seed").start()
+
+    def seed(self, name, brief, lore=(), role=""):
+        """Ask for the character's sample lines and story threads (consistent with what it already said about
+        itself), keep them (Memory.character_add). -> {"samples", "plot"} or None."""
+        c = self.coach
+        try:
+            text, _meta = c.llm.call_once(c.cfg.get("fast_model"), persona_mod.seed_request(brief, lore, role), 800,
+                                          schema=persona_mod.SEED_SCHEMA)
+            mt = re.search(r"\{.*\}", text or "", re.S)
+            d = json.loads(mt.group(0)) if mt else {}
+        except Exception as e:  # noqa: BLE001 - an extra: the character plays on without its samples
+            log_once("banter.seed", e)
+            return None
+        d = d if isinstance(d, dict) else {}
+        got = {}
+        for k in ("samples", "plot"):
+            rows = d.get(k)
+            got[k] = [x for x in rows if isinstance(x, str) and x.strip()] if isinstance(rows, list) else []
+        m = c.deps.memory
+        if m is not None:
+            if got["samples"]:
+                m.character_add(name, "samples", got["samples"][:5])
+            if got["plot"]:
+                m.character_add(name, "plot", got["plot"][:2])
+        return got
 
     # ---- the clock: time together, sessions, replies, the game going away ---------------------------------------
     def tick(self):
         now = time.time()
         self._clock(now)
         self._reaction()
+        self._seed()
         self._warm(now)
         if self._due(now):
             self.speak()
@@ -438,14 +527,18 @@ class Banter:
         self.mood = (MOMENTS["greeting"][2], "they're back", now, MOMENTS["greeting"][3])
 
     def _reaction(self):
-        """The player answered the last aside (said or asked anything within REPLY_S): count it, per activity."""
+        """The player answered the last aside (said or asked anything within REPLY_S): count it, per activity, and
+        keep the line among the character's favourites (the voice it is anchored to)."""
         c = self.coach
         if self.awaiting is None:
             return
-        at, act = self.awaiting
+        at, act, line, who = self.awaiting
         if any(e["who"] == "player" and e["t"] >= at for e in list(c.convo)):    # (>=: one 15 ms clock tick)
-            if c.deps.memory is not None:
-                c.deps.memory.bond_add(replied=1, activity=act)
+            m = c.deps.memory
+            if m is not None:
+                m.bond_add(replied=1, activity=act)
+                if line and who and who == c.persona_name():     # still the one who said it (not a switch since)
+                    m.character_add(who, "favorites", line)
             self.awaiting = None
         elif c._now() - at > REPLY_S:
             self.awaiting = None
@@ -517,7 +610,8 @@ class Banter:
                 " (they're %s)" % act if act and act != "questing" else "")
         elif moment["kind"] == "greeting":
             what = ("THE PLAYER JUST LOGGED IN: %s Greet them in character like someone you know, at your bond's stage; "
-                    "pick up from last time if there is one." % moment["text"])
+                    "pick up from last time if there is one. Mention in passing something you did or thought about "
+                    "while they were away, true to your story threads." % moment["text"])
         elif moment["kind"] == "goodbye":
             what = ("THE PLAYER JUST LEFT: %s. One short goodbye in character, about something from today." %
                     moment["text"])
@@ -567,7 +661,7 @@ class Banter:
             msg["tone"] = tone
         c.emit(msg)
         if moment is None or moment["kind"] != "goodbye":
-            self.awaiting = (c._now(), act)
+            self.awaiting = (c._now(), act, text, c.persona_name())
         if c.deps.memory is not None:
             c.deps.memory.bond_add(asides=1, activity=act)
         return msg

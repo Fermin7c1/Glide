@@ -84,7 +84,10 @@ def split_watch(text):
 
 # the lines a reply ends with that are never spoken (the coach strips and applies them)
 DIRECTIVES = ("SKIP", "FACTS", "WATCH:", "UNWATCH:", "PERSONA:", "VOICE:", "BANTER:", "CHAT:", "NAME:", "LORE:",
-              "TONE:")
+              "TONE:", "ROLE:", "SCENE:")
+
+
+MIDLINE_DIRECTIVE = re.compile(r"(?<=\S)\s+(?:VOICE|NAME|LORE|TONE|ROLE|SCENE|PERSONA|BANTER|CHAT)\s*:\s")
 
 
 class EarlySpeech:
@@ -127,6 +130,9 @@ class EarlySpeech:
             cut = next((i for i, ln in enumerate(lines) if ln.strip().upper().startswith(DIRECTIVES)), None)
             if cut is not None:
                 raw, self.stopped = "\n".join(lines[:cut]), True
+            mid = MIDLINE_DIRECTIVE.search(raw)    # one written mid-line ("...east. SCENE: we're hunters")
+            if mid:
+                raw, self.stopped = raw[:mid.start()], True
             sentence = " ".join(raw.split())
             up = sentence.upper()
             n = len(sentence.split())

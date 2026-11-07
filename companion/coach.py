@@ -65,6 +65,7 @@ SUMMARY_NOTE = ("(Several quest events at once: one summary for all of them, at 
 
 # the coach's lines in a conversation with the player: answers, and asides and the chat replies after them
 REPLIES = frozenset(("answer", "banter"))
+SCENE_S = 6 * 3600           # a scene not played for this long has lapsed (a new session, another day)
 
 ANNOUNCE = object()          # the coach thread's queue: an update notice, not a question (announce_update)
 # a new Glide (Coach.announce_update): what the model is asked to say
@@ -199,6 +200,9 @@ class Coach:
                                "text": msg["text"], **({"chat": True} if msg.get("chat") else {})})
             if msg.get("speak"):
                 self.said_t = time.time()        # the coach spoke (asides wait for quiet after any line)
+            # its worn phrases (Banter.worn): the character's own lines (asides, chat replies), not the coaching's
+            if self.persona() and self.deps.memory is not None and (msg["kind"] == "banter" or msg.get("chat")):
+                self.deps.memory.character_add(self.persona_name(), "lines", msg["text"])
         if msg.get("kind") in msg_kinds.RECENT and msg.get("text"):
             self.recent.append({"t": msg.get("t") or self._now(), "type": "message", "kind": msg["kind"],
                                 "text": msg["text"]})
@@ -848,9 +852,17 @@ class Coach:
             m.character_save(self.persona_name(), self.persona(), self.persona_voice())
             for fact in found["lore"]:
                 m.character_lore(self.persona_name(), fact)
+        if found["role"] and m is not None and self.persona():
+            m.character_add(self.persona_name(), "role", found["role"])
+        if found["scene"] is not None and m is not None and self.persona():
+            # the character's scene (Memory: a new one or its end; said again, or near enough, changes nothing)
+            if m.character_add(self.persona_name(), "scene", found["scene"]):
+                self.emit({"kind": "info", "speak": False,
+                           "text": ("Scene: %s" % found["scene"]) if found["scene"] else "Scene ended"})
 
     def _set_persona(self, brief, voice, name=None):
-        """Play the new character ("" = drop the act), saved like a setting and kept in the memory by name."""
+        """Play the new character ("" = drop the act), saved like a setting and kept in the memory by name (with its
+        scene, its story, its voice)."""
         brief = persona_mod.clean(brief)
         voice = persona_mod.clean(voice) if brief else ""
         name = (persona_mod.clean(name) or persona_mod.short_name(brief, 4))[:60] if brief else ""
@@ -1014,10 +1026,12 @@ class Coach:
         brief = self.persona()
         if brief:    # last, so its tone overrides the coach rules'
             o = self.opt
-            ch = self._character()
+            ch = self._character() or {}
             mem = "\n\n".join(x for x in (mem, persona_mod.block(brief, [
                 self._stretch(o.get(k)) for k in ("callout_words", "answer_words", "typed_answer_words")],
-                (ch or {}).get("lore") or ())) if x)
+                ch.get("lore") or (), (ch.get("samples") or []) + (ch.get("favorites") or [])[-3:],
+                ch.get("plot") or (), ch.get("role") or "",
+                str(ch.get("scene") or "") if time.time() - (ch.get("scene_t") or 0) < SCENE_S else "")) if x)
         # memory and persona share one cached block: a changed note re-writes only this part of the prompt cache, and
         # a request may carry at most 4 cache_control markers (tools, these two blocks, the user message's reference)
         if mem:
