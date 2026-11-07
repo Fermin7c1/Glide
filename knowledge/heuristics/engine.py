@@ -192,7 +192,7 @@ STATE_FIELDS = {
     "step_xp_ratio": {"type": "float", "meaning": "step_xp_per_min / current XP per minute", "src": "derived"},
     "on_step_minutes": {"type": "float", "meaning": "minutes on the current step",
                         "src": "derived from summary on_step_seconds"},
-    "quest_log_count": {"type": "int", "meaning": "quests in the log (Classic cap 20)", "src": "derived from quests"},
+    "quest_log_count": {"type": "int", "meaning": "quests in the log (WoW Forever cap 40)", "src": "derived from quests"},
     "quests_complete": {"type": "int", "meaning": "completed quests waiting for turn-in", "src": "derived"},
     "turnin_level_gap": {"type": "int", "meaning": "largest (level - quest level) among completed quests in the "
                          "log", "src": "coach (kb quest.level)"},

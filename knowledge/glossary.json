@@ -48,7 +48,7 @@
  {"term": "exclusive quest", "definition": "One of two or more quests where taking one locks the others out.", "aliases": ["mutually exclusive quest"]},
  {"term": "quest XP decay", "definition": "Reduced quest XP when you out-level a quest: full up to quest level +5, then 80/60/40/20% at +6/+7/+8/+9 and 10% from +10.", "aliases": ["quest xp reduction", "overlevel penalty", "gray quest"]},
  {"term": "zero difference", "definition": "ZD: the level gap below you at which a mob's XP reaches zero in the kill-XP formula (5 at 1-7, 8 at 12-15, 11 at 20-29, 12 at 30-39, 16 at 55-59).", "aliases": ["ZD", "zero-difference", "zd value"]},
- {"term": "quest log cap", "definition": "The maximum number of quests you can hold: 20 in Classic (Forever's cap not yet verified).", "aliases": ["quest log full", "20 quests", "log cap"]},
+ {"term": "quest log cap", "definition": "The maximum number of quests you can hold: 40 on WoW Forever (Classic's was 20).", "aliases": ["quest log full", "40 quests", "log cap"]},
  {"term": "downtime", "definition": "Time not killing or travelling: eating, drinking, bandaging, waiting for respawns.", "aliases": ["rest time", "drinking", "eating"]},
  {"term": "rotation", "definition": "The order of abilities you use in a fight; while leveling, the cheapest one that kills fast.", "aliases": ["priority", "opener"]},
  {"term": "GCD", "definition": "Global cooldown: the ~1.5 s (1 s for energy users) lockout after most abilities.", "aliases": ["global cooldown"]},

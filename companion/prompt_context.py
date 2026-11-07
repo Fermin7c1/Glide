@@ -48,6 +48,8 @@ def fit(obj, limit, steps):
 
 
 # The live sections a callout can do without, and which ones each trigger topic needs.
+# WoW Forever's quest log holds 40 quests (Classic's held 20; community note n:20261021-quest-log-40)
+QUEST_LOG_CAP = 40
 LIVE_SECTIONS = ("buffs", "target", "heuristics", "nearby", "route", "progress", "next_pace")
 TOPIC_NEEDS = {"route": set(LIVE_SECTIONS),
                "upkeep": {"heuristics", "nearby", "route", "progress", "next_pace"},
@@ -65,7 +67,7 @@ TRIGGER_TOPIC = {"low_health_in_combat": "combat", "target_tapped": "combat",
 def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=None, gear_fn=None, system_fn=None,
                  talent_plan=None):
     """Everything the model sees about the game for summary s: the player (buffs, kit, extras), the guide step,
-    the current and next RestedXP steps with their places described, up to 20 quests in quest id order (with
+    the current and next RestedXP steps with their places described, up to a full quest log in quest id order (with
     quest_priority for trimming), gear and the addon status. state: the GameState (or None); knowledge: glide.db's
     reader, read only while there is no knowledge pack; geo: the place describer; pack: the knowledge layer (quests
     and map names, names instead of ids in the extras); watched_fn, gear_fn, system_fn: the app's getters for watched
@@ -115,9 +117,9 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
         if q not in qids and as_int(q) not in qids:
             qids.append(q)
     quests = {}
-    # up to 20 quests (a full quest log plus the current step's), in quest id order so the set and its order
-    # don't change when the step does (the REFERENCE cache); the priority order goes along for trimming
-    qids = qids[:20]
+    # up to a full quest log plus the current step's quests (QUEST_LOG_CAP + 5), in quest id order so the set and its
+    # order don't change when the step does (the REFERENCE cache); the priority order goes along for trimming
+    qids = qids[:QUEST_LOG_CAP + 5]
     for q in sorted(qids, key=lambda v: (as_int(v) is None, as_int(v) or 0, str(v))):
         info = quest_of(q, near_map=near, detail=deep)
         for key in ("giver_at", "turn_in_at"):
@@ -169,6 +171,7 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
     off = [k for k, v in (s.get("coach_flags") or {}).items() if not v and k not in ("coach", "voice")]
     if off:
         player["commentary_turned_off"] = off
+    player["quest_log"] = "%d of %d quests" % (len(s.get("quests") or {}), QUEST_LOG_CAP)
     guide = {"name": s.get("guide"), "group": s.get("guide_group"), "step": s.get("step")}
     cur = s.get("step")
     skipped = [i for i in s.get("rxp_skipped") or () if cur is None or cur - 10 <= i <= cur + 40]
