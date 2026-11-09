@@ -143,9 +143,10 @@ def apply(cfg, changes, config_path=None):
                 raise ValueError("%s takes true or false, not %r" % (k, v))
             applied[k] = cfg[k] = v
         elif k in MODEL_KEYS:
-            if not isinstance(v, str) or not MODEL_RE.match(v.strip()):
+            if not isinstance(v, str) or (v.strip() and not MODEL_RE.match(v.strip())):
                 raise ValueError("not a model id: %r" % (v,))
-            applied[k] = cfg[k] = v.strip()
+            cfg[k] = v.strip()
+            applied[k] = settings.fill_models(cfg)[k]      # (empty: the other path's model)
         elif k in TEXTS:
             if not isinstance(v, str):
                 raise ValueError("%s takes text, not %r" % (k, v))

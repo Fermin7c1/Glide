@@ -345,7 +345,7 @@
      "fields": [
       {
        "def": "claude-haiku-4-5-20251001",
-       "help": "Live callouts, spoken questions and quest briefings.",
+       "help": "Live callouts, spoken questions and quest briefings. Empty: the deep model.",
        "key": "companion.llm.fast_model",
        "label": "Fast model",
        "type": "text",
@@ -353,7 +353,7 @@
       },
       {
        "def": "claude-sonnet-5-5",
-       "help": "Typed questions and pace reviews.",
+       "help": "Typed questions and pace reviews. Empty: the fast model.",
        "key": "companion.llm.deep_model",
        "label": "Deep model",
        "type": "text",

@@ -66,6 +66,17 @@ def defaults():
     return out
 
 
+def fill_models(llm):
+    """The two model paths with an empty one (its Settings box cleared) filled, in place: an empty model is the other
+    path's, and both empty are the defaults; never an empty id sent to a provider (it read as a Claude model)."""
+    if not isinstance(llm, dict):
+        return llm
+    fast, deep = (str(llm.get(k) or "").strip() for k in ("fast_model", "deep_model"))
+    llm["fast_model"] = fast or deep or default("llm.fast_model")
+    llm["deep_model"] = deep or fast or default("llm.deep_model")
+    return llm
+
+
 def clamp_config(cfg):
     """Clamp every setting a loaded config (app.load_config) sets, in place, so reads without Settings agree."""
     for key in ENTRIES:
@@ -75,6 +86,7 @@ def clamp_config(cfg):
             node = node.get(p) if isinstance(node, dict) else None
         if isinstance(node, dict) and name in node:
             node[name] = clamp(key, node[name])
+    fill_models(cfg.get("llm"))
     return cfg
 
 

@@ -963,3 +963,9 @@ they don't spell out.
   that version kept beside the one played and that was never played itself, and without lines its replies gave
   another speaker (`[Name] ...`, out of the characters' lines and the kept conversation); it is saved once, cleaned,
   and a clean one is never rewritten. The player asked (2026-11-07). Pinned by `tests/test_older_leftovers.py`.
+- **An empty model is the other path's (contracts 5 and 8).** `llm.fast_model` / `llm.deep_model` left empty in
+  config.json (a Settings box cleared and saved) read as the other path's model, both empty as the defaults
+  (`settings.fill_models`, at load); `POST /settings` takes an empty one the same way and saves the model it took.
+  Before, an empty deep model was sent as a Claude model (a 400 for a player whose fast model was on OpenRouter). The
+  Settings help says "Empty: the deep model" / "Empty: the fast model" (contract 8). The player reported it
+  (2026-11-09). Pinned by `tests/test_model_fill.py`.

@@ -63,9 +63,9 @@ export const SCHEMA: Tab[] = [
       { title: "Model ids", intro: "Or type an id: claude-… (Anthropic), gemini:<id> (Gemini API), vendor/model (OpenRouter), ep:<endpoint>:<model> (custom endpoint).",
         fields: [
           { key: L + "fast_model", label: "Fast model", type: "text", wide: true,
-            help: "Live callouts, spoken questions and quest briefings." },
+            help: "Live callouts, spoken questions and quest briefings. Empty: the deep model." },
           { key: L + "deep_model", label: "Deep model", type: "text", wide: true,
-            help: "Typed questions and pace reviews." },
+            help: "Typed questions and pace reviews. Empty: the fast model." },
           { key: L + "voice_question_model", label: "Spoken questions use", type: "select",
             options: [["fast", "the fast model"], ["deep", "the deep model"]] },
           { key: L + "enabled", label: "AI coach on", type: "bool",
