@@ -969,3 +969,12 @@ they don't spell out.
   Before, an empty deep model was sent as a Claude model (a 400 for a player whose fast model was on OpenRouter). The
   Settings help says "Empty: the deep model" / "Empty: the fast model" (contract 8). The player reported it
   (2026-11-09). Pinned by `tests/test_model_fill.py`.
+- **Addon 0.18.0, contract 8 additive: stack counts on the Cooldown Manager.** Blizzard's Tracked Bars and Tracked
+  Buffs (Blizzard_CooldownViewer) write an item's stack text before the item finds a debuff on the player (they look
+  the player's auras up as helpful ones first), so a stacking debuff such as Arcane Blast never showed its count.
+  `Stacks.lua` hooks each item's refresh (`hooksecurefunc` on `OnAcquireItemFrame` and the items' `RefreshData`,
+  `RefreshApplications`, `ResetCooldownData`) and writes the count after, on a font string of its own laid over the
+  item's (same font, same place), only when the item's own text had no aura; in combat the count (a secret value) goes
+  to `SetText` as it is (`C_StringUtil.TruncateWhenZero`, never compared). Blizzard's frames are never written to.
+  New: the Glide window's "Stacks on cooldown bars" switch and `/glide stacks on|off` (GlideLinkDB `stacks`). The
+  strip is unchanged. The player asked (2026-11-22). Pinned by `tests/test_addon_stacks.py`.

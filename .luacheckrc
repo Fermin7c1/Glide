@@ -18,12 +18,13 @@ read_globals = {
     "date", "time", "strsplit", "tinsert", "hooksecurefunc",
     -- C_ namespaces and enums
     "C_AddOns", "C_Container", "C_DeathInfo", "C_EncodingUtil", "C_GossipInfo", "C_Item", "C_Map", "C_MerchantFrame",
-    "C_PlayerInfo", "C_QuestLog", "C_Spell", "C_SpellBook", "C_TaxiMap", "C_Timer", "C_TooltipInfo", "C_UnitAuras",
+    "C_PlayerInfo", "C_QuestLog", "C_Spell", "C_SpellBook", "C_StringUtil", "C_TaxiMap", "C_Timer", "C_TooltipInfo",
+    "C_UnitAuras",
     "Enum", "BOOKTYPE_SPELL", "SOUNDKIT",
     -- frames, mixins and UI
     "CreateFrame", "CreateVector2D", "BackdropTemplateMixin", "GameTooltip", "MerchantFrame", "Minimap", "UIParent",
     "UISpecialFrames", "WorldFrame", "PlaySound", "ReloadUI", "GetCursorPosition", "GetPhysicalScreenSize",
-    "GetCoinTextureString", "InCombatLockdown",
+    "GetCoinTextureString", "InCombatLockdown", "BuffBarCooldownViewer", "BuffIconCooldownViewer",
     -- the client and the player
     "GetBuildInfo", "GetLocale", "GetRealmName", "GetServerTime", "GetTime", "GetZoneText", "GetSubZoneText",
     "GetBindLocation", "GetMoney", "GetXPExhaustion", "GetUnitSpeed", "GetPlayerFacing", "GetWeaponEnchantInfo",

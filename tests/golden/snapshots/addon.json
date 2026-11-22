@@ -149,6 +149,7 @@
   "Training.lua",
   "Trash.lua",
   "Repair.lua",
+  "Stacks.lua",
   "Coach.lua",
   "Strip.lua",
   "Minimap.lua",
@@ -156,6 +157,7 @@
  ],
  "window": {
   "checks": [
+   true,
    true,
    true,
    true,
@@ -204,6 +206,8 @@
    "When bags are full, delete the cheapest RestedXP junk",
    "New spells on level up",
    "Show what your trainer now teaches, and what it changes",
+   "Stacks on cooldown bars",
+   "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
    "Data strip",
    "The pixel strip in the top-left corner the app reads",
    "Minimap button",

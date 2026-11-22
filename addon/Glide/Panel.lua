@@ -224,6 +224,12 @@ local function build()
                 .. "rank changes, and its cost. /glide train opens it any time.",
             get = ns.TrainAutoOn, set = ns.SetTrainAuto })
     end
+    if ns.StacksOn then
+        y = checkbox(y, PAD, { name = "Stacks on cooldown bars", desc = "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
+            tip = "The Cooldown Manager's bars and icons show a buff's stacks but not a stacking debuff's on you: Glide adds "
+                .. "the count in the same place. /glide stacks on|off.",
+            get = ns.StacksOn, set = ns.SetStacks })
+    end
     y = y - 10
 
     -- the link to the desktop app
