@@ -96,8 +96,18 @@ try:
     got = [n["fact"] for n in r["notes"]]
     assert "n:fx-bear-xp" in got, r                                             # Loch Modan, level 9
     assert "n:fx-warlock-trick" not in got, "another class's note"
-    block = pack.block(kc, ["question"])
-    assert any(n["fact"].startswith("n:") for n in block.get("community") or []), block.get("community")
+    # the block keeps the last 45 days' notes: on the day after the fixture's (its notes are dated 2026-10-05), and
+    # not 48 days on (the clock pinned: on the real one this broke once the fixture's notes grew old)
+    from knowledge.api import community as api_community
+    real_today = api_community._today
+    try:
+        api_community._today = lambda: "2026-10-06"
+        block = pack.block(kc, ["question"])
+        assert any(n["fact"].startswith("n:") for n in block.get("community") or []), block.get("community")
+        api_community._today = lambda: "2026-11-22"
+        assert not pack.block(kc, ["question"]).get("community"), "older than 45 days: left out"
+    finally:
+        api_community._today = real_today
     known, unknown = pack.verify_facts(["n:fx-bear-xp", "n:nope"])
     assert known == ["n:fx-bear-xp"] and unknown == ["n:nope"], (known, unknown)
     rec = pack.community_recent(3)

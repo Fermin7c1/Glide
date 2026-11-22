@@ -16,6 +16,11 @@ def _day_s(day):
     return time.mktime(time.strptime(day, "%Y-%m-%d"))
 
 
+def _today():
+    """Today as YYYY-MM-DD, local (how old a note is: recent_days). The tests pin it to their fixture's day."""
+    return time.strftime("%Y-%m-%d")
+
+
 def note_out(r, full=False):
     """A community_note row as the API shows it (full adds title, detail, zones, classes, sources)."""
     srcs = store.jload(r.get("sources"), []) or []
@@ -48,7 +53,7 @@ def community_notes(kb, ctx=None, query=None, level=None, zone=None, kind=None, 
     rows = kb.q("SELECT * FROM community_note")
     if not rows:
         return []
-    today = time.strftime("%Y-%m-%d")
+    today = _today()
     out = []
     q = (query or "").strip().lower()
     for r in rows:
