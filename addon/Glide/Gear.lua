@@ -33,6 +33,9 @@ local TOOLTIP = {
     { "Increased Defense %+(%d+)", "DF" }, { "chance to dodge an attack by (%d+)%%", "DG" },
     { "chance to parry an attack by (%d+)%%", "PA" },
 }
+-- a set bonus line, "(3) Set: Restores 4 mana per 5 sec." (until enough pieces are worn) or "Set: ..." (once they
+-- are): the same words as an "Equip:" line, but the bonus is the whole set's, not each piece's
+local function setBonus(text) return text:match("^%(%d+%) Set:") or text:match("^Set:") end
 
 local clean = ns.Cleaner("[;=|:,/\n\r]", " ")    -- a field of an entry (and "/", which joins the stats)
 local CHUNK = 112                                 -- entry text per page (page max 118 minus "g=" and room)
@@ -61,9 +64,11 @@ local function itemStats(link)
         for _, line in ipairs(ok and data and data.lines or {}) do
             local left, right = Safe(line.leftText), Safe(line.rightText)
             if left then
-                for _, p in ipairs(TOOLTIP) do
-                    local n = tonumber(left:match(p[1]))
-                    if n and not stats[p[2]] then stats[p[2]] = n; break end
+                if not setBonus(left) then
+                    for _, p in ipairs(TOOLTIP) do
+                        local n = tonumber(left:match(p[1]))
+                        if n and not stats[p[2]] then stats[p[2]] = n; break end
+                    end
                 end
                 local ar = tonumber(left:match("^(%d+) Armor$"))
                 if ar and not stats.AR then stats.AR = ar end
