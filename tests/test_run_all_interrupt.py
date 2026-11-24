@@ -20,7 +20,7 @@ if os.name != "posix":
     sys.exit(77)
 
 env = dict(os.environ, ANTHROPIC_API_KEY="", GEMINI_API_KEY="", GOOGLE_API_KEY="", OPENROUTER_API_KEY="",
-           OPENAI_API_KEY="")
+           OPENAI_API_KEY="", TAVILY_API_KEY="", BRAVE_API_KEY="")
 # anything run_all.py imports from beside it still resolves from the real tests folder
 env["PYTHONPATH"] = os.pathsep.join(filter(None, [os.path.join(ROOT, "tests"), env.get("PYTHONPATH")]))
 tmp = tempfile.mkdtemp(prefix="glide-run-all-interrupt-")

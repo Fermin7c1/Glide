@@ -4,6 +4,10 @@
 -- set against the weaker of your two, a two-hander against your main and off hand. No line without weights for this
 -- character (below 60, a class WoWSims doesn't sim here, or not weighed yet), nor for an item you can't use.
 -- On by default; the Glide window or "/glide compare on|off".
+-- Under it, at any level and on any item (the one you wear too), the source line: where the item comes from, "Glide:
+-- drops from Darkmaster Gandling, Scholomance", from the facts the Glide app writes into Data/Live.lua (ns.live.items,
+-- read at login and /reload). Grey for an item you can't get yet or with no known source, " (web, unconfirmed)" after
+-- a fact found only on the web. On by default; the Glide window or "/glide sources on|off".
 local _, ns = ...
 local rec = ns.rec
 local Safe, Print = ns.Safe, ns.Print
@@ -12,6 +16,9 @@ local DEFAULTS = { enabled = true }
 local function settings() return ns.LinkSection("compare", DEFAULTS) end
 function ns.CompareOn() return settings().enabled ~= false end
 function ns.SetCompare(on) settings().enabled = not not on; ns.OnSettingsChanged() end
+local function sourceSettings() return ns.LinkSection("sources", DEFAULTS) end
+function ns.SourcesOn() return sourceSettings().enabled ~= false end
+function ns.SetSources(on) sourceSettings().enabled = not not on; ns.OnSettingsChanged() end
 
 local GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
 local GetItemInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
@@ -100,6 +107,19 @@ local function lineFor(link)
 end
 ns.CompareLine = lineFor
 
+--- The source line for an item id, from ns.live.items[id] = { text, a = "n" (now) | "l" (later) | "x" (no known
+--- source), w = 1 (found on the web) }: its text and colour, or nil.
+local function sourceLine(id)
+    local items = type(ns.live) == "table" and ns.live.items
+    local e = id and type(items) == "table" and items[id]
+    local text = type(e) == "table" and e[1]
+    if type(text) ~= "string" or text == "" then return nil end
+    text = "Glide: " .. text .. (e.w == 1 and " (web, unconfirmed)" or "")
+    if e.a == "l" or e.a == "x" then return text, 0.6, 0.6, 0.6 end
+    return text, 0.4, 0.8, 1
+end
+ns.SourceLine = sourceLine
+
 local function linkOf(tooltip)
     if TooltipUtil and TooltipUtil.GetDisplayedItem then
         local _, link = TooltipUtil.GetDisplayedItem(tooltip)
@@ -111,13 +131,27 @@ local function linkOf(tooltip)
     end
 end
 
-local function onTooltip(tooltip)
-    if not ns.CompareOn() or (tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip) then return end
-    local ok, text, r, g, b = pcall(function() return lineFor(Safe(linkOf(tooltip))) end)
+-- a pcall's line onto the tooltip (wrap: wrapped to the tooltip's width); its error only with the recorder's debug on
+local function add(tooltip, what, wrap, ok, text, r, g, b)
     if ok and text then
-        tooltip:AddLine(text, r, g, b)
+        tooltip:AddLine(text, r, g, b, wrap)
     elseif not ok and rec and rec.debug then
-        Print("|cffff5555compare:|r", text)
+        Print("|cffff5555" .. what .. ":|r", text)
+    end
+end
+
+-- the two lines, each on its own: one that fails leaves the other
+local function onTooltip(tooltip, data)
+    if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
+    if ns.CompareOn() then
+        add(tooltip, "compare", nil, pcall(function() return lineFor(Safe(linkOf(tooltip))) end))
+    end
+    if ns.SourcesOn() then
+        add(tooltip, "sources", true, pcall(function()
+            local link = Safe(linkOf(tooltip))
+            local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+            return sourceLine(id or (type(data) == "table" and tonumber(Safe(data.id))))
+        end))
     end
 end
 
@@ -134,4 +168,19 @@ ns.Command("compare", "compare [on|off] - at level 60, what an item changes in y
         Print("upgrade line on item tooltips", ns.OnOff(ns.CompareOn()),
             e and ("(WoWSims %s, %s)"):format(e.wowsims or "", e.spec or "")
               or "(no WoWSims weights for this character yet: level 60, a mage, and the Glide app running; then /reload)")
+    end)
+
+ns.Command("sources", "sources [on|off] - where an item comes from on its tooltip (the boss, quest, vendor or craft)",
+    function(rest)
+        local a = (rest or ""):lower():match("^(%S*)")
+        if a == "on" or a == "off" then ns.SetSources(a == "on") end
+        -- no ns.live at all: the game never loaded Data/Live.lua (an addon updated while WoW ran: a /reload keeps the
+        -- file list WoW read when it started), and only a restart loads it
+        local loaded = type(ns.live) == "table"
+        local items, n = loaded and ns.live.items, 0
+        for _ in pairs(type(items) == "table" and items or {}) do n = n + 1 end
+        Print("where items come from, on item tooltips", ns.OnOff(ns.SourcesOn()),
+            not loaded and "(Glide's item facts aren't loaded: restart WoW once)"
+              or n > 0 and ("(%d items known)"):format(n)
+              or "(none known yet: the Glide app finds them while it runs; then /reload)")
     end)

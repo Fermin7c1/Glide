@@ -1,6 +1,7 @@
 """The coach's own tools and spoken commands, next to the knowledge layer's: reminders ("remind me to repair"), the
-memory of the player across sessions (and the reflection that updates it), and feature switches said out loud
-("quest briefings off"). Tool definitions for the model, the tool calls, and the local handling of clear requests."""
+memory of the player across sessions (and the reflection that updates it), where an item comes from (the engine's
+research, research.py: "where does Magister's Crown drop?"), and feature switches said out loud ("quest briefings
+off"). Tool definitions for the model, the tool calls, and the local handling of clear requests."""
 import json
 import re
 
@@ -45,9 +46,21 @@ MEMORY_TOOLS = [
     {"name": "memory_list", "description": "Everything remembered about the player (id, kind, text).",
      "input_schema": {"type": "object", "properties": {}, "required": []}},
 ]
+ITEM_TOOLS = [
+    {"name": "item_info", "description": (
+        "Where an item comes from on WoW Forever: the boss or mob that drops it (and the dungeon), the quest that "
+        "rewards it, the vendor that sells it, the profession that makes it, the reputation or PvP rank it needs. "
+        "For 'where does X drop?', 'how do I get X?', 'who sells X?'. avail: now (it can be had now), later (a later "
+        "phase: not in the game yet), nosrc (no known source). Cite its fact_ids in FACTS."),
+     "input_schema": {"type": "object", "required": ["item"], "properties": {
+         "item": {"type": "string", "description": "the item's name (e.g. Magister's Crown) or its item id"}}}},
+]
+ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS)
 # the tools the coach runs itself; every other tool call goes to the knowledge layer (api.dispatch)
 LOCAL_TOOLS = ("reminder_add", "reminder_list", "reminder_done", "web_search",
-               "memory_remember", "memory_forget", "memory_list")
+               "memory_remember", "memory_forget", "memory_list") + ITEM_TOOL_NAMES
+# the engine's research worker (research.Research), set by the app once it runs: item_info answers from it
+research = None
 
 
 def reminder_view(rem):
@@ -239,6 +252,63 @@ def apply_reflection(memory, text, emit, since=None, now=None):
     for t in done["remove"]:
         emit({"kind": "info", "text": "No longer remembering: %s" % t, "speak": False})
     return done
+
+
+# ---- where items come from (research.py) ---------------------------------------------------------------------------
+def item_tools():
+    """The item tool definitions while the research worker runs (none before)."""
+    return list(ITEM_TOOLS) if research is not None else []
+
+
+def run_item_tool(name, args):
+    """item_info on the research worker's facts -> {"id", "name", "sources": [texts], "avail", "fact_ids"}."""
+    r = research
+    if r is None:
+        return {"error": "item lookups are not available"}
+    if name == "item_info":
+        item = str((args or {}).get("item") or "").strip()
+        if not item:
+            return {"error": "which item?"}
+        return r.item_info(item)
+    return {"error": "unknown tool %r" % name}
+
+
+_THE = r"(?:the |an? |my )?"
+ITEM_QUESTIONS = [re.compile(p, re.I) for p in (
+    r"where (?:does|do|did) %s(.+?) (?:drop|drops|come from|comes from)" % _THE,
+    r"where (?:can|could|do|would|should) i (?:get|find|farm|buy) %s(.+?)" % _THE,
+    r"where (?:to|can you) (?:get|find|farm|buy) %s(.+?)" % _THE,
+    r"where (?:is|are) %s(.+?) (?:sold|from|dropped)" % _THE,
+    r"(?:who|what) (?:sells|drops|makes|crafts|gives) %s(.+?)" % _THE,
+    r"how (?:do|can|could|would|should) i (?:get|obtain|farm) %s(.+?)" % _THE,
+    r"how to (?:get|obtain|farm) %s(.+?)" % _THE)]
+
+
+def item_question(question):
+    """The item a 'where does X drop?' / 'who sells X?' / 'how do I get X?' question asks about, or None."""
+    q = " ".join((question or "").split()).strip(" .!?")
+    for pat in ITEM_QUESTIONS:
+        m = pat.fullmatch(q)
+        if m:
+            return m.group(1).strip(" '\"") or None
+    return None
+
+
+def item_command(question, ai_ok):
+    """'where does Magister's Crown drop?' answered from the research facts while the AI is off (ai_ok false; with
+    it the model asks item_info): "<item>: <where it comes from>." Returns the spoken answer, or None."""
+    r = research
+    if r is None or ai_ok:
+        return None
+    item = item_question(question)
+    if not item:
+        return None
+    info = r.item_info(item)
+    if not info or info.get("id") is None:
+        return None
+    if not info.get("sources"):
+        return "I don't know where %s comes from yet." % info["name"]
+    return "%s: %s." % (info["name"], info["sources"][0].rstrip("."))
 
 
 # ---- feature switches said or typed ("quest briefings off") --------------------------------------------------------

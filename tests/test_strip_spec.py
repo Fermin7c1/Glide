@@ -142,6 +142,11 @@ frames.append((core_now(), pages_now()))
 L.execute("DEAD = false; SICK = true; TAXI = true")
 frames.append((core_now(), pages_now()))
 L.execute("SICK = false; TAXI = false")
+# a Data/Live.lua the Glide app wrote (gen above 0): the optional core key lg (in this frame or, held back from a full
+# core, the next)
+L.execute("LIVE_SHIPPED = ns.live; ns.live = { v = 1, gen = 7, t = 1795000000, items = {}, chars = {} }")
+assert "7" in (core_now().get("lg"), core_now().get("lg")), "core lg: the gen of the Data/Live.lua this UI load read"
+L.execute("ns.live = LIVE_SHIPPED")
 
 # ---- what it sends is registered -----------------------------------------------------------------------------
 problems = []

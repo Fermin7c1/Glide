@@ -1003,3 +1003,69 @@ they don't spell out.
   at 0. They are measured too now (WoWSims' hit and crit rating), and the weights carry how they were measured
   (`simbuild.VERSION` in `data/sim_weights.json`'s key), so ones measured the old way are measured again. Pinned by
   `tests/test_sim_weights.py`.
+- **Addon 0.20.0 and the engine, contracts 1, 5, 7 and 8 additive: item tooltips say where gear comes from (the BiS
+  plan's R1).** The engine looks up where each item a character may care about comes from (`companion/research.py`:
+  items on screen, worn items and the character's level band, every item its class can use from 10 levels below to 5
+  above) in WoWSims' item database (`companion/item_db.py`: `assets/database/db.json` and `leftover_db.json`, MIT,
+  read at runtime at the release `WoWSims.data_tag()` names and kept beside its runner in
+  `data/wowsims/<tag>/files/`), the knowledge base and the drops the player saw, and words it
+  (`companion/item_text.py`). New on the player's disk (contract 5): `data/research/facts.json` (`{"v": 1, "faction":
+  the last character's, "facts": {"i:<id>": {"s": [Src], "bond", "price", "conf", "src", "t", "ttl", "name",
+  "avail", "fa", "tag", "kb"}}, "neg": {"i:<id>": [t, fa]}, "seen": {"i:<id>": [Src + "t"]}}`; `fa` the side a fact
+  or a negative holds for, null for both; `tag` WoWSims' tag, `<tag>/db` while its leftover_db.json hasn't come in;
+  a drop seen is kept 30 days), `data/research/live.json` (the writer's state: `gen`, `t`, `sha`, `writes`, `ids`,
+  `told`, `told_kind`, `loaded`, `reload_ok`, `stale`), `"data": {"tag", "t"}` in `data/wowsims/state.json`, and
+  the addon's `Data/Live.lua` in the WoW folder: shipped empty (`ns.live = { v = 1, gen = 0, t = 0, items = {}, chars
+  = {} }`), its TOC line after `Data\SimWeights.lua` new, so installing 0.20.0 needs one full WoW restart.
+  `companion/live_data.py` is its one writer: `items[<id>] = { "<text>", a = "n"|"l"|"x", w = 1 }` (to be had now,
+  in a later phase, no known source, judged from every source merged; `w`: found on the web), the facts that hold
+  for the side of the character playing (or the last one), every write raising `gen`, only into an installed addon
+  0.20.0 or later, written again whenever it differs (an addon update puts the empty one back), at most 256 KB and
+  100,000 Lua constants (worn, bags and reward choices kept first). The strip (contract 1) gains the optional core key
+  `lg`, the `gen` the UI load read (only above 0): optional core keys go last and only into a core of at most 442
+  bytes with them, and one left out of a frame goes into the next (State.lua `ns.CoreOptional`). With it the engine
+  checks that a /reload reads the file again (`GameState.addon_restart_t`, the old load's last frame with its ring:
+  a restart shows only at the new load's first event): two reloads in a row that kept an older `gen` and the nudge
+  asks for a WoW restart, until a reload has the newest `gen` again. In the game (contract 8), item tooltips (bags, worn, chat
+  links) gain one line under the upgrade line, "Glide: drops from Darkmaster Gandling, Scholomance", grey for an item
+  not to be had yet or with no known source, " (web, unconfirmed)" after a web fact. Its shapes, every one
+  (`item_text`'s docstring): "drops from <boss>, <place>" (two bosses "<a> or <b>", more "<a> and N others", no
+  place "drops from <boss>"), "drops in <place>", "drops from enemies", "from <chest or event>, <place>", "drops from
+  trash in <place>", "drops from trash", "world drop" (also for a world drop the player saw from one mob, or one seen
+  from three kinds), "reward of <quest> (<n>-quest chain, ends at <npc>, <place>)" (either part or neither; "a quest
+  reward" without a name), "sold by <npc>, <place>", "sold by <npc>", "sold by a vendor in <place>", "sold by a
+  vendor", "sold by <npc>, a PvP vendor", "sold by a PvP vendor", "sold by <npc>; needs <standing> with <faction>"
+  (a vendor the knowledge base lists keeps the reputation WoWSims gives it), "sold by <npc>; needs reputation with
+  <faction>", "a reputation reward; needs <standing> with <faction>", "a reputation reward from <faction>", "a
+  reputation reward", "made with <profession>", "crafted", "PvP reward". `NO_SOURCE_BOE` "no known source; binds
+  when equipped, so the auction house may have it" is written but not said in this release: reading how an item
+  binds (ItemSparse) isn't wired (`Research.bond_fn` stays None), so an item with no known source stays silent (the
+  plan's fallback). `/glide sources` says "(Glide's item facts aren't loaded: restart WoW once)" when the game never
+  loaded `Data\Live.lua`. New: the Glide window's "Where items come
+  from" switch ("On item tooltips: the boss, quest, vendor or craft") and `/glide sources on|off` (GlideLinkDB
+  `sources`; contract 7). The coach gains the `item_info` tool (`{id, name, sources, avail, fact_ids}`; FACTS ids
+  `ws:<kind>:<id>` and `res:<kind>:<id>` verify without a kb.db row, `knowledge/api/facts.py`), answers "where does X
+  drop?" itself while no model can ("<item>: <source text>." / "I don't know where <item> comes from yet."), and the
+  trigger `facts_ready` (`{"n", "restart"}`, category upkeep, topic gear; the system prompt's Gear paragraph says how
+  to word it), each wording said once (again only when it changes; kept across engine restarts) at a quiet moment
+  (out of combat, resting or on a flight): "New item facts are in the game after a /reload." or "Glide learned where
+  your gear comes from; restart WoW once to see it in the game." New setting
+  `research.enabled` (default on; Settings, Gear upgrades: "Look up where items come from"). The player asked
+  (2026-11-24). Pinned by `tests/test_item_db.py`, `tests/test_item_text.py`, `tests/test_research.py`,
+  `tests/test_live_data.py`, `tests/test_reload_selftest.py`, `tests/test_facts_ready.py`,
+  `tests/test_item_info_tool.py`, `tests/test_research_wiring.py`, `tests/test_addon_compare.py`,
+  `tests/test_addon_panel.py`, `tests/test_core_budget.py` and `tests/test_strip_spec.py`; the `addon` golden
+  re-recorded (`Data\Live.lua` in the TOC list, the new switch's texts) and the `desktop` golden (the new Settings
+  field). The strip frames in the goldens are unchanged: the shipped file's `gen` 0 sends no `lg`.
+- **Set bonuses aren't a set piece's own stats (contract 1, a content fix; addon 0.20.0).** Gear.lua's tooltip
+  reading took a set bonus's "(3) Set: Restores 4 mana per 5 sec." as the piece's own MR4 (and the like for FI, HS,
+  CS) on the W, I and R pages, so the upgrade line and the coach's gear advice counted it on every piece. Lines that
+  start "(n) Set:" or "Set:" are skipped now; the wire format is unchanged. The player asked (2026-11-24). Pinned by
+  `tests/test_addon_gear.py`.
+- **Drop rates count corpses, not loot windows (contract 6, a content fix; no schema change).** Looting one corpse
+  again (a roll still open, an item left behind) opened another loot window, and each counted as a kill: Urok
+  Doomhowl's one kill counted five. `knowledge/sources/observations.derive_drops` merges an NPC's loot windows while
+  they are within 300 s of the group's first and no kill of it came between (`loot_events`); where no kill was
+  recorded (no XP: level 60, grey mobs) only a window within 15 s of the one before with nothing new in it is the same
+  corpse looted again; an item counts once per corpse, objects stay one event per window. `creature_drop` and `object_loot` rates and `n_obs` change on the next
+  kb build. The player asked (2026-11-24). Pinned by `tests/test_observations_drops.py`.

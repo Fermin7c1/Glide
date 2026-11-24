@@ -98,6 +98,7 @@ export const MANIFEST: Record<string, ManifestEntry> = {
   "gear.spec": {"default":"","kind":"text"},
   "gear.min_gain_pct": {"default":3,"min":0,"max":50,"kind":"number"},
   "gear.sims": {"default":true,"kind":"bool"},
+  "research.enabled": {"default":true,"kind":"bool"},
   "ptt.enabled": {"default":true,"kind":"bool"},
   "ptt.key": {"default":"F8","kind":"text"},
   "ptt.engine": {"default":"auto","kind":"text"},

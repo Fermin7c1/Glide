@@ -183,6 +183,8 @@ export const SCHEMA: Tab[] = [
         { key: "companion.gear.min_gain_pct", label: "Minimum gain to call an upgrade (%)", type: "number", step: 0.5 },
         { key: "companion.gear.sims", label: "Weigh my gear with WoWSims at level 60", type: "bool",
           help: "Glide runs WoWSims (wowsims.com/forever) on your own gear and talents to measure what each stat is worth to you, for the coach's gear advice and the upgrade line on item tooltips in the game. It downloads WoWSims' simulator (about 10 MB) from the project's own releases and keeps it current. Mage for now." },
+        { key: "companion.research.enabled", label: "Look up where items come from", type: "bool",
+          help: "Glide finds out where the gear you could use comes from (the boss that drops it, the quest that gives it, who sells it, the craft that makes it) and says it on item tooltips in the game and when you ask the coach. It reads WoWSims' open item data (wowsims.com/forever) and Glide's own knowledge of the game. New facts reach the game after a /reload; the very first time, after a WoW restart." },
       ] },
       { title: "RestedXP route", intro: "These describe how you play, so the route analysis matches.", fields: [
         { key: "companion.rxp.ssf", label: "Solo self-found", type: "bool" },

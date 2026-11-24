@@ -998,6 +998,14 @@
        "label": "Weigh my gear with WoWSims at level 60",
        "restart": true,
        "type": "bool"
+      },
+      {
+       "def": true,
+       "help": "Glide finds out where the gear you could use comes from (the boss that drops it, the quest that gives it, who sells it, the craft that makes it) and says it on item tooltips in the game and when you ask the coach. It reads WoWSims' open item data (wowsims.com/forever) and Glide's own knowledge of the game. New facts reach the game after a /reload; the very first time, after a WoW restart.",
+       "key": "companion.research.enabled",
+       "label": "Look up where items come from",
+       "restart": true,
+       "type": "bool"
       }
      ],
      "title": "Gear upgrades"

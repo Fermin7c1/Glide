@@ -388,6 +388,7 @@ class Coach:
             defs += coach_tools.REMINDER_TOOLS
         if self.deps.memory is not None:
             defs += coach_tools.MEMORY_TOOLS
+        defs += coach_tools.item_tools()             # where an item comes from (once the research worker runs)
         if web and not self.llm.web_off:
             if models_mod.provider(model or "") == "anthropic":
                 defs.append(websearch.server_tool(self.opt.get("web_search_max"), model,
@@ -408,12 +409,15 @@ class Coach:
         return self.api.dispatch(name, args, ctx, budget_s=min(self.api.TOOL_BUDGET_S, max(1.0, budget_s)))
 
     def _local_tool(self, name, args):
-        """One of the coach's own tools (coach_tools.LOCAL_TOOLS): the local web search, memory, reminders."""
+        """One of the coach's own tools (coach_tools.LOCAL_TOOLS): the local web search, memory, where an item comes
+        from, reminders."""
         if name == "web_search":
             self.llm.count_web_search()
             return websearch.search(args.get("query"))
         if name.startswith("memory_"):
             return coach_tools.run_memory_tool(self.deps.memory, name, args, self.emit)
+        if name in coach_tools.ITEM_TOOL_NAMES:
+            return coach_tools.run_item_tool(name, args)
         if self.deps.reminders is None:
             return {"error": "reminders are not available"}
         return coach_tools.run_reminder_tool(self.deps.reminders, name, args, self._summary(), self._now())
@@ -432,6 +436,13 @@ class Coach:
         """A spoken or typed reminder request handled locally (coach_tools.reminder_command), or None for the AI."""
         ai_ok = self.llm.enabled and self.llm.keys.get(models_mod.provider(self.cfg.get("fast_model")))
         return coach_tools.reminder_command(self.deps.reminders, question, ai_ok, self._summary, self._now())
+
+    def _item_command(self, question):
+        """'where does Magister's Crown drop?' answered from the item research (coach_tools.item_command) while no
+        model can take it with the item_info tool (the AI off, or no knowledge pack: tools go only with one); else
+        None."""
+        ai_ok = self.llm.enabled and self.llm.keys.get(models_mod.provider(self.cfg.get("fast_model")))             and self.pack is not None
+        return coach_tools.item_command(question, bool(ai_ok))
 
     def _local_command(self, question):
         """Push-to-talk / typed switches handled without the AI ('quest briefings off', 'turn on videos'; see
@@ -707,7 +718,7 @@ class Coach:
         self._convo_before = list(self.convo)
         self.convo.append({"t": self._now(), "who": "player", "kind": "voice" if voice else "typed",
                            "text": question})
-        done = self._local_command(question) or self._memory_command(question) or self._reminder_command(question)
+        done = self._local_command(question) or self._memory_command(question) or self._reminder_command(question)             or self._item_command(question)
         if not done:
             return None
         msg = {"kind": "answer", "text": done, "speak": True, "model": "local", "t": time.time()}

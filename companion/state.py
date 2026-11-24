@@ -27,6 +27,10 @@ class GameState:
         self.event_max = None
         self.events_missed = 0     # events that left the ring between two frames (ids skipped)
         self.addon_restarts = 0
+        # the latest the last one can have happened: the last frame that still showed the old load's ring (a restart
+        # is only noticed at the new load's first event, minutes later at times; the frames between have no ring)
+        self.addon_restart_t = None
+        self._ring_t = None        # the last frame with a ring in it
         self.frames = 0
         self.last_frame = 0.0
         self.started = time.time()
@@ -115,8 +119,11 @@ class GameState:
                 ring.append((i, parts[1], parts[2]))
         if ring and self.event_max is not None and max(i for i, _, _ in ring) < self.event_max:
             self.addon_restarts += 1
+            self.addon_restart_t = self._ring_t if self._ring_t is not None else self.last_frame
             self.event_max = 0
             log("link", "the addon restarted (UI reload or relog): its event ids start over")
+        if ring:
+            self._ring_t = self.last_frame
         return ring
 
     def _buff_cast(self, key):

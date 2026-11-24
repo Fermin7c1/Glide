@@ -33,7 +33,7 @@ def tier(name):
 
 PORTABLE = [p for p in PROBES if tier(p) == "portable"]
 ENV = dict(os.environ, ANTHROPIC_API_KEY="", GEMINI_API_KEY="", GOOGLE_API_KEY="", OPENROUTER_API_KEY="",
-           PYTHONHASHSEED="0", PYTHONIOENCODING="utf-8")
+           OPENAI_API_KEY="", TAVILY_API_KEY="", BRAVE_API_KEY="", PYTHONHASHSEED="0", PYTHONIOENCODING="utf-8")
 
 
 TIMES = {}                              # probe -> seconds its last run took (printed by check: the slowest sets the pace)

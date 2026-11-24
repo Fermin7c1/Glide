@@ -9,6 +9,9 @@ from knowledge.api.guides import norm_guide_name
 from knowledge.api.results import FACT_RE
 from knowledge.api.values import as_int
 
+# the engine's research facts: ws:<kind>:<id> (WoWSims' data), res:<kind>:<id> (its research cache)
+RESEARCH_FACT_RE = re.compile(r"^(ws|res):[a-z]+:[\w.-]+$", re.I)
+
 
 class FactsMixin:
     """Fact verification (the coach's FACTS lines), the glossary and the community panel."""
@@ -35,7 +38,11 @@ class FactsMixin:
                 or norm_guide_name(RP.affix_name(r.get("name") or "")) == n]
 
     def fact_exists(self, fid):
-        """True when a fact id names a usable knowledge row."""
+        """True when a fact id names a usable knowledge row. The engine's own research facts (ws:i:16686, from
+        WoWSims' item data; res:..., from its research cache: companion/research.py) are taken as they come, like
+        the coach's web: ids: they aren't kb.db rows."""
+        if isinstance(fid, str) and RESEARCH_FACT_RE.match(fid.strip()):
+            return True
         if not self.ok or not isinstance(fid, str):
             return False
         m = FACT_RE.match(fid.strip())

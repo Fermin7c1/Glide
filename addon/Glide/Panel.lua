@@ -230,6 +230,13 @@ local function build()
                 .. "WoWSims measured on your own gear and talents in the Glide app (new ones after a /reload). /glide compare on|off.",
             get = ns.CompareOn, set = ns.SetCompare })
     end
+    if ns.SourcesOn then
+        y = checkbox(y, PAD, { name = "Where items come from", desc = "On item tooltips: the boss, quest, vendor or craft",
+            tip = "Your item tooltips say where an item comes from, at any level and on chat links too: the boss that "
+                .. "drops it, the quest that gives it, who sells it or the craft that makes it, as the Glide app found "
+                .. "out (new ones after a /reload). /glide sources on|off.",
+            get = ns.SourcesOn, set = ns.SetSources })
+    end
     if ns.StacksOn then
         y = checkbox(y, PAD, { name = "Stacks on cooldown bars", desc = "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
             tip = "The Cooldown Manager's bars and icons show a buff's stacks but not a stacking debuff's on you: Glide adds "

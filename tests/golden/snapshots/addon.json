@@ -138,6 +138,7 @@
   "Data\\VendorTreasures.lua",
   "Data\\RXPImports.lua",
   "Data\\SimWeights.lua",
+  "Data\\Live.lua",
   "Core.lua",
   "Recorder.lua",
   "Scanner.lua",
@@ -159,6 +160,7 @@
  ],
  "window": {
   "checks": [
+   true,
    true,
    true,
    true,
@@ -211,6 +213,8 @@
    "Show what your trainer now teaches, and what it changes",
    "Upgrades on item tooltips",
    "At 60: what an item changes in your DPS (WoWSims)",
+   "Where items come from",
+   "On item tooltips: the boss, quest, vendor or craft",
    "Stacks on cooldown bars",
    "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
    "Data strip",

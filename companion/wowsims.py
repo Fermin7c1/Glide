@@ -11,7 +11,12 @@ runner, wowsimcli, from the project's official GitHub releases, and keeps it on 
 - Files a request needs from the project at that release (a spec's rotation, ui/specs/.../*.apl.json) come from
   raw.githubusercontent.com at the release's tag, kept beside its runner; one a newer release no longer has falls
   back to an older release's copy.
-- data/wowsims/state.json: {"current": tag, "checked": time, "failed": {tag: why}}. Two releases are kept on disk.
+- Data files read without simming (the item database research.py reads) are read at data_tag(): the release in use,
+  else the latest release's tag, looked up at most once a day without downloading its runner.
+- data/wowsims/state.json: {"current": tag, "checked": time, "failed": {tag: why}, "data": {"tag", "t"}} ("data":
+  the latest tag data_tag() looked up, and when). On disk are kept the release in use, the one whose data is read
+  (prune: research.ItemDBSource calls it when it takes a new tag, so a player who never sims doesn't keep every
+  release's item database) and the newest other one.
 """
 import hashlib
 import io
@@ -40,6 +45,7 @@ CHECK_S = 24 * 3600
 RETRY_S = 3600                                                # after a check or download that failed
 MISSES = 3                                                    # checksum mismatches before a release is set aside
 KEEP = 2                                                      # releases kept on disk: in use, and the one before
+                                                              # (and the one whose data is read, when another)
 MAX_JSON = 2 * 1024 * 1024                                   # the release listing, checksums
 MAX_ZIP = 96 * 1024 * 1024                                   # the runner's zip (about 10 MB today)
 MAX_FILE = 8 * 1024 * 1024                                   # a file from the repository (a rotation: a few KB)
@@ -100,6 +106,8 @@ class WoWSims:
         self.lock = threading.RLock()
         self.state = self._load()
         self._tried = None                                    # when the last check ran (RETRY_S between)
+        self._data_tried = None                               # ... and data_tag()'s last look-up
+        self._data_used = None                                # the tag whose data files are read (prune keeps it)
         self._misses = {}                                     # tag -> checksum mismatches
 
     # ---- state on disk ----------------------------------------------------------------------------------------
@@ -110,10 +118,14 @@ class WoWSims:
             d = {}
         d = d if isinstance(d, dict) else {}
         cur = d.get("current")
+        data = d.get("data")
+        dtag, dt = (data.get("tag"), data.get("t")) if isinstance(data, dict) else (None, None)
+        ok = isinstance(dtag, str) and TAG.match(dtag) and isinstance(dt, (int, float))
         return {"current": cur if isinstance(cur, str) and TAG.match(cur) else None,
                 "checked": d.get("checked") if isinstance(d.get("checked"), (int, float)) else 0,
                 "failed": {k: str(v) for k, v in (d.get("failed") or {}).items() if isinstance(k, str)}
-                if isinstance(d.get("failed"), dict) else {}}
+                if isinstance(d.get("failed"), dict) else {},
+                "data": {"tag": dtag, "t": dt} if ok else None}
 
     def _save(self):
         os.makedirs(self.dir, exist_ok=True)
@@ -131,6 +143,29 @@ class WoWSims:
         """The release in use, if its runner is on disk."""
         cur = self.state["current"]
         return cur if cur and os.path.exists(self.exe(cur)) else None
+
+    def data_tag(self):
+        """The release whose repository files to read for data (db.json): the one in use, else the latest release's
+        tag, looked up at most once a day (after a look-up that failed, not before RETRY_S) and without downloading
+        its runner. -> the tag, or None (never looked up, offline)."""
+        cur = self.current()
+        if cur:
+            return cur
+        with self.lock:
+            known, now = self.state.get("data"), self._now()
+            if known and now - known["t"] < CHECK_S:
+                return known["tag"]
+            if self._data_tried is not None and now - self._data_tried < RETRY_S:
+                return known["tag"] if known else None
+            self._data_tried = now
+            try:
+                tag = self.latest()["tag"]
+            except Exception as e:  # noqa: BLE001 - offline, blocked: the tag looked up before, after RETRY_S again
+                log_once("wowsims.data_tag", e)
+                return known["tag"] if known else None
+            self.state["data"] = {"tag": tag, "t": now}
+            self._save()
+            return tag
 
     # ---- keeping it current -----------------------------------------------------------------------------------
     def latest(self):
@@ -213,18 +248,25 @@ class WoWSims:
         os.replace(tmp, os.path.join(d, EXE))
 
     def _prune(self):
-        """Keep the release in use and the newest one before it."""
-        try:
-            tags = [t for t in os.listdir(self.dir) if TAG.match(t) and os.path.isdir(os.path.join(self.dir, t))]
-        except OSError:
-            return
-        keep = {self.state["current"]}
-        older = sorted((t for t in tags if t not in keep), key=lambda t: os.path.getmtime(os.path.join(self.dir, t)),
-                       reverse=True)
-        keep.update(older[:KEEP - 1])
-        for t in tags:
-            if t not in keep:
-                shutil.rmtree(os.path.join(self.dir, t), ignore_errors=True)
+        self.prune()
+
+    def prune(self, data_tag=None):
+        """Keep the release in use, the one whose data files are read (data_tag, remembered for the next call) and
+        the newest other one; the other release folders go."""
+        with self.lock:
+            if data_tag:
+                self._data_used = data_tag
+            try:
+                tags = [t for t in os.listdir(self.dir) if TAG.match(t) and os.path.isdir(os.path.join(self.dir, t))]
+            except OSError:
+                return
+            keep = {self.state["current"], self._data_used} - {None}
+            older = sorted((t for t in tags if t not in keep),
+                           key=lambda t: os.path.getmtime(os.path.join(self.dir, t)), reverse=True)
+            keep.update(older[:KEEP - 1])
+            for t in tags:
+                if t not in keep:
+                    shutil.rmtree(os.path.join(self.dir, t), ignore_errors=True)
 
     # ---- files from the repository ---------------------------------------------------------------------------
     def file(self, path, tag=None):

@@ -190,7 +190,34 @@ function ns.Core()
     if ns.CoreExtras then ns.Try("core extras", ns.CoreExtras, put) end
     if ns.errors > 0 then put("er", ns.errors) end
     for i = 1, 3 do if ring[i] then put("e" .. i, ring[i]) end end
-    return table.concat(t, ";")
+    return ns.CoreOptional(table.concat(t, ";"))
+end
+
+-- Optional core keys go last, and only while the core leaves the largest page its room: the strip's 573 bytes minus
+-- 6 of framing, the "|" and a 124-byte page leave the core 442. They are left out of a frame whose core would pass
+-- that and go in the next frame whatever its size (so long as the frame holds it whole), so they're never held back
+-- for long and a page still gets its room every other frame.
+local FRAME_ROOM = 566                              -- core and page: the strip's 573 bytes - 6 framing - the "|"
+local CORE_MAX = FRAME_ROOM - (PAGE_MAX + 6)        -- 442
+local optional, held = {}, false
+-- lg: the generation of Data/Live.lua this UI load read (the facts the Glide app writes there; the shipped file has
+-- none), so the app can tell whether a /reload picked up its last write
+optional[#optional + 1] = function()
+    local gen = type(ns.live) == "table" and tonumber(ns.live.gen)
+    if gen and gen > 0 then return "lg=" .. floor(gen) end
+end
+
+function ns.CoreOptional(core)
+    local extra = {}
+    for _, fn in ipairs(optional) do
+        local ok, kv = ns.Try("core optional", fn)
+        if ok and kv then extra[#extra + 1] = kv end
+    end
+    if #extra == 0 then held = false; return core end
+    local full = core .. ";" .. table.concat(extra, ";")
+    if #full <= CORE_MAX or (held and #full <= FRAME_ROOM) then held = false; return full end
+    held = true
+    return core
 end
 
 -- ---------------------------------------------------------------------------------------------

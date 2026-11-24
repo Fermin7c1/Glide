@@ -7,8 +7,9 @@ Raw:      obs_session, obs_kill (ttk from the combat start/previous kill; creatu
           obs_gossip (per-session union of what an NPC offered; no time: the session start is used),
           obs_loot, quest_xp_obs.
 Derived:  creature_drop / object_loot rates (drops / max(kills, loot events) of that source in the
-          sessions where it was looted), obs_respawn (time between kills at the same spot), quest_giver
-          rows from gossip (avail -> start, active -> end), quest_prereq inference (src 'inf', conf 0.5).
+          sessions where it was looted; an NPC's loot windows merged into corpses first, see loot_events),
+          obs_respawn (time between kills at the same spot), quest_giver rows from gossip (avail -> start,
+          active -> end), quest_prereq inference (src 'inf', conf 0.5).
 
 Prerequisite rule (sound, deliberately conservative): for one character, NPC N did not offer Q in session
 Si (Q neither offered nor active, not yet offered/accepted/turned in) and did offer Q in a later session
@@ -19,6 +20,7 @@ no level change across the window; levels from the XP timeline) and exactly one 
 inside that window, then P is a prerequisite of Q. Anything else is reported as ambiguous, never written. Community prerequisites contradicted by a character whose whole history was recorded (first
 session at level 1) are reported in the loader result (possible Forever changes), not deleted.
 """
+import bisect
 import collections
 import statistics
 
@@ -26,6 +28,8 @@ from knowledge import store
 from knowledge.values import as_int
 
 OBS = store.SOURCE_CONF["obs"]
+LOOT_MERGE_S = 300      # loot windows of one NPC kind this close, with no kill of it between them: one corpse
+REOPEN_S = 15           # ... and with no kill recorded for them: one this soon after the last, nothing new in it
 
 
 def load(conn, ctx):
@@ -214,26 +218,80 @@ def load_loot(conn, g):
 # ------------------------------------------------------------------------------------------------
 # derived
 # ------------------------------------------------------------------------------------------------
+def loot_events(windows, kills=None, gap=LOOT_MERGE_S, reopen=REOPEN_S):
+    """Loot windows of one source in one session ({t: {item ids}}) -> [(loot events, {item: events with it})].
+
+    Looting one corpse again (a roll still open, an item left behind) opens another window seconds later: Urok
+    Doomhowl's one kill left five. So an NPC's windows merge while they stay within `gap` of the group's first one and
+    no kill of that NPC (kills: its kill times in the session) came between them. A group is as many corpses as the
+    NPC's kills since the previous group, no more than its windows. Groups in a row that no kill was recorded for (a
+    kill that gives no XP, as at level 60 or on a grey mob, never is) can be many corpses: there a window is the same
+    corpse looted again only when it came within `reopen` of the window before and holds nothing that one didn't (what
+    is left on a corpse only shrinks); any other is another corpse. An item counts at most once per corpse. An object's
+    windows (kills None) are one event each: one node or chest."""
+    if kills is None:
+        return [(1, dict.fromkeys(items, 1)) for items in windows.values()]
+    kills = sorted(kills)
+    groups, last = [], None                        # [first t, last t, [(t, items)]]
+    for t in sorted(w for w in windows if w is not None):
+        if not groups or t - groups[-1][0] > gap or bisect.bisect_right(kills, last) < bisect.bisect_right(kills, t):
+            groups.append([t, t, []])
+        groups[-1][1] = last = t
+        groups[-1][2].append((t, windows[t]))
+    out, before, run = [], 0, []                   # run: the windows of groups in a row no kill was recorded for
+    for _t0, t1, wins in groups:
+        upto = bisect.bisect_right(kills, t1)
+        k, before = upto - before, upto
+        if k <= 0:
+            run += wins
+            continue
+        out += _reloots(run, reopen)
+        run = []
+        n = min(len(wins), k)
+        seen = collections.Counter(i for _t, items in wins for i in items)
+        out.append((n, {i: min(c, n) for i, c in seen.items()}))
+    out += _reloots(run, reopen)
+    if None in windows:                            # no time: can't be merged with anything
+        out.append((1, dict.fromkeys(windows[None], 1)))
+    return out
+
+
+def _reloots(wins, reopen):
+    """Windows ([(t, items)], oldest first) no kill was recorded for, as corpses: one looted again is a window within
+    `reopen` of the one before that holds nothing new. -> [(1, {item: 1})] per corpse."""
+    corpses, prev = [], None
+    for t, items in wins:
+        if prev is None or t - prev[0] > reopen or not set(items) <= set(prev[1]):
+            corpses.append(set())
+        corpses[-1] |= set(items)
+        prev = (t, items)
+    return [(1, dict.fromkeys(c, 1)) for c in corpses]
+
+
 def derive_drops(conn):
-    events = collections.defaultdict(set)          # (session, kind, src) -> loot event times
-    hits = collections.defaultdict(set)            # (session, kind, src, item) -> event times with the item
+    windows = collections.defaultdict(lambda: collections.defaultdict(set))   # (session, kind, src) -> t -> items
     for s, t, k, src, item in conn.execute("SELECT session, t, src_kind, src_id, item_id FROM obs_loot WHERE src_id IS NOT NULL"):
-        events[(s, k, src)].add(t)
-        hits[(s, k, src, item)].add(t)
+        windows[(s, k, src)][t].add(item)
     kills = collections.Counter()
-    for s, cid in conn.execute("SELECT session, creature_id FROM obs_kill WHERE creature_id IS NOT NULL"):
+    kill_t = collections.defaultdict(list)         # (session, creature) -> kill times
+    for s, cid, t in conn.execute("SELECT session, creature_id, t FROM obs_kill WHERE creature_id IS NOT NULL"):
         kills[(s, cid)] += 1
+        if t is not None:
+            kill_t[(s, cid)].append(t)
+    events = collections.Counter()                 # (session, kind, src) -> loot events (corpses, nodes, chests)
     agg = collections.defaultdict(lambda: [0, 0, 0])   # (kind, src, item) -> [drops, events, kills]
-    for (_s, k, src, item), ts in hits.items():
-        a = agg[(k, src, item)]
-        a[0] += len(ts)
+    for (s, k, src), wins in windows.items():
+        for n, items in loot_events(wins, kill_t.get((s, src), []) if k == "npc" else None):
+            events[(s, k, src)] += n
+            for item, c in items.items():
+                agg[(k, src, item)][0] += c
     looted_sessions = collections.defaultdict(set)
     for (s, k, src) in events:
         looted_sessions[(k, src)].add(s)
     n_c = n_o = 0
     for (k, src, item), a in agg.items():
         sessions = looted_sessions[(k, src)]
-        ev = sum(len(events[(s, k, src)]) for s in sessions)
+        ev = sum(events[(s, k, src)] for s in sessions)
         kl = sum(kills[(s, src)] for s in sessions) if k == "npc" else 0
         denom = max(ev, kl)
         rate = round(min(1.0, a[0] / denom), 3) if denom else None

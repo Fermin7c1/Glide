@@ -72,8 +72,10 @@ class Repo:
         """repo-relative form of a path, or None outside the repository"""
         p = os.path.normpath(p).replace(os.sep, "/")
         if p.startswith("/") or re.match(r"^[A-Za-z]:", p):
-            rel = os.path.relpath(p, ROOT).replace(os.sep, "/")
-            p = rel
+            try:
+                p = os.path.relpath(p, ROOT).replace(os.sep, "/")
+            except ValueError:          # on another drive (Windows; or text like "q:96608"): not in the repository
+                return None
         if p == ".":
             return ""
         return None if p.startswith("..") else p
@@ -473,7 +475,7 @@ def trace(words=(), jobs=4):
     # a call that failed (= -1 ENOENT ...) read nothing; one strace split in two (<unfinished ...>) counts as read
     opened = re.compile(r'\bopen(?:at2?)?\((?:[^,"]*, )?"([^"]+)"(?!.*= -1 )')
     env = dict(os.environ, ANTHROPIC_API_KEY="", GEMINI_API_KEY="", GOOGLE_API_KEY="", OPENROUTER_API_KEY="",
-               OPENAI_API_KEY="")
+               OPENAI_API_KEY="", TAVILY_API_KEY="", BRAVE_API_KEY="")
 
     def one(t):
         with tempfile.TemporaryDirectory() as tmp:

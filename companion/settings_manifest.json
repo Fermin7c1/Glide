@@ -93,6 +93,8 @@
     "gear.min_gain_pct": {"default": 3, "min": 0, "max": 50, "kind": "number"},
     "gear.sims": {"default": true, "kind": "bool"},
 
+    "research.enabled": {"default": true, "kind": "bool", "note": "look up where items come from (research.py): the source line on item tooltips in the game (Data/Live.lua) and the coach's item_info"},
+
     "ptt.enabled": {"default": true, "kind": "bool"},
     "ptt.key": {"default": "F8", "kind": "text"},
     "ptt.engine": {"default": "auto", "kind": "text"},

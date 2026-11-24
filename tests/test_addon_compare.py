@@ -4,7 +4,11 @@ weights the Glide app wrote for this character (Data/SimWeights.lua's ns.simWeig
 would change in DPS against what is worn in its slot (Gear.lua reads the stats): a ring against the weaker of the two,
 a two-hander against main and off hand, a worse item in red, an equal one "no change"; nothing for the item worn, one
 the character can't use, below 60, another class or character, or with the switch off (/glide compare off).
-Needs lupa."""
+Under it, the source line: where the item comes from, from the facts the Glide app wrote into Data/Live.lua
+(ns.live.items), wrapped, grey for an item not out yet or with no known source, " (web, unconfirmed)" after a web
+fact; it shows without weights, below 60, on the item worn, on a chat link (also one whose data hasn't come yet) and
+when the upgrade line fails, and not with its own switch off (/glide sources off), for an item with no fact, nor
+without Live.lua. Needs lupa."""
 import os
 import sys
 
@@ -39,23 +43,26 @@ Enum.TooltipDataType = { Item = 0 }
 TooltipDataProcessor = { AddTooltipPostCall = function(kind, fn) POSTCALLS[kind] = fn end }
 GameTooltip = { lines = {} }
 function GameTooltip:GetItem() return "x", self.link end
-function GameTooltip:AddLine(t, r, g, b) self.lines[#self.lines + 1] = { text = t, r = r, g = g, b = b } end
+function GameTooltip:AddLine(t, r, g, b, wrap) self.lines[#self.lines + 1] = { text = t, r = r, g = g, b = b, wrap = wrap } end
 ItemRefTooltip = { lines = {}, GetItem = GameTooltip.GetItem, AddLine = GameTooltip.AddLine }
-function show(l, tip)
+-- the lines Glide adds to a tooltip showing link l (data: the tooltip data the post-call gets)
+function lines(l, tip, data)
   tip = tip or GameTooltip
   tip.link, tip.lines = l, {}
-  POSTCALLS[0](tip, {})
-  return tip.lines[1]
+  POSTCALLS[0](tip, data or {})
+  return tip.lines
 end
+function show(l, tip) return lines(l, tip)[1] end
 printed = {}
 function print(...) local t = {} for i = 1, select("#", ...) do t[#t + 1] = tostring(select(i, ...)) end
   printed[#printed + 1] = table.concat(t, " ") end
 """)
 ns = L.table()
 toc = [ln.strip() for ln in open(os.path.join(ROOT, "addon", "Glide", "Glide.toc"), encoding="utf-8")
-       if ln.strip().endswith(".lua") and (ln.strip() == "Data\\SimWeights.lua" or
+       if ln.strip().endswith(".lua") and (ln.strip() in ("Data\\SimWeights.lua", "Data\\Live.lua") or
                                             not ln.startswith(("Data", "Recorder", "Scanner", "RXPDump")))]
-assert toc.index("Data\\SimWeights.lua") < toc.index("Gear.lua") < toc.index("Compare.lua") < toc.index("Panel.lua"), toc
+assert toc.index("Data\\SimWeights.lua") + 1 == toc.index("Data\\Live.lua"), toc          # Live.lua right after it
+assert toc.index("Data\\Live.lua") < toc.index("Gear.lua") < toc.index("Compare.lua") < toc.index("Panel.lua"), toc
 for f in toc:
     src = open(os.path.join(ROOT, "addon", "Glide", *f.split("\\")), encoding="utf-8").read()
     L.eval("function(src, name, a, ns) local f, e = loadstring(src, name) if not f then error(e) end return f(a, ns) end")(
@@ -64,7 +71,8 @@ G = L.globals()
 G.fire("ADDON_LOADED", "Glide")
 G.fire("PLAYER_LOGIN")
 assert len(list(ns.simWeights.keys())) == 0, "the addon ships no weights"
-show = G.show
+assert ns.live.v == 1 and ns.live.gen == 0 and len(list(ns.live["items"].keys())) == 0, "nor any item facts"
+show, lines = G.show, G.lines
 
 # the weights the app wrote for Nine: spell power 1, intellect 0.865, 1% spell crit 9.038; 0.52 DPS per spell power
 ns.simWeights = L.eval('{ ["Nine"] = { class = "MAGE", spec = "Arcane", dps = 600, perRef = 0.52, wowsims = "v1.0.4", '
@@ -127,4 +135,73 @@ assert show(new) is None and ns.CompareOn() is False, "switched off"
 G.SlashCmdList.GLIDE("compare on")
 assert show(new).text.startswith("Glide (Arcane): +6.9 DPS"), "back on"
 assert any("WoWSims v1.0.4, Arcane" in p for p in G.printed.values()), list(G.printed.values())
+
+# ---- the source line: where an item comes from (Data/Live.lua, ns.live.items) --------------------------------------
+assert [ln.text for ln in lines(new).values()] == ["Glide (Arcane): +6.9 DPS (+1.2%) vs Band of Old"], "no facts yet"
+items = ns.live["items"]                       # (lupa: .items is the Python method)
+items[1003] = L.eval('{ "drops from Darkmaster Gandling, Scholomance", a = "n" }')
+got = list(lines(new).values())
+assert [ln.text for ln in got] == ["Glide (Arcane): +6.9 DPS (+1.2%) vs Band of Old",
+                                   "Glide: drops from Darkmaster Gandling, Scholomance"], [ln.text for ln in got]
+src = got[1]
+assert src.wrap is True and (src.r, src.g, src.b) == (0.4, 0.8, 1), (src.wrap, src.r, src.g, src.b)
+assert not got[0].wrap, "the upgrade line is as it was"
+# on a chat link's tooltip too
+assert [ln.text for ln in lines(new, G.ItemRefTooltip).values()][1] == src.text
+# none of the upgrade line's limits: the item worn, no weights, below 60, a chat link whose data hasn't come yet
+items[1001] = L.eval('{ "sold by Deliana, Ironforge", a = "n" }')
+assert [ln.text for ln in lines(old).values()] == ["Glide: sold by Deliana, Ironforge"], "the ring you wear"
+G.LEVEL = 30
+assert [ln.text for ln in lines(new).values()] == [src.text], "below 60"
+G.LEVEL = 60
+weights = ns.simWeights
+ns.simWeights = L.table()
+assert [ln.text for ln in lines(new).values()] == [src.text], "no weights"
+ns.simWeights = weights
+far = item(3003, "Distant Ring", "INVTYPE_FINGER", L.eval("{ ITEM_MOD_INTELLECT_SHORT = 30 }"))
+G.ITEMS[far].loading = True
+items[3003] = L.eval('{ "reward of General Drakkisath\'s Demise", a = "n" }')
+got = [ln.text for ln in lines(far, G.ItemRefTooltip).values()]
+assert got == ["Glide: reward of General Drakkisath's Demise"], got
+# a tooltip without a link: the item id the tooltip data carries
+assert [ln.text for ln in lines(None, G.GameTooltip, L.eval("{ id = 1003 }")).values()] == [src.text], "data.id"
+# an item that isn't out yet, or with no known source: grey; a fact found only on the web says so
+items[1003] = L.eval('{ "drops from Golemagg the Incinerator, Molten Core", a = "l", w = 1 }')
+ln = list(lines(new).values())[1]
+assert ln.text == "Glide: drops from Golemagg the Incinerator, Molten Core (web, unconfirmed)", ln.text
+assert (ln.r, ln.g, ln.b) == (0.6, 0.6, 0.6), (ln.r, ln.g, ln.b)
+items[1003] = L.eval('{ "no known source; binds when equipped, so the auction house may have it", a = "x" }')
+ln = list(lines(new).values())[1]
+assert ln.text.endswith("the auction house may have it") and ln.r == 0.6, ln.text
+items[1003] = L.eval('{ "drops from Darkmaster Gandling, Scholomance", a = "n" }')
+# when the upgrade line fails, the source line still shows
+ns.simWeights.Nine.perRef = "junk"
+assert [ln.text for ln in lines(new).values()] == [src.text], "the upgrade line failed alone"
+ns.simWeights.Nine.perRef = 0.52
+# nothing: an item with no fact, a broken entry, its own switch off, no Live.lua
+assert [ln.text for ln in lines(better).values()] == [], "no fact for it (and it's worn)"
+for junk in ('"text"', "{}", '{ "" }', "{ 12 }"):
+    items[1005] = L.eval(junk)
+    assert [ln.text for ln in lines(same).values()] == ["Glide (Arcane): no change vs Band of Old"], junk
+G.SlashCmdList.GLIDE("sources off")
+assert [ln.text for ln in lines(new).values()] == ["Glide (Arcane): +6.9 DPS (+1.2%) vs Band of Old"], "switched off"
+assert ns.SourcesOn() is False and G.GlideLinkDB.sources.enabled is False
+G.SlashCmdList.GLIDE("compare off")
+G.SlashCmdList.GLIDE("sources on")
+assert [ln.text for ln in lines(new).values()] == [src.text], "each line has its own switch"
+G.SlashCmdList.GLIDE("compare on")
+assert any("where items come from, on item tooltips" in p and "items known" in p for p in G.printed.values())
+live = ns.live
+ns.live = None
+assert len(list(lines(new).values())) == 1, "no Live.lua: the upgrade line alone"
+# never loaded (an addon updated while WoW ran: /reload keeps the old file list): a restart, not a /reload, loads it
+G.SlashCmdList.GLIDE("sources")
+said = list(G.printed.values())[-1]
+assert "aren't loaded: restart WoW once" in said and "/reload" not in said, said
+# loaded, nothing in it yet: the app finds them, then a /reload
+ns.live = L.eval("{ v = 1, gen = 0, t = 0, items = {}, chars = {} }")
+G.SlashCmdList.GLIDE("sources")
+said = list(G.printed.values())[-1]
+assert "none known yet" in said and "then /reload" in said, said
+ns.live = live
 print("OK")

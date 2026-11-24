@@ -25,7 +25,7 @@ sys.path.insert(0, HERE)
 import run_all  # noqa: E402
 
 ENV = dict(os.environ, ANTHROPIC_API_KEY="", GEMINI_API_KEY="", GOOGLE_API_KEY="", OPENROUTER_API_KEY="",
-           OPENAI_API_KEY="")
+           OPENAI_API_KEY="", TAVILY_API_KEY="", BRAVE_API_KEY="")
 ENV.pop("GLIDE_TEST_TIMINGS", None)
 ENV.pop("GLIDE_TYPES_FILES", None)
 

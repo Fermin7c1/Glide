@@ -1,6 +1,7 @@
 """Rules engine: turns state changes into coaching triggers (no AI here)."""
 import math
 import time
+from typing import Any
 
 from geo import compass, relative_label
 import settings
@@ -38,11 +39,14 @@ CATEGORY = {
     # addon 0.10 extras (see Rules._extras)
     "training_available": "upkeep", "talent_points_unspent": "upkeep", "consumables_low": "upkeep",
     "flight_path_nearby": "route", "target_tapped": "combat",
+    # new item facts in the addon's Data/Live.lua (see Rules._live)
+    "facts_ready": "upkeep",
 }
 CONSUMABLE_LOW = {"food": 4, "drink": 4, "ammo": 200}   # warn when a count drops to this or below
 TALENT_GRACE_S = 30               # unspent talent points: say so once per level, after this long
 DECAY_XP_WINDOW = 0.15            # turnin_decay_soon: within 15% of the level's XP from levelling
 DECAY_COOLDOWN_S = 600            # ... at most once per quest every 10 minutes
+LIVE_POLL_S = 5                   # facts_ready: how often Data/Live.lua's writer is asked for news
 
 
 def allowed(kind, flags):
@@ -99,6 +103,7 @@ class Rules:
         self.fp_told = set()          # flight node ids already pointed out
         self.tapped_told = {}         # npc id -> time
         self.vendor_told = set()      # vendor treasure indexes already pointed out this session
+        self.live: Any = None         # live_data.LiveData (the addon's Data/Live.lua), set by the app
 
     def watch(self, name, on=True):
         n = name.strip().lower()
@@ -239,7 +244,24 @@ class Rules:
             out.append(Trigger("pace_review", {}, 3, deep=True))
         self._kb_triggers(s, out)
         self._extras(state, s, busy, out)
+        self._live(s, out)
         return out
+
+    def _live(self, s, out):
+        """facts_ready: the engine wrote new item facts into the addon's Data/Live.lua since the coach last said so
+        (live_data.LiveData.news: handed out once, so asked only when it can be said), said at a quiet moment: out of
+        combat, alive, and resting or on a flight. restart: the game only sees them after a WoW restart."""
+        live = self.live
+        quiet = not s.get("combat") and not s.get("dead") and (s.get("resting") or s.get("on_taxi"))
+        if live is None or not quiet or not self._ready("live", LIVE_POLL_S):
+            return
+        try:
+            news = live.news()
+        except Exception as e:  # noqa: BLE001 - an extra; never break the rules loop
+            log_once("rules.live", e)
+            return
+        if news:
+            out.append(Trigger("facts_ready", {"n": news.get("n") or 0, "restart": bool(news.get("restart"))}, 3))
 
     def _away(self, state, s, busy, out):
         """Moving away from the waypoint, judged from the recent track (state.pos_hist), not two samples: the

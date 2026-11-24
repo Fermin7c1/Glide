@@ -103,7 +103,17 @@ def callout(batch, ctx):
         f = kinds["turnin_decay_soon"].facts
         lines.insert(0, "Turn in %s before you level: it drops from %s to %s XP." % (
             f.get("quest"), f.get("xp_now"), f.get("xp_after_level_up")))
+    if "facts_ready" in kinds:
+        lines.append(facts_ready_line(kinds["facts_ready"].facts))
     return " ".join(lines[:3])
+
+
+def facts_ready_line(facts):
+    """What to say when new item facts are in the addon's Data/Live.lua (facts_ready): a /reload shows them, or
+    (restart) only a WoW restart does."""
+    if facts.get("restart"):
+        return "Glide learned where your gear comes from; restart WoW once to see it in the game."
+    return "New item facts are in the game after a /reload."
 
 
 def why_line(ctx):

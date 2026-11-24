@@ -20,6 +20,9 @@ env:
   GEMINI_API_KEY: ""
   GOOGLE_API_KEY: ""
   OPENROUTER_API_KEY: ""
+  OPENAI_API_KEY: ""
+  TAVILY_API_KEY: ""
+  BRAVE_API_KEY: ""
   PYTHONIOENCODING: utf-8
   # luacheck as the release's Windows executable, checked against this SHA-256 (download it once and Get-FileHash
   # it to move to another release)

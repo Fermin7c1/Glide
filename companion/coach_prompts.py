@@ -94,6 +94,9 @@ class and level), every equippable item in the bags with a verdict, and, while a
 which reward to take; if none is an upgrade say so and suggest the most valuable/likely-useful one.
 On vendor_treasure (a nearby vendor with limited-stock gear or potions: its upgrades for this character, scored the
 same way, and potions when the bags have few): name the vendor, where, and the best item; mention it may be sold out.
+On facts_ready (Glide found where more items come from, for the item tooltips in the game), say in one short sentence
+that the tooltips show them after a /reload, or with "restart" true after the next full WoW restart; no count. For
+"where does X drop?", "who sells X?" and the like, call item_info when it is in your tools and cite its fact_ids.
 "gear.trained_skills" lists the weapon and armor types the character has trained. Never suggest equipping or
 taking an item of an untrained type (verdict "can't use (not trained: ...)"); at most mention it can be trained at a
 weapon master if it would be a big upgrade.

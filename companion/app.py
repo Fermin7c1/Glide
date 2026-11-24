@@ -185,6 +185,8 @@ class App:
         self.strip_other = None
         self.app_version = os.environ.get("GLIDE_APP_VERSION") or None    # the desktop app that runs this engine
         self.refresher = None
+        self._ws, self._ws_lock = None, threading.Lock()     # WoWSims (_wowsims), made on first use
+        self.research = self.live = None        # item research and Data/Live.lua's writer (_start_research)
         import health
         self.health = health.Health(self)
         self.last_seq = None
@@ -925,6 +927,7 @@ class App:
         if not self.args.sim:
             threading.Thread(target=self._sync_rxp_imports, daemon=True).start()
             self._start_sim_weights()
+            threading.Thread(target=self._start_research, daemon=True, name="research-start").start()
         self.start_ptt()
         if not self.args.sim and not getattr(self.args, "no_kb", False):
             import kb_refresh
@@ -939,13 +942,48 @@ class App:
         upgrade line on item tooltips. WoWSims is downloaded on first use and kept current (wowsims.py)."""
         try:
             import sim_weights
-            import wowsims
             gear = self.rules.gear
             self.sim_weights = sim_weights.SimWeights(
-                ROOT, wowsims.WoWSims(ROOT, smoke=sim_weights.smoke), lambda: self.state, gear,
+                ROOT, self._wowsims(), lambda: self.state, gear,
                 lambda: glideconfig.wow_dir(ROOT), lambda: gear.opt.get("sims"), emit=self.on_message).start()
         except Exception as e:  # noqa: BLE001 - gear advice goes on with the stat weights it ships with
             log_once("sim_weights.start", e)
+
+    def _wowsims(self):
+        """The one wowsims.WoWSims of this run (data/wowsims/state.json has one writer): the sim weights' and the item
+        research's."""
+        with self._ws_lock:
+            if self._ws is None:
+                import sim_weights
+                import wowsims
+                self._ws = wowsims.WoWSims(ROOT, smoke=sim_weights.smoke)
+            return self._ws
+
+    def _start_research(self):
+        """Where items come from (research.py), on its own thread so the start never waits on it: the research worker
+        (WoWSims' item database, db.json and leftover_db.json at its data tag, loaded in the background and again for
+        a new tag; the knowledge base; the drops the player sees), the coach's item_info tool, and the facts written
+        into the addon's Data/Live.lua (live_data.py: every poll when they changed; the addon's reloads and its "lg"
+        observed from the game state) with the rules' facts_ready nudge. research.enabled off: nothing is looked up
+        (what is known stays)."""
+        try:
+            import coach_tools
+            import live_data
+            import research
+            opt = settings.Settings("research", self.cfg.get("research") or {})
+            self.research = research.Research(ROOT, research.ItemDBSource(self._wowsims()), self.kb_handle,
+                                              lambda: self.state, lambda: opt.get("enabled")).start()
+            coach_tools.research = self.research
+
+            def wow():
+                return glideconfig.wow_dir(ROOT)
+            self.live = live_data.LiveData(ROOT, wow, lambda: self.versions.installed(wow()),
+                                           state_fn=lambda: self.state)
+            self.live.register("items", self.research.items_section)
+            self.live.start()
+            self.rules.live = self.live
+        except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without item sources
+            log_once("research.start", e)
 
     def _sync_rxp_imports(self):
         """The RestedXP strings added in the app that RestedXP doesn't have yet back in the addon's
