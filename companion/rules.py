@@ -157,7 +157,8 @@ class Rules:
             return
         sk = s.get("skills") or {}
         ver = (state.gear_version["W"], state.gear_version["I"], state.gear_version["R"], s["level"],
-               tuple(sorted(sk.get("weapons") or ())), tuple(sorted(sk.get("armor") or ())))
+               tuple(sorted(sk.get("weapons") or ())), tuple(sorted(sk.get("armor") or ())),
+               getattr(self.gear, "sim_version", 0))           # (WoWSims weighed the gear anew)
         if ver == self.gear_ver:
             if self.pending_gear and not busy:
                 out.append(Trigger("gear_upgrade", {"upgrades": self.pending_gear[:3]}, 2))

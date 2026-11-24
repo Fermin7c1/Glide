@@ -65,7 +65,7 @@ for b in buttons:
     assert b.template != "UIPanelButtonTemplate" or b.text, "every button says what it does"
 assert P.status.text and "Streaming" in P.status.text, P.status.text
 want = ["Coach commentary", "Route", "Combat", "Buffs", "Gear", "Pace", "Upkeep", "Voice",
-        "Auto repair", "Bag cleanup", "New spells on level up", "Stacks on cooldown bars", "Data strip", "Minimap button"]
+        "Auto repair", "Bag cleanup", "New spells on level up", "Upgrades on item tooltips", "Stacks on cooldown bars", "Data strip", "Minimap button"]
 assert [b.label.text for b in boxes] == want, [b.label.text for b in boxes]
 
 

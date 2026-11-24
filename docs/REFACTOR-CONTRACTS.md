@@ -978,3 +978,23 @@ they don't spell out.
   to `SetText` as it is (`C_StringUtil.TruncateWhenZero`, never compared). Blizzard's frames are never written to.
   New: the Glide window's "Stacks on cooldown bars" switch and `/glide stacks on|off` (GlideLinkDB `stacks`). The
   strip is unchanged. The player asked (2026-11-22). Pinned by `tests/test_addon_stacks.py`.
+- **Addon 0.19.0 and the engine, contracts 5, 7 and 8 additive: WoWSims weighs a level-60 character's own gear.**
+  The engine downloads WoWSims Forever's simulator (`wowsimcli`, MIT) from the project's GitHub releases on first
+  use and follows its newest release without an app update (`companion/wowsims.py`): the release list is read at
+  most once a day, a new release's zip is checked against its `checksums.txt` and tried on WoWSims' own Arcane preset
+  before it is used, and one Glide's requests don't run on is set aside while the last one that ran stays (two kept);
+  no network, a download cut short or a sim that couldn't start are tried again after an hour. Rotation files are
+  read at the release's tag. `companion/sim_weights.py` sims a level-60 mage's worn gear and talents
+  (`companion/simbuild.py`: a base sim and one per stat, on one seed; enchants and random suffixes aren't in the
+  strip, so they aren't simmed yet) and keeps the stat weights. New on the player's disk: `data/wowsims/`
+  (`state.json`, `<tag>/wowsimcli(.exe)`, `<tag>/files/`), `data/sim_weights.json`, and the addon's
+  `Data/SimWeights.lua` in the WoW folder (`ns.simWeights`, shipped empty, written by the engine like
+  `Data/RXPImports.lua`, and again whenever it differs: an addon update puts the empty one back). New setting `gear.sims` (default on;
+  Settings, Gear upgrades: "Weigh my gear with WoWSims at level 60"). At 60 the coach's gear advice uses the
+  character's weights (the profile title "WoWSims <tag> (<spec>, your gear)"), and the chat says what WoWSims
+  measured the first time and after a new WoWSims (an info line, not spoken). In the game, `Compare.lua` adds one line
+  to item tooltips (bags, chat links, loot, vendors): "Glide (<spec>): +4.1 DPS (+0.6%) vs <the item worn>", a ring
+  or trinket set against the weaker of the two worn, a two-hander against main and off hand. New: the Glide window's
+  "Upgrades on item tooltips" switch and `/glide compare on|off` (GlideLinkDB `compare`); Gear.lua's item reading is
+  `ns.ItemStats`. The strip is unchanged. The player asked (2026-11-23). Pinned by `tests/test_simbuild.py`,
+  `tests/test_wowsims.py`, `tests/test_sim_weights.py` and `tests/test_addon_compare.py`.

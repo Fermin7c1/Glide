@@ -25,6 +25,7 @@ read_globals = {
     "CreateFrame", "CreateVector2D", "BackdropTemplateMixin", "GameTooltip", "MerchantFrame", "Minimap", "UIParent",
     "UISpecialFrames", "WorldFrame", "PlaySound", "ReloadUI", "GetCursorPosition", "GetPhysicalScreenSize",
     "GetCoinTextureString", "InCombatLockdown", "BuffBarCooldownViewer", "BuffIconCooldownViewer",
+    "TooltipDataProcessor", "TooltipUtil", "ItemRefTooltip",
     -- the client and the player
     "GetBuildInfo", "GetLocale", "GetRealmName", "GetServerTime", "GetTime", "GetZoneText", "GetSubZoneText",
     "GetBindLocation", "GetMoney", "GetXPExhaustion", "GetUnitSpeed", "GetPlayerFacing", "GetWeaponEnchantInfo",

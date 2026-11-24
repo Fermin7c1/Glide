@@ -18,6 +18,12 @@ terrain, buff and target icons, the level-up sound, the game's tables) is read a
 | `wowfiles/target_icons.py` (`TABLES`, `TYPE_ICONS`, `NAMED`) | [wowdev/wow-listfile](https://github.com/wowdev/wow-listfile) | No license published | About forty FileDataID numbers of client files (tables, icons), looked up there, to find those files in the player's client; nothing else is taken |
 | `knowledge/community/` | The community scan's own notes; each note cites its sources | Glide's notes: GPL-3.0; quoted facts belong to their sources | Short factual claims with links to the original posts and articles |
 
+## Downloaded at runtime, not shipped
+
+| What | Source | License | Notes |
+|---|---|---|---|
+| WoWSims Forever's simulator (`wowsimcli`) and a spec's rotation files | [WoWSims Forever](https://wowsims.com/forever/) ([wowsims/forever](https://github.com/wowsims/forever)) | MIT, copyright (c) 2022 wowsims team | Downloaded by the engine from the project's official GitHub releases on first use and kept on the newest (`companion/wowsims.py`; checked against the release's checksums), into `data/wowsims/`: none of it ships with Glide, since its item and spell data come from Blizzard's game files. It measures the stat weights for a level-60 character's own gear (`companion/sim_weights.py`); `companion/simbuild.py` holds a few of its preset settings (consumable and buff choices). Glide links back to the project wherever its numbers show |
+
 Glide used data from [alcaras/forever-ref](https://github.com/alcaras/forever-ref) (a QuestieDB copy, in-game
 observations and Wowhead harvests) until 2026-10-30. That repository publishes no license, and Wowhead's terms don't
 allow redistributing its data, so none of it is in Glide any more.

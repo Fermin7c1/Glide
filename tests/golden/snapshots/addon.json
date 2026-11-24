@@ -137,6 +137,7 @@
   "Data\\QuestIDs.lua",
   "Data\\VendorTreasures.lua",
   "Data\\RXPImports.lua",
+  "Data\\SimWeights.lua",
   "Core.lua",
   "Recorder.lua",
   "Scanner.lua",
@@ -150,6 +151,7 @@
   "Trash.lua",
   "Repair.lua",
   "Stacks.lua",
+  "Compare.lua",
   "Coach.lua",
   "Strip.lua",
   "Minimap.lua",
@@ -157,6 +159,7 @@
  ],
  "window": {
   "checks": [
+   true,
    true,
    true,
    true,
@@ -206,6 +209,8 @@
    "When bags are full, delete the cheapest RestedXP junk",
    "New spells on level up",
    "Show what your trainer now teaches, and what it changes",
+   "Upgrades on item tooltips",
+   "At 60: what an item changes in your DPS (WoWSims)",
    "Stacks on cooldown bars",
    "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
    "Data strip",

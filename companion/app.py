@@ -924,6 +924,7 @@ class App:
             Archiver(glideconfig.wow_dir(ROOT), ROOT, log=console_log).start()
         if not self.args.sim:
             threading.Thread(target=self._sync_rxp_imports, daemon=True).start()
+            self._start_sim_weights()
         self.start_ptt()
         if not self.args.sim and not getattr(self.args, "no_kb", False):
             import kb_refresh
@@ -932,6 +933,19 @@ class App:
             self.navbuild = kb_refresh.NavBuilder(ROOT, log=console_log,
                                                   first_map=self._continent, wait_for=self.refresher)
             self.navbuild.start()
+
+    def _start_sim_weights(self):
+        """WoWSims weighs a level-60 character's own gear (sim_weights.py): the coach's gear advice and the addon's
+        upgrade line on item tooltips. WoWSims is downloaded on first use and kept current (wowsims.py)."""
+        try:
+            import sim_weights
+            import wowsims
+            gear = self.rules.gear
+            self.sim_weights = sim_weights.SimWeights(
+                ROOT, wowsims.WoWSims(ROOT, smoke=sim_weights.smoke), lambda: self.state, gear,
+                lambda: glideconfig.wow_dir(ROOT), lambda: gear.opt.get("sims"), emit=self.on_message).start()
+        except Exception as e:  # noqa: BLE001 - gear advice goes on with the stat weights it ships with
+            log_once("sim_weights.start", e)
 
     def _sync_rxp_imports(self):
         """The RestedXP strings added in the app that RestedXP doesn't have yet back in the addon's

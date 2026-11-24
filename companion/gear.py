@@ -60,8 +60,20 @@ class Gear:
         self.cfg = cfg
         with open(os.path.join(HERE, "data", "stat_weights.json"), encoding="utf-8") as fh:
             self.profiles = json.load(fh)["profiles"]
+        self.sim = None                 # the weights WoWSims measured on this character (sim_weights.py), or None
+        self.sim_version = 0            # bumped when they change (rules.py compares the bags again)
+
+    def set_sim(self, entry):
+        """The character's WoWSims weights ({"class", "spec", "w", "wowsims", ...}), or None."""
+        if entry is not self.sim:
+            self.sim = entry
+            self.sim_version += 1
 
     def weights(self, cls, level):
+        sim = self.sim
+        if sim and self.opt.get("sims") and (level or 0) >= 60 and str(cls or "").upper() == sim.get("class"):
+            return {"title": "WoWSims %s (%s, your gear)" % (sim.get("wowsims") or "", sim.get("spec") or ""),
+                    "kind": "sim", "spec": sim.get("spec"), "w": sim["w"]}
         cls = (cls or "").capitalize()
         kind = self.opt.get("kind")
         spec = self.cfg.get("spec")

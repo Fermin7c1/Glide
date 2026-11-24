@@ -990,6 +990,14 @@
        "restart": true,
        "step": 0.5,
        "type": "number"
+      },
+      {
+       "def": true,
+       "help": "Glide runs WoWSims (wowsims.com/forever) on your own gear and talents to measure what each stat is worth to you, for the coach's gear advice and the upgrade line on item tooltips in the game. It downloads WoWSims' simulator (about 10 MB) from the project's own releases and keeps it current. Mage for now.",
+       "key": "companion.gear.sims",
+       "label": "Weigh my gear with WoWSims at level 60",
+       "restart": true,
+       "type": "bool"
       }
      ],
      "title": "Gear upgrades"

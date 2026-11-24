@@ -224,6 +224,12 @@ local function build()
                 .. "rank changes, and its cost. /glide train opens it any time.",
             get = ns.TrainAutoOn, set = ns.SetTrainAuto })
     end
+    if ns.CompareOn then
+        y = checkbox(y, PAD, { name = "Upgrades on item tooltips", desc = "At 60: what an item changes in your DPS (WoWSims)",
+            tip = "Your item tooltips say what an item would change in your DPS against what you wear, by the stat weights "
+                .. "WoWSims measured on your own gear and talents in the Glide app (new ones after a /reload). /glide compare on|off.",
+            get = ns.CompareOn, set = ns.SetCompare })
+    end
     if ns.StacksOn then
         y = checkbox(y, PAD, { name = "Stacks on cooldown bars", desc = "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
             tip = "The Cooldown Manager's bars and icons show a buff's stacks but not a stacking debuff's on you: Glide adds "

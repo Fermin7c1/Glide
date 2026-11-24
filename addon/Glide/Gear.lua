@@ -76,6 +76,7 @@ local function itemStats(link)
     end
     return stats
 end
+ns.ItemStats = itemStats          -- (Compare.lua: the upgrade line on item tooltips)
 
 -- the stats an entry keeps when they don't all fit its page, most worth keeping first (a weapon's speed and damage,
 -- armor, the main stats); codes not listed go before any of these

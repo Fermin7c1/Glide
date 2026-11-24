@@ -2,7 +2,7 @@
 ## Title: Glide
 ## Notes: Glide - records quests, NPCs, XP and routes, and streams live game state to the Glide companion through a small pixel strip (top-left). What it does for you: repairs everything at a merchant who repairs, and when the bags are full, deletes the cheapest item RestedXP marked as junk.
 ## Author: Fermin
-## Version: 0.18.0
+## Version: 0.19.0
 ## SavedVariables: GlideRecorderDB, GlideLinkDB
 ## OptionalDeps: RXPGuides
 ## IconTexture: Interface\AddOns\Glide\Media\icon
@@ -10,6 +10,7 @@
 Data\QuestIDs.lua
 Data\VendorTreasures.lua
 Data\RXPImports.lua
+Data\SimWeights.lua
 Core.lua
 Recorder.lua
 Scanner.lua
@@ -23,6 +24,7 @@ Training.lua
 Trash.lua
 Repair.lua
 Stacks.lua
+Compare.lua
 Coach.lua
 Strip.lua
 Minimap.lua

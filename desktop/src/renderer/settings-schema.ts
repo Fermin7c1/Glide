@@ -181,6 +181,8 @@ export const SCHEMA: Tab[] = [
         { key: "companion.gear.spec", label: "Spec", type: "text",
           help: "e.g. Enhancement, Frost, Arms. Empty: your class's first profile." },
         { key: "companion.gear.min_gain_pct", label: "Minimum gain to call an upgrade (%)", type: "number", step: 0.5 },
+        { key: "companion.gear.sims", label: "Weigh my gear with WoWSims at level 60", type: "bool",
+          help: "Glide runs WoWSims (wowsims.com/forever) on your own gear and talents to measure what each stat is worth to you, for the coach's gear advice and the upgrade line on item tooltips in the game. It downloads WoWSims' simulator (about 10 MB) from the project's own releases and keeps it current. Mage for now." },
       ] },
       { title: "RestedXP route", intro: "These describe how you play, so the route analysis matches.", fields: [
         { key: "companion.rxp.ssf", label: "Solo self-found", type: "bool" },
