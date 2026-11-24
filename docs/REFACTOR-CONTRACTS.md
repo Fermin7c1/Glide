@@ -998,3 +998,8 @@ they don't spell out.
   "Upgrades on item tooltips" switch and `/glide compare on|off` (GlideLinkDB `compare`); Gear.lua's item reading is
   `ns.ItemStats`. The strip is unchanged. The player asked (2026-11-23). Pinned by `tests/test_simbuild.py`,
   `tests/test_wowsims.py`, `tests/test_sim_weights.py` and `tests/test_addon_compare.py`.
+- **WoWSims weights count hit and crit rating (contract 8).** Forever's items report hit and crit as ratings (`HT`,
+  `CR` in the strip: the player's Channeler's Ring `HT10`, Robe of the Archmage `CR14`), which the first weights left
+  at 0. They are measured too now (WoWSims' hit and crit rating), and the weights carry how they were measured
+  (`simbuild.VERSION` in `data/sim_weights.json`'s key), so ones measured the old way are measured again. Pinned by
+  `tests/test_sim_weights.py`.

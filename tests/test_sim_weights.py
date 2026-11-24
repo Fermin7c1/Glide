@@ -95,6 +95,18 @@ try:
           "Worth in spell power: intellect 0.86, 1% crit 9.04." in said[0]["text"] and "hit" not in said[0]["text"],
           said)
 
+    check(set(e["w"]) >= {"HT", "CR", "HS", "CS"}, "hit and crit as Forever's ratings and as old percents")
+
+    # ---- weights an older Glide measured another way: measured again once settled --------------------------------
+    key0 = e["key"]
+    sw.chars["Nine"] = dict(e, key=key0.replace("[%d," % simbuild.VERSION, "[1,", 1))
+    n = ws.sims
+    sw.tick()
+    clock[0] += sim_weights.SETTLE_S + 1
+    sw.tick()
+    check(ws.sims > n and sw.chars["Nine"]["key"] == key0 and len(said) == 1, "measured again, silently")
+    e = sw.chars["Nine"]
+
     # ---- the coach's gear advice uses them at 60 -----------------------------------------------------------------
     check(gear.sim is e and gear.sim_version > 0, "handed to the coach")
     prof = gear.weights("MAGE", 60)

@@ -130,8 +130,8 @@ class SimWeights:
 
     @staticmethod
     def key(char):
-        """What the weights depend on: class, race, talents, the items worn."""
-        return json.dumps([char["class"], char["race"], char["faction"],
+        """What the weights depend on: how they're measured, class, race, talents, the items worn."""
+        return json.dumps([simbuild.VERSION, char["class"], char["race"], char["faction"],
                            simbuild.talents_string(char["talents"]),
                            sorted((str(it.get("key")), it.get("id")) for it in char["worn"])])
 

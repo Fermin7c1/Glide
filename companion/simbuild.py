@@ -9,9 +9,12 @@ WoWSims sims every character at level 60 and has no healer sims: only the classe
 talent tree, the tree with the most points). Pure: no files, no network.
 
 Stat codes are the addon's and gear.py's (Gear.lua STAT_CODE / TOOLTIP): a weight per code is what one point of it
-on an item is worth, against the reference stat (a caster's spell damage: EP).
+on an item is worth, against the reference stat (a caster's spell damage: EP). Forever's items give hit and crit as
+ratings (HT, CR: 10 hit and 14 crit rating to 1%, and either counts for spells too), and older "chance ... with
+spells by 1%" lines as percents (HS, CS): both are weighed.
 """
 STAT_COUNT, PSEUDO_COUNT = 39, 40           # proto/common.proto Stat and PseudoStat, as WoWSims v1.0 has them
+VERSION = 2                                  # how weights are measured: weights from an older one are measured again
 
 # WoW's inventory slot -> WoWSims' ItemSlot (Head 0 .. Ranged 16); shirt and tabard aren't simmed
 INV_TO_SIM = {1: 0, 2: 1, 3: 2, 15: 3, 5: 4, 9: 5, 10: 6, 6: 7, 7: 8, 8: 9, 11: 10, 12: 11, 13: 12, 14: 13,
@@ -43,7 +46,8 @@ CLASSES = {
                 "Fire": "ui/specs/mage/dps/apls/deepFire.apl.json",
                 "Frost": "ui/specs/mage/dps/apls/frost.apl.json"},
         "weigh": [("SP", "s", 5, 50), ("IN", "s", 3, 50), ("SI", "s", 13, 50), ("MR", "s", 31, 10),
-                  ("AC", "s", 6, 50), ("FI", "s", 7, 50), ("FR", "s", 8, 50), ("CS", "p", 15, 2), ("HS", "p", 13, 2)],
+                  ("AC", "s", 6, 50), ("FI", "s", 7, 50), ("FR", "s", 8, 50), ("CR", "s", 18, 28), ("HT", "s", 17, 20),
+                  ("CS", "p", 15, 2), ("HS", "p", 13, 2)],
         "consumables": {"flaskId": 13513, "elixirIds": [13455, 250349, 20074], "foodId": 13932, "mhImbueId": 20750,
                         "mhWeaponImbueId": 277503, "resourcePotId": 13445},
         "buffs": {"greaterBlessingOfKings": True, "greaterBlessingOfWisdom": 1, "innervates": 1},
