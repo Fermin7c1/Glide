@@ -3,7 +3,18 @@ the coach thread's tickers (Coach._loop calls tick about once a second; it check
 import time
 
 import reminders as reminders_mod
+import rules as rules_mod
 from log import log_once
+
+# the kind of talk a reminder an engine part placed is (its "source"): held, untold and still armed, while the player
+# mutes that talk in game (/coach gear off holds the next move's vendor and auction house steps, as it holds the move)
+SOURCE_TALK = {"pursuit": "next_move"}
+
+
+def muted(rem, flags):
+    """Whether a reminder is held now: one an engine part placed whose kind of talk is muted (SOURCE_TALK)."""
+    kind = SOURCE_TALK.get(rem.get("source"))
+    return kind is not None and not rules_mod.allowed(kind, flags or {})
 
 
 class ReminderTicker:
@@ -41,7 +52,7 @@ class ReminderTicker:
                                 near_yd=float(c.opt.get("reminder_near_yd")))
         flags = c.state.coach_flags() if hasattr(c.state, "coach_flags") else {}
         out = []
-        for rem, why, detail in r.check(env, now):
+        for rem, why, detail in r.check(env, now, held=lambda x: muted(x, flags)):
             msg = {"kind": "reminder", "text": reminders_mod.speech(rem, why, detail),
                    "speak": bool(flags.get("coach", True)), "urgent": False, "reminder": rem["id"], "t": time.time()}
             c.emit(msg)

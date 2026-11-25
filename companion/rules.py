@@ -1,4 +1,5 @@
 """Rules engine: turns state changes into coaching triggers (no AI here)."""
+import inspect
 import math
 import re
 import time
@@ -6,6 +7,7 @@ from typing import Any
 
 from geo import compass, relative_label
 import gear as gear_mod
+import offline_coach
 import settings
 from state import as_int
 from log import log_once
@@ -45,6 +47,8 @@ CATEGORY = {
     "flight_path_nearby": "route", "target_tapped": "combat",
     # new item facts in the addon's Data/Live.lua (see Rules._live); a web fact the coach said, shown wrong (_corrected)
     "facts_ready": "upkeep", "fact_corrected": "upkeep",
+    # the next move toward the next best-in-slot piece, weighed by effort, and its follow-through (see Rules._pursuit)
+    "next_move": "gear", "pursuit_roll": "gear", "pursuit_got": "gear",
 }
 CONSUMABLE_LOW = {"food": 4, "drink": 4, "ammo": 200}   # warn when a count drops to this or below
 TALENT_GRACE_S = 30               # unspent talent points: say so once per level, after this long
@@ -55,12 +59,222 @@ BIS_POLL_S = 5                    # next_upgrade / enchant_missing: how often th
 BIS_ADDON = (0, 22, 0)            # the oldest addon that sends worn enchants: from it on, no EN code means no enchant
 ENCHANT_GAP_S = 600               # enchant_missing: one slot at a time, at most once in this long
 TALENT_POLL_S = 5                 # talent_check: how often the sims' talent check is looked at
+PURSUIT_POLL_S = 15               # next_move: how often the pursuit plan is looked at (the planner works it out)
+ROLL_WAIT_S = 120                 # pursuit_roll: after a boss of the move died, the time its loot (and a roll) may take
+#                                   (pursuit.LOOT_S, research.LOOT_S: a boss's death to its item in the bags)
+KILL_GAP_S = 300                  # ... one kill per boss in this long (its corpse stays targeted; pursuit.KILL_DEDUP_S)
+GOT_WAIT_S = 30                   # pursuit_got: how long the plan may take to move past an item that landed
+HERE_GAP_S = 1800                 # zoning into the move's dungeon: what drops there, once per place in this long
+PLAN_ALTS = 2                     # the alternatives followed through on with the first move (what bis_plan tells)
+AH_CITIES = {"Alliance": ("Stormwind City", "Ironforge", "Darnassus"),       # an auction house step is said in these
+             "Horde": ("Orgrimmar", "Undercity", "Thunder Bluff")}
+TRY_UNITS = {"inst": "runs", "raid": "weeks", "mob": "kills"}                # what a try at a move of this kind is
 
 
 def version_tuple(v):
     """An addon version as a tuple ("0.22.0" -> (0, 22, 0)); () for none."""
     m = re.match(r"\s*(\d+(?:\.\d+)*)", str(v or ""))
     return tuple(int(x) for x in m.group(1).split(".")) if m else ()
+
+
+def pursuit_key(s):
+    """The key a character's pursuit is kept under (bis.char_key's rule): "Name-Realm" when the realm is known (its
+    spaces left out), else "Name"; "" without a name."""
+    name = str((s or {}).get("name") or "")
+    realm = str((s or {}).get("realm") or "").replace(" ", "")
+    return "%s-%s" % (name, realm) if name and realm else name
+
+
+def move_key(char, m):
+    """next_move's told key for a move (kept by the planner: told / mark_told): the character and the move's own key
+    (what to do and its items sorted: the same move, however a kill reorders what it rolls)."""
+    own = m.get("key")
+    key = own if isinstance(own, str) and own else "%s|%s" % (
+        m.get("act"), ",".join(str(i) for i in sorted(offline_coach.move_items(m))))
+    return "next_move|%s|%s" % (char, key)
+
+
+def planner_on(planner):
+    """Whether the planner plans now (pursuit.enabled): its enabled() or _on() when it has one, else True."""
+    for name in ("enabled", "_on"):
+        fn = getattr(planner, name, None)
+        if callable(fn):
+            try:
+                return fn() is not False
+            except Exception as e:  # noqa: BLE001 - on then
+                log_once("rules.pursuit_on", e)
+                return True
+    return True
+
+
+def _takes(fn, name):
+    """Whether a callable takes a keyword argument of this name (or any keyword)."""
+    try:
+        ps = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == name or p.kind is inspect.Parameter.VAR_KEYWORD for p in ps)
+
+
+def plan_of(planner, char, fresh=False):
+    """planner.plan(char) ({"goal", "moves", "alts"}), worked out now (fresh: an item just landed) when the planner can
+    be asked to; None when it gives none."""
+    fn = planner.plan
+    plan = fn(char, fresh=True) if fresh and _takes(fn, "fresh") else fn(char)
+    return plan if isinstance(plan, dict) else None
+
+
+def _count(n):
+    return n if isinstance(n, int) and not isinstance(n, bool) and n >= 0 else None
+
+
+def _ledger(planner, char, item_id):
+    """planner.ledger(char, item id), the hunt so far ({"tries", "range", "odds", ...}), when it has one; else None."""
+    fn = getattr(planner, "ledger", None)
+    if not callable(fn):
+        return None
+    try:
+        got = fn(char, item_id)
+    except Exception as e:  # noqa: BLE001 - none then
+        log_once("rules.pursuit_ledger", e)
+        return None
+    return got if isinstance(got, dict) else None
+
+
+def pursuit_runs(planner, char, item_id, seen: int | None = 0):
+    """The runs so far at an item without it: the planner's own count from the tries it keeps in data/pursuit.json
+    (Planner.ledger(char, item id)["tries"], else Planner.runs(char, item id)) when it has one, else `seen` (the kills
+    the caller counted)."""
+    n = _count((_ledger(planner, char, item_id) or {}).get("tries"))
+    if n is not None:
+        return n
+    fn = getattr(planner, "runs", None)
+    if callable(fn):
+        try:
+            n = _count(fn(char, item_id))
+        except Exception as e:  # noqa: BLE001 - the caller's count then
+            log_once("rules.pursuit_runs", e)
+            n = None
+        if n is not None:
+            return n
+    return seen
+
+
+def pursuit_range(planner, char, item_id, move=None):
+    """(fewest, most) runs an item usually takes: the planner's ledger for it ("range": [p25, p75]), else the move's
+    (odds_range); None when nothing says."""
+    return _pair((_ledger(planner, char, item_id) or {}).get("range")) or odds_range(move)
+
+
+def pursuit_src(planner, char, item_id, move=None):
+    """The source the odds of an item's hunt name ("classic's chance", "web, unconfirmed", "a guess"): the planner's
+    ledger odds for it, else the move's (offline_coach.odds_source); None when none is named (the player's own kills)."""
+    for odds in ((_ledger(planner, char, item_id) or {}).get("odds"), (move or {}).get("odds")):
+        if isinstance(odds, str) and odds:
+            return offline_coach.odds_source(odds)
+    return None
+
+
+def planner_told(planner, key, char, mark=False):
+    """planner.told(key) (mark: mark_told(key)) for the character: with it (char_key_) when the planner takes one, so
+    a key said before its first poll is the right character's."""
+    fn = planner.mark_told if mark else planner.told
+    try:
+        takes = len(inspect.signature(fn).parameters) >= 2
+    except (TypeError, ValueError):
+        takes = False
+    return fn(key, char) if takes and char else fn(key)
+
+
+def _pair(r):
+    """(lo, hi) from a [p25, p75] list, or None."""
+    if isinstance(r, (list, tuple)) and len(r) >= 2 and all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                                                            for x in r[:2]):
+        return int(round(r[0])), int(round(r[1]))
+    return None
+
+
+def _chance(move):
+    """A move's chance a try ("p", else "q") when it is one (0 < p < 1), else None."""
+    m = move or {}
+    q = m.get("p") if m.get("p") is not None else m.get("q")
+    return q if isinstance(q, (int, float)) and not isinstance(q, bool) and 0 < q < 1 else None
+
+
+def odds_range(move):
+    """(fewest, most) runs a move usually takes, the 25 to 75% range of tries: the planner's "range" ([p25, p75]),
+    else from its chance per try ("p" or "q": effort.quantiles), else from its odds as said ("usually 3 to 10 runs");
+    None when none of them says."""
+    m = move or {}
+    got = _pair(m.get("range"))
+    if got:
+        return got
+    q = _chance(m)
+    if q is not None:
+        try:
+            import effort
+            got = _pair(effort.quantiles(q))
+            if got:
+                return got
+        except Exception as e:  # noqa: BLE001 - from the words then
+            log_once("rules.odds_range", e)
+    hit = re.search(r"(\d+) to (\d+)", str(m.get("odds") or ""))
+    return (int(hit.group(1)), int(hit.group(2))) if hit else None
+
+
+def unlucky(n, move=None, rng=None):
+    """Whether n tries without the item is past what most take ("bad luck, not a bad plan"): past the median try for
+    the move's chance a try (effort.tries_for), else past the top of the usual range."""
+    if not isinstance(n, int) or isinstance(n, bool) or n < 1:
+        return False
+    q = _chance(move)
+    if q is not None:
+        try:
+            import effort
+            median = effort.tries_for(q, 0.5)
+            if isinstance(median, int):
+                return n > median
+        except Exception as e:  # noqa: BLE001 - by the range then
+            log_once("rules.unlucky", e)
+    return bool(rng) and n > rng[1]
+
+
+def same_place(zone, place):
+    """Is the zone the player is in the place a move names ("Blackrock Spire" for "Upper Blackrock Spire")?"""
+    a, b = (" ".join(re.sub(r"[^a-z0-9' ]+", " ", str(x or "").lower()).split()) for x in (zone, place))
+    return bool(a and b) and (a == b or (min(len(a), len(b)) >= 4 and (a in b or b in a)))
+
+
+def step_reminders(m, name_fn, srcs_fn, faction=None):
+    """A move's steps that are best said where they happen, as reminders for Reminders.replace (said once per arrival,
+    no nudges): a vendor's, near the vendor (its npc id and name) and in its town; an auction house buy, in the side's
+    auction house cities. [] for another move."""
+    mk, where = offline_coach.move_act(m)
+    names = [n for n in (name_fn(i) for i in offline_coach.move_items(m)) if n]
+    if not names or mk not in ("vendor", "ah"):
+        return []
+    things = " and ".join(offline_coach.the_item(n) for n in names[:2])
+    if mk != "vendor":
+        cities = AH_CITIES.get(str(faction or "")) or AH_CITIES["Alliance"] + AH_CITIES["Horde"]
+        return [{"what": "check the auction house for %s" % things, "when": {"kind": "place", "place": list(cities)},
+                 "every_min": 0}]
+    src = {}
+    for iid in offline_coach.move_items(m):
+        src = next((x for x in srcs_fn(iid) if x.get("kind") in ("vendor", "rep")
+                    and (not isinstance(where, int) or x.get("npc") == where)), None) or {}
+        if src:
+            break
+    # (the planner's own names fill in what the sources don't say)
+    who = src.get("npc_name") or (m.get("npc_name") if isinstance(m.get("npc_name"), str) else None)
+    town = src.get("zone_name") or (m.get("place") if isinstance(m.get("place"), str) else None)
+    what = "buy %s from %s" % (things, who) if who else "buy %s" % things
+    out = []
+    if isinstance(where, int) or who:
+        out.append({"what": what, "when": {"kind": "npc", "npc": where if isinstance(where, int) else None,
+                                           "name": who}, "every_min": 0})
+    if town:
+        out.append({"what": what, "when": {"kind": "place", "place": town}, "every_min": 0})
+    return out
 
 
 def allowed(kind, flags):
@@ -123,6 +337,9 @@ class Rules:
         self.bis_said = set()         # next_upgrade / enchant_missing keys said this session
         self.enchant_t = 0.0          # when enchant_missing was last raised
         self.sims: Any = None         # sims.Sims (its talent check, and what was told: data/sims.json), set by the app
+        self.pursuit: Any = None      # pursuit.Planner (the next move toward the next BiS piece), set by the app
+        self.reminders: Any = None    # reminders.Reminders (the move's vendor and auction house steps), set by the app
+        self._pursuit_reset(None)
 
     def watch(self, name, on=True):
         n = name.strip().lower()
@@ -194,8 +411,15 @@ class Rules:
         self.bag_items = self.gear.compare_all(worn, bags, s["class"], s["level"], sk)
         self.upgrades = sorted([u for u in self.bag_items if u["verdict"].startswith("upgrade")],
                                key=lambda x: -x["gain"])
+        # an item the pursuit went for (Glide's next move, still missing at its last look, or one that landed: this
+        # session's, and the planner's own across restarts) is pursuit_got's to say, wherever it moves in the bags
+        ids = self._pursued_ids(s)
+        chased = {it.get("key") for it in bags if it.get("id") in ids} if ids else set()
         for u in self.upgrades:
             tag = "%s|%s" % (u["key"], u["item"])
+            if u["key"] in chased:
+                self.gear_told[tag] = "ok"
+                continue
             now_ok = u["wait_level"] is None
             told = self.gear_told.get(tag)
             if told is None or (now_ok and told == "wait"):
@@ -266,6 +490,7 @@ class Rules:
         self._live(s, out)
         self._corrected(s, out)
         self._bis(state, s, out)
+        self._pursuit(state, s, busy, out)
         self._talent_check(s, out)
         return out
 
@@ -310,7 +535,10 @@ class Rules:
                 return
             flags = s.get("coach_flags") or {}
             sends = version_tuple(s.get("addon_version")) >= BIS_ADDON        # (worn enchants and suffixes)
-            t = self._next_upgrade(cb, state, flags, ranker, sends)
+            # (while the pursuit has a move, or hasn't looked at the plan yet, the next move is the one "next" said:
+            # next_move, weighed by effort)
+            waits = self.pursuit is not None and (self.p_move is not None or not self.p_looked)
+            t = None if waits else self._next_upgrade(cb, state, flags, ranker, sends)
             if t is None and sends:
                 t = self._enchant_missing(cb, state, worn, flags, ranker)
             if t is not None:
@@ -436,6 +664,339 @@ class Rules:
         self.enchant_t = now
         return Trigger("enchant_missing", {"slot": gear_mod.slot_word(e["slot"]), "item": it.get("name"),
                                            "enchant": e["name"], "dps": round(e["d"], 1)}, 3)
+
+    # ---- the next move toward the next best-in-slot piece (pursuit.Planner), and its follow-through ----------------
+    def _pursuit_reset(self, char):
+        """Forget what the pursuit rules saw (at the start, and when another character plays)."""
+        self.p_char = char            # the character key the state below is for
+        self.p_said = set()           # next_move / pursuit_got keys said this session (the planner keeps them too)
+        self.p_looked = False         # the plan was looked at for this character (next_upgrade waits for it)
+        self.p_move = None            # the plan's first move at the last look ({"act", "items", "odds", "why", ...})
+        self.p_moves = []             # ... it and the PLAN_ALTS alternatives: what the player was told of
+        self.p_missing = {}           # item id -> its name: their items the character didn't have at the last look
+        self.p_landed = {}            # item id -> {"t", "name", "equip"}: one of those, theirs now (pursuit_got)
+        self.p_got = set()            # item ids that landed this session (gear_upgrade never says them)
+        self.p_bosses = {}            # npc id -> [item ids]: the bosses that drop those items (a kill is a run)
+        self.p_rolls = []             # [{"npc", "t", "items"}]: such a boss died; its roll is said once the loot is in
+        self.p_kills = {}             # npc id -> when its kill was last counted
+        self.p_base = {}              # item id -> the planner's run count when this session first followed it
+        self.p_runs = {}              # item id -> kills counted without it this session
+        self.p_zone = None            # the zone the character was last seen in (zoning into the move's place)
+        self.p_here = None            # (place, text): the zone-in line waiting for a quiet moment
+        self.p_reminded = False       # the first move whose steps are placed as reminders (its key; None: no move)
+
+    def _pursuit(self, state, s, busy, out):
+        """Glide's next move toward the character's next best-in-slot piece at 60, weighed by effort as well as DPS
+        (pursuit.Planner: plan(char) -> {"goal", "moves", "alts"}), and the follow-through as the player plays, on the
+        first move and its PLAN_ALTS alternatives (what the player is told of):
+        - next_move {text, odds, why} (priority 2): the plan's first move in words (offline_coach.move_parts), its odds
+          as the planner says them (one number and its range, the source named) and the reasons (said only when
+          asked), "also" for a run that rolls more (the others: the odds are its lead item's); once per move, never
+          again after a restart (the planner keeps what was told: told / mark_told).
+          Zoning into the dungeon or raid of the move or an alternative: {text, here: true}, what drops there for
+          them, once per place in HERE_GAP_S.
+        - pursuit_roll {item, tries, range} (priority 3): a boss that drops one of their items died (the target, dead)
+          and, ROLL_WAIT_S on (the loot, a group's roll), the item isn't theirs: the runs so far (the planner's count,
+          or this session's kills on top of its count when it missed one), the range most runs take (pursuit_range),
+          "src" the source its odds name below 0.9 sure ("classic's chance"), "unit" ("runs", "weeks" for a raid,
+          "kills" for a creature outside an instance), "unlucky" past the median try. Once per kill (one per boss in
+          KILL_GAP_S); counted whether or not it is said.
+        - pursuit_got {item, next} (priority 2): one of their items the character didn't have is in the bags
+          ("equip") or worn; the plan is worked out again at once, and it is said once the plan moved past it (at most
+          GOT_WAIT_S on) with the next move in words (whose next_move isn't said again); gear_upgrade never says that
+          item (_gear leaves it to this).
+        The first move's vendor and auction house steps are placed as reminders (source "pursuit", said to that
+        character only), replaced when it changes. Nothing below 60, before the session started or while the planner is off (pursuit.enabled); said never
+        in combat, on a flight or dead, one a frame, next_move only in a frame that raised nothing else; while gear
+        talk is muted (/coach gear off) next_move waits, untold."""
+        planner = self.pursuit
+        if planner is None or not self.started:
+            return
+        try:
+            char = pursuit_key(s)
+            if not char:
+                return
+            if char != self.p_char:
+                self._pursuit_reset(char)              # (the reminders a move placed are its character's alone)
+            if (s.get("level") or 0) < 60:
+                return
+            if not planner_on(planner):
+                self._pursuit_off()
+                return
+            held = self._held(state)
+            landed = self._pursuit_watch(state, s, held)
+            if landed or self._ready("pursuit", PURSUIT_POLL_S):
+                self._pursuit_look(planner, char, state, s, held, fresh=landed)
+            if busy:
+                return
+            flags = s.get("coach_flags") or {}
+            t = self._pursuit_got(planner, char, state, held, flags, out) or self._pursuit_roll(char, held, flags) \
+                or self._pursuit_here(flags)
+            if t is None and not out:
+                t = self._next_move(planner, char, state, flags)
+            if t is not None:
+                out.append(t)
+        except Exception as e:  # noqa: BLE001 - an extra; never break the rules loop
+            log_once("rules.pursuit", e)
+
+    def _pursuit_off(self):
+        """The planner is off: no move (next_upgrade speaks again), its reminders gone."""
+        self.p_move, self.p_moves, self.p_missing, self.p_bosses, self.p_looked = None, [], {}, {}, True
+        if self.reminders is not None and self.p_reminded is not None:
+            self.p_reminded = None
+            self.reminders.replace("pursuit", [])
+
+    def _pursued_ids(self, s):
+        """The item ids gear_upgrade leaves to the pursuit: the ones it follows still missing, the ones that landed
+        (this session's, and the planner's own record of them for this character, kept across restarts)."""
+        ids = set(self.p_missing) | set(self.p_landed) | self.p_got
+        planner = self.pursuit
+        fn = getattr(planner, "owned", None)
+        char = pursuit_key(s)
+        if callable(fn) and char and (s.get("level") or 0) >= 60 and planner_on(planner):
+            try:
+                got = fn(char)
+                ids |= {i for i in (got if isinstance(got, (list, tuple, set)) else ()) if isinstance(i, int)}
+            except Exception as e:  # noqa: BLE001 - this session's then
+                log_once("rules.pursuit_owned", e)
+        return ids
+
+    @staticmethod
+    def _held(state):
+        """{item id: "W" (worn) or "I" (in the bags)}."""
+        out = {}
+        for where in ("I", "W"):
+            for it in state.gear.get(where) or ():
+                if isinstance(it.get("id"), int):
+                    out[it["id"]] = where
+        return out
+
+    def _srcs(self, iid):
+        """Where an item comes from: the research's sources (Src dicts), or []."""
+        r = self.research
+        try:
+            f = r.facts(iid) if r is not None else None
+        except Exception as e:  # noqa: BLE001 - not known then
+            log_once("rules.pursuit_facts", e)
+            f = None
+        return [x for x in (f or {}).get("s") or () if isinstance(x, dict)]
+
+    def _names(self, m, state):
+        """-> a move's item names: the planner's own ("names"), else the research's or the game's; never an id (the
+        planner's "item 12345" stand-in isn't a name)."""
+        given = offline_coach.given_names(m)
+        return lambda i: given.get(i) or self._bis_item(i, state)[0]
+
+    def _move_parts(self, m, state):
+        """(text, also) of a move in words (offline_coach.move_parts)."""
+        return offline_coach.move_parts(m, self._names(m, state), self._srcs)
+
+    @staticmethod
+    def _move_key(char, m):
+        return move_key(char, m)
+
+    def _p_told(self, key, planner):
+        """Whether a pursuit key was said (this session, or before: the planner keeps it)."""
+        if key in self.p_said:
+            return True
+        if planner_told(planner, key, self.p_char):
+            self.p_said.add(key)
+            return True
+        return False
+
+    def _pursuit_watch(self, state, s, held):
+        """Every frame: one of the followed items the character didn't have is theirs now (landed), a boss that drops
+        one died (a roll to say once the loot is in), the character zoned into the dungeon or raid of the first move or
+        an alternative (what drops there for them). -> whether an item landed."""
+        now = time.time()
+        landed = [i for i in self.p_missing if i in held]
+        for iid in landed:
+            name = self.p_missing.pop(iid)
+            for where in ("W", "I"):
+                name = next((it.get("name") for it in state.gear.get(where) or () if it.get("id") == iid
+                             and it.get("name")), None) or name                  # (the game's, with its suffix)
+            self.p_landed.setdefault(iid, {"t": now, "name": name, "equip": held[iid] == "I"})
+            self.p_got.add(iid)
+        t = s.get("target") or {}
+        npc = as_int(t.get("npc"))
+        if t.get("dead") and npc in self.p_bosses and now - self.p_kills.get(npc, now - KILL_GAP_S) >= KILL_GAP_S:
+            self.p_kills[npc] = now
+            self.p_rolls.append({"npc": npc, "t": now, "items": list(self.p_bosses[npc])})
+        zone = s.get("zone")
+        if zone and zone != self.p_zone:
+            before, self.p_zone, self.p_here = self.p_zone, zone, None      # (left before it could be said: gone)
+            for m in self.p_moves if before is not None else ():
+                places = offline_coach.move_place(m, self._srcs)
+                if any(same_place(zone, p) for p in places):
+                    text = offline_coach.here_text(m, self._names(m, state), self._srcs)
+                    self.p_here = (places[0], text) if text else None
+                    break
+        return bool(landed)
+
+    def _pursuit_look(self, planner, char, state, s, held, fresh=False):
+        """Look at the plan (fresh: worked out now, an item just landed): its first move and PLAN_ALTS alternatives,
+        the items they name that the character doesn't have (and the planner's run count for each one first seen),
+        the bosses that drop them; the first move's steps placed as reminders when it changed. No plan (None) leaves
+        what was seen."""
+        self.p_looked = True                           # (a planner that fails: next_upgrade speaks while no move)
+        plan = plan_of(planner, char, fresh)
+        if plan is None:
+            return
+        ok = [m for m in plan.get("moves") or () if isinstance(m, dict) and offline_coach.move_items(m)]
+        first = ok[0] if ok and ok[0] is (plan.get("moves") or [None])[0] else None
+        moves, keys = [], set()
+        for m in ([first] if first else []) + list(plan.get("alts") or ()) + ok[1:]:
+            k = move_key(char, m) if isinstance(m, dict) and offline_coach.move_items(m) else None
+            if k is not None and k not in keys and len(moves) <= PLAN_ALTS:
+                keys.add(k)
+                moves.append(m)
+        missing, bosses = {}, {}
+        for m in moves:
+            mk, where = offline_coach.move_act(m)
+            name = self._names(m, state)
+            for iid in offline_coach.move_items(m):
+                if iid not in held and iid not in missing:
+                    missing[iid] = self.p_missing.get(iid) or name(iid)
+                    if iid not in self.p_base:
+                        self.p_base[iid] = pursuit_runs(planner, char, iid, 0) or 0
+                for npc in self._bosses_of(m, mk, where, iid):
+                    got = bosses.setdefault(npc, [])
+                    if iid not in got:
+                        got.append(iid)
+        self.p_move, self.p_moves, self.p_missing, self.p_bosses = first, moves, missing, bosses
+        self._pursuit_reminders(first, char, state, s)
+
+    def _pursuit_got(self, planner, char, state, held, flags, out):
+        """pursuit_got for an item that landed, once the plan moved past it (or GOT_WAIT_S on); its gear_upgrade line,
+        if one is about to be said, goes (this one says it's theirs)."""
+        now = time.time()
+        for iid, got in list(self.p_landed.items()):
+            moved = self.p_move is None or iid not in offline_coach.move_items(self.p_move)
+            if not moved and now - got["t"] < GOT_WAIT_S:
+                continue
+            del self.p_landed[iid]
+            self._drop_gear_line(got["name"], out)
+            key = "pursuit_got|%s|%d" % (char, iid)
+            if self._p_told(key, planner) or not allowed("pursuit_got", flags):
+                continue
+            self.p_said.add(key)
+            planner_told(planner, key, char, mark=True)
+            facts = {"item": got["name"], "next": None}
+            if got["equip"] and held.get(iid) == "I":
+                facts["equip"] = True
+            m = self.p_move
+            if moved and m is not None:
+                text, also = self._move_parts(m, state)
+                if text:
+                    facts["next"] = offline_coach.move_line(text, m.get("odds"), also)
+                    nk = self._move_key(char, m)              # (said here: no next_move for it after)
+                    self.p_said.add(nk)
+                    planner_told(planner, nk, char, mark=True)
+            return Trigger("pursuit_got", facts, 2)
+        return None
+
+    def _drop_gear_line(self, name, out):
+        """gear_upgrade doesn't say an item pursuit_got says: out of a trigger raised this frame and the held ones."""
+        for t in list(out):
+            if t.kind != "gear_upgrade":
+                continue
+            ups = [u for u in t.facts.get("upgrades") or () if u.get("item") != name]
+            if ups:
+                t.facts["upgrades"] = ups
+            else:
+                out.remove(t)
+        self.pending_gear = [u for u in self.pending_gear if u.get("item") != name]
+
+    def _pursuit_roll(self, char, held, flags):
+        """pursuit_roll ROLL_WAIT_S after a boss of the plan died, when none of its items is theirs (one that is:
+        pursuit_got says so). The run counts whether or not it is said (muted gear talk: counted, untold): the
+        planner's count, or its count when first followed plus this session's kills when that is more (a kill its
+        own poll missed)."""
+        now = time.time()
+        due = next((k for k in self.p_rolls if now - k["t"] >= ROLL_WAIT_S), None)
+        if due is None:
+            return None
+        self.p_rolls.remove(due)
+        if any(i in held or i in self.p_landed for i in due["items"]):
+            return None
+        for i in due["items"]:
+            self.p_runs[i] = self.p_runs.get(i, 0) + 1
+        iid = due["items"][0]
+        name = self.p_missing.get(iid)
+        if not name or not allowed("pursuit_roll", flags):
+            return None
+        mine = self.p_base.get(iid, 0) + self.p_runs[iid]
+        n = max(pursuit_runs(self.pursuit, char, iid, None) or 0, mine, 1)
+        move = next((m for m in self.p_moves if iid in offline_coach.move_items(m)), None)
+        rng = pursuit_range(self.pursuit, char, iid, move)
+        facts = {"item": name, "tries": n, "range": "%d to %d" % rng if rng else None}
+        src = pursuit_src(self.pursuit, char, iid, move) if rng else None
+        if src:
+            facts["src"] = src                         # (where the range comes from, below 0.9 sure)
+        unit = TRY_UNITS.get(offline_coach.move_act(move)[0], "runs")
+        if unit != "runs":
+            facts["unit"] = unit
+        if unlucky(n, move, rng):
+            facts["unlucky"] = True
+        return Trigger("pursuit_roll", facts, 3)
+
+    def _pursuit_here(self, flags):
+        """next_move {text, here: true} a moment after zoning into a followed move's dungeon or raid: what drops there,
+        once per place in HERE_GAP_S (muted gear talk: not said)."""
+        if self.p_here is None:
+            return None
+        place, text = self.p_here
+        self.p_here = None
+        if not allowed("next_move", flags) or not self._ready("pursuit_here|%s" % place, HERE_GAP_S):
+            return None
+        return Trigger("next_move", {"text": text, "odds": None, "why": None, "here": True}, 2)
+
+    def _next_move(self, planner, char, state, flags):
+        """next_move for the plan's first move, once per move (a web source it names is kept as told by the research,
+        so the game can correct it)."""
+        m = self.p_move
+        if m is None:
+            return None
+        key = self._move_key(char, m)
+        if self._p_told(key, planner) or not allowed("next_move", flags):
+            return None
+        text, also = self._move_parts(m, state)
+        if not text:
+            return None                                # (nothing to call it yet: never an id)
+        self.p_said.add(key)
+        planner_told(planner, key, char, mark=True)
+        for iid in offline_coach.move_items(m):
+            self._note_told(iid)
+        facts = {"text": text, "odds": m.get("odds"), "why": m.get("why")}
+        if also:
+            facts["also"] = also                       # (the run's other items: the odds are its lead item's)
+        return Trigger("next_move", facts, 2)
+
+    def _pursuit_reminders(self, m, char, state, s):
+        """The first move's vendor and auction house steps as reminders (source "pursuit", for this character alone:
+        Reminders.check says them to no other), in place of the ones placed for the move before, when it changed:
+        near the vendor and in its town; in an auction house city."""
+        rem = self.reminders
+        key = self._move_key(char, m) if m is not None else None
+        if rem is None or key == self.p_reminded:
+            return
+        self.p_reminded = key
+        rem.replace("pursuit", step_reminders(m, self._names(m, state), self._srcs, s.get("faction"))
+                    if m is not None else [], char=char)
+
+    def _bosses_of(self, m, mk, where, iid):
+        """The creatures whose kill is a run at a move's item: a dungeon or raid boss that drops it (the planner's
+        "drops", else the research's sources: there), the creature of a "mob" move (mk: the move's kind)."""
+        if mk == "mob":
+            return [where] if isinstance(where, int) else []
+        if mk not in ("inst", "raid"):
+            return []
+        out = [as_int(d.get("npc")) for d in m.get("drops") or () if isinstance(d, dict) and d.get("item") == iid]
+        for src in self._srcs(iid):
+            here = not isinstance(where, int) or src.get("zone") in (None, where)
+            if src.get("kind") == "drop" and here:
+                out.append(as_int(src.get("npc")))
+        return [n for n in dict.fromkeys(out) if n]
 
     @staticmethod
     def _worn_in(worn, slot):

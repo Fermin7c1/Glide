@@ -19,6 +19,8 @@ numbers with a "facts" list of the ids behind them. Nothing here writes to kb.db
   pack.panel(summary=None)         {"why", "pace"} for the dashboard, from the last block (never computes)
   pack.decay_info(quest_id, level) turnin_decay_soon facts (one cached row per quest; cheap on any thread)
   pack.verify_facts(ids)           (known, unknown): grounding check of a FACTS line
+  pack.instance_entrance(key)      where a dungeon's or raid's door is (area id or name; map percent), or None;
+                                   instance_entrance(kb, key) is the same for a store.KB or a kb.db path
   pack.status()                    KB status for the companion's startup line
   TOOLS / tool_definitions()       the Messages API "tools" list
   dispatch(name, args, ctx)        one tool's result dict (time-budgeted, trimmed to RESULT_TOKENS, never raises)
@@ -36,13 +38,14 @@ poi:<kind>:<id> g:<glossary term>. verify_facts() accepts one only when the row 
 
 Modules: pack (KnowledgePack, a facade over resolve, lookup, panel, extras and facts), context (Ctx), guides
 (guide and player resolution), results (budgets, trimming, fact ids), reasons (why codes in words), community
-(community notes), navigation (walking and flying routes; walk_world for routes outside the coach), explorer
-(per-guide facts for the Guides page), tools (the Claude tools and dispatch), values (small shared helpers), _layer
-(the defensive imports).
+(community notes), entrances (dungeon and raid doors), navigation (walking and flying routes; walk_world for routes
+outside the coach), explorer (per-guide facts for the Guides page), tools (the Claude tools and dispatch), values
+(small shared helpers), _layer (the defensive imports).
 """
 from knowledge.api._layer import IMPORT_ERROR
 from knowledge.api.community import NOTE_SKIP, community_notes
 from knowledge.api.context import Ctx
+from knowledge.api.entrances import instance_entrance
 from knowledge.api.guides import (DEFAULT_RXP, HORDE_RACES, RXP_KEYS, GuideResolver, norm_guide_name, player_from,
                                   resolve_guide_key)
 from knowledge.api.navigation import flight_from_track, plan_to_step, walk_route, walk_to_step, walk_world
@@ -59,10 +62,10 @@ from knowledge.api.tools.simulation import t_alternatives_here, t_eta, t_skip_im
 from knowledge.api.tools.travel import t_path_time, t_walk_route
 from knowledge.api.values import COMPASS, CONFIRMED, RANK, compass, money_text
 
-__all__ = ["IMPORT_ERROR", "NOTE_SKIP", "community_notes", "Ctx", "DEFAULT_RXP", "HORDE_RACES", "RXP_KEYS",
-           "GuideResolver", "norm_guide_name", "player_from", "resolve_guide_key", "flight_from_track", "plan_to_step",
-           "walk_route", "walk_to_step", "walk_world", "KnowledgePack", "verify_facts", "WHY_NOT_TEXT", "WHY_TEXT",
-           "why_text",
+__all__ = ["IMPORT_ERROR", "NOTE_SKIP", "community_notes", "Ctx", "instance_entrance", "DEFAULT_RXP", "HORDE_RACES",
+           "RXP_KEYS", "GuideResolver", "norm_guide_name", "player_from", "resolve_guide_key", "flight_from_track",
+           "plan_to_step", "walk_route", "walk_to_step", "walk_world", "KnowledgePack", "verify_facts", "WHY_NOT_TEXT",
+           "WHY_TEXT", "why_text",
            "BLOCK_TOKENS", "FACT_RE", "RESULT_TOKENS", "approx_tokens", "fit_block", "trim_result", "TOOL_BUDGET_S",
            "TOOLS", "dispatch", "tool_definitions", "tool_names", "t_community", "t_heuristics", "t_creature_info",
            "t_glossary", "t_quest_info", "t_search", "t_kill_xp", "t_param", "t_quest_xp", "route_steps",

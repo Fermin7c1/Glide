@@ -61,13 +61,14 @@ TRIGGER_TOPIC = {"low_health_in_combat": "combat", "target_tapped": "combat",
                  "buffs_dropped": "buffs", "buff_expiring": "buffs",
                  "gear_upgrade": "gear", "reward_choice": "gear", "vendor_treasure": "gear", "facts_ready": "gear",
                  "fact_corrected": "gear", "next_upgrade": "gear", "enchant_missing": "gear", "talent_check": "gear",
+                 "next_move": "gear", "pursuit_roll": "gear", "pursuit_got": "gear",
                  "addon_outdated": "system",
                  "bags_nearly_full": "upkeep", "low_durability": "upkeep", "consumables_low": "upkeep",
                  "training_available": "upkeep", "talent_points_unspent": "upkeep"}
 
 
 def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=None, gear_fn=None, system_fn=None,
-                 talent_plan=None, item_brief=None):
+                 talent_plan=None, item_brief=None, pursuit_fn=None):
     """Everything the model sees about the game for summary s: the player (buffs, kit, extras, the item they hover),
     the guide step, the current and next RestedXP steps with their places described, up to a full quest log in quest
     id order (with quest_priority for trimming), gear and the addon status. state: the GameState (or None);
@@ -76,7 +77,8 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
     app's getters for watched buffs, gear and addon status (gear_fn -> (upgrades, rewards, worn, bag items) and, at
     60, a fifth: Glide's best-in-slot ranks for the character, as Gear.bis_now gives them, for gear.next_upgrades);
     talent_plan: the next talent pick; item_brief(item id): what is known of an item (the hovered item's
-    hovered_item, and the names and sources of the next upgrades)."""
+    hovered_item, and the names and sources of the next upgrades); pursuit_fn: -> Glide's next move toward the next
+    best-in-slot piece in words, or None (coach_tools.plan_brief: gear.next_move)."""
     st = state
     # quests and map names from the knowledge base (kb.db); glide.db only without one
     if pack is not None and getattr(pack, "ok", False):
@@ -177,6 +179,9 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
             nu = bis_next(got[4], worn, item_brief)
             if nu:
                 gear["next_upgrades"] = nu
+        nm = next_move(pursuit_fn)
+        if nm:
+            gear["next_move"] = nm
     if me:
         area, _ = geo.area_at(me["map"], me["x"], me["y"])
         player["standing_in"] = area
@@ -212,6 +217,22 @@ def bis_next(got, worn, brief_fn=None):
     except Exception as e:  # noqa: BLE001 - the gear section goes without them
         log_once("context.next_upgrades", e)
         return []
+
+
+def next_move(pursuit_fn):
+    """gear.next_move: Glide's next move toward the next best-in-slot piece, {"move", "odds", "also" (what else the run
+    rolls), "why", "alts": [moves in a few words]} (pursuit_fn: coach_tools.plan_brief), or None (no plan, no
+    getter)."""
+    if pursuit_fn is None:
+        return None
+    try:
+        got = pursuit_fn()
+    except Exception as e:  # noqa: BLE001 - the gear section goes without it
+        log_once("context.next_move", e)
+        return None
+    if not isinstance(got, dict) or not got.get("move"):
+        return None
+    return {k: got[k] for k in ("move", "odds", "also", "why", "alts") if got.get(k)}
 
 
 HOVER_NOTE = "under the player's mouse in the game now: 'this' or 'that item' means it"
@@ -461,9 +482,11 @@ def shrink_hovered(player):
 def reference_trims(ref, order=()):
     """fit() steps for REFERENCE, least important first: quest flavour text, then the quests furthest down the
     route (quest_priority: the current step's quests first, then the next steps', then the rest of the log),
-    bag items beyond 6, community notes beyond 2, the next upgrades beyond 1, then quests down to 3."""
+    bag items beyond 6, community notes beyond 2, the next move's alternatives, the next upgrades beyond 1, then quests
+    down to 3."""
     quests = ref.get("quests") or {}
     gear = ref.get("gear") or {}
+    move = gear.get("next_move") if isinstance(gear.get("next_move"), dict) else {}
     order = [q for q in order if q in quests]
     order += [q for q in quests if q not in order]
 
@@ -482,4 +505,4 @@ def reference_trims(ref, order=()):
             return False
         return step
     return [details, quest(8), drop_list(gear, "equippable_items_in_bags", 6),
-            drop_list(ref, "community", 2), drop_list(gear, "next_upgrades", 1), quest(3)]
+            drop_list(ref, "community", 2), drop_list(move, "alts", 0), drop_list(gear, "next_upgrades", 1), quest(3)]

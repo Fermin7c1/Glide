@@ -5,7 +5,10 @@ The Glide addon's recorder half (Core.lua, Recorder.lua, Scanner.lua, RXPDump.lu
 side reads it back (contract 5, files on the player's disk): `tools/build_db.py` (sessions and RestedXP guide texts
 into `data/glide.db`) and `knowledge/sources/map_bounds.py` (exact map bounds into `data/kb.db`), both through
 `knowledge/sources/_lua.py` `recorder_db()`, which warns when the file's `schema` or a session's addon version is
-newer than the code reading it knows. `companion/archiver.py` keeps copies, so the 12 sessions the addon keeps are
+newer than the code reading it knows. The engine reads it too, read-only (`companion/recorder_data.py`, through the
+same reader): the character's professions, its reputation standings, the auction house prices it saw and the corpses
+it looted, for the BiS ranks, the sims and the pursuit planner. It is what the game knew at the last `/reload` or
+logout, never a live reading. `companion/archiver.py` keeps copies, so the 12 sessions the addon keeps are
 not the only ones. The live link's other SavedVariable, `GlideLinkDB`, holds settings only (Core.lua `ns.LinkDB`).
 
 This is a hand-written description of the addon's code; the strip (addon to engine, live) is `docs/STRIP.md`.
@@ -23,6 +26,7 @@ This is a hand-written description of the addon's code; the strip (addon to engi
 | `rxpVersion` | The RestedXP version whose guides were last copied |
 | `mapBounds` | `[uiMapID] = { instanceID, x0, y0, x1, y1, name }`: world yards of the map's (0,0) and (1,1) corners |
 | `mapBoundsBuild` | Client version + build the bounds were read on (e.g. `1.60.1.70205`) |
+| `auction` | `["<realm>\|<side>"] = { [itemID] = { copper, t } }` (addon 0.24.0): the lowest buyout for one the player saw while browsing the auction house, for the items in the character's plan only (its goal, its ranked items, and the `ah` list Data/Live.lua gives); a book per realm and side (`Skyborne\|Alliance`: each has its own auction house, so a price is only ever told to a character trading there), the 300 newest of each kept. Glide never searches by itself |
 
 ## A session
 
@@ -42,5 +46,6 @@ One per login (Core.lua `newSession`), id `YYYYMMDD-HHMMSS`.
 | `trail` | Position breadcrumbs `{ time, map, x, y, inCombat }` |
 | `events` | `{ e = kind, t, lvl, m, x, y, ... }`: level ups, deaths, zones, hearth, taxis, marks (`/glide mark`) |
 | `scan` | Quest-ID sweep results (`/glide scan`) |
-| `skills` | Trained skills at login, when the client reports them |
+| `skills` | Trained skills at login, when the client reports them: `{ t, lines = { { n = name, r = rank, mx = max rank, md = modifier, h = header } }, w = weapon mask, a = armor mask, ranks }`. A client that lists no skill lines (Forever's) gets `lines` from the spells it knows (addon 0.24.0, `from = "spells"`): each profession by its rank spells (`mx` the rank's cap, no `r`, `h` "Professions" or "Secondary Skills"), and the weapon and armor skills ("Weapon Skills", "Armor Proficiencies") |
+| `factions` | `[factionID] = { standing, value, t, v0, t0, t1 }` (addon 0.24.0): the standing (1 Hated to 8 Exalted) and its value for WoWSims' 15 item-source factions (21, 59, 369, 470, 509, 510, 529, 576, 577, 609, 910, 2798, 2799, 2819, 2827), read at login and a second after each `UPDATE_FACTION`; once it rises this session, `v0` and `t0` are its value just after the first rise and when, `t1` when it last rose (the session's grind: the Glide app learns a reputation rate from it however long the session runs) |
 | `errors` | The first 50 errors of the session, as text: the whole addon's (recorder and live link), Core.lua `ns.ReportError` |

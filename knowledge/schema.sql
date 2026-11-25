@@ -10,6 +10,7 @@
 --   2026-10-04  store: + column heuristic.priority (1 act now .. 3 background; filled by heuristics/engine.py
 --               load); + index i_step_time on obs_step_time(guide_key, idx) (rows from sources/live_logs.py).
 --   2026-10-08  community: + tables community_note, community_source (daily community scan, sources/community.py).
+--   2026-11-25  pursuit: + table instance_entrance (dungeon and raid entrances, sources/entrances.py).
 
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
 
@@ -268,3 +269,15 @@ CREATE TABLE IF NOT EXISTS community_note(
 CREATE TABLE IF NOT EXISTS community_source(
   id TEXT PRIMARY KEY, kind TEXT, medium TEXT, name TEXT, url TEXT, access TEXT, status TEXT,
   first_seen TEXT, last_checked TEXT, notes TEXT);
+
+-- dungeon and raid entrances (knowledge/sources/entrances.py): where the pursuit's map pin goes for "run <instance>".
+-- One row per instance; x, y are map percent like every other position here.
+CREATE TABLE IF NOT EXISTS instance_entrance(
+  area_id INTEGER PRIMARY KEY,          -- AreaTable id of the instance (kb.area's instance row, WoWSims' drop zoneId)
+  ui_map INT, x REAL, y REAL,           -- the entrance on the outdoor zone (or city) map
+  src TEXT,                             -- db2 (Map.db2's Corpse position through map_bounds) | hand (checked override)
+  instance INT,                         -- Map.db2 ID (NULL for an override the client's Map table doesn't list)
+  name TEXT, kind TEXT, max_players INT,   -- the instance's name, party|raid
+  continent INT, wx REAL, wy REAL,      -- world position of (x, y) (store.py axes), when the map has bounds
+  conf REAL,
+  aliases TEXT);                        -- json list of other names it answers to (normalised, see entrances.norm)

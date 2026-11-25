@@ -16,6 +16,10 @@
 -- Better Orb" for a one-hander ranked with an off hand in place of a two-hander. An item with random suffixes shows its
 -- rank on the suffix it was ranked with only ("of Sorcery", not "of the Monkey"). On by default; the Glide window or
 -- "/glide bis on|off".
+-- The item Glide chases for this character (ns.live.chars[key].goal: the next BiS piece the app's plan goes after,
+-- Pursuit.lua) says so on that same line, never a third: "Glide BiS #1 for Head, +6.1 DPS, your next BiS goal: sold by
+-- Deliana, Ironforge", "Glide, your next BiS goal: drops from ..." on the source line, "Glide: your next BiS goal" alone
+-- when neither has anything to say; nothing once you wear it.
 -- And the item the player is looking at (ns.hover, for State.lua's core key hv): the same item on a tooltip for
 -- 0.75 s, so the Glide app knows which item "this" is in a question and looks it up before it's asked. A "|" in a
 -- source line's text is the Glide app's own escaping ("||"): the line never carries a colour or texture code.
@@ -143,12 +147,20 @@ local function sourceOf(id)
     return text .. (e.w == 1 and " (web, unconfirmed)" or ""), e.a == "l" or e.a == "x"
 end
 
+local GOAL = "your next BiS goal"
+
 --- The source line for an item id: its text and colour (grey for an item not out yet or with no known source), or nil.
-local function sourceLine(id)
+--- goal: the item is the one Glide chases for this character, said before where it comes from ("Glide, your next BiS
+--- goal: drops from ..."), or alone when no source is known.
+local function sourceLine(id, goal)
     local text, grey = sourceOf(id)
-    if not text then return nil end
-    if grey then return "Glide: " .. text, 0.6, 0.6, 0.6 end
-    return "Glide: " .. text, 0.4, 0.8, 1
+    if not text then
+        if goal then return "Glide: " .. GOAL, 0.4, 0.8, 1 end
+        return nil
+    end
+    local head = goal and ("Glide, " .. GOAL .. ": ") or "Glide: "
+    if grey then return head .. text, 0.6, 0.6, 0.6 end
+    return head .. text, 0.4, 0.8, 1
 end
 ns.SourceLine = sourceLine
 
@@ -174,6 +186,7 @@ local function myChar()
     e = chars[name]
     return type(e) == "table" and e or nil
 end
+ns.LiveChar = myChar             -- (Pursuit.lua's next move, the recorder's auction prices for the plan's items)
 
 --- An item link's item id, random suffix id (the link's field 7, counted after "item:" as Gear.lua does, so the
 --- colon in Forever's "|cnIQ4:" colour prefix doesn't shift it; without its sign, 0 for none) and enchant id (field 2,
@@ -234,6 +247,23 @@ local function wearing(id, sfx)
     return false
 end
 
+--- True for the item Glide chases for this character (ns.live.chars[key].goal, an item id) while it isn't worn yet.
+--- An item ranked with a random suffix (ns.live.chars[key].bis[id][6]) is the goal with that suffix only, as the BiS
+--- line has it (link: the tooltip's item link): another roll of it isn't the goal, and wearing another roll doesn't
+--- reach it.
+local function chased(id, link)
+    local ch = id and myChar()
+    if ch == nil or tonumber(ch.goal) ~= id then return false end
+    local e = type(ch.bis) == "table" and ch.bis[id]
+    local sfx = type(e) == "table" and tonumber(e[6]) or nil
+    sfx = sfx and sfx ~= 0 and math.abs(sfx) or nil
+    if sfx then
+        local lid, lsfx = linkIds(link)
+        if lid ~= id or lsfx ~= sfx then return false end           -- (another roll, or no link to tell)
+    end
+    return not wearing(id, sfx)
+end
+
 --- The BiS line for an item id (link: the tooltip's item link, for its random suffix), from this character's
 --- ns.live.chars[key].bis[id] = { slot, rank, d, "~" (about the same as what you wear: within the sims' noise) or "s"
 --- (best only with its set: d nil), the profession it needs to wear (when you don't have it), the random suffix it
@@ -265,6 +295,7 @@ local function bisLine(id, link)
     end
     if type(e[7]) == "string" and e[7] ~= "" then text = text .. " with " .. e[7] end
     if type(e[5]) == "string" and e[5] ~= "" then text = text .. (" (needs %s to wear)"):format(e[5]) end
+    if chased(id, link) then text = text .. ", " .. GOAL end
     local src, grey = sourceOf(id)
     if src and ns.SourcesOn() then text = text .. ": " .. src end
     if grey then return text, 0.6, 0.6, 0.6 end
@@ -373,7 +404,8 @@ local function shownId(tooltip, data)
 end
 
 -- the lines and the hover, each on its own: one that fails leaves the others. Two Glide lines at most: the upgrade
--- line, then the BiS line on an item ranked for this character, else (or when the BiS line fails) the source line.
+-- line, then the BiS line on an item ranked for this character, else (or when the BiS line fails) the source line;
+-- the item Glide chases says so on that second line (with the BiS line switched on).
 local function onTooltip(tooltip, data)
     if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
     if ns.CompareOn() then
@@ -385,8 +417,16 @@ local function onTooltip(tooltip, data)
         add(tooltip, "bis", true, ok, text, r, g, b)
         ranked = ok and text ~= nil
     end
-    if not ranked and ns.SourcesOn() then
-        add(tooltip, "sources", true, pcall(function() return sourceLine(shownId(tooltip, data)) end))
+    if not ranked then
+        local okG, goal = pcall(function()
+            return ns.BisOn() and chased(shownId(tooltip, data), Safe(linkOf(tooltip)))
+        end)
+        goal = okG and goal or nil
+        if ns.SourcesOn() then
+            add(tooltip, "sources", true, pcall(function() return sourceLine(shownId(tooltip, data), goal) end))
+        elseif goal then
+            tooltip:AddLine("Glide: " .. GOAL, 0.4, 0.8, 1, true)
+        end
     end
     local ok, err = pcall(function()
         local id = linkedId(tooltip)

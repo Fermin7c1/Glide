@@ -104,6 +104,12 @@
     "research.usd_per_day": {"default": 0.2, "min": 0, "max": 5, "kind": "number", "note": "dollars a day the web lookups may cost at most (the engine's first spending cap; data/research/spend.json)"},
     "research.hover": {"default": true, "kind": "bool", "note": "look up the item the player hovers in the game before it is asked about (core key hv)"},
 
+    "pursuit.enabled": {"default": true, "kind": "bool", "note": "at 60, the next move toward the next best-in-slot piece, weighed by effort (pursuit.py): the coach's next_move, pursuit_roll and pursuit_got, the overlay line with no guide step, Data/Live.lua chars[].next and goal (/glide next, the tooltip's 'your next BiS goal')"},
+    "pursuit.pin": {"default": "free", "kind": "text", "note": "the game's map pin for the next move (Data/Live.lua pursuit.pin): free (placed by itself when nothing else guides), command (only on /glide next pin) or off"},
+    "pursuit.atlasloot_rates": {"default": true, "kind": "bool", "note": "read classic drop chances from the player's own AtlasLootClassic install (atlasloot_rates.py; read at runtime, never shipped), always said as classic's"},
+    "pursuit.group": {"default": "pug", "kind": "text", "note": "how the player runs dungeons: pug (a pick-up group: needers roll against them), guild or solo; the chance of winning a roll and the time to form a group"},
+    "pursuit.form_minutes": {"default": 20, "min": 0, "max": 120, "kind": "int", "note": "minutes to find a group for a dungeon run (half as long again for 10-player Upper Blackrock Spire; none solo)"},
+
     "ptt.enabled": {"default": true, "kind": "bool"},
     "ptt.key": {"default": "F8", "kind": "text"},
     "ptt.engine": {"default": "auto", "kind": "text"},

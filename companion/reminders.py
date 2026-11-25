@@ -14,6 +14,12 @@ nudges about open ones every `every_min` minutes (default 20; 0 = never), never 
 Repair reminders close themselves when durability goes back up; everything else is closed by saying it's done
 ("done with the repair reminder", "clear reminders"), from the dashboard, or by the coach's reminder_done tool.
 Kept in data/live/reminders.json across restarts.
+
+Glide places some itself: a reminder with a "source" belongs to that part of the engine, which puts its own in place of
+the ones it placed before (replace). "pursuit" (rules._pursuit): the vendor and auction house steps of the next move
+toward the next best-in-slot piece, near the vendor (an npc condition with the vendor's "npc" id and "name") and in
+its town or an auction house city (a place condition with one place or a list of them), replaced when the plan changes;
+each for the character whose move it is ("char": never said to another) and held while gear talk is muted.
 """
 import json
 import math
@@ -94,39 +100,47 @@ class Reminders:
         except OSError:
             pass
 
-    def add(self, what, when=None, every_min=None, now=None, durability=None, level=None):
-        """what: the thing to do. when: {"kind": "npc"|"place"|"level"|"time"|"none", "role", "item", "place",
-        "level", "minutes"}; missing: inferred from `what` ("repair" -> near a repair vendor, "buy X" -> near a
-        vendor selling X). Returns the reminder (a copy)."""
-        now = time.time() if now is None else now
-        what = " ".join(str(what or "").split()).strip(" .") or "?"
-        when = dict(when or {})
-        kind = when.get("kind")
-        if not kind or kind == "auto":
-            item = when.get("item") or _buy_item(what)
-            role = when.get("role") or role_from_words(what)
-            if item:
-                when.update(kind="npc", item=item, role=role if role not in (None, "vendor") else None)
-            elif role:
-                when.update(kind="npc", role=role)
-            else:
-                when["kind"] = "none"
-        if when["kind"] == "level":
-            when["level"] = int(when.get("level") or 0) or None
-        if when["kind"] == "time":
-            when["at"] = now + float(when.get("minutes") or 10) * 60
-        if when["kind"] == "npc" and when.get("role") not in ROLES and not when.get("item"):
-            when["role"] = role_from_words(when.get("role") or what) or "vendor"
-        r = {"id": self.next_id, "what": what, "when": _clean(when), "created": now,
-             "every_min": DEFAULT_EVERY_MIN if every_min is None else max(0, int(every_min)),
-             "last_said": now, "armed": True, "false_since": now, "fired": 0}
-        if when.get("role") == "repair" and durability is not None:
-            r["dur_low"] = durability
+    def add(self, what, when=None, every_min=None, now=None, durability=None, level=None, source=None):
+        """what: the thing to do. when: {"kind": "npc"|"place"|"level"|"time"|"none", "role", "item", "npc", "name",
+        "place", "level", "minutes"}; missing: inferred from `what` ("repair" -> near a repair vendor, "buy X" -> near
+        a vendor selling X). source: the part of the engine that placed it (None: the player). Returns the reminder
+        (a copy)."""
+        r = _make(what, when, every_min, time.time() if now is None else now, durability, source)
         with self.lock:
+            r["id"] = self.next_id
             self.next_id += 1
             self.items.append(r)
             self.save()
         return dict(r)
+
+    def replace(self, source, specs, now=None, char=None):
+        """Put a source's reminders (one the engine places itself, e.g. "pursuit") in place of the ones it placed
+        before: specs [{"what", "when", "every_min"}]. One that is already there (the same what and when, for the
+        same character) stays as it is, armed or not; the source's others go; the player's own are never touched.
+        char: the character key ("Name-Realm" or "Name") they are for: check says them to no other. -> (added,
+        removed)."""
+        now = time.time() if now is None else now
+        want = [_make(sp.get("what"), sp.get("when"), sp.get("every_min"), now, None, source)
+                for sp in specs or () if isinstance(sp, dict)]
+        for r in want:
+            if char:
+                r["char"] = str(char)
+        with self.lock:
+            mine = [r for r in self.items if r.get("source") == source]
+            have = {_same(r): r for r in mine}
+            keep = {_same(r) for r in want if _same(r) in have}
+            removed = [r for r in mine if _same(r) not in keep]
+            added = []
+            for r in want:
+                if _same(r) in keep or any(_same(a) == _same(r) for a in added):
+                    continue
+                r["id"] = self.next_id
+                self.next_id += 1
+                added.append(r)
+            if removed or added:
+                self.items = [r for r in self.items if r not in removed] + added
+                self.save()
+        return [dict(r) for r in added], [dict(r) for r in removed]
 
     def remove(self, key=None):
         """key: an id, words of the reminder ("repair"), or None / "all" for every one. -> removed reminders."""
@@ -150,12 +164,16 @@ class Reminders:
             return [dict(r) for r in self.items]
 
     # ---- deciding what to say --------------------------------------------------------------------
-    def check(self, env, now=None):
-        """env: Env (what's around the player now). -> [(reminder, "condition"|"periodic"|"done", detail)]."""
+    def check(self, env, now=None, held=None):
+        """env: Env (what's around the player now). held(reminder) -> True: not looked at now, its state left as it
+        is (a kind of talk the player muted). A reminder placed for another character (for_other) is left the same
+        way. -> [(reminder, "condition"|"periodic"|"done", detail)]."""
         now = time.time() if now is None else now
         out, changed = [], False
         with self.lock:
             for r in list(self.items):
+                if for_other(r, env) or (held is not None and held(r)):
+                    continue
                 w = r["when"]
                 # repair reminders close themselves once durability goes back up
                 if w.get("role") == "repair" and env.durability is not None:
@@ -194,10 +212,17 @@ class Reminders:
         w = r["when"]
         k = w.get("kind")
         if k == "npc":
-            hit = env.nearest(w.get("role"), w.get("item"))
+            if w.get("npc") or w.get("name"):                  # (one NPC: a vendor the coach's next move names)
+                hit = env.nearest(w.get("role"), w.get("item"), npc=w.get("npc"), name=w.get("name"))
+            else:
+                hit = env.nearest(w.get("role"), w.get("item"))
             return (hit is not None and hit["yards"] <= env.near_yd), hit
         if k == "place":
-            return env.in_place(w.get("place")), None
+            places = w.get("place")
+            if isinstance(places, list):                       # (any of them: the one it is said with)
+                hit = next((p for p in places if env.in_place(p)), None)
+                return hit is not None, hit
+            return env.in_place(places), None
         if k == "level":
             return bool(env.level and w.get("level") and env.level >= w["level"]), None
         if k == "time":
@@ -220,16 +245,81 @@ def _clean(d):
     return {k: v for k, v in d.items() if v not in (None, "", [])}
 
 
+def _make(what, when, every_min, now, durability=None, source=None):
+    """A new reminder (its id still None): the condition inferred from `what` when none is given (Reminders.add)."""
+    what = " ".join(str(what or "").split()).strip(" .") or "?"
+    when = dict(when or {})
+    kind = when.get("kind")
+    if not kind or kind == "auto":
+        item = when.get("item") or _buy_item(what)
+        role = when.get("role") or role_from_words(what)
+        if item:
+            when.update(kind="npc", item=item, role=role if role not in (None, "vendor") else None)
+        elif role:
+            when.update(kind="npc", role=role)
+        else:
+            when["kind"] = "none"
+    if when["kind"] == "level":
+        when["level"] = int(when.get("level") or 0) or None
+    if when["kind"] == "time":
+        when["at"] = now + float(when.get("minutes") or 10) * 60
+    if when["kind"] == "npc" and when.get("role") not in ROLES and not (when.get("item") or when.get("npc")
+                                                                       or when.get("name")):
+        when["role"] = role_from_words(when.get("role") or what) or "vendor"
+    if when["kind"] == "place" and isinstance(when.get("place"), (list, tuple)):
+        when["place"] = [str(p) for p in when["place"] if p] or None
+    r = {"id": None, "what": what, "when": _clean(when), "created": now,
+         "every_min": DEFAULT_EVERY_MIN if every_min is None else max(0, int(every_min)),
+         "last_said": now, "armed": True, "false_since": now, "fired": 0}
+    if when.get("role") == "repair" and durability is not None:
+        r["dur_low"] = durability
+    if source:
+        r["source"] = str(source)
+    return r
+
+
+def _same(r):
+    """What makes two reminders one (Reminders.replace): what to do and when, and the character it is for."""
+    return r.get("what"), json.dumps(r.get("when") or {}, sort_keys=True), r.get("char")
+
+
+def char_key(s):
+    """The character key of a game state summary (bis.char_key's rule: "Name-Realm" when the realm is known, its
+    spaces left out, else "Name"); "" without a name."""
+    name = str((s or {}).get("name") or "")
+    realm = str((s or {}).get("realm") or "").replace(" ", "")
+    return "%s-%s" % (name, realm) if name and realm else name
+
+
+def for_other(r, env):
+    """Whether a reminder placed for one character (its "char") is another's than the one playing (env.s): not said
+    to them, its state left as it is. One for no character, or with no one known to be playing, is anyone's."""
+    want = r.get("char")
+    if not want:
+        return False
+    me = char_key(getattr(env, "s", None))
+    if not me:
+        return False
+    # (a key without the realm matches the same name on any realm, as the planner's "Name" does)
+    return want != me and want.split("-")[0] != me and me.split("-")[0] != want
+
+
 def describe_when(r):
     """'near a repair vendor' / 'in Ironforge' / 'at level 10' / 'in 12 minutes' / ''."""
     w = r.get("when") or {}
     k = w.get("kind")
     if k == "npc":
+        if w.get("name"):
+            return "near %s" % w["name"]
         if w.get("item"):
             return "near a vendor that sells %s" % w["item"]
         return "near %s" % ROLES.get(w.get("role"), (None, "a vendor"))[1]
     if k == "place":
-        return "in %s" % w.get("place")
+        places = w.get("place")
+        if isinstance(places, list):
+            return "in " + (" or ".join(places) if len(places) < 3 else "%s or %s" % (", ".join(places[:-1]),
+                                                                                     places[-1]))
+        return "in %s" % places
     if k == "level":
         return "at level %s" % w.get("level")
     if k == "time":
@@ -251,7 +341,7 @@ def speech(r, why, detail=None):
                                              int(round(detail["yards"] / 5.0) * 5) or 5, detail.get("direction") or "away")
             return "Reminder: %s. %s." % (what, where)
         if w.get("kind") == "place":
-            return "Reminder, you're in %s: %s." % (w.get("place"), what)
+            return "Reminder, you're in %s: %s." % (detail if isinstance(detail, str) else w.get("place"), what)
         if w.get("kind") == "level":
             return "Reminder for level %s: %s." % (w.get("level"), what)
         return "Reminder: %s." % what
@@ -275,21 +365,25 @@ class NpcIndex:
         self.pack, self.data = pack, data        # api.KnowledgePack (friendly_npcs, vendors_selling)
         self.cache = {}
 
-    def points(self, ui_map, faction, role=None, item=None, player_class=None):
-        key = (ui_map, faction, role, (item or "").lower(), player_class)
+    def points(self, ui_map, faction, role=None, item=None, player_class=None, npc=None, name=None):
+        """npc / name: one NPC (its creature id, else its name), whatever its role."""
+        key = (ui_map, faction, role, (item or "").lower(), player_class, npc, (name or "").lower())
         hit = self.cache.get(key)
         if hit is not None:
             return hit
         rows = []
         try:
-            if item:
+            if item and not (npc or name):
                 rows = self.pack.vendors_selling(item, ui_map, faction)
             else:
                 rows = self.pack.friendly_npcs(ui_map, faction)
         except Exception as e:  # noqa: BLE001
             log_once("reminders.npcs", e)
             rows = []
-        if not item:
+        if npc or name:
+            rows = [r for r in rows if (npc and r.get("id") == npc)
+                    or (name and _norm(r.get("name")) == _norm(name))]
+        elif not item:
             if role == "class_trainer":
                 pat = re.compile(r"^%s$" % re.escape(CLASS_TRAINER % (player_class or "?")), re.I)
             else:
@@ -325,10 +419,15 @@ class Env:
                 log_once("reminders.dist", e)
         return math.hypot(x - m["x"], y - m["y"]) * 40.0        # ~40 yd per map percent on a mid-size zone
 
-    def nearest(self, role=None, item=None):
+    def nearest(self, role=None, item=None, npc=None, name=None):
+        """The nearest NPC of a role, or that sells an item, or one NPC (npc: its id, name: its name) -> {"name",
+        "subname", "yards", "direction"} or None."""
         if not self.me or self.index is None:
             return None
-        pts = self.index.points(self.me["map"], self.s.get("faction"), role, item, self.s.get("class"))
+        if npc or name:
+            pts = self.index.points(self.me["map"], self.s.get("faction"), npc=npc, name=name)
+        else:
+            pts = self.index.points(self.me["map"], self.s.get("faction"), role, item, self.s.get("class"))
         if item and not pts and role:          # nobody here is known to sell it: any vendor of that kind
             pts = self.index.points(self.me["map"], self.s.get("faction"), role, None, self.s.get("class"))
         best = None

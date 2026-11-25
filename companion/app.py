@@ -46,7 +46,7 @@ from knowledge_layer import KB_PATH, handle_view  # noqa: E402
 import rules as rules_mod  # noqa: E402
 from rules import Rules  # noqa: E402
 import settings  # noqa: E402
-from state import GameState  # noqa: E402
+from state import GameState, as_int  # noqa: E402
 from voice import Voice  # noqa: E402
 
 DEFAULTS = settings.defaults()      # every engine setting's default: companion/settings_manifest.json
@@ -191,6 +191,8 @@ class App:
         self.research = self.live = None        # item research and Data/Live.lua's writer (_start_research)
         self.sim_queue = self.sim_weights = self.bis = None  # WoWSims' one line of runs, the weights, the BiS ranks
         self.sims = None                        # the sims the coach runs for the player (_start_sims)
+        self.recorder_data = None               # the addon's SavedVariables, read back (_start_research)
+        self.pursuit = None                     # the next move toward the next BiS piece (_start_pursuit)
         import health
         self.health = health.Health(self)
         self.last_seq = None
@@ -597,8 +599,9 @@ class App:
         rem = self.coach.deps.reminders
         if rem is not None:
             import reminders as reminders_mod
+            # (the ones the pursuit places, the next move's vendor and auction house steps, are said, not listed)
             s["reminders"] = [{"id": x["id"], "what": x["what"], "when": reminders_mod.describe_when(x),
-                               "every_min": x["every_min"]} for x in rem.list()]
+                               "every_min": x["every_min"]} for x in rem.list() if x.get("source") != "pursuit"]
         try:
             # no UI reads it today (the dashboard's settings panel went), so it is kept cheap: recomputed only when
             # what it reads changes (contract 3 keeps the key)
@@ -630,7 +633,7 @@ class App:
         s["kb"] = self._kb_status
         if self.pack is not None:
             s["why"], s["pace"] = self._why_panel(s)
-        s["overlay_step"] = self.step_line(s)       # the desktop app's overlay shows it
+        s["overlay_step"] = self.overlay_line(s)    # the desktop app's overlay shows it
         return s
 
     def _describe_places(self, s, me):
@@ -1018,8 +1021,28 @@ class App:
             self.rules.live = self.live
         except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without item sources
             log_once("research.start", e)
+        self._start_recorder_data()
         self._start_bis()
         self._start_sims()
+        self._start_pursuit()
+
+    def _start_recorder_data(self):
+        """The addon's own saved data read back from the WoW folder (recorder_data.py: WTF/Account/*/SavedVariables/
+        Glide.lua, read only, as the game wrote it at the last logout or /reload): the character's professions (the
+        BiS ranks' and the sims' skills_fn: ring enchants and items that need a profession count when the character
+        has it, else they count as unknown), and its standings, the auction house prices it saw and the corpses it
+        looted (the pursuit planner's)."""
+        try:
+            import recorder_data
+            self.recorder_data = recorder_data.RecorderData(lambda: glideconfig.wow_dir(ROOT))
+        except Exception as e:  # noqa: BLE001 - professions unknown, the planner without the Recorder's data
+            log_once("recorder_data.start", e)
+
+    def _skills_of(self, name):
+        """The professions a character has, from the Recorder (names), or None (unknown: none recorded, a client that
+        lists no skill lines, not read yet)."""
+        rd = getattr(self, "recorder_data", None)
+        return rd.skills(name) if rd is not None and name else None
 
     def _start_bis(self):
         """Glide's own best-in-slot ranks at 60 (bis.py's BisRanker, on its own thread; after the research, whose
@@ -1029,8 +1052,8 @@ class App:
         keeps what it said with the ranker; the prompt's gear.next_upgrades; the bis_slot tool) and into the addon's
         Data/Live.lua (chars[key].bis: the tooltip's "Glide BiS #2 for Head" line). gear.bis off: nothing is ranked and
         none of it is shown or said; gear.bis_lens: "now" (what can be had now) or "all". The professions the
-        character has don't reach the engine (the Recorder keeps them in its session, which nothing reads yet), so
-        they count as unknown: ring enchants aren't simmed and an item that needs a profession is never "next"."""
+        character has come from the Recorder (_skills_of, as of the last /reload); until it has recorded them they
+        count as unknown: ring enchants aren't simmed and an item that needs a profession is never "next"."""
         queue, gear = getattr(self, "sim_queue", None), getattr(self.rules, "gear", None)
         if queue is None or gear is None:
             return                                  # (no sim queue: WoWSims couldn't be set up)
@@ -1042,6 +1065,7 @@ class App:
                                    sources_fn=r.facts if r is not None else None)
             ranker.enabled_fn = gear.bis_on
             ranker.lens_fn = lambda: gear.opt.get("bis_lens")
+            ranker.skills_fn = self._skills_of
             ranker.on_change = gear.set_bis
             self.bis = ranker
             self.rules.bis = ranker
@@ -1080,6 +1104,7 @@ class App:
                 s.find_fn = r._find
                 s.name_fn = lambda i: (r.brief(i) or {}).get("name")
             s.weights_fn = lambda name: (self._sim_weights_of(name) or {}).get("w")
+            s.skills_fn = self._skills_of
             self.sims = s
             coach_tools.sims = s
             self.rules.sims = s
@@ -1089,13 +1114,89 @@ class App:
         except Exception as e:  # noqa: BLE001 - the coach goes on without sims on request
             log_once("sims.start", e)
 
+    def _start_pursuit(self):
+        """The next move toward the next best-in-slot piece at 60, weighed by effort (pursuit.py's Planner, on its own
+        thread; after the BiS ranks, which it plans from): of the ranked items the character can have now, which
+        dungeon run, vendor, quest, reputation, craft or auction house buy gets the most DPS for the hours it takes,
+        with the drop chances of the player's own kills, AtlasLoot classic's (read from the player's own
+        AtlasLootClassic install while pursuit.atlasloot_rates is on, never shipped) and the web's (the numbers a top
+        move lacks go to the research's web lookups: "r:", "v:", "q:", "f:" jobs, within its daily caps), the run
+        times it measures, the Recorder's data (recorder_data.py) and the knowledge base's instance entrances. The
+        rules say the move and follow through (rules.pursuit: next_move, pursuit_roll, pursuit_got; the move's vendor
+        and auction house steps as reminders); the coach's bis_plan and pursuit_set tools and "what's my next move?"
+        (coach_tools.pursuit); the overlay line at 60 with no guide step (overlay_line); Data/Live.lua's
+        chars[key].next and goal (/glide next, its map pin, the tooltip's "your next BiS goal") and pursuit.pin.
+        Needs the BiS ranks (gear.bis); pursuit.enabled off: nothing is planned, said or written."""
+        ranker, gear = getattr(self, "bis", None), getattr(self.rules, "gear", None)
+        if ranker is None or gear is None:
+            self._drop_pursuit_reminders()
+            return                                  # (no BiS ranks: nothing to plan toward)
+        try:
+            import bis
+            import coach_tools
+            import effort
+            import pursuit
+            cfg = self.cfg.get("pursuit")
+            opt = settings.Settings("pursuit", cfg if isinstance(cfg, dict) else {})
+            planner = pursuit.Planner(ROOT, lambda key: ranker._entry(key) if gear.bis_on() else None,
+                                      self.research, effort, self.kb_handle, lambda: self.state, self.recorder_data,
+                                      opt=opt, item_db_fn=self._item_db(), wow_dir_fn=lambda: glideconfig.wow_dir(ROOT))
+            planner.weights_fn = lambda name: (self._sim_weights_of(name) or {}).get("w")
+            deps = getattr(getattr(self, "coach", None), "deps", None)
+            self.rules.reminders = getattr(deps, "reminders", None)
+            self.rules.pursuit = planner
+            coach_tools.pursuit = planner
+            coach_tools.pursuit_char = lambda: bis.char_key(self.state.summary())
+            coach_tools.goal_memory = getattr(self, "memory", None)
+            planner.on_goal_cleared = lambda _key: coach_tools.goal_cleared()
+            self.pursuit = planner
+            if self.live is not None:
+                self.live.register("chars", self._live_chars)
+                self.live.register("pursuit", lambda: {"pin": opt.get("pin")} if planner.enabled() else {})
+            planner.start()
+        except Exception as e:  # noqa: BLE001 - the coach goes on with the next upgrade alone
+            log_once("pursuit.start", e)
+            self._drop_pursuit_reminders()
+
+    def _drop_pursuit_reminders(self):
+        """No planner this run: the next move's reminders a past run placed (source "pursuit") go, so they aren't said
+        with nothing behind them."""
+        rem = getattr(getattr(getattr(self, "coach", None), "deps", None), "reminders", None)
+        try:
+            if rem is not None:
+                rem.replace("pursuit", [])
+        except Exception as e:  # noqa: BLE001 - they stay
+            log_once("pursuit.reminders", e)
+
+    def overlay_line(self, s):
+        """The overlay's one line (contract 3's overlay_step): the guide step's (step_line), else at 60 the next move
+        toward the next best-in-slot piece ("L60  Next: Scholomance: Bonecreeper Stylus": offline_coach.overlay_line),
+        else None."""
+        line = self.step_line(s)
+        p = getattr(self, "pursuit", None)
+        if line or p is None or not s.get("name") or (as_int(s.get("level")) or 0) < 60:
+            return line
+        try:
+            import bis
+            import offline_coach
+            if not rules_mod.planner_on(p):
+                return None
+            move = p.next_move(bis.char_key(s))
+            return offline_coach.overlay_line(s["level"], move, self.rules._names(move or {}, self.state),
+                                              self.rules._srcs) if move else None
+        except Exception as e:  # noqa: BLE001 - no line then
+            log_once("app.overlay_next", e)
+            return None
+
     def _live_chars(self):
         """Data/Live.lua's chars section: the BiS ranks' per-character fields (while gear.bis is on) merged with the
-        sims' (the link, the asked item sims), whichever of them runs."""
+        sims' (the link, the asked item sims) and the pursuit's (next, goal), whichever of them runs."""
         import sims
         gear, ranker, s = getattr(self.rules, "gear", None), getattr(self, "bis", None), getattr(self, "sims", None)
+        p = getattr(self, "pursuit", None)
         ranks = ranker.live_section() if ranker is not None and gear is not None and gear.bis_on() else {}
-        return sims.merge_chars(ranks, s.live_section() if s is not None else {})
+        return sims.merge_chars(ranks, s.live_section() if s is not None else {},
+                                p.live_section() if p is not None else {})
 
     def _sim_weights_of(self, name):
         """The character's WoWSims weights (sim_weights.py's entry), or None."""

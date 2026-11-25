@@ -151,8 +151,8 @@ try:
     check(rk.sources_fn == a.research.facts, "where items come from: the research's facts")
     sw.chars["Nine"] = {"class": "MAGE", "w": {"SP": 1.0}}
     check(rk.weights_fn("Nine") is sw.chars["Nine"] and rk.weights_fn("Other") is None, "the weights' entries")
-    check(rk.state_fn() is a.state and rk.skills_fn is None and rk._skills("Nine") is None,
-          "professions unknown (they don't reach the engine)")
+    check(rk.state_fn() is a.state and rk.skills_fn == a._skills_of and rk._skills("Nine") is None,
+          "professions from the Recorder: unknown while it has recorded none")
     check(rk.enabled_fn == a.rules.gear.bis_on and rk.enabled_fn() is True, "gear.bis: on by default")
     check(rk.lens() == "now", "gear.bis_lens: now by default")
     gear_cfg["bis_lens"] = "all"

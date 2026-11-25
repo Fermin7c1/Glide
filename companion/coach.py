@@ -573,7 +573,8 @@ class Coach:
         d = self.deps
         return prompt_context.game_context(s, st, self.k, self.geo, self.pack, deep=deep, watched_fn=d.watched_fn,
                                            gear_fn=d.gear_fn, system_fn=d.system_fn,
-                                           talent_plan=self.talent_pick(s), item_brief=coach_tools.item_brief)
+                                           talent_plan=self.talent_pick(s), item_brief=coach_tools.item_brief,
+                                           pursuit_fn=coach_tools.plan_brief)
 
     def _wow_folder(self):
         """The WoW folder (RestedXP's saved files), looked up once ("" when it isn't found)."""

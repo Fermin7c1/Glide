@@ -460,10 +460,56 @@ end)
 -- ---------------------------------------------------------------------------------------------
 -- trained skills, once per session a few seconds after login:
 -- session.skills = { t, lines = { { n = name, r = rank, mx = max rank, md = modifier, h = header } },
---                    w = weapon mask, a = armor mask, ranks = "Swords 5/10,..." }
+--                    w = weapon mask, a = armor mask, ranks = "Swords 5/10,...", from = "spells" (lines below) }
 -- lines: Classic-style skill lines when the client has them; w/a/ranks: the live link (Gear.lua).
+-- A client that lists no skill lines (Forever's) gets them from the spells it knows instead: each profession by its
+-- rank spells (mx = the rank's cap, no r), and the weapon and armor skills the live link found (so a character
+-- with no profession reads as none, not unknown); only when the spell lookup answered at all.
 -- Left out entirely when neither answers.
 -- ---------------------------------------------------------------------------------------------
+local PROFESSION_SPELLS = {     -- the classic rank spells (Apprentice, Journeyman, Expert, Artisan)
+    { "Alchemy", "Professions", 2259, 3101, 3464, 11611 },
+    { "Blacksmithing", "Professions", 2018, 3100, 3538, 9785 },
+    { "Enchanting", "Professions", 7411, 7412, 7413, 13920 },
+    { "Engineering", "Professions", 4036, 4037, 4038, 12656 },
+    { "Herbalism", "Professions", 2366, 2368, 3570, 11993 },
+    { "Leatherworking", "Professions", 2108, 3104, 3811, 10662 },
+    { "Mining", "Professions", 2575, 2576, 3564, 10248 },
+    { "Skinning", "Professions", 8613, 8617, 8618, 10768 },
+    { "Tailoring", "Professions", 3908, 3909, 3910, 12180 },
+    { "Cooking", "Secondary Skills", 2550, 3102, 3413, 18260 },
+    { "First Aid", "Secondary Skills", 3273, 3274, 7924, 10846 },
+    { "Fishing", "Secondary Skills", 7620, 7731, 7732, 18248 },
+}
+local WEAPON_NAMES = { [0] = "Axes", [1] = "Two-Handed Axes", [2] = "Bows", [3] = "Guns", [4] = "Maces",
+                       [5] = "Two-Handed Maces", [6] = "Polearms", [7] = "Swords", [8] = "Two-Handed Swords",
+                       [10] = "Staves", [13] = "Fist Weapons", [15] = "Daggers", [16] = "Thrown", [18] = "Crossbows",
+                       [19] = "Wands" }
+local ARMOR_NAMES = { [1] = "Cloth", [2] = "Leather", [3] = "Mail", [4] = "Plate Mail", [6] = "Shield" }
+
+local function bitSet(mask, n) return math.floor(mask / 2 ^ n) % 2 == 1 end
+
+local function linesFromSpells()
+    local w, a = ns.skillWeapons, ns.skillArmor
+    if type(w) ~= "number" and type(a) ~= "number" then return nil end     -- the spell lookup told us nothing
+    local lines = {}
+    for _, p in ipairs(PROFESSION_SPELLS) do
+        for rank = 6, 3, -1 do
+            if ns.KnowsSpell(p[rank]) then
+                lines[#lines + 1] = { n = p[1], mx = 75 * (rank - 2), h = p[2] }
+                break
+            end
+        end
+    end
+    for sub, name in pairs(WEAPON_NAMES) do
+        if type(w) == "number" and bitSet(w, sub) then lines[#lines + 1] = { n = name, h = "Weapon Skills" } end
+    end
+    for sub, name in pairs(ARMOR_NAMES) do
+        if type(a) == "number" and bitSet(a, sub) then lines[#lines + 1] = { n = name, h = "Armor Proficiencies" } end
+    end
+    return #lines > 0 and lines or nil
+end
+
 local function snapshotSkills()
     local s = S()
     if not s then return end
@@ -490,10 +536,199 @@ local function snapshotSkills()
     if ns.BuildSkills then pcall(ns.BuildSkills) end
     out.w, out.a = ns.skillWeapons, ns.skillArmor
     if type(ns.skillRanks) == "string" and ns.skillRanks ~= "" then out.ranks = ns.skillRanks end
+    if not out.lines and ns.KnowsSpell then
+        local ok, lines = pcall(linesFromSpells)
+        if ok and lines then out.lines, out.from = lines, "spells" end
+    end
     if next(out) then
         out.t = Now()
         s.skills = out
     end
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- reputation, for the Glide app's plan (a vendor that needs a standing): the factions WoWSims' item sources name,
+-- read a few seconds after login and again after each change (UPDATE_FACTION, a second later):
+-- session.factions = { [factionID] = { standing = 1 Hated .. 8 Exalted, value = the reputation the game counts from
+--                      Neutral's 0 (Friendly starts at 3000, Honored 9000, Revered 21000, Exalted 42000), t,
+--                      v0, t0 = the value just after its first rise this session and when, t1 = when it last rose } }
+-- t is when it was read. v0, t0 and t1 are the grind this session (the first turn-in to the last), so the Glide app
+-- learns a reputation rate from one session however long it runs between reloads. A faction the client doesn't know
+-- is left out; left out entirely when it knows none.
+-- ---------------------------------------------------------------------------------------------
+-- Booty Bay, Thorium Brotherhood, Gadgetzan, Ratchet, the League of Arathor, the Defilers, Argent Dawn, Timbermaw Hold,
+-- Everlook, Cenarion Circle, Brood of Nozdormu, Darkspear Raiders, Theramore Expeditionary Force, The Watchers, Powderfuse
+local FACTIONS = { 21, 59, 369, 470, 509, 510, 529, 576, 577, 609, 910, 2798, 2799, 2819, 2827 }
+
+-- -> standing, value of one faction, or nil (C_Reputation where the client has it, else the classic call)
+local function factionStanding(id)
+    local R = _G.C_Reputation
+    if R and R.GetFactionDataByID then
+        local ok, d = pcall(R.GetFactionDataByID, id)
+        if ok and type(d) == "table" and Safe(d.name) then return Safe(d.reaction), Safe(d.currentStanding) end
+        return nil
+    end
+    local info = _G.GetFactionInfoByID
+    if not info then return nil end
+    local ok, name, _, standing, _, _, value = pcall(info, id)
+    if ok and Safe(name) then return Safe(standing), Safe(value) end
+end
+
+local function snapshotFactions()
+    local s = S()
+    if not s then return end
+    local now, got = Now(), s.factions or {}
+    for _, id in ipairs(FACTIONS) do
+        local standing, value = factionStanding(id)
+        if type(standing) == "number" and type(value) == "number" and standing >= 1 and standing <= 8 then
+            value = math.floor(value + 0.5)
+            local was, e = got[id], { standing = standing, value = value, t = now }
+            if type(was) == "table" then
+                e.v0, e.t0, e.t1 = was.v0, was.t0, was.t1
+                if type(was.value) == "number" and value > was.value then
+                    if not e.t0 then e.v0, e.t0 = value, now end       -- (the first rise: the grind starts here)
+                    e.t1 = now
+                end
+            end
+            got[id] = e
+        end
+    end
+    if next(got) then s.factions = got end
+end
+
+local factionsPending = false
+rec.On("UPDATE_FACTION", function()
+    if factionsPending or not S() then return end
+    factionsPending = true
+    C_Timer.After(1, function()
+        factionsPending = false
+        local ok, err = pcall(snapshotFactions)
+        if not ok then rec.Report("factions: " .. tostring(err)) end
+    end)
+end)
+
+-- ---------------------------------------------------------------------------------------------
+-- auction house prices, for the Glide app's plan (an item to buy, its price): the lowest buyout per item the player
+-- sees while browsing the auction house, for the items in this character's plan only (ns.live.chars[key]: the goal,
+-- the items Glide ranked, and its "ah" list when it has one). Glide never searches by itself: it reads the results
+-- of the player's own searches.
+-- GlideRecorderDB.auction = { ["<realm>|<side>"] = { [itemID] = { copper = the lowest buyout for one, t } } }
+-- (each realm and side has its own auction house: the newest AUCTION_KEEP items of each)
+-- ---------------------------------------------------------------------------------------------
+local AUCTION_KEEP, AUCTION_READ = 300, 1000
+
+-- the auction house this character trades at: "<realm>|<side>" (the session's own character), or nil
+local function house()
+    local c = S() and S().char
+    local realm = type(c) == "table" and c.realm or Safe(GetRealmName())
+    local side = type(c) == "table" and c.faction or Safe(UnitFactionGroup("player"))
+    if type(realm) ~= "string" or realm == "" or type(side) ~= "string" or side == "" then return nil end
+    return realm .. "|" .. side
+end
+
+-- the item ids the plan wants priced -> set, or nil
+local function planItems()
+    local ch = ns.LiveChar and ns.LiveChar()
+    if type(ch) ~= "table" then return nil end
+    local want = {}
+    local goal = tonumber(ch.goal)
+    if goal then want[goal] = true end
+    if type(ch.bis) == "table" then
+        for id in pairs(ch.bis) do
+            if type(id) == "number" then want[id] = true end
+        end
+    end
+    if type(ch.ah) == "table" then
+        for _, id in ipairs(ch.ah) do
+            id = tonumber(id)
+            if id then want[id] = true end
+        end
+    end
+    return next(want) and want or nil
+end
+
+-- the lowest of these prices ({ [itemID] = copper for one }) into this auction house's book in GlideRecorderDB.auction,
+-- the oldest beyond AUCTION_KEEP dropped
+local function keepPrices(seen)
+    local db, where = rec.db, house()
+    if not db or not where or not next(seen) then return end
+    db.auction = type(db.auction) == "table" and db.auction or {}
+    for k in pairs(db.auction) do
+        if type(k) ~= "string" then db.auction[k] = nil end        -- (a flat entry: no house to tell it by)
+    end
+    db.auction[where] = type(db.auction[where]) == "table" and db.auction[where] or {}
+    local book, now = db.auction[where], Now()
+    for id, copper in pairs(seen) do book[id] = { copper = copper, t = now } end
+    local ids = {}
+    for id in pairs(book) do ids[#ids + 1] = id end
+    if #ids <= AUCTION_KEEP then return end
+    table.sort(ids, function(a, b) return (tonumber(book[a].t) or 0) > (tonumber(book[b].t) or 0) end)
+    for i = AUCTION_KEEP + 1, #ids do book[ids[i]] = nil end
+end
+
+-- one price seen: the lowest per item wins
+local function note(seen, want, id, copper)
+    id, copper = Safe(id), Safe(copper)
+    if type(id) ~= "number" or not want[id] or type(copper) ~= "number" or copper <= 0 then return end
+    copper = math.floor(copper + 0.5)
+    if not seen[id] or copper < seen[id] then seen[id] = copper end
+end
+
+local AH = _G.C_AuctionHouse
+if type(AH) == "table" and AH.GetBrowseResults then
+    -- the auction house as the client has it now: browse results (one row per item, its lowest buyout), an item's
+    -- auctions once the player opens it, a commodity's
+    local function browsed()
+        local want = planItems()
+        if not want then return end
+        local ok, results = pcall(AH.GetBrowseResults)
+        if not ok or type(results) ~= "table" then return end
+        local seen = {}
+        for i = 1, math.min(#results, AUCTION_READ) do
+            local r = results[i]
+            if type(r) == "table" and type(r.itemKey) == "table" then note(seen, want, r.itemKey.itemID, r.minPrice) end
+        end
+        keepPrices(seen)
+    end
+    rec.On("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", browsed)
+    rec.On("AUCTION_HOUSE_BROWSE_RESULTS_ADDED", browsed)
+    rec.On("ITEM_SEARCH_RESULTS_UPDATED", function(itemKey)
+        local want = planItems()
+        if not want or type(itemKey) ~= "table" or not AH.GetItemSearchResultInfo then return end
+        local okN, n = pcall(AH.GetNumItemSearchResults, itemKey)
+        n = okN and Safe(n) or 1
+        local seen = {}
+        for i = 1, math.min(type(n) == "number" and n or 1, 50) do
+            local ok, info = pcall(AH.GetItemSearchResultInfo, itemKey, i)
+            if ok and type(info) == "table" then note(seen, want, itemKey.itemID, info.buyoutAmount) end
+        end
+        keepPrices(seen)
+    end)
+    rec.On("COMMODITY_SEARCH_RESULTS_UPDATED", function(itemID)
+        local want = planItems()
+        if not want or not AH.GetCommoditySearchResultInfo then return end
+        local ok, info = pcall(AH.GetCommoditySearchResultInfo, itemID, 1)
+        local seen = {}
+        if ok and type(info) == "table" then note(seen, want, itemID, info.unitPrice) end
+        keepPrices(seen)
+    end)
+elseif _G.GetAuctionItemInfo and _G.GetNumAuctionItems then
+    -- the classic auction house: the page of results the player's search shows (a buyout for the stack, so per one)
+    rec.On("AUCTION_ITEM_LIST_UPDATE", function()
+        local want = planItems()
+        if not want then return end
+        local okN, n = pcall(_G.GetNumAuctionItems, "list")
+        n = okN and Safe(n)
+        local seen = {}
+        for i = 1, math.min(type(n) == "number" and n or 0, AUCTION_READ) do
+            local ok, _, _, count, _, _, _, _, _, _, buyout, _, _, _, _, _, _, id = pcall(_G.GetAuctionItemInfo, "list", i)
+            count, buyout = ok and Safe(count), ok and Safe(buyout)
+            if type(count) == "number" and count > 0 and type(buyout) == "number" then
+                note(seen, want, ok and id, buyout / count)
+            end
+        end
+        keepPrices(seen)
+    end)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -622,6 +857,8 @@ rec.AtSessionStart(function()
     C_Timer.After(BOUNDS_DELAY, function()
         local ok, err = pcall(snapshotSkills)
         if not ok then rec.Report("skills: " .. tostring(err)) end
+        ok, err = pcall(snapshotFactions)
+        if not ok then rec.Report("factions: " .. tostring(err)) end
         ok, err = pcall(rec.ScanMapBounds)
         if not ok then rec.Report("map bounds: " .. tostring(err)) end
     end)

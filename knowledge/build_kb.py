@@ -28,9 +28,9 @@ RestedXP's files come from reference/rxp/ or, when that is absent (the player's 
 <wow_dir>/Interface/AddOns/RXPGuides/ (store.BuildContext.rxp); the build prints which (meta `rxp_source`).
 
 Order: glide_entities, rxp_parser (parser lane), seed_items, rxp_db, db2, observations, live_logs
-(companion logs -> obs_step_time), flags (feedback marks -> eval_flag), quest_xp, map_bounds, travel_edges,
-params (mechanics lane), heuristics (heuristics lane), analyzer (analyzer lane, when it exposes
-route.load), community, finalize.
+(companion logs -> obs_step_time), flags (feedback marks -> eval_flag), quest_xp, map_bounds, entrances (dungeon
+and raid doors through map_bounds -> instance_entrance), travel_edges, params (mechanics lane), heuristics
+(heuristics lane), analyzer (analyzer lane, when it exposes route.load), community, finalize.
 """
 import argparse
 import glob
@@ -53,7 +53,7 @@ if ROOT not in sys.path:
 from knowledge import store  # noqa: E402
 
 STORE_LOADERS = ("glide_entities", "seed_items", "rxp_db", "db2", "observations", "live_logs", "flags", "quest_xp",
-                 "map_bounds", "travel_edges", "finalize")
+                 "map_bounds", "entrances", "travel_edges", "finalize")
 # Loaders whose failure fails the build: the store lane's and the other in-repo lanes' (parser, mechanics params,
 # heuristics, analyzer, community). Before, an import error or exception in the parser or the analyzer was only
 # "skipped" and a KB without guides or briefs was installed and called up to date.
@@ -146,7 +146,7 @@ def steps():
     return [("glide_entities", src("glide_entities")), ("rxp_parser", _parser), ("seed_items", src("seed_items")),
             ("rxp_db", src("rxp_db")), ("db2", src("db2")), ("observations", src("observations")),
             ("live_logs", src("live_logs")), ("flags", src("flags")),
-            ("quest_xp", src("quest_xp")), ("map_bounds", src("map_bounds")),
+            ("quest_xp", src("quest_xp")), ("map_bounds", src("map_bounds")), ("entrances", src("entrances")),
             ("travel_edges", src("travel_edges")), ("params", _params), ("heuristics", _heuristics),
             ("analyzer", _analyzer), ("community", src("community")), ("finalize", src("finalize"))]
 

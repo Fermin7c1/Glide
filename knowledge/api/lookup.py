@@ -4,6 +4,7 @@ import re
 
 from knowledge import store
 from knowledge.api._layer import A, MAX_LEVEL, MX, decay_level
+from knowledge.api.entrances import instance_entrance as _instance_entrance
 from knowledge.api.guides import norm_guide_name
 from knowledge.api.values import RANK, as_int, clean, compass, cut, parse_id, uniq
 
@@ -319,6 +320,11 @@ class LookupMixin:
         return self.kb.q("""SELECT a.name AS name, b.x1 AS x1, b.y1 AS y1, b.x2 AS x2, b.y2 AS y2 FROM area_box b
                             JOIN area a ON a.area_id = b.area_id
                             WHERE b.ui_map = ? AND a.name IS NOT NULL ORDER BY b.rowid""", ui_map)
+
+    def instance_entrance(self, key):
+        """Where a dungeon's or raid's door is: {"map", "x", "y" (map percent), "src", "name", "area_id", "kind",
+        "conf"} or None; key is its area id or a name (knowledge/api/entrances.py)."""
+        return _instance_entrance(self.kb, key) if self.ok else None
 
     def landmarks(self, ui_map):
         """[{"name", "subname", "friendly", "x", "y"}]: NPCs on a UiMap worth naming in directions: titled NPCs of a

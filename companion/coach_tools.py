@@ -1,7 +1,8 @@
 """The coach's own tools and spoken commands, next to the knowledge layer's: reminders ("remind me to repair"), the
 memory of the player across sessions (and the reflection that updates it), where an item comes from (the engine's
 research, research.py: "where does Magister's Crown drop?"), Glide's own best-in-slot ranks for a slot (bis.py: "what's
-best in slot for my neck?"), WoWSims sims the player asks for (sims.py: "sim this", "what if I wear Eye of the
+best in slot for my neck?"), the next move toward the next best-in-slot piece (pursuit.py: "what should I farm next?",
+"chase the robe", "skip that"), WoWSims sims the player asks for (sims.py: "sim this", "what if I wear Eye of the
 Beast?"), and feature switches said out loud ("quest briefings off"). Tool definitions for the model, the tool calls,
 and the local handling of clear requests."""
 import json
@@ -10,7 +11,9 @@ from typing import Any
 
 import gear as gear_mod
 import memory as memory_mod
+import offline_coach
 import reminders as reminders_mod
+import rules as rules_mod
 from log import log_once
 
 REMINDER_TOOLS = [
@@ -91,7 +94,26 @@ SIM_TOOLS = [
          "talents": {"type": "string", "description": "a talent build: a WoWSims build's name ('Arcane Fire', "
                                                       "'FFB') or a WoWSims talent string"}}}},
 ]
-ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS + BIS_TOOLS + SIM_TOOLS)
+PURSUIT_TOOLS = [
+    {"name": "bis_plan", "description": (
+        "Glide's next move toward the character's next best-in-slot piece (level 60), weighed by the time it takes as "
+        "well as the DPS: move (what to do, in words), odds (one number and its range, with its source: say it as "
+        "given), also (what else the run rolls; the odds are the first item's), why (the reasons: only when the "
+        "player asks), runs (the runs so far without the item, when counted), alts (two other moves, in words), "
+        "goal (the item the player chose to chase, if any). For 'what should I farm next?', 'what's my next move?', "
+        "'how's the stylus hunt?'."),
+     "input_schema": {"type": "object", "properties": {}, "required": []}},
+    {"name": "pursuit_set", "description": (
+        "Change what Glide's next move goes for, only when the player asks to: an item and skip false to chase it "
+        "('chase the robe', 'go for that one'); skip true to drop an item from the plan ('skip that', 'skip the "
+        "stylus'; no item: the current move's); neither: Glide picks again. Returns the new plan as bis_plan does, "
+        "with done (what changed)."),
+     "input_schema": {"type": "object", "required": [], "properties": {
+         "item": {"type": "string", "description": "the item: its name (a word of it will do: 'robe'), or its id "
+                                                   "(the hovered item's when they say 'this')"},
+         "skip": {"type": "boolean", "description": "true: drop the item from the plan"}}}},
+]
+ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS + BIS_TOOLS + SIM_TOOLS + PURSUIT_TOOLS)
 # the tools the coach runs itself; every other tool call goes to the knowledge layer (api.dispatch)
 LOCAL_TOOLS = ("reminder_add", "reminder_list", "reminder_done", "web_search",
                "memory_remember", "memory_forget", "memory_list") + ITEM_TOOL_NAMES
@@ -106,6 +128,14 @@ bis = None
 # simulate / answer, which find the items and say the answer); wowsims_sim and "sim this" run through it
 sims: Any = None
 _last_link: str | None = None         # the link of the last sim the tool or the command ran (its answer's message)
+# the next move toward the next best-in-slot piece (pursuit.Planner), set by the app once it runs: plan(char) -> the
+# plan ({"goal", "moves", "alts"}), pursue(char, item id or None), skip(char, item id), told / mark_told(key); bis_plan
+# and pursuit_set answer from it, and "what's my next move?", "chase the robe", "skip that" said or typed
+pursuit: Any = None
+# -> the key of the character playing ("Name-Realm" or "Name"), set by the app with pursuit (None: the planner's own)
+pursuit_char: Any = None
+# the coach's memory (memory.Memory), set by the app: a best-in-slot goal the player sets is kept as a "goal" note
+goal_memory: Any = None
 
 
 def reminder_view(rem):
@@ -302,17 +332,25 @@ def apply_reflection(memory, text, emit, since=None, now=None):
 # ---- where items come from (research.py) ---------------------------------------------------------------------------
 def item_tools():
     """The item tool definitions: item_info while the research worker runs, bis_slot while the best-in-slot ranker
-    does (none before), and wowsims_sim while sims on request can run (sim_tools)."""
+    does (none before), bis_plan and pursuit_set while the pursuit planner does, and wowsims_sim while sims on request
+    can run (sim_tools)."""
     return (list(ITEM_TOOLS) if research is not None else []) + (list(BIS_TOOLS) if bis is not None else []) + \
-        sim_tools()
+        (list(PURSUIT_TOOLS) if _planner() is not None else []) + sim_tools()
 
 
 def run_item_tool(name, args, budget_s=None):
     """item_info on the research worker's facts -> {"id", "name", "sources": [texts], "avail", "fact_ids"}; bis_slot on
-    the best-in-slot ranks -> {"slot", "ranks": bis_slot rows}; wowsims_sim through the sims (sim_tool; budget_s: the
-    seconds the answer may still take, None: gear.sim_seconds)."""
+    the best-in-slot ranks -> {"slot", "ranks": bis_slot rows}; bis_plan and pursuit_set on the pursuit plan (bis_plan,
+    pursuit_set); wowsims_sim through the sims (sim_tool; budget_s: the seconds the answer may still take, None:
+    gear.sim_seconds)."""
     if name == "bis_slot":
         return bis_tool(args)
+    if name == "bis_plan":
+        return bis_plan()
+    if name == "pursuit_set":
+        a = args or {}
+        item = str(a.get("item") or "").strip() or None
+        return pursuit_set(item, a.get("skip") in (True, "true", "True", 1))
     if name == "wowsims_sim":
         return sim_tool(args, budget_s)
     r = research
@@ -374,9 +412,9 @@ LOOKING_UP = "I don't know where %s comes from yet; I'm looking it up, ask me ag
 def item_command(question, ai_ok, hovered=None):
     """'where does Magister's Crown drop?' answered from the research facts while the AI is off (ai_ok false; with
     it the model asks item_info): "<item>: <where it comes from>." ("where does this drop?": the hovered item, see
-    item_question); and 'what's best in slot for my neck?' from the best-in-slot ranks (bis_command). Returns the
-    spoken answer, or None."""
-    said = bis_command(question, ai_ok)
+    item_question); 'what's best in slot for my neck?' from the best-in-slot ranks (bis_command); "what's my next
+    move?", "chase the robe", "skip that" on the pursuit plan (pursuit_command). Returns the spoken answer, or None."""
+    said = pursuit_command(question, ai_ok, hovered) or bis_command(question, ai_ok)
     if said:
         return said
     r = research
@@ -520,6 +558,361 @@ def _note_told(item_id):
         note(item_id)
     except Exception as e:  # noqa: BLE001 - said; no correction then
         log_once("coach_tools.bis_told", e)
+
+
+# ---- the next move toward the next best-in-slot piece (pursuit.py) ---------------------------------------------------
+NO_PLAN = "I have no next move for your gear yet; I plan them at 60, once your gear is ranked."
+GOAL_NOTE = "Best-in-slot goal: %s."             # the memory note a goal the player sets is kept as (kind "goal")
+
+
+def _planner():
+    """The pursuit planner while it plans (set, and pursuit.enabled on: rules.planner_on), else None: off, nothing is
+    planned, said or offered (no bis_plan / pursuit_set, no gear.next_move, no spoken answer)."""
+    p = pursuit
+    return p if p is not None and rules_mod.planner_on(p) else None
+
+
+def _char():
+    """The key of the character playing (the pursuit_char hook), or None (the planner's own)."""
+    fn = pursuit_char
+    try:
+        return fn() if callable(fn) else fn
+    except Exception as e:  # noqa: BLE001 - the planner's own then
+        log_once("coach_tools.pursuit_char", e)
+        return None
+
+
+def _plan():
+    """(the plan of the character playing or None, its key: the pursuit_char hook's, else the plan's own "char")."""
+    p, char = _planner(), _char()
+    if p is None:
+        return None, char
+    try:
+        plan = p.plan(char)
+    except Exception as e:  # noqa: BLE001 - no plan
+        log_once("coach_tools.pursuit_plan", e)
+        return None, char
+    plan = plan if isinstance(plan, dict) else None
+    if not char and plan is not None and isinstance(plan.get("char"), str):
+        char = plan["char"] or None
+    return plan, char
+
+
+def _item_name(iid):
+    """An item's name (the research's), or None: never an id."""
+    b = item_brief(iid) if iid is not None else None
+    name = (b or {}).get("name")
+    return name if isinstance(name, str) and name else None
+
+
+def _plan_name(iid, plan):
+    """An item's name: the plan's own (its moves' "names", never the planner's "item 12345" stand-in), else the
+    research's; None when neither knows it."""
+    for m in list((plan or {}).get("moves") or ()) + list((plan or {}).get("alts") or ()):
+        if isinstance(m, dict):
+            got = offline_coach.given_names(m).get(iid)
+            if got:
+                return got
+    return _item_name(iid)
+
+
+def _item_srcs(iid):
+    """Where an item comes from (the research's sources), or []."""
+    r = research
+    try:
+        f = r.facts(iid) if r is not None else None
+    except Exception as e:  # noqa: BLE001 - not known then
+        log_once("coach_tools.pursuit_srcs", e)
+        f = None
+    return [s for s in (f or {}).get("s") or () if isinstance(s, dict)]
+
+
+def _moves(plan):
+    """(the first move or None, [the alternatives, at most 2]): only moves with items."""
+    def ok(ms):
+        return [m for m in ms or () if isinstance(m, dict) and offline_coach.move_items(m)]
+    moves = ok((plan or {}).get("moves"))
+    return (moves[0] if moves else None), ok((plan or {}).get("alts"))[:2]
+
+
+def _names(m):
+    """-> a move's item names: the planner's own ("names", never its "item 12345" stand-in), else the research's."""
+    given = offline_coach.given_names(m)
+    return lambda i: given.get(i) or _item_name(i)
+
+
+def _move_words(m) -> dict[str, Any] | None:
+    """{"move": in words, "odds", "why"} for a move, and "also" for a run that rolls more than its lead item (the odds
+    are the lead item's); None when nothing names its items."""
+    text, also = offline_coach.move_parts(m, _names(m), _item_srcs)
+    if not text:
+        return None
+    out = {"move": text, "odds": m.get("odds") or None, "why": m.get("why") or None}
+    if also:
+        out["also"] = also
+    return out
+
+
+def plan_brief():
+    """The plan of the character playing in brief, for the prompt's gear.next_move (prompt_context.game_context's
+    pursuit_fn): {"move", "odds", "why", "alts": [the alternatives in words]}, or None."""
+    plan, _char_key = _plan()
+    first, alts = _moves(plan)
+    said = _move_words(first) if first is not None else None
+    if said is None:
+        return None
+    said["alts"] = [w["move"] for w in (_move_words(a) for a in alts) if w]
+    return said
+
+
+def _runs(char, m):
+    """The runs so far at a dungeon, raid or creature move's first item without it (rules.pursuit_runs: the planner's
+    count), and the range most runs take, (n or None, (lo, hi) or None)."""
+    items = offline_coach.move_items(m)
+    if not items or offline_coach.move_act(m)[0] not in ("inst", "raid", "mob"):
+        return None, None
+    n = rules_mod.pursuit_runs(pursuit, char, items[0], None)
+    return n, rules_mod.pursuit_range(pursuit, char, items[0], m)
+
+
+def _told(char, m):
+    """The coach said this move (an answer): the rules don't say it again as next_move."""
+    if m is None or not char or not callable(getattr(pursuit, "mark_told", None)):
+        return
+    try:
+        rules_mod.planner_told(pursuit, rules_mod.move_key(char, m), char, mark=True)
+    except Exception as e:  # noqa: BLE001 - said once more then
+        log_once("coach_tools.pursuit_told", e)
+
+
+def goal_cleared():
+    """The planner's on_goal_cleared (wired by the app): the player's goal landed or was skipped, so its memory note
+    goes (the model isn't told of a goal the plan dropped)."""
+    _goal_note(None)
+
+
+def _goal_note(name):
+    """Keep the player's best-in-slot goal as one memory note of kind "goal" (GOAL_NOTE): the earlier one goes; name
+    None: none."""
+    m = goal_memory
+    if m is None:
+        return
+    try:
+        want = GOAL_NOTE % name if name else None
+        for n in m.list():
+            if n.get("kind") == "goal" and str(n.get("text") or "").startswith(GOAL_NOTE.split("%")[0]) \
+                    and n.get("text") != want:
+                m.remove(n["id"])
+        if want:
+            m.add(want, "goal", source="player")
+    except Exception as e:  # noqa: BLE001 - the plan holds the goal all the same
+        log_once("coach_tools.goal_note", e)
+
+
+def bis_plan(sync_goal=True) -> dict[str, Any]:
+    """The bis_plan tool: the plan of the character playing in words -> {"move", "odds", "why", "runs" (a dungeon or
+    raid move's runs so far, when counted), "alts": [{"move", "odds", "why"}], "goal" (the item the player chose, or
+    None)}; or {"error", "say"}. The move it gives is told (the rules don't say it again). sync_goal: a plan without a
+    goal (reached, or dropped) takes the goal's memory note with it."""
+    if _planner() is None:
+        return {"error": "Glide isn't planning best-in-slot moves on this PC yet", "say": NO_PLAN}
+    plan, char = _plan()
+    first, alts = _moves(plan)
+    said = _move_words(first) if first is not None else None
+    if said is None:
+        return {"error": "no next move yet", "say": NO_PLAN}
+    n, _rng = _runs(char, first)
+    if n is not None:
+        said["runs"] = n
+    said["alts"] = [w for w in (_move_words(a) for a in alts) if w]
+    goal = (plan or {}).get("goal")
+    if (plan or {}).get("pursued") is False:
+        goal = None                                   # (the plan's own pick, not one the player chose)
+    said["goal"] = (offline_coach.given_names(first).get(goal) or _item_name(goal)) if isinstance(goal, int) else None
+    if sync_goal and not isinstance(goal, int):
+        _goal_note(None)
+    _told(char, first)
+    return said
+
+
+def _norm_words(text):
+    return re.sub(r"[^a-z0-9' ]+", " ", str(text or "").lower().replace("'s", "")).split()
+
+
+_NOT_NAME = {"the", "a", "an", "my", "that", "this", "it", "one", "piece", "item", "gear", "new", "bis"}
+
+
+def _plan_item(query, plan, hovered=None, lookup=True):
+    """The item a pursuit request names: an id, "this" (hovered: the item the player hovers), a word of the name of
+    an item the plan or the best-in-slot ranks name ("the robe"), else (lookup) the research's lookup by name. -> id
+    or None."""
+    q = " ".join(str(query or "").split()).strip(" .?!'\"")
+    if THIS_ITEM.fullmatch(q):
+        return hovered if isinstance(hovered, int) and hovered > 0 else None
+    m = re.fullmatch(r"(?:item\s*)?#?(\d+)", q, re.I)
+    if m:
+        return int(m.group(1))
+    words = [w for w in _norm_words(q) if w not in _NOT_NAME]
+    if not words:
+        return None
+    first, alts = _moves(plan)
+    ids = [i for mv in [first] + alts + list((plan or {}).get("moves") or ()) if isinstance(mv, dict)
+           for i in offline_coach.move_items(mv)]
+    if isinstance((plan or {}).get("goal"), int):
+        ids.append(plan["goal"])
+    cb, _worn = _bis_now()
+    for rows in ((cb or {}).get("slots") or {}).values():
+        ids += [r["id"] for r in rows or () if isinstance(r, dict) and isinstance(r.get("id"), int)]
+    given = {}
+    for mv in [first] + alts + list((plan or {}).get("moves") or ()):
+        if isinstance(mv, dict) and isinstance(mv.get("names"), dict):
+            given.update(mv["names"])
+    for iid in dict.fromkeys(ids):
+        have = _norm_words(given.get(str(iid)) or _item_name(iid))
+        if have and all(any(h == w or h.startswith(w) for h in have) for w in words):
+            return iid
+    find = getattr(research, "_find", None) if lookup else None
+    try:
+        return find(q) if callable(find) else None
+    except Exception as e:  # noqa: BLE001 - not found
+        log_once("coach_tools.pursuit_find", e)
+        return None
+
+
+def pursuit_set(item=None, skip=False, hovered=None, lookup=True) -> dict[str, Any]:
+    """The pursuit_set tool: chase an item (item, skip false: the plan goes for it, kept as a memory note of kind
+    "goal"), drop one (skip true; no item: the first move's), or let Glide pick again (neither). hovered: the item the
+    player hovers ("this"); lookup: an item named outside the plan and the ranks is looked up by name. -> the new plan
+    as bis_plan gives it, with "done" (what changed) and "item_id", or {"error", "say"}."""
+    p = _planner()
+    if p is None:
+        return {"error": "Glide isn't planning best-in-slot moves on this PC yet", "say": NO_PLAN}
+    plan, char = _plan()
+    iid = _plan_item(item, plan, hovered, lookup) if item else None
+    if item and iid is None:
+        return {"error": "no item called %r is known" % item, "say": "I don't know which item you mean."}
+    try:
+        if skip:
+            first, _alts = _moves(plan)
+            iid = iid if iid is not None else (offline_coach.move_items(first) or [None])[0]
+            if iid is None:
+                return {"error": "nothing to skip", "say": NO_PLAN}
+            name = _plan_name(iid, plan)
+            p.skip(char, iid)
+            done = "skipping %s" % (offline_coach.the_item(name) if name else "that item")
+        elif iid is not None:
+            name = _plan_name(iid, plan)
+            p.pursue(char, iid)
+            _goal_note(name)
+            done = "chasing %s" % (offline_coach.the_item(name) if name else "that item")
+        else:
+            p.pursue(char, None)
+            _goal_note(None)
+            done = "Glide picks the next move again"
+    except Exception as e:  # noqa: BLE001 - say it didn't take
+        log_once("coach_tools.pursuit_set", e)
+        return {"error": "the plan couldn't change: %s" % e, "say": "I couldn't change the plan just now."}
+    out = bis_plan(sync_goal=skip)                  # (a skipped goal: its memory note goes with it)
+    out["done"] = done
+    out["item_id"] = iid
+    return out
+
+
+# "what's my next move?", "how's the stylus hunt?", "chase the robe", "skip that", "let Glide pick"
+PURSUIT_QUESTIONS = [(kind, re.compile(p)) for kind, p in (
+    ("plan", r"(?:what(?: is|s)? |tell me )?(?:my |the )?next (?:move|gear move|bis move|best in slot move)"
+             r"|what should i (?:farm|run|chase|go for|go after)(?: next)?(?: for (?:my )?(?:gear|bis|best in slot))?"
+             r"|what should i do next for (?:my )?(?:gear|bis|best in slot)"
+             r"|(?:what(?: is|s)? )?(?:my |the )?(?:bis|best in slot|gear) plan|glide next"),
+    ("hunt", r"how(?: is|s| are)? (?:the |my )?(.+?) (?:hunt|chase|farm|farming)(?: going)?"),
+    ("pick", r"(?:let glide pick|you pick|pick for me|no (?:bis )?goal|clear (?:my |the )?(?:bis |gear )?goal)"
+             r"(?: again)?"),
+    ("chase", r"(?:let'?s |i want to |i'?ll )?(?:chase|go for|go after|pursue|hunt for) (.+?)"
+              r"(?: instead| next| now| first)?"),
+    ("skip", r"(?:let'?s )?skip (.+?)|(?:stop|quit) (?:chasing|hunting|going for|going after) (.+?)"
+             r"|(?:forget|drop) (?:the )?(.+?) (?:hunt|chase|goal)"))]
+
+
+def pursuit_question(question):
+    """What a pursuit request asks: ("plan", None), ("hunt", item words), ("pick", None), ("chase", item words) or
+    ("skip", item words, "that" for the move said), or None for another question."""
+    q = " ".join(str(question or "").lower().replace("best-in-slot", "best in slot").replace("’", "'").split())
+    q = re.sub(r"^(?:hey |coach,? |glide,? |please )+", "", q.strip(" .!?"))
+    q = re.sub(r"^what'?s ", "what is ", q)
+    q = re.sub(r"^how'?s ", "how is ", q)
+    for kind, pat in PURSUIT_QUESTIONS:
+        m = pat.fullmatch(q)
+        if m:
+            what = next((g for g in m.groups() if g), None)
+            return kind, (what.strip(" '\"") if what else None)
+    return None
+
+
+def pursuit_command(question, ai_ok, hovered=None):
+    """"What's my next move?", "how's the stylus hunt?", "chase the robe", "skip that", "let Glide pick" answered from
+    the pursuit plan while the AI is off (ai_ok false; with it the model asks bis_plan and pursuit_set). One line,
+    one number and its range. Returns the spoken answer, or None (another question, no planner)."""
+    if ai_ok or _planner() is None:
+        return None
+    got = pursuit_question(question)
+    if got is None:
+        return None
+    kind, what = got
+    if kind == "plan":
+        said = bis_plan()
+        if said.get("error"):
+            return said.get("say") or NO_PLAN
+        line = "Next: %s." % offline_coach.move_line(said["move"], said.get("odds"), said.get("also"))
+        alts = [a["move"] for a in said.get("alts") or ()]
+        return line + (" Or: %s." % "; or ".join(alts) if alts else "")
+    if kind == "hunt":
+        return _hunt_line(what)
+    if kind == "skip" and what and THIS_ITEM.fullmatch(what):
+        what = None                               # ("skip that": the move just said)
+    if what and _plan_item(what, _plan()[0], hovered, lookup=False) is None:
+        return None                               # ("go for a run": no item of the plan or the ranks)
+    out = pursuit_set(what, kind == "skip", hovered, lookup=False)
+    if out.get("error"):
+        return out.get("say") or NO_PLAN
+    done = out["done"]
+    line = _cap_first(done) + "."
+    if out.get("move"):
+        plan, _char_key = _plan()
+        first, _alts = _moves(plan)
+        moved = kind == "pick" or (kind == "chase") == (out.get("item_id") in offline_coach.move_items(first))
+        if moved:
+            line += " Next: %s." % offline_coach.move_line(out["move"], out.get("odds"), out.get("also"))
+    return line
+
+
+def _cap_first(text):
+    return text[:1].upper() + text[1:]
+
+
+def _hunt_line(what):
+    """"How's the stylus hunt?": the runs so far without it, and the range most runs take."""
+    plan, char = _plan()
+    iid = _plan_item(what, plan) if what else None
+    first, alts = _moves(plan)
+    m = next((mv for mv in [first] + alts if mv is not None and (iid is None or iid in offline_coach.move_items(mv))),
+             None)
+    if m is None:
+        return NO_PLAN if plan is None else "That isn't in my plan right now."
+    iid = iid if iid is not None else offline_coach.move_items(m)[0]
+    name = offline_coach.the_item(_names(m)(iid) or "that item")
+    lead = dict(m, items=[iid] + [i for i in offline_coach.move_items(m) if i != iid])
+    n, rng = _runs(char, lead)
+    if n is None:
+        return "I haven't counted runs for %s yet." % name
+    unit = rules_mod.TRY_UNITS.get(offline_coach.move_act(m)[0], "runs")
+    src = rules_mod.pursuit_src(pursuit, char, iid, m) if rng else None
+    usual = ("; it usually takes %d to %d" % rng + (" (%s)" % src if src else "")) if rng else ""
+    if n == 0:
+        return "No %s for %s yet%s." % (unit, name, usual)
+    if rules_mod.unlucky(n, m if iid == offline_coach.move_items(m)[0] else None, rng):
+        return "%d %s without %s: bad luck, not a bad plan%s." % (n, unit if n != 1 else offline_coach.TRY_ONE[unit],
+                                                                  name, usual)
+    return "%s %d without %s%s." % (offline_coach.TRY_ONE[unit].capitalize(), n, name, usual)
 
 
 # ---- sims the coach runs for the player (sims.py) ----------------------------------------------------------------

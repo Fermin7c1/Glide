@@ -28,6 +28,12 @@ Glide used data from [alcaras/forever-ref](https://github.com/alcaras/forever-re
 observations and Wowhead harvests) until 2026-10-30. That repository publishes no license, and Wowhead's terms don't
 allow redistributing its data, so none of it is in Glide any more.
 
+## Read from the player's own installs, not shipped
+
+| What | Source | License | Notes |
+|---|---|---|---|
+| AtlasLootClassic's classic drop chances (`AtlasLootClassic_DungeonsAndRaids/droprate.lua`) | [AtlasLootClassic](https://github.com/Hoizame/AtlasLootClassic), the copy the player installed in WoW | GPL-2.0 | Read at runtime from the player's own AtlasLootClassic install, when there is one and `pursuit.atlasloot_rates` is on (`companion/atlasloot_rates.py`: a restricted pattern reader that never runs the file, gives nothing when its shape doesn't match, and keeps the chances in memory only). Nothing of it ships with Glide or is written anywhere; the coach always names them as classic's chances ("that's classic's chance"), and the player's own kills correct them. The tests use a hand-made file (`tests/fixtures/atlasloot_droprate.lua`) holding three chances, cited in Glide's own plan |
+
 ## Fonts
 
 All under the [SIL Open Font License 1.1](https://openfontlicense.org); the full texts are in `companion/static/fonts/`.

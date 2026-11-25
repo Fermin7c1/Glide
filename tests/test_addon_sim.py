@@ -149,7 +149,8 @@ def glide(cmd):
 item = G.item
 toc_version = [ln for ln in open(os.path.join(ROOT, "addon", "Glide", "Glide.toc"), encoding="utf-8")
                if ln.startswith("## Version:")]
-assert toc_version == ["## Version: 0.23.0\n"], toc_version
+assert len(toc_version) == 1 and tuple(int(x) for x in toc_version[0].split(":")[1].strip().split(".")) >= (0, 23, 0), \
+    toc_version                                 # (the sim request came in 0.23.0)
 
 # ---- /glide sim: the request form and the nonce --------------------------------------------------------------------
 ring = item(19136, "Ring of Sorcery", "INVTYPE_FINGER", L.eval("{ ITEM_MOD_INTELLECT_SHORT = 15 }"), 2564, -13002)

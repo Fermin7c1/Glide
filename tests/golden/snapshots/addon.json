@@ -153,6 +153,7 @@
   "Repair.lua",
   "Stacks.lua",
   "Compare.lua",
+  "Pursuit.lua",
   "Coach.lua",
   "Strip.lua",
   "Minimap.lua",

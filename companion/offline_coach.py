@@ -1,7 +1,9 @@
 """The coach without a model (no API key, the AI off or suspended): rule-based callouts for the triggers, and the
 current step or the reason for it in plain words."""
+import re
 import sys
 
+import item_text
 from gear import PLURAL_SLOTS, dps_text
 
 # Plain meaning of the analyzer's why codes. The knowledge layer's own (knowledge/api/reasons.py) are used whenever
@@ -110,6 +112,12 @@ def callout(batch, ctx):
         f = kinds["turnin_decay_soon"].facts
         lines.insert(0, "Turn in %s before you level: it drops from %s to %s XP." % (
             f.get("quest"), f.get("xp_now"), f.get("xp_after_level_up")))
+    if "pursuit_got" in kinds:
+        lines.insert(0, pursuit_got_line(kinds["pursuit_got"].facts))
+    if "next_move" in kinds:
+        lines.append(next_move_line(kinds["next_move"].facts))
+    if "pursuit_roll" in kinds:
+        lines.append(pursuit_roll_line(kinds["pursuit_roll"].facts))
     if "facts_ready" in kinds:
         lines.append(facts_ready_line(kinds["facts_ready"].facts))
     if "fact_corrected" in kinds:
@@ -175,6 +183,267 @@ def enchant_missing_line(facts):
     return "Your %s %s no enchant: %s is worth about %s DPS." % (slot, "have" if slot in PLURAL_SLOTS else "has",
                                                                 facts.get("enchant") or "an enchant",
                                                                 dps_text(facts.get("dps")))
+
+
+# ---- the next move toward the next best-in-slot piece (pursuit.py, rules._pursuit) ---------------------------------
+def move_line(text, odds=None, also=None):
+    """A move and its odds as said: "<text>, about 1 in 8, usually 3 to 10 runs; that's classic's chance" (odds that
+    aren't a chance, "I don't know its price yet", after a semicolon), then what else the run rolls (also: the odds are
+    the lead item's): "... The run also rolls the Magister's Mantle". No closing period."""
+    text = str(text or "").strip().rstrip(".")
+    odds = str(odds or "").strip().rstrip(".")
+    if odds:
+        text = "%s%s %s" % (text, "," if odds.lower().startswith("about") else ";", odds)
+    return text + (". The run also rolls %s" % also if also else "")
+
+
+def next_move_line(facts):
+    """Glide's next move toward the next best-in-slot piece (next_move): "Next: <move>, <odds>." (and "The run also
+    rolls <also>."); zoning into the move's place (here): what drops there, "<text>." """
+    if facts.get("here"):
+        return _cap(str(facts.get("text") or "").rstrip(".")) + "."
+    return "Next: %s." % move_line(facts.get("text"), facts.get("odds"), facts.get("also"))
+
+
+def odds_source(odds):
+    """The source a move's odds name, as effort.say_odds names it below 0.9 sure: "classic's chance" (from "...; that's
+    classic's chance"), "web, unconfirmed" (from "... (web, unconfirmed)"), "a guess" (from "my guess is ..."); None
+    when none is named (the player's own kills, or no chance at all)."""
+    text = str(odds or "").strip().rstrip(".")
+    if re.match(r"my guess\b", text, re.I) or re.search(r"don'?t know the real chance", text, re.I):
+        return "a guess"
+    paren = re.search(r"\((web[^()]*)\)$", text, re.I)
+    if paren:
+        return re.sub(r",\s*with your kills counted$", "", paren.group(1).strip()) or None
+    if ";" not in text:
+        return None
+    return re.sub(r"^that'?s\s+", "", text.rpartition(";")[2].strip(), flags=re.I) or None
+
+
+TRY_ONE = {"runs": "run", "weeks": "week", "kills": "kill"}
+
+
+def pursuit_roll_line(facts):
+    """A boss of the move died and the item wasn't theirs (pursuit_roll): "No <item>. That's run <n>; it usually takes
+    <range> (<src>)." ("week" for a raid, "kill" for a creature: unit), and past the median try "<n> runs without it is
+    bad luck, not a bad plan." (unlucky)."""
+    item = facts.get("item") or "luck"
+    unit = facts.get("unit") if facts.get("unit") in TRY_ONE else "runs"
+    n = facts.get("tries") or 1
+    line = "No %s. That's %s %s" % (item, TRY_ONE[unit], n)
+    if facts.get("range"):
+        line += "; it usually takes %s" % facts["range"]
+        if facts.get("src"):
+            line += " (%s)" % facts["src"]
+    line += "."
+    if facts.get("unlucky"):
+        line += " %s %s without it is bad luck, not a bad plan." % (n, unit if n != 1 else TRY_ONE[unit])
+    return line
+
+
+def pursuit_got_line(facts):
+    """The item Glide's move went for is theirs (pursuit_got): "<Item> is yours[; equip it]. Next: <next move>." """
+    line = "%s is yours" % _cap(the_item(facts.get("item") or "the item"))
+    if facts.get("equip"):
+        line += "; equip it"
+    nxt = str(facts.get("next") or "").strip().rstrip(".")
+    return line + (". Next: %s." % nxt if nxt else ".")
+
+
+def the_item(name):
+    """An item's name with "the" in front ("the Sorcerer's Crown"), unless it has one."""
+    name = str(name or "").strip()
+    return name if not name or name.lower().startswith("the ") else "the " + name
+
+
+def _cap(text):
+    return text[:1].upper() + text[1:]
+
+
+def move_act(move):
+    """(kind, id) of a move's "act" ("inst:2057" -> ("inst", 2057)); the id as text when it isn't a number."""
+    kind, _, arg = str((move or {}).get("act") or "").partition(":")
+    return kind, int(arg) if arg.lstrip("-").isdigit() else (arg or None)
+
+
+def move_items(move):
+    """A move's item ids, in the planner's order."""
+    return [i for i in (move or {}).get("items") or () if isinstance(i, int) and not isinstance(i, bool)]
+
+
+STAND_IN = re.compile(r"(?:item\s*)?#?\d+", re.I)        # the planner's "item 12345" when it knows no name
+
+
+def given_names(move):
+    """{item id: name} the planner gave a move ("names", keyed by the id as text), without its "item 12345"
+    stand-ins: never an id said as a name."""
+    names = (move or {}).get("names")
+    out = {}
+    for k, v in (names.items() if isinstance(names, dict) else ()):
+        if str(k).isdigit() and isinstance(v, str) and v.strip() and not STAND_IN.fullmatch(v.strip()):
+            out[int(k)] = v.strip()
+    return out
+
+
+def overlay_line(level, move, name_fn=None, srcs_fn=None):
+    """The overlay's one line at 60 with no guide step (app.step_line's fallback): "L60  Next: Scholomance:
+    Bonecreeper Stylus" (the planner's short line, "text", else the move in words); None without a move."""
+    if not isinstance(move, dict) or not move_items(move):
+        return None
+    names = given_names(move)
+    text = move.get("text") if isinstance(move.get("text"), str) else None
+    if not text or (isinstance(move.get("names"), dict) and any(i not in names for i in move_items(move))):
+        # (no short line, or it may carry an "item 12345" stand-in: the move in words)
+        text = move_text(move, lambda i: names.get(i) or (name_fn(i) if name_fn else None), srcs_fn)
+    return "L%s  Next: %s" % (level, _cap(text)) if text else None
+
+
+def _src(srcs, kinds, **match):
+    """The first source of these kinds that matches (a value of None matches anything), else the first of the kinds."""
+    hits = [s for s in srcs or () if isinstance(s, dict) and s.get("kind") in kinds]
+    return next((s for s in hits if all(v is None or s.get(k) == v for k, v in match.items())), hits[0] if hits else
+                None)
+
+
+def move_place(move, srcs_fn):
+    """The names a dungeon or raid move's place goes by (the planner's "place" and "zone", the sources' instance and
+    zone names: "Upper Blackrock Spire", "Blackrock Spire"), for zoning in; [] for another move."""
+    m = move or {}
+    kind, where = move_act(m)
+    if kind not in ("inst", "raid"):
+        return []
+    out = [p for p in (m.get("place"), m.get("zone")) if isinstance(p, str) and p]
+    for iid in move_items(m):
+        s = _src(srcs_fn(iid) if srcs_fn else [], ("drop", "trash"), zone=where if isinstance(where, int) else None)
+        for name in (s or {}).get("instance"), (s or {}).get("zone_name"):
+            if name and name not in out:
+                out.append(name)
+    return list(dict.fromkeys(out))
+
+
+def _bosses(move, name_fn, srcs_fn):
+    """[(item name, boss name or None)] of a dungeon or raid move's items that have a name (the boss: the planner's
+    "drops", else the sources')."""
+    m = move or {}
+    _kind, where = move_act(m)
+    drops = {d.get("item"): d.get("npc_name") for d in m.get("drops") or () if isinstance(d, dict)}
+    out = []
+    for iid in move_items(m):
+        name = name_fn(iid) if name_fn else None
+        if not name:
+            continue
+        s = _src(srcs_fn(iid) if srcs_fn else [], ("drop",), zone=where if isinstance(where, int) else None)
+        out.append((name, drops.get(iid) or (s or {}).get("npc_name")))
+    return out
+
+
+def _named(pairs, n=2):
+    """"the X (Boss) and the Y (Boss)", at most n named, then "and more" (no second number in a line)."""
+    parts = [the_item(item) + (" (%s)" % boss if boss else "") for item, boss in pairs[:n]]
+    if len(pairs) > len(parts):
+        return "%s and more" % ", ".join(parts)
+    return " and ".join(parts)
+
+
+def _plural(name):
+    """Whether an item's name is a plural ("Ghostloom Leggings", "Robes of the Exalted"; not "Bonecreeper Stylus"):
+    its head word (the one before " of ", else the last) ends in a lone s."""
+    head = str(name or "").split(" of ")[0].split()
+    w = head[-1].lower() if head else ""
+    return w.endswith("s") and not w.endswith(("ss", "us", "is", "'s"))
+
+
+def _also(names):
+    """The other items a run rolls, at most two named: "the X", "the X and the Y", "the X, the Y and more"."""
+    named = [the_item(n) for n in names[:2]]
+    if len(names) > 2:
+        return "%s, %s and more" % (named[0], named[1])
+    return " and ".join(named) or None
+
+
+def move_parts(move, name_fn=None, srcs_fn=None):
+    """A pursuit move (pursuit.Planner's plan: {"act", "items", "odds", "why", ...}) in words, without its odds:
+    (text, also). text: "Scholomance. The Bonecreeper Stylus drops from Darkmaster Gandling", "Deliana in Ironforge
+    sells the Sorcerer's Crown", "the quest <name> rewards the <item>" (one ready to turn in, the move's "done": "turn
+    in the quest <name> for the <item>; <who> in <place> takes it"), "the auction house for the <item>"; also, for a
+    dungeon or raid run that rolls more than its lead item: the others ("the Magister's Mantle"), said after the odds
+    (which are the lead item's), else None. name_fn(item id) -> its name or None; srcs_fn(item id) -> its sources (the
+    research's Src list) or []; the planner's own "place", "npc_name" and "drops" fill in what they don't say. (None,
+    None) when nothing names its items (never an id)."""
+    m = move or {}
+    kind, where = move_act(m)
+    names = [n for n in (name_fn(i) if name_fn else None for i in move_items(m)) if n]
+    if not names:
+        return None, None
+    srcs = (srcs_fn(move_items(m)[0]) if srcs_fn else None) or []
+    things = " and ".join(the_item(n) for n in names[:2]) + (" and more" if len(names) > 2 else "")
+    if kind in ("inst", "raid"):
+        pairs, place = _bosses(m, name_fn, srcs_fn), (move_place(m, srcs_fn) or [None])[0]
+        lead, boss = pairs[0]
+        if boss:
+            said = "%s %s from %s" % (_cap(the_item(lead)), "drop" if _plural(lead) else "drops", boss)
+            return ("%s. %s" % (place, said) if place else said), _also([n for n, _b in pairs[1:]])
+        return ("%s for %s" % (place, _named(pairs)) if place else _cap(_named(pairs))), None
+    if kind == "mob":
+        s = _src(srcs, ("drop", "world"), npc=where if isinstance(where, int) else None) or {}
+        who, place = s.get("npc_name") or m.get("npc_name"), s.get("zone_name") or m.get("place")
+        return "%s%s drops %s" % (who or "a creature", " in %s" % place if place else "", things), None
+    if kind == "vendor":
+        s = _src(srcs, ("vendor", "rep"), npc=where if isinstance(where, int) else None) or {}
+        who, place = s.get("npc_name") or m.get("npc_name"), s.get("zone_name") or m.get("place")
+        if who:
+            return "%s%s sells %s" % (who, " in %s" % place if place else "", things), None
+        return "a vendor%s sells %s" % (" in %s" % place if place else "", things), None
+    if kind == "quest":
+        s = _src(srcs, ("quest",), quest=where if isinstance(where, int) else None) or {}
+        who, place = m.get("npc_name"), m.get("place")          # (the planner's: who starts it, and where)
+        at = " in %s" % place if isinstance(place, str) and place else ""
+        if m.get("done"):                                       # (complete: who it is turned in to)
+            text = "turn in the quest %s for %s" % (s["quest_name"], things) if s.get("quest_name") else \
+                "turn in the quest for %s" % things
+            return text + ("; %s%s takes it" % (who, at) if isinstance(who, str) and who else ""), None
+        text = "the quest %s rewards %s" % (s["quest_name"], things) if s.get("quest_name") else \
+            "a quest rewards %s" % things
+        if isinstance(who, str) and who:
+            text += "; it starts with %s%s" % (who, at)
+        return text, None
+    if kind == "ah":
+        return "the auction house for %s" % things, None
+    if kind == "pvp":
+        return "%s, a PvP reward" % things, None
+    want = {"rep": ("rep",), "craft": ("crafted",)}.get(kind)
+    s = _src(srcs, want) if want else item_text.best(srcs)
+    said = item_text.source_text(s) if s else ""
+    return ("%s, %s" % (things, said) if said else things), None
+
+
+def move_text(move, name_fn=None, srcs_fn=None):
+    """A pursuit move in words without its odds (move_parts' text: for a run, its lead item); None when nothing names
+    its items."""
+    return move_parts(move, name_fn, srcs_fn)[0]
+
+
+def move_say(move, name_fn=None, srcs_fn=None):
+    """A pursuit move as said after "Next: ", with its odds and what else the run rolls (move_line); None when nothing
+    names its items."""
+    text, also = move_parts(move, name_fn, srcs_fn)
+    return move_line(text, (move or {}).get("odds"), also) if text else None
+
+
+def here_text(move, name_fn=None, srcs_fn=None):
+    """Zoning into a dungeon or raid move's place: what drops there for the player, "The Bonecreeper Stylus drops from
+    Darkmaster Gandling here" or "Here: the X (Boss) and the Y (Boss)"; None for another move or none named."""
+    if move_act(move)[0] not in ("inst", "raid"):
+        return None
+    pairs = _bosses(move, name_fn, srcs_fn)
+    if not pairs:
+        return None
+    if len(pairs) == 1:
+        item, boss = pairs[0]
+        verb = "drop" if _plural(item) else "drops"
+        return "%s %s from %s here" % (_cap(the_item(item)), verb, boss) if boss else \
+            "%s %s here" % (_cap(the_item(item)), verb)
+    return "Here: " + _named(pairs)
 
 
 def fact_corrected_line(facts):

@@ -56,7 +56,7 @@ they don't spell out.
    font_size}` belong to the standalone Python overlay (`companion/overlay.py`, run without the app); the app's
    overlay uses `app-settings.json` `overlay.{opacity,fontSize,...}` and reads only `companion.overlay.drag_key`
    from `config.json` (both overlays use it).
-6. **The databases**: `data/glide.db` and `data/kb.db` table and column names (51 kb tables) as read by the engine
+6. **The databases**: `data/glide.db` and `data/kb.db` table and column names (52 kb tables) as read by the engine
    and written by `tools/` and `knowledge/build_kb.py`. A schema change means a rebuild for every player, so it is
    out of scope for the refactor. With a kb.db, glide.db is the knowledge build's input: at runtime the engine reads
    kb.db (through `knowledge.api`), and glide.db only when there is no knowledge pack and in the simulator (`--sim`).
@@ -1333,3 +1333,126 @@ they don't spell out.
   its link, so the coach screen's text has "Open in WoWSims" and the credit) and the `desktop` golden (the three new
   Settings fields). The addon and engine probes are unchanged (no request is sent in the mock; a simulated run starts
   no sims).
+- **Addon 0.24.0 and the engine, contracts 3, 5, 6, 7 and 8 additive: the next move toward the next best-in-slot piece,
+  weighed by effort (the BiS plan's Phase 4).** At 60, of the items the BiS ranks find better than what the character
+  wears and can have now, new `companion/pursuit.py` (`Planner`, wired by `App._start_pursuit` after the BiS ranks and
+  the sims, on its own thread: the full plan every 15 s, the game state every 3 s between) picks the activity that
+  gets the most DPS per hour: the sum over slot groups of the best `p * d'` it rolls over the hours a try takes, d' an
+  item's gain over the better of what is worn or carried (what just landed in the bags counts before the ranks are
+  worked out again) and the best item of its slot group that takes fewer expected hours (rings and trinkets: the
+  second best), p a drop's chance a try (new `companion/effort.py`: a Beta update of the player's own kills, those
+  whose loot was seen or that brought the item, over AtlasLoot classic's chance at k=20 or a web rate at k=5, else a
+  labelled 1-in-10 guess that never ranks above a known chance gaining as much, nor makes a known item the slower
+  one; times the chance of winning the roll for `pursuit.group` and, for a random-suffix item, the share of suffixes
+  as good as the ranked one), the hours from the player's own run times (zone in to zone out; back in within 15
+  minutes, or after a corpse run, the same run) shrunk toward `analyzer.dungeon.run_s`, plus `pursuit.form_minutes`
+  (half as long again for 10-player Upper Blackrock Spire, none solo) and travel, floored by Forever's 5 dungeon
+  entries an hour; raids gated by the calendar (December 9) and, after a kill of one of their followed bosses, by the
+  weekly reset (Tuesday 15:00 UTC, a week at most); a vendor by the gold missing at the gold per hour measured from
+  the money the strip sends; a reputation by the standing missing (as of the last `/reload`) at a rate learned from
+  the Recorder's rise within a session (its first turn-in to its last), else standings over reloads; a quest chain by
+  its steps left (the knowledge base's prerequisites, the quest log; one ready to turn in: the way to whom it goes, a
+  try that takes no time ranked as the quickest); a craft by the profession, its
+  pattern and reagents; the auction house by the last price seen and its age; PvP not estimated. A number a top move
+  lacks is asked of the research's web lookups (`research.enqueue_web(job, "pursued", 2)`: `r:<npc>:<item>`,
+  `v:<npc>:<item>`, `q:<quest>`, `f:<faction>`, once a session each, within its daily caps). AtlasLoot classic's
+  chances are read from the player's own AtlasLootClassic install (new `companion/atlasloot_rates.py`:
+  `AtlasLootClassic_DungeonsAndRaids/droprate.lua`, a restricted pattern reader that runs nothing, re-read when it
+  changes; `pursuit.atlasloot_rates`), never shipped (THIRD_PARTY_NOTICES.md). The addon's saved data is read,
+  read-only (new `companion/recorder_data.py`: every account's `WTF/Account/*/SavedVariables/Glide.lua` under the
+  configured WoW folder through `knowledge/sources/_lua.py`, parsed again when a file's size or time changes, the
+  folder looked at every 2 s at most, only the session keys it reads kept): the character's professions (now the BiS
+  ranks' and the sims' `skills_fn`, so a ring enchant and an item that needs a profession count once the character is
+  known to have it; unknown until the addon has recorded them), standings, auction prices and looted corpses (one per
+  corpse by the knowledge build's merge rules: tries the strip missed). **Contract 5:** new `data/pursuit.json`
+  (`{"v": 1, "chars": {key: {"goal": item id or null, "pursued": bool (the goal is the player's), "moves": [Move]
+  (the 3 first), "tag", "tries": [{"t", "act", "npc", "items", "seen", "got", "looked"}], "skipped": [id], "owned":
+  [id], "runs": {act: [minutes]}, "gold": [[t, copper]], "rep": {faction id: [[t, value]]}, "grind": {faction id:
+  [[t0, t1, gain]]}, "rec_t", "told": {key: t}, "pinned"}}}`,
+  key as in bis.json; a Move is `{"act"` (`inst:<zone>`, `inst:1583:Upper|Lower`, `raid:<zone>`, `mob:<npc>`,
+  `quest:<id>`, `vendor:<npc>`, `rep:<faction>`, `craft:<item>`, `ah:<item>`, `pvp:<item>`), `"key", "kind", "items",
+  "names", "value", "hours", "odds", "why", "text", "say", "where": {"map", "x", "y"} (0..1) or null, "place", "zone",
+  "npc", "npc_name", "p", "tries", "range", "jobs", "drops", "done"?}` (`done`: a quest ready to turn in, its
+  npc_name and where whom it goes to)); `Data/Live.lua`'s `chars[key]` gains `next = { t =
+  "<the move's short line>", m = <uiMapID>, x = <0..1>, y = <0..1>, alt = { "<line>", "<line>" } }` (m, x, y only when
+  its place is known) and `goal = <item id>` (merged into the same entry as `bis`, `link` and `sim` by
+  `App._live_chars`; neither while `pursuit.enabled` is off), and a new section `pursuit = { ["pin"] = "free" |
+  "command" | "off" }` (the app's setting; empty while off); the addon also reads an optional `chars[key].ah = {
+  <item id>, ... }` (more items to note prices for; the engine writes none yet). The Recorder's SavedVariables
+  (additive, docs/RECORDER.md): `session.factions[factionID] = { standing, value, t, v0, t0, t1 }` for WoWSims' 15
+  factions (at login and a second after `UPDATE_FACTION`; v0, t0 the value just after the session's first rise and
+  when, t1 its last rise), top-level `GlideRecorderDB.auction["<realm>|<side>"][itemID] = { copper, t }` (the lowest
+  buyout for one the player saw while browsing, for the plan's items only, a book per realm and side, the 300 newest
+  of each; Glide never searches; `recorder_data.auction(item, char)` answers the character's own house only), and on
+  a client that lists no skill lines (Forever's) `session.skills.lines` from the spells it knows
+  (each profession by its classic rank spells: `{ n, mx, h = "Professions" | "Secondary Skills" }`, and the weapon and
+  armor skills, `h = "Weapon Skills" | "Armor Proficiencies"`) with `session.skills.from = "spells"`; GlideLinkDB
+  section `pursuit` (`pin`, `told[Name-Realm]` = the last move said, `placed = { m, x, y }`: Glide's own pin).
+  `data/live/reminders.json` entries gain `source` (`"pursuit"`: the next move's vendor and auction house steps,
+  replaced as a whole whenever the move changes, `Reminders.replace`; the player's own have none and are never
+  touched) and `char` (the character key whose move it is: `Reminders.check` never says it to another, nor while gear
+  talk is muted, `ReminderTicker` passing `held`; dropped at the start when no planner runs); an npc condition takes
+  `npc` (id) and/or `name` (one vendor), a place condition a list of places.
+  **Contract 3:** `overlay_step` at 60 with no guide step is the next move, `"L60  Next: <move>"`
+  (`App.overlay_line`, `offline_coach.overlay_line`; a guide step's line as before whenever one runs; none below 60
+  or with the planner off); the state's `reminders` leave out the `"pursuit"` ones (they are said, not listed).
+  **Contract 6:** new kb table `instance_entrance(area_id INTEGER PRIMARY KEY, ui_map, x, y, src, instance, name,
+  kind, max_players, continent, wx, wy, conf, aliases)` (new `knowledge/sources/entrances.py`, run after
+  `map_bounds`: the client's Map.db2 `Corpse` positions converted through `map_bounds`, `src` "db2", conf 0.7, and
+  twelve hand-checked level-55+ overrides, `src` "hand", conf 0.9; x, y map percent; read with
+  `knowledge.api.instance_entrance(kb, key)` / `KnowledgePack.instance_entrance(key)` by area id, name or alias),
+  additive: no table or column changed, `SCHEMA_VERSION` stays 1, and it is there after the next kb build (schema.sql
+  and the knowledge code are staleness inputs, so a player's next background refresh builds it; an older kb.db
+  answers None). **Triggers** (category gear, topic gear; at 60, out of combat, alive, not on a flight, held untold
+  while gear talk is muted): `next_move` (`{"text", "odds", "why", "also"?}`, priority 2: once per move, kept in
+  pursuit.json's `told` across restarts, in a frame that raised nothing else; zoning into the dungeon or raid of the
+  move or an alternative `{"text", "odds": null, "why": null, "here": true}`, once per place in 30 minutes; while a
+  plan has a move, Phase 2's `next_upgrade` waits), `pursuit_roll` (`{"item", "tries", "range": "3 to 10", "src"?,
+  "unit"? ("weeks" for a raid, "kills" for a creature), "unlucky"?}`, priority 3: 120 s after a boss of a followed item
+  died without it, one kill per boss in 5 minutes; the first move and its two alternatives are followed) and
+  `pursuit_got` (`{"item", "next", "equip"?}`, priority 2: a followed item in the bags or worn, the plan worked out
+  again at once; `gear_upgrade` never says that item again). The prompt's REFERENCE gains `gear.next_move` (`{"move",
+  "odds", "also", "why", "alts"}`; `alts` trimmed first) and the system prompt's Gear paragraph how to word it; the
+  coach gains the local tools `bis_plan` (`{}` -> `{"move", "odds", "why", "also"?, "runs"?, "alts": [{"move",
+  "odds", "why"}], "goal"}`) and `pursuit_set` (`{"item"?, "skip"?}` -> the same plus `"done"`, `"item_id"`; a goal
+  set is kept as one memory note of kind "goal", "Best-in-slot goal: <item>.", removed when cleared, skipped or once
+  it lands: the planner's `on_goal_cleared`), and "what's my next move?", "how's the stylus hunt?", "chase the robe",
+  "skip that" and "let Glide pick" are answered without a model; with `pursuit.enabled` off the planner plans, keeps
+  and writes nothing and none of these is offered or answered. **Contract 7:** `/glide next` ("next [pin] - your next move toward your next best-in-slot piece (pin: on your
+  map; pin free|command|off: when Glide pins by itself)"), `/glide next pin`, `/glide next pin free|command|off`
+  (auto and on for free, manual for command). **Contract 8 (player text):** the move ("Next: Deliana in Ironforge
+  sells the Sorcerer's Crown; I don't know its price yet.", "Next: Scholomance. The Ghostloom Leggings drop from Lady
+  Illucia Barov, about 1 in 8, usually 3 to 11 runs; that's classic's chance. The run also rolls the Magister's Mantle
+  and the Bonecreeper Stylus.", "Raid gear: earliest December 9, then one roll a week.", "I can't estimate PvP rewards
+  yet.", "Ask a tailor or check the auction house."), effort's odds ("about 1 in 8, usually 3 to 10 runs", "every
+  run", the 90% count "(9 in 10 get it by run 16)" only when asked; the source after the last "; ": "that's classic's
+  chance", "web, unconfirmed", "that's my guess, nobody lists its chance", "... with your kills counted", or ", by
+  your own kills"; "with the rolls" and "with the right suffix" after the chance when it counts a group's rolls or a
+  random suffix's share) and times ("About an hour a run, finding a group included; ...", "that's my guess until
+  you've run it", "by your own runs", "About 1.5 hours a run by your own runs, plus my guess for finding a group.",
+  "at a guessed 10g an hour", "its price is from the web, unconfirmed", "Your raid lockout is used; next week brings
+  one more roll.", "The quest is ready to turn in.", "Next: turn in the quest <quest> for the <item>; <who> in
+  <place> takes it."), the
+  follow-through ("The Bonecreeper Stylus drops from Darkmaster Gandling here", "No Bonecreeper Stylus. That's run 6;
+  it usually takes 3 to 10 (classic's chance). Six runs without it is bad luck, not a bad plan.", "The Sorcerer's
+  Crown is yours; equip it. Next: ..."), the reminders ("buy the Sorcerer's Crown from Deliana", "check the auction
+  house for the ..."), the overlay's "L60  Next: Scholomance: Bonecreeper Stylus"; in the game "next: <move>",
+  "(/glide next pin puts it on your map)", "  or: <move>", "no next move for this character yet: level 60 and a few
+  minutes of the Glide app running; then /reload", "pinned on your map: <move>", "in combat: /glide next pin again
+  once the fight is over", "map pins are off: /glide next pin command (or free) turns them on", "map pins are off in
+  the Glide app's settings", "map pins are off until you /reload: the game refused the last one", "the game refused
+  the pin, so Glide won't place one again until you /reload", "that move has no place on the map to pin", "the game
+  can't put a pin on that map", "this client has no map pins", and on the chased item's tooltip "your next BiS goal"
+  on the second Glide line ("Glide BiS #1 for Ranged, +7.2 DPS, your next BiS goal: drops from ...", "Glide, your
+  next BiS goal: drops from ...", "Glide: your next BiS goal"; never a third line, nothing once worn or with `/glide
+  bis off`; a goal ranked with a random suffix only on that suffix, and only that suffix worn reaches it). New
+  settings (Settings, "Best in slot pursuit"): `pursuit.enabled` (on, "Pick my next best-in-slot move
+  at level 60"), `pursuit.group` ("pug", or "guild", "solo"; "How I run dungeons"), `pursuit.form_minutes` (20, 0 to
+  120, "Minutes to find a group"), `pursuit.atlasloot_rates` (on, "Use AtlasLoot's classic drop chances") and
+  `pursuit.pin` ("free", or "command", "off"; "Map pin for the next move"); each applies after a coach restart. The
+  player asked (2026-11-24). Pinned by `tests/test_effort.py`, `tests/test_atlasloot_rates.py`,
+  `tests/test_pursuit.py`, `tests/test_pursuit_rules.py`, `tests/test_pursuit_wiring.py`,
+  `tests/test_recorder_data.py`, `tests/test_addon_pursuit.py`, `tests/kb/test_entrances.py` (its client check exits
+  77 without data/kb.db or the client's Map table), `tests/test_bis_wiring.py` and `tests/test_versions.py`; the
+  `addon` golden re-recorded (the TOC gains `Pursuit.lua`) and the `desktop` golden (the new Settings group). The
+  engine probes are unchanged (a simulated run starts no planner) and so is the knowledge probe.
