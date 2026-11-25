@@ -87,8 +87,9 @@ check(db.eligible(226935, dict(MAGE, level=55)), "60 is within 5 levels of 55")
 check(db.eligible(754, MAGE) and 754 not in db.band(MAGE), "wearable, but below the level-60 band")
 check(4746 in db.band(dict(MAGE, level=32)) and 4746 in db.band(dict(MAGE, level=47))
       and 4746 not in db.band(dict(MAGE, level=48)) and 4746 not in db.band(dict(MAGE, level=31)), "the band's edges")
-check(db.band(MAGE) == [12543, 13253, 13371, 13968, 14152, 14558, 16337, 16437, 16533, 16686, 18820, 21809, 22268,
+check(db.band(MAGE) == [12543, 13253, 13371, 13968, 14152, 14558, 16337, 16437, 16686, 18820, 21809, 22268,
                         22301, 226935], db.band(MAGE))
+check(16533 in db.band(HORDE_MAGE) and 16437 not in db.band(HORDE_MAGE), "each side's PvP gear (Warlord's, Marshal's)")
 check(db.band(PALADIN) == [647, 11735, 12543, 13253, 13371, 13968, 14558, 16337, 16686, 18820, 20041, 21809, 22268,
                            22400, 287031], db.band(PALADIN))
 check(20041 not in db.band(HORDE_PALADIN) and 20068 in db.band(HORDE_MAGE), "each side's band")
@@ -149,7 +150,10 @@ check([(s["kind"], s["npc_name"], s["zone"], s["zone_name"]) for s in clate]
       == [("vendor", "Sergeant Major Clate", 2918, "PvP vendor"), ("pvp", None, None, None)], clate)
 check([(s["npc_name"], s["zone"], s["zone_name"]) for s in db.sources(16533, "Horde") if s["kind"] == "vendor"]
       == [("Lady Palanseer", 2917, "PvP vendor")], "Horde's honor vendor")
-check(kinds(16533, "Alliance") == ["pvp"], "the other side's honor vendor is left out")
+# the other side's honor vendor is left out, and so is the PvP source WoWSims gives no side (regression: a Warlord's
+# cowl, sold only by a Horde vendor, read "PvP" for the Alliance: ranked and named as an upgrade)
+check(kinds(16533, "Alliance") == [] and not db.eligible(16533, MAGE) and kinds(16533, "Horde") == [
+    "vendor", "pvp"], "the other side's PvP gear")
 hawke = db.sources(20041, "Alliance")
 check([(s["kind"], s["npc_name"], s["zone_name"], s["rep_faction"], s["rep_level"]) for s in hawke]
       == [("rep", "Samuel Hawke", "Arathi Highlands", "The League of Arathor", "Honored"),
@@ -217,6 +221,44 @@ check(db.avail(18820, "Alliance", None, []) == "later", "a later phase stays lat
 # ---- a quest's side, from any item's sources (research settles the knowledge base's "Both" quests with it) ----------
 check(db.quest_side(4974) == "Horde" and db.quest_side("5102") == "Alliance" and db.quest_side(709) is None and
       db.quest_side(None) is None, "quest_side")
+
+# ---- PvP gear WoWSims gives no side: the rank title in the name says it (regression: for an Alliance mage the
+# Horde's Premier High Warlord's Spellblade, the Alliance's Mageblade twin in stats and the lower id, came first in the
+# ranks and could be named the next upgrade); a source with a side wins over none; a drop is anyone's ----------------
+pv = json.loads(DB_BYTES)
+SPELL = {"type": 13, "weaponType": 2, "handType": 2, "reqLvl": 60, "phase": 1, "quality": 4,
+         "scalingOptions": {"0": {"ilvl": 78, "stats": {"5": 94}}}}
+pv["items"] = [dict(SPELL, id=272683, name="Premier High Warlord's Spellblade", sources=[{"pvp": {}}]),
+               dict(SPELL, id=272856, name="Premier Grand Marshal's Mageblade", sources=[{"pvp": {}}]),
+               dict(SPELL, id=900001, name="Knight-Champion's Dagger", sources=[{"pvp": {}}]),
+               dict(SPELL, id=900002, name="Champion's Dagger", sources=[{"pvp": {}}]),
+               dict(SPELL, id=900003, name="Insignia of the Horde", type=12, sources=[{"pvp": {}}]),
+               dict(SPELL, id=900004, name="Battle Dagger", sources=[{"pvp": {}}]),
+               dict(SPELL, id=900005, name="Frostwolf Legionnaire's Dagger", sources=[
+                   {"soldBy": {"npcId": 1, "npcName": "Jekyll", "zoneId": 2597, "faction": 2}}, {"pvp": {}}]),
+               dict(SPELL, id=900006, name="Field Dagger", sources=[
+                   {"soldBy": {"npcId": 2, "npcName": "Quartermaster", "zoneId": 2597, "faction": 2}}, {"pvp": {}}]),
+               dict(SPELL, id=900007, name="Lost Champion's Dagger", sources=[{"drop": {"zoneId": 1337}}, {"pvp": {}}]),
+               dict(SPELL, id=900008, name="Neutral Dagger", sources=[
+                   {"soldBy": {"npcId": 3, "npcName": "Goblin", "zoneId": 1337}},
+                   {"soldBy": {"npcId": 4, "npcName": "Quartermaster", "zoneId": 2597, "faction": 1}}, {"pvp": {}}])]
+pdb = item_db.ItemDB.load(json.dumps(pv).encode(), None, "v1.0.4")
+for iid, horde in ((272683, True), (272856, False), (900001, False), (900002, True), (900003, True),
+                   (900005, True), (900006, True)):
+    mine, other = (HORDE_MAGE, MAGE) if horde else (MAGE, HORDE_MAGE)
+    check(pdb.eligible(iid, mine) and not pdb.eligible(iid, other) and iid in pdb.band(mine)
+          and iid not in pdb.band(other), ("one side's PvP gear", iid))
+    check(pdb.avail(iid, mine["faction"]) == "now" and pdb.avail(iid, other["faction"]) == "nosrc"
+          and pdb.sources(iid, other["faction"]) == [], ("the other side's PvP gear can't be had", iid))
+check(pdb.eligible(900004, MAGE) and pdb.eligible(900004, HORDE_MAGE) and pdb.avail(900004, "Alliance") == "now",
+      "PvP gear with no side to tell: either")
+check([s["kind"] for s in pdb.sources(900007, "Alliance")] == ["drop"] and pdb.eligible(900007, MAGE)
+      and [s["kind"] for s in pdb.sources(900007, "Horde")] == ["drop", "pvp"], "a drop is anyone's, the PvP Horde's")
+check([s["kind"] for s in pdb.sources(900008, "Horde")] == ["vendor"] and pdb.eligible(900008, HORDE_MAGE)
+      and [s["kind"] for s in pdb.sources(900008, "Alliance")] == ["vendor", "vendor", "pvp"],
+      "a vendor of either side; the PvP source the Alliance's (its only sided vendor)")
+check(item_db.pvp_side({"name": "Lieutenant Commander's Crown"}) == 1 and item_db.pvp_side(
+    {"name": "Blood Guard's Silk Footwraps"}) == 2 and item_db.pvp_side({"name": "Sergeant's Cape"}) == 0, "titles")
 
 # ---- WoWSims' names cleaned: a few keep a backslash before a quote (regression: 'Eric \\"The Swift\\"') ---------------
 esc = json.loads(DB_BYTES)

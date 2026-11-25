@@ -8,9 +8,14 @@ Under it, the source line: where the item comes from, from the facts the Glide a
 (ns.live.items), wrapped, grey for an item not out yet or with no known source, " (web, unconfirmed)" after a web
 fact; it shows without weights, below 60, on the item worn, on a chat link (also one whose data hasn't come yet) and
 when the upgrade line fails, and not with its own switch off (/glide sources off), for an item with no fact, nor
-without Live.lua. Needs lupa."""
+without Live.lua. On an item the Glide app ranked for this character (ns.live.chars[Name-Realm or Name].bis), the BiS
+line takes the source line's place ("Glide BiS #2 for Finger, +6.1 DPS: <where it comes from>", "you wear it" when
+worn, "about the same as yours" for "~", "with its set" for "s", the profession it needs), keyed by the realm with or
+without its spaces, the
+source line back for a broken entry, a failing BiS line, or with its own switch off (/glide bis off). Needs lupa."""
 import os
 import sys
+import tempfile
 
 from lupa import lua51
 
@@ -203,5 +208,194 @@ ns.live = L.eval("{ v = 1, gen = 0, t = 0, items = {}, chars = {} }")
 G.SlashCmdList.GLIDE("sources")
 said = list(G.printed.values())[-1]
 assert "none known yet" in said and "then /reload" in said, said
+ns.live = live
+
+# ---- the BiS line: where an item ranks for this character (ns.live.chars[key].bis[id] = { slot, rank, d, "~" }) ------
+assert ns.BisOn() is True, "on by default"
+
+
+def texts(got):
+    return [ln.text for ln in got.values()]
+
+
+up = "Glide (Arcane): +6.9 DPS (+1.2%) vs Band of Old"
+gandling = "drops from Darkmaster Gandling, Scholomance"
+chars = ns.live.chars
+assert texts(lines(new)) == [up, "Glide: " + gandling], "nothing ranked: the source line"
+chars.Nine = L.eval('{ bis = { [1003] = { "Finger", 2, 6.1 } } }')
+got = list(lines(new).values())
+assert [ln.text for ln in got] == [up, "Glide BiS #2 for Finger, +6.1 DPS: " + gandling], [ln.text for ln in got]
+assert got[1].wrap is True and (got[1].r, got[1].g, got[1].b) == (0.4, 0.8, 1), (got[1].wrap, got[1].r)
+bis_text = got[1].text
+# on a chat link's tooltip, and on a tooltip without a link (the item id its data carries)
+assert texts(lines(new, G.ItemRefTooltip)) == [up, bis_text]
+assert texts(lines(None, G.GameTooltip, L.eval("{ id = 1003 }"))) == [bis_text], "data.id"
+# about the same as what you wear (within the sims' noise); a worse one says so in numbers
+chars.Nine.bis[1003] = L.eval('{ "Finger", 3, 0.2, "~" }')
+assert texts(lines(new))[1] == "Glide BiS #3 for Finger, about the same as yours: " + gandling, texts(lines(new))
+chars.Nine.bis[1003] = L.eval('{ "Finger", 5, -1.54 }')
+assert texts(lines(new))[1] == "Glide BiS #5 for Finger, -1.5 DPS: " + gandling, texts(lines(new))
+# a set piece best only with another piece of its set (alone it loses): no number, "with its set"
+chars.Nine.bis[1003] = L.eval('{ "Finger", 1, nil, "s" }')
+assert texts(lines(new))[1] == "Glide BiS #1 for Finger, with its set: " + gandling, texts(lines(new))
+chars.Nine.bis[1003] = L.eval('{ "Finger", 1, nil, "s", "Tailoring" }')
+assert texts(lines(new))[1] == "Glide BiS #1 for Finger, with its set (needs Tailoring to wear): " + gandling
+chars.Nine.bis[1003] = L.eval('{ "Finger", 5, -1.54 }')
+# the item you wear: the addon sees it (whatever the entry's numbers say), with no source and no upgrade line
+chars.Nine.bis[1001] = L.eval('{ "Finger", 1, 0.3, "~" }')
+got = list(lines(old).values())
+assert [ln.text for ln in got] == ["Glide BiS #1 for Finger: you wear it"], [ln.text for ln in got]
+assert (got[0].r, got[0].g, got[0].b) == (0.4, 0.8, 1)
+G.WORN[11] = None
+assert texts(lines(old)) == [up.replace("+6.9 DPS (+1.2%) vs Band of Old", "+4.5 DPS (+0.7%) vs an empty slot"),
+                             "Glide BiS #1 for Finger, about the same as yours: sold by Deliana, Ironforge"], \
+    texts(lines(old))
+G.WORN[11] = old
+# no known source: the rank alone; a web fact says so; an item not out yet or with no known source: grey
+crown = item(5001, "Sorcerer's Crown", "INVTYPE_HEAD", L.eval("{ ITEM_MOD_INTELLECT_SHORT = 25 }"))
+chars.Nine.bis[5001] = L.eval('{ "Head", 2, 6.1 }')
+got = texts(lines(crown))
+assert len(got) == 2 and got[0].startswith("Glide (Arcane): +11.") and got[1] == "Glide BiS #2 for Head, +6.1 DPS", got
+items[5001] = L.eval('{ "sold by Deliana, Ironforge", a = "n", w = 1 }')
+assert texts(lines(crown))[1] == "Glide BiS #2 for Head, +6.1 DPS: sold by Deliana, Ironforge (web, unconfirmed)"
+items[5001] = L.eval('{ "no known source; binds when equipped, so the auction house may have it", a = "x" }')
+ln = list(lines(crown).values())[1]
+assert ln.text == ("Glide BiS #2 for Head, +6.1 DPS: no known source; binds when equipped, so the auction house may "
+                   "have it") and (ln.r, ln.g, ln.b) == (0.6, 0.6, 0.6), (ln.text, ln.r)
+# a profession it needs to wear (one the character doesn't have)
+robe = item(5002, "Robe of the Archmage", "INVTYPE_ROBE", L.eval("{ ITEM_MOD_INTELLECT_SHORT = 40 }"))
+chars.Nine.bis[5002] = L.eval('{ "Chest", 1, 9.0, nil, "Tailoring" }')
+items[5002] = L.eval('{ "made with Tailoring", a = "n" }')
+got = texts(lines(robe))
+assert got[-1] == "Glide BiS #1 for Chest, +9.0 DPS (needs Tailoring to wear): made with Tailoring", got
+# an item with random suffixes: the rank shows on the suffix it was ranked with only (sixth field, without its sign;
+# Forever's links: "|cnIQ3:" before the item string, the suffix in field 7). Regression: a mage wearing Circlet of
+# the Monkey read "you wear it" on a Circlet of Fiery Wrath, and any copy of a ranked item showed the ranked suffix's
+# rank and gain
+L.execute(r"""
+function sfxlink(id, sfx, name) local l = "|cnIQ3:|Hitem:" .. id .. "::::::" .. sfx .. ":77:60|h[" .. name .. "]|h|r"
+  ITEMS[l] = { loc = "INVTYPE_HEAD", stats = { ITEM_MOD_INTELLECT_SHORT = 12 } }; return l end
+""")
+monkey, wrath = G.sfxlink(7001, 1, "Circlet of the Monkey"), G.sfxlink(7001, -2, "Circlet of Fiery Wrath")
+items[7001] = L.eval('{ "drops from Ras Frostwhisper, Scholomance", a = "n" }')
+ras = "Glide: drops from Ras Frostwhisper, Scholomance"
+worn_head = G.WORN[1]
+G.WORN[1] = monkey
+chars.Nine.bis[7001] = L.eval('{ "Head", 1, 8.1, nil, nil, 2 }')          # (ranked with Fiery Wrath)
+assert texts(lines(wrath))[-1] == "Glide BiS #1 for Head, +8.1 DPS: " + ras[len("Glide: "):], texts(lines(wrath))
+assert texts(lines(monkey)) == [ras], ("the worn Monkey isn't the ranked Fiery Wrath", texts(lines(monkey)))
+assert texts(lines(None, G.GameTooltip, L.eval("{ id = 7001 }"))) == [ras], "no link to tell the suffix: the source"
+chars.Nine.bis[7001] = L.eval('{ "Head", 3, 0.0, nil, nil, 1 }')          # (ranked as worn: the Monkey)
+assert texts(lines(monkey)) == ["Glide BiS #3 for Head: you wear it"], texts(lines(monkey))
+assert texts(lines(wrath))[-1] == ras, ("another suffix of what you wear isn't 'you wear it'", texts(lines(wrath)))
+chars.Nine.bis[7001] = L.eval('{ "Head", 2, 4.0 }')                       # (no suffix in the row: by the id)
+assert texts(lines(wrath))[-1] == "Glide BiS #2 for Head: you wear it", texts(lines(wrath))
+G.WORN[1] = worn_head
+chars.Nine.bis[7001] = None
+# a one-hander ranked with an off hand in place of a two-hander: the gain is the pair's, the line names the partner
+dagger = item(5003, "Better Dagger", "INVTYPE_WEAPON", L.eval("{ ITEM_MOD_INTELLECT_SHORT = 5 }"))
+chars.Nine.bis[5003] = L.eval('{ "Main Hand", 1, 32.0, nil, nil, nil, "Bright Orb" }')
+items[5003] = L.eval('{ "sold by Deliana, Ironforge", a = "n" }')
+assert texts(lines(dagger))[-1] == "Glide BiS #1 for Main Hand, +32.0 DPS with Bright Orb: sold by Deliana, Ironforge", \
+    texts(lines(dagger))
+chars.Nine.bis[5003] = None
+# without weights the rank still shows (the app's own sims; the upgrade line has its own limits)
+ns.simWeights = L.table()
+assert texts(lines(new)) == ["Glide BiS #5 for Finger, -1.5 DPS: " + gandling], "no weights"
+ns.simWeights = weights
+chars.Nine.bis[1003] = L.eval('{ "Finger", 2, 6.1 }')
+
+# the character's key: Name-Realm (the realm as the game gives it, with or without its spaces) before Name
+chars["Nine-TestRealm"] = L.eval('{ bis = { [1003] = { "Finger", 1, 7.0 } } }')
+assert texts(lines(new))[1] == "Glide BiS #1 for Finger, +7.0 DPS: " + gandling, "Name-Realm first"
+chars["Nine-TestRealm"] = None
+chars["Nine-Test Realm"] = L.eval('{ bis = { [1003] = { "Finger", 1, 7.0 } } }')
+L.execute('REALM_GRN = GetRealmName; function GetRealmName() return "Test Realm" end')
+assert texts(lines(new))[1] == "Glide BiS #1 for Finger, +7.0 DPS: " + gandling, "the realm with its spaces"
+chars["Nine-Test Realm"] = None
+chars["Nine-TestRealm"] = L.eval('{ bis = { [1003] = { "Finger", 1, 7.0 } } }')
+L.execute('REALM_UFN = UnitFullName; function UnitFullName() return "Nine", nil end')
+assert texts(lines(new))[1] == "Glide BiS #1 for Finger, +7.0 DPS: " + gandling, "no realm yet: its spaces taken out"
+L.execute("GetRealmName, UnitFullName = REALM_GRN, REALM_UFN")
+chars["Nine-TestRealm"] = None
+saved = chars.Nine
+chars.Nine = None
+chars["Nine-OtherRealm"] = L.eval('{ bis = { [1003] = { "Finger", 1, 7.0 } } }')
+assert texts(lines(new)) == [up, "Glide: " + gandling], "another realm's Nine"
+chars["Nine-OtherRealm"] = None
+chars.Nine = saved
+G.NAME = "Dragon"
+assert texts(lines(new)) == ["Glide: " + gandling], "another character"
+G.NAME = "Nine"
+
+# a broken entry: the source line instead; a BiS line that fails: the source line still shows (the error with debug)
+for junk in ('"text"', "{}", '{ "Finger" }', '{ "", 1, 2 }', '{ "Finger", "two", 1 }', '{ "Finger", 0, 1 }',
+             '{ 12, 1, 1 }'):
+    chars.Nine.bis[1003] = L.eval(junk)
+    assert texts(lines(new)) == [up, "Glide: " + gandling], junk
+chars.Nine.bis[1003] = L.eval('{ "Finger", 2, 6.1 }')
+for junk in ('{ bis = "x" }', '"x"', "{}"):
+    chars.Nine = L.eval(junk)
+    assert texts(lines(new)) == [up, "Glide: " + gandling], junk
+ns.live.chars = L.eval("setmetatable({}, { __index = function() error('boom') end })")
+ns.rec.debug = True
+n_printed = len(list(G.printed.values()))
+assert texts(lines(new)) == [up, "Glide: " + gandling], "the BiS line failed alone"
+assert any("bis:" in p and "boom" in p for p in list(G.printed.values())[n_printed:]), "said with debug on"
+ns.rec.debug = None
+ns.live.chars = chars
+chars.Nine = saved
+assert texts(lines(new)) == [up, bis_text]
+
+# the switches: sources off keeps the rank without where it comes from; bis off gives the source line back
+G.SlashCmdList.GLIDE("sources off")
+assert texts(lines(new)) == [up, "Glide BiS #2 for Finger, +6.1 DPS"], texts(lines(new))
+G.SlashCmdList.GLIDE("bis off")
+assert ns.BisOn() is False and G.GlideLinkDB.bis.enabled is False
+assert texts(lines(new)) == [up], "both off: the upgrade line alone"
+G.SlashCmdList.GLIDE("sources on")
+assert texts(lines(new)) == [up, "Glide: " + gandling], "bis off: the source line"
+G.SlashCmdList.GLIDE("compare off")
+G.SlashCmdList.GLIDE("bis on")
+assert ns.BisOn() is True and texts(lines(new)) == [bis_text], "each line has its own switch"
+G.SlashCmdList.GLIDE("compare on")
+G.SlashCmdList.GLIDE("bis")
+said = list(G.printed.values())[-1]
+assert "best-in-slot rank on item tooltips" in said and "4 items ranked for this character" in said, said
+chars.Nine = None
+G.SlashCmdList.GLIDE("bis")
+said = list(G.printed.values())[-1]
+assert "none ranked for this character yet" in said and "then /reload" in said, said
+ns.live = None
+G.SlashCmdList.GLIDE("bis")
+said = list(G.printed.values())[-1]
+assert "aren't loaded: restart WoW once" in said and "/reload" not in said, said
+assert texts(lines(new)) == [up], "no Live.lua: the upgrade line alone"
+ns.live = live
+chars.Nine = saved
+
+# ---- the file as the engine writes it (live_data.py, a "chars" provider as bis.BisRanker.live_section gives it) -----
+sys.path.insert(0, os.path.join(ROOT, "companion"))
+import live_data  # noqa: E402
+
+home = tempfile.mkdtemp()
+ld = live_data.LiveData(home, lambda: None, lambda: "0.22.0")
+ld.register("items", lambda: {1003: {"t": gandling, "a": "n"}, 5002: {"t": "made with Tailoring", "a": "n"}})
+ld.register("chars", lambda: {"Nine-TestRealm": {"bis": {1003: ["Finger", 2, 6.1], 1001: ["Finger", 1, 0.0],
+                                                         5001: ["Head", 4, 0.2, "~"],
+                                                         5002: ["Chest", 1, 9.0, None, "Tailoring"],
+                                                         7001: ["Head", 1, 8.1, None, None, 2],
+                                                         5003: ["Main Hand", 1, 32.0, None, None, None,
+                                                                "Bright Orb"]}}})
+L.eval("function(src, ns) local f, e = loadstring(src, '@Live.lua') if not f then error(e) end return f('Glide', ns) end")(
+    ld.text(), ns)
+assert ns.live is not live and ns.live.chars["Nine-TestRealm"] is not None
+assert texts(lines(new)) == [up, "Glide BiS #2 for Finger, +6.1 DPS: " + gandling], texts(lines(new))
+assert texts(lines(old)) == ["Glide BiS #1 for Finger: you wear it"]
+assert texts(lines(crown))[1] == "Glide BiS #4 for Head, about the same as yours", texts(lines(crown))
+assert texts(lines(robe))[1] == "Glide BiS #1 for Chest, +9.0 DPS (needs Tailoring to wear): made with Tailoring"
+assert texts(lines(wrath))[-1] == "Glide BiS #1 for Head, +8.1 DPS", texts(lines(wrath))
+assert not any(t.startswith("Glide BiS") for t in texts(lines(monkey))), ("another suffix", texts(lines(monkey)))
+assert texts(lines(dagger))[-1] == "Glide BiS #1 for Main Hand, +32.0 DPS with Bright Orb", texts(lines(dagger))
 ns.live = live
 print("OK")

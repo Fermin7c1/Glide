@@ -237,6 +237,14 @@ local function build()
                 .. "out (new ones after a /reload). /glide sources on|off.",
             get = ns.SourcesOn, set = ns.SetSources })
     end
+    if ns.BisOn then
+        y = checkbox(y, PAD, { name = "Best-in-slot rank on item tooltips", desc = "At 60: its rank for you (WoWSims)",
+            tip = "At level 60, your item tooltips say where an item ranks in its slot for you and what it adds to your "
+                .. "DPS, as the Glide app worked out by simming your own gear with WoWSims (new ranks after a /reload). "
+                .. "On a ranked item it takes the place of the line that says where the item comes from. "
+                .. "/glide bis on|off.",
+            get = ns.BisOn, set = ns.SetBis })
+    end
     if ns.StacksOn then
         y = checkbox(y, PAD, { name = "Stacks on cooldown bars", desc = "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
             tip = "The Cooldown Manager's bars and icons show a buff's stacks but not a stacking debuff's on you: Glide adds "

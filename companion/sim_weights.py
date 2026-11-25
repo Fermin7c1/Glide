@@ -3,9 +3,10 @@ builds the requests): the coach's gear advice at 60 uses them (gear.Gear.set_sim
 line on item tooltips (addon Compare.lua, from Data/SimWeights.lua).
 
 Every POLL_S the worker reads the game state. A character WoWSims sims (simbuild.simmable) is weighed again when its
-gear, talents or spec changed and stayed so for SETTLE_S (not while a fishing pole is in hand), or when a newer
-WoWSims came in: the newest release that runs (WoWSims.ensure), the rotation it gives the spec,
-simbuild.stat_weights. The result, per character name, goes to data/sim_weights.json and to
+gear (an enchant or random suffix too), talents or spec changed and stayed so for SETTLE_S (not while a fishing pole
+is in hand), or when a newer WoWSims came in: the newest release that runs (WoWSims.ensure), the rotation it gives the
+spec, simbuild.stat_weights (with WoWSims' item database when item_db_fn has it loaded: what it doesn't know of the
+gear's enchants and suffixes is left out). The result, per character name, goes to data/sim_weights.json and to
 <wow>/Interface/AddOns/Glide/Data/SimWeights.lua (read at the next login or /reload; it is written again whenever it
 differs, since an addon update puts back the empty one), and the chat says so the first time and after a new
 WoWSims. A character that can't be weighed (WoWSims can't run, a sim failed) is tried again after RETRY_S, and after
@@ -64,12 +65,16 @@ def handoff_text(chars):
 
 
 class SimWeights:
-    """The worker: start() polls in its own thread; tick() is one poll (the tests call it)."""
+    """The worker: start() polls in its own thread; tick() is one poll (the tests call it). item_db_fn -> WoWSims'
+    item database (item_db.ItemDB: research.ItemDBSource) or None; sim_fn(request, tag) -> DPS runs each sim (the
+    sim queue's sim, sim_queue.SimQueue.sim, in the background; None: ws.sim, at once)."""
 
-    def __init__(self, home, ws, state_fn, gear, wow_dir_fn, enabled_fn, emit=None, now=time.time):
+    def __init__(self, home, ws, state_fn, gear, wow_dir_fn, enabled_fn, emit=None, now=time.time, item_db_fn=None,
+                 sim_fn=None):
         self.path = os.path.join(home, "data", "sim_weights.json")
         self.ws, self.state_fn, self.gear, self.wow_dir_fn = ws, state_fn, gear, wow_dir_fn
-        self.enabled_fn, self.emit, self._now = enabled_fn, emit, now
+        self.enabled_fn, self.emit, self._now, self.item_db_fn = enabled_fn, emit, now, item_db_fn
+        self.sim_fn = sim_fn
         self.chars = self._load()
         self.pending, self.pending_t = None, 0.0        # what changed, and since when (settling)
         self.failed = {}                                 # key -> {"t", "tag", "n"}: when, on which WoWSims, how often
@@ -130,10 +135,22 @@ class SimWeights:
 
     @staticmethod
     def key(char):
-        """What the weights depend on: how they're measured, class, race, talents, the items worn."""
+        """What the weights depend on: how they're measured, class, race, talents, the items worn with their enchants
+        and random suffixes (0: none, or an addon that doesn't send them), and whether a ring's enchant counts."""
         return json.dumps([simbuild.VERSION, char["class"], char["race"], char["faction"],
                            simbuild.talents_string(char["talents"]),
-                           sorted((str(it.get("key")), it.get("id")) for it in char["worn"])])
+                           sorted((str(it.get("key")), it.get("id"), simbuild.as_id(it.get("enchant")),
+                                   simbuild.as_id(it.get("suffix"))) for it in char["worn"]),
+                           simbuild.enchanter(char.get("skills"))])
+
+    def _item_db(self):
+        """WoWSims' item database for the request (what it doesn't know of the gear's enchants and suffixes is left
+        out), or None (not loaded yet: everything known is sent)."""
+        try:
+            return self.item_db_fn() if self.item_db_fn else None
+        except Exception as e:  # noqa: BLE001 - weighed without it
+            log_once("sim_weights.item_db", e)
+            return None
 
     def tick(self):
         try:
@@ -180,8 +197,9 @@ class SimWeights:
             conf = simbuild.CLASSES[char["class"]]
             spec = simbuild.spec_of(char["class"], char["talents"])
             rotation = json.loads(self.ws.file(conf["apl"][spec], tag).decode("utf-8"))
-            res = simbuild.stat_weights(char["class"], lambda req: self.ws.sim(req, tag),
-                                        lambda bonus: simbuild.request(char, rotation, ITERATIONS, SEED, bonus))
+            db, run = self._item_db(), self.sim_fn or self.ws.sim
+            res = simbuild.stat_weights(char["class"], lambda req: run(req, tag),
+                                        lambda bonus: simbuild.request(char, rotation, ITERATIONS, SEED, bonus, db))
         except Exception as e:  # noqa: BLE001 - tried again after RETRY_S
             n = (self.failed.get(key) or {}).get("n", 0) + 1
             self.failed[key] = {"t": self._now(), "tag": self.ws.current(), "n": n}
@@ -210,6 +228,8 @@ SMOKE_GEAR = [(1, 226935), (2, 22403), (3, 226936), (15, 272411), (5, 14152), (9
               (7, 226933), (8, 226931), (11, 272406), (12, 12543), (13, 22268), (14, 13968), (16, 22383),
               (17, 19315), (18, 13938)]
 SMOKE_TALENTS = "050205223101311531-5500003-003"
+# ... and the request's enchant and random suffix fields in it: Arcanum of Focus on the head, a Master's Cloak of Magic
+SMOKE_EXTRA = {1: {"enchant": 2544}, 15: {"id": 10249, "suffix": 12734}}
 
 
 def talent_list(string):
@@ -223,9 +243,11 @@ def talent_list(string):
 
 
 def smoke(ws, tag):
-    """Raises unless the release sims Glide's request for WoWSims' own Arcane preset."""
+    """Raises unless the release sims Glide's request for WoWSims' own Arcane preset, with an enchant and a random
+    suffix as Glide sends them (SMOKE_EXTRA)."""
+    worn = [dict({"key": str(s), "id": i}, **SMOKE_EXTRA.get(s, {})) for s, i in SMOKE_GEAR]
     char = {"name": "Glide", "class": "MAGE", "race": "Human", "faction": "Alliance",
-            "talents": talent_list(SMOKE_TALENTS), "worn": [{"key": str(s), "id": i} for s, i in SMOKE_GEAR]}
+            "talents": talent_list(SMOKE_TALENTS), "worn": worn}
     rotation = json.loads(ws.file(simbuild.CLASSES["MAGE"]["apl"]["Arcane"], tag).decode("utf-8"))
     if not ws.sim(simbuild.request(char, rotation, 200, 1), tag) > 0:
         raise simbuild.SimError("it simmed no DPS")

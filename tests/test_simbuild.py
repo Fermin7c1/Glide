@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """A level-60 character as WoWSims sims it (companion/simbuild.py): the talent string WoWSims reads (each tree's
 talents row by row, trailing zeroes trimmed), the spec (the tree with the most points), the 17 sim slots from WoW's
-inventory slots, races (Skyborne by faction), the request's shape, and stat weights measured against a fake sim whose
-DPS is known per stat.
+inventory slots, races (Skyborne by faction), the request's shape, the worn items' enchants and random suffixes (what
+WoWSims' item database doesn't know left out and logged once, a suffix found without its sign, a ring's enchant only
+for an enchanter), and stat weights measured against a fake sim whose DPS is known per stat.
 
 Run: python3 tests/test_simbuild.py   (prints OK)
 """
+import json
 import os
 import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.join(ROOT, "companion"))
+import item_db  # noqa: E402
 import sim_weights  # noqa: E402
 import simbuild  # noqa: E402
 
@@ -70,6 +73,65 @@ for bad, why in ((dict(char, worn=[]), "no gear"), (dict(char, talents=[]), "no 
         check(False, why)
     except simbuild.SimError:
         pass
+
+# ---- enchants and random suffixes (parse_item's "enchant" and "suffix", sent by addon 0.22 when non-zero) ----------
+check(simbuild.VERSION == 3, "requests with enchants and suffixes: weights measured again")
+logged = []
+simbuild.log = lambda tag, msg: logged.append((tag, msg))
+DB = item_db.ItemDB.load(json.dumps({
+    "items": [{"id": 226935, "name": "Sorcerer's Crown", "type": 1}],
+    "randomSuffixes": [{"id": 12734, "name": "of Magic", "stats": [0, 0, 0, 0, 11700, 11700]}],
+    "enchants": [{"effectId": 2544, "name": "Arcanum of Focus", "type": 1, "extraTypes": [9], "stats": [0] * 5 + [8]},
+                 {"effectId": 1883, "name": "Enchant Bracer - Greater Intellect", "type": 6, "stats": [0, 0, 0, 7]},
+                 {"effectId": 9001, "name": "Enchant Ring - Spell Power", "type": 11, "stats": [0] * 5 + [4]}]}),
+    None, "v1.0.4")
+
+
+def gear_with(changes, db=None, skills=None):
+    """The smoke gear with some items' enchant and suffix set ({inventory slot: {"enchant": .., "suffix": ..}})."""
+    w = [dict({"key": str(s), "id": i, "stats": {}}, **changes.get(s, {})) for s, i in sim_weights.SMOKE_GEAR]
+    return simbuild.equipment(w, db, skills)["items"]
+
+
+eq = gear_with({1: {"enchant": 2544}, 15: {"suffix": 12734}, 9: {"enchant": 1883}, 11: {"enchant": 9001}})
+check(eq[0] == {"id": 226935, "enchant": 2544} and eq[3] == {"id": 272411, "randomSuffix": 12734} and
+      eq[5] == {"id": 226929, "enchant": 1883} and eq[2] == {"id": 226936}, eq)
+check(eq[10] == {"id": 272406}, "a ring's enchant: left out when the professions aren't known")
+check(gear_with({11: {"enchant": 9001}}, skills={"Tailoring", "Alchemy"})[10] == {"id": 272406} and
+      gear_with({12: {"enchant": 9001}}, skills=["Tailoring"])[11] == {"id": 12543}, "not an enchanter: left out")
+for skills in ({"Enchanting"}, ["tailoring", "enchanting"], "Enchanting", {"Enchanting": 300}):
+    check(gear_with({11: {"enchant": 9001}}, skills=skills)[10] == {"id": 272406, "enchant": 9001}, skills)
+    check(gear_with({12: {"enchant": 9001}}, DB, skills)[11] == {"id": 12543, "enchant": 9001}, "an enchanter's, known")
+check(not simbuild.enchanter(None) and not simbuild.enchanter({"weapons": {7}, "armor": {1}, "ranks": []}) and
+      simbuild.enchanter({" ENCHANTING "}), "the trained-skills dict isn't a profession list")
+check(gear_with({1: {"enchant": 0, "suffix": 0}})[0] == {"id": 226935} and gear_with({1: {"enchant": None}})[0] ==
+      {"id": 226935} and gear_with({1: {"enchant": "2544"}})[0] == {"id": 226935, "enchant": 2544}, "zero, none, text")
+
+# a suffix: as the link carries it, else without its sign; WoWSims' ids are never negative
+check(gear_with({15: {"suffix": -12734}})[3] == {"id": 272411, "randomSuffix": 12734}, "no database: the sign dropped")
+check(gear_with({15: {"suffix": -12734}}, DB)[3] == {"id": 272411, "randomSuffix": 12734}, "found without its sign")
+check(gear_with({15: {"suffix": 12734}}, DB)[3] == {"id": 272411, "randomSuffix": 12734}, "found as sent")
+check(gear_with({15: {"suffix": 99999}})[3] == {"id": 272411, "randomSuffix": 99999}, "no database: sent as known")
+check(not logged, logged)
+eq = gear_with({15: {"suffix": 99999}, 1: {"enchant": 77777}, 9: {"enchant": 2544}, 5: {"enchant": 1883}}, DB)
+check(eq[3] == {"id": 272411} and eq[0] == {"id": 226935} and eq[4] == {"id": 14152}, "unknown to WoWSims: left out")
+check(eq[5] == {"id": 226929}, "an enchant WoWSims has for another slot only: left out (its runner would put it on)")
+check(gear_with({9: {"enchant": 1883}, 1: {"enchant": 2544}}, DB)[5] == {"id": 226929, "enchant": 1883}, "its own slot")
+check(len(logged) == 4 and all(tag == "simbuild" for tag, _ in logged) and
+      any("random suffix 99999 (on item 272411)" in m for _, m in logged) and
+      any("enchant 77777 (on item 226935)" in m for _, m in logged), logged)
+gear_with({15: {"suffix": 99999}, 1: {"enchant": 77777}}, DB)
+check(len(logged) == 4, "logged once")
+check(gear_with({7: {"enchant": 2544}}, DB)[8] == {"id": 226933, "enchant": 2544}, "an arcanum on the legs (extraTypes)")
+
+# the request: the database and the character's professions passed through
+worn_e = [dict(it, enchant=2544) if it["key"] == "1" else dict(it, enchant=9001) if it["key"] == "11" else
+          dict(it, suffix=-12734) if it["key"] == "15" else it for it in worn]
+items = simbuild.request(dict(char, worn=worn_e), rot, db=DB)["raid"]["parties"][0]["players"][0]["equipment"]["items"]
+check(items[0] == {"id": 226935, "enchant": 2544} and items[3] == {"id": 272411, "randomSuffix": 12734} and
+      items[10] == {"id": 272406}, items)
+items = simbuild.request(dict(char, worn=worn_e, skills={"Enchanting"}), rot, 100, 1, None, DB)
+check(items["raid"]["parties"][0]["players"][0]["equipment"]["items"][10] == {"id": 272406, "enchant": 9001}, items)
 
 # ---- stat weights: a sim whose DPS is 500 + 0.5 per spell damage + 0.45 per intellect + 5 per 1% crit ---------------
 PER = {("s", 5): 0.5, ("s", 3): 0.45, ("p", 15): 5.0, ("s", 6): 0.45, ("p", 13): -0.01}

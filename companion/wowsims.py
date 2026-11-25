@@ -52,6 +52,19 @@ MAX_FILE = 8 * 1024 * 1024                                   # a file from the r
 TIMEOUT_S = 60
 SIM_TIMEOUT_S = 300
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")        # a release tag, as a folder name (never . or ..)
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+BELOW_NORMAL = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+
+
+def runner_env(threads=None):
+    """The runner's environment: the engine's without its API keys (WoWSims' runner never sees them), with GOMAXPROCS
+    (WoWSims' runner honours it): threads, else what the engine's environment sets, else a quarter of the cores."""
+    env = {k: v for k, v in os.environ.items() if not k.upper().endswith("_API_KEY")}
+    if threads is not None:
+        env["GOMAXPROCS"] = str(max(1, int(threads)))
+    elif not str(env.get("GOMAXPROCS") or "").strip().isdigit():
+        env["GOMAXPROCS"] = str(max(1, (os.cpu_count() or 1) // 4))
+    return env
 
 
 class FetchError(SimError):
@@ -295,19 +308,26 @@ class WoWSims:
             return fh.read()
 
     # ---- simming ------------------------------------------------------------------------------------------------
-    def run(self, request, tag=None, timeout=SIM_TIMEOUT_S):
-        """The RaidSimResult (protojson) for a RaidSimRequest, run by the release's runner."""
+    def run(self, request, tag=None, timeout=SIM_TIMEOUT_S, env=None, creationflags=None):
+        """The RaidSimResult (protojson) for a RaidSimRequest, run by the release's runner. env: the runner's
+        environment (None: runner_env(), the engine's without API keys, on a quarter of the cores); creationflags:
+        how Windows starts it (None: no window, below normal priority, as a background run of sim_queue.py; a caller
+        outside the queue, such as the smoke test of a new release, never runs at full speed beside it)."""
         tag = tag or self.current()
         if not tag:
             raise SimError("WoWSims isn't installed yet")
         argv = (self._command(tag) if self._command else [self.exe(tag)])
+        if env is None:
+            env = runner_env()
+        if creationflags is None:
+            creationflags = NO_WINDOW | BELOW_NORMAL
         with tempfile.TemporaryDirectory(prefix="glide-sim-") as tmp:
             inp, out = os.path.join(tmp, "request.json"), os.path.join(tmp, "result.json")
             with open(inp, "w", encoding="utf-8") as fh:
                 json.dump(request, fh)
             r = subprocess.run(argv + ["sim", "--infile", inp, "--outfile", out], capture_output=True, text=True,
-                               encoding="utf-8", errors="replace", timeout=timeout,
-                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                               encoding="utf-8", errors="replace", timeout=timeout, env=env,
+                               creationflags=creationflags)
             if r.returncode != 0 or not os.path.exists(out):
                 raise SimError("WoWSims %s couldn't sim: %s" % (tag, ((r.stderr or r.stdout or "").strip()
                                                                        or "exit %d" % r.returncode)[-300:]))
@@ -319,9 +339,9 @@ class WoWSims:
                                                                        else err)[:300]))
         return result
 
-    def sim(self, request, tag=None):
+    def sim(self, request, tag=None, timeout=SIM_TIMEOUT_S, env=None, creationflags=None):
         """The player's average DPS for a request."""
-        return float(dps(self.run(request, tag))["avg"])
+        return float(dps(self.run(request, tag, timeout=timeout, env=env, creationflags=creationflags))["avg"])
 
 
 def dps(result):

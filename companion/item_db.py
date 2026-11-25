@@ -20,6 +20,7 @@ a few keep a backslash before a quote).
 """
 import json
 import math
+import re
 
 WS_CONF = 0.8                       # how sure a WoWSims fact is (the plan's rule 1: obs 0.95, client 0.9, kb 0.6, ...)
 SOURCE_CONF = {"obs": 0.95, "client": 0.9, "ws": WS_CONF, "kb": 0.6, "web": 0.3}
@@ -66,6 +67,16 @@ BRS_WING = {9196: "Lower", 9217: "Lower", 9218: "Lower", 9219: "Lower", 9236: "L
 # the honor vendors' zones, which db.json's zones leave out: their sources read "PvP vendor"
 PVP_VENDOR_ZONES = {2917, 2918}
 PVP_VENDOR = "PvP vendor"
+# WoWSims gives most PvP items no factionRestriction and a source {"pvp": {}} with no side (v1.0.4: none of the 87
+# High Warlord's and Grand Marshal's items has one): the side is in the PvP rank title of the name ("Premier High
+# Warlord's Spellblade": Horde), or "of the Horde" / "of the Alliance" (the insignia). Each side's titles, the longer
+# ones first; "Champion's" isn't Alliance's "Knight-Champion's" (no letter or hyphen before a title)
+PVP_TITLES = (
+    (2, re.compile(r"(?<![\w-])(?:High Warlord|Warlord|Lieutenant General|General|Champion|Centurion|Legionnaire|"
+                   r"Blood Guard|Stone Guard|First Sergeant|Senior Sergeant)'s\b|\bof the Horde$")),
+    (1, re.compile(r"(?<![\w-])(?:Grand Marshal|Field Marshal|Marshal|Lieutenant Commander|Commander|"
+                   r"Knight-Champion|Knight-Captain|Knight-Lieutenant|Sergeant Major|Master Sergeant)'s\b|"
+                   r"\bof the Alliance$")))
 
 # the game's inventory slot (the strip's worn key) -> the ItemType an enchant names
 INV_TO_TYPE = {1: 1, 2: 2, 3: 3, 15: 4, 5: 5, 9: 6, 10: 7, 6: 8, 7: 9, 8: 10, 11: 11, 12: 11, 13: 12, 14: 12,
@@ -99,6 +110,40 @@ def side(faction):
 
 def _scaling(rec):
     return ((rec or {}).get("scalingOptions") or {}).get("0") or {}
+
+
+def _sided(s):
+    """The side of a WoWSims source that has one: a vendor's, a quest's or a reputation's faction (1, 2); 0 for one
+    with no side; None for a source of another kind (a drop, a craft, PvP)."""
+    for kind, field in (("soldBy", "faction"), ("quest", "faction"), ("rep", "factionId")):
+        if isinstance(s.get(kind), dict):
+            return s[kind].get(field) or 0
+    return None
+
+
+def pvp_side(rec):
+    """The side a PvP source of the item ({"pvp": {}}, which WoWSims gives no side) is for: the rank title in its name
+    (PVP_TITLES), else the one side every vendor, quest and reputation it lists is on; 0 when it can't be told."""
+    name = _text((rec or {}).get("name"))
+    for side_id, pat in PVP_TITLES:
+        if pat.search(name):
+            return side_id
+    sides = {_sided(s) for s in (rec or {}).get("sources") or () if isinstance(s, dict)} - {None, 0}
+    return sides.pop() if len(sides) == 1 else 0
+
+
+def item_side(rec):
+    """The only side that can have the item (1 Alliance, 2 Horde), or 0 for either: its factionRestriction; else, for
+    a PvP item every source of which has a side (PvP, vendors, quests, reputations; no drop or craft), pvp_side."""
+    restricted = (rec or {}).get("factionRestriction") or 0
+    if restricted:
+        return restricted
+    raw = [s for s in (rec or {}).get("sources") or () if isinstance(s, dict) and s]
+    if not any("pvp" in s for s in raw):
+        return 0
+    if any("pvp" not in s and not _sided(s) for s in raw):
+        return 0                                    # (a drop, a craft, a vendor of either side: anyone)
+    return pvp_side(rec)
 
 
 def required_level(rec):
@@ -255,7 +300,7 @@ class ItemDB:
         allow = rec.get("classAllowlist") or ()
         if allow and gear["id"] not in allow:
             return False
-        restricted, mine = rec.get("factionRestriction") or 0, side(ch.get("faction"))
+        restricted, mine = item_side(rec), side(ch.get("faction"))
         if restricted and mine and restricted != mine:
             return False
         level = ch.get("level")
@@ -363,19 +408,20 @@ class ItemDB:
 
     def sources(self, item_id, faction):
         """Where the item comes from for a player of this side ("Alliance" / "Horde"; None: either): one Src per way
-        to get it, WoWSims' order; quests and vendors of the other side left out, and everything for an item only the
-        other side can have."""
+        to get it, WoWSims' order; quests, vendors and PvP (pvp_side) of the other side left out, and everything for
+        an item only the other side can have (item_side)."""
         rec = self.item(item_id)
         if rec is None:
             return []
         mine = side(faction)
-        restricted = rec.get("factionRestriction") or 0
+        restricted = item_side(rec)
         if restricted and mine and restricted != mine:
             return []
 
         def ours(f):
             return not f or not mine or f == mine
         raw = [s for s in rec.get("sources") or () if isinstance(s, dict) and s]
+        pvp_ours = ours(pvp_side(rec)) if any("pvp" in s for s in raw) else True
         reps = [s["rep"] for s in raw if isinstance(s.get("rep"), dict) and ours(s["rep"].get("factionId"))]
         paired, out = set(), []
         for s in raw:
@@ -401,7 +447,8 @@ class ItemDB:
             elif isinstance(s.get("crafted"), dict):
                 out.append(src("crafted", profession=PROFESSIONS.get(s["crafted"].get("profession"))))
             elif "pvp" in s:
-                out.append(src("pvp"))
+                if pvp_ours:
+                    out.append(src("pvp"))
         out += [src("rep", **self._rep(r)) for i, r in enumerate(reps) if i not in paired]
         seen, unique = set(), []
         for s in out:
@@ -431,11 +478,11 @@ class ItemDB:
         """"later" for what WoWSims can't place in the game yet (its phase Unknown); "now" for an item with a source
         on the player's side (sources: the ones to judge by, research's merged from everywhere; else WoWSims' own), or
         one that binds when equipped (bonding: the client's ItemSparse Bonding, when known; the auction house may have
-        it); else "nosrc" (also for an item only the other side can have)."""
+        it); else "nosrc" (also for an item only the other side can have: item_side)."""
         rec = self.item(item_id)
         if rec is not None and rec.get("phase") == PHASE_LATER:
             return "later"
-        restricted, mine = (rec or {}).get("factionRestriction") or 0, side(faction)
+        restricted, mine = item_side(rec), side(faction)
         if restricted and mine and restricted != mine:
             return "nosrc"
         if (self.sources(item_id, faction) if sources is None else sources) or bonding == BOND_EQUIP:

@@ -986,7 +986,8 @@ they don't spell out.
   no network, a download cut short or a sim that couldn't start are tried again after an hour. Rotation files are
   read at the release's tag. `companion/sim_weights.py` sims a level-60 mage's worn gear and talents
   (`companion/simbuild.py`: a base sim and one per stat, on one seed; enchants and random suffixes aren't in the
-  strip, so they aren't simmed yet) and keeps the stat weights. New on the player's disk: `data/wowsims/`
+  strip, so they aren't simmed yet: superseded by addon 0.22.0, the BiS plan's Phase 2 below) and keeps the stat
+  weights. New on the player's disk: `data/wowsims/`
   (`state.json`, `<tag>/wowsimcli(.exe)`, `<tag>/files/`), `data/sim_weights.json`, and the addon's
   `Data/SimWeights.lua` in the WoW folder (`ns.simWeights`, shipped empty, written by the engine like
   `Data/RXPImports.lua`, and again whenever it differs: an addon update puts the empty one back). New setting `gear.sims` (default on;
@@ -1133,3 +1134,97 @@ they don't spell out.
   `tests/test_item_info_tool.py`, `tests/test_item_text.py` and `tests/test_versions.py`; the `desktop` golden
   re-recorded (the four new Settings fields). The strip frames in the goldens are unchanged (no item hovered: no
   `hv`), and so are the engine probes.
+- **Addon 0.22.0 and the engine, contracts 1, 5, 7 and 8 additive: Glide's own best-in-slot ranks (the BiS plan's
+  Phase 2).** The strip (contract 1): `GEAR_ENTRY`'s worn entries (W) carry the item link's enchant and random suffix
+  ids as the stat codes `EN` and `SX` (`EN2564/SX13002`: the link's field 2 and field 7, the suffix with its sign as
+  the link has it, the `|cnIQ4:` colour prefix read past), each only when non-zero and first in `KEEP` (a trimmed
+  entry drops other stats before them; bag, reward and vendor entries carry none); `docs/STRIP.md` regenerated. This
+  supersedes the Phase 1 bullet's "enchants and random suffixes aren't in the strip". `UNIT_INVENTORY_CHANGED` for
+  the player rebuilds the W pages too (an enchant applied). `GameState.parse_item` moves the codes out of `"stats"`
+  into int keys `"enchant"` and `"suffix"`, present only when sent (absent: unknown, an older addon, not "no
+  enchant"). WoWSims requests (`simbuild.equipment` / `item_spec`) carry each worn item's ItemSpec `enchant` and
+  `randomSuffix` (v1.0.4's runner reads `randomSuffix` and `random_suffix` alike; it refuses a whole request for an
+  unknown or negative suffix id and puts any enchant it knows on any slot): with WoWSims' item database only an
+  enchant it has for that slot and a suffix id it has (as sent, else without its sign) go in, the rest left out and
+  logged once per id; a ring's enchant only for a character with Enchanting. `simbuild.VERSION` is 3 and
+  `data/sim_weights.json`'s `key` gains each worn item's enchant and suffix ids and whether the character enchants,
+  so every character is weighed again once; the smoke request a new WoWSims release must sim carries an enchant
+  (Arcanum of Focus) and a random suffix (a Master's Cloak, 12734), so a release that refuses them is set aside.
+  `wowsims.WoWSims.run` and `sim` take `env` and `creationflags` (defaults unchanged: the engine's environment, no
+  window). New `companion/sim_queue.py`: every WoWSims run of the engine goes through one queue, one `wowsimcli` at
+  a time, the most urgent first (asked, reward, BiS, weights; the stat weights now run through it at the last). A
+  background run starts below normal priority with no window and `GOMAXPROCS` a quarter of the logical cores (v1.0.4
+  honours it), and waits between runs while the player is in combat, dead or a ghost, or in an instance (the map
+  sent without a position; game state older than 60 s doesn't hold it); an asked run uses normal priority and half
+  the cores; the runner's environment has no `*_API_KEY`. New `companion/bis.py` (`BisRanker`, on its own thread,
+  wired by `App._start_bis` after the research): at 60, for a class WoWSims sims, the character's level band (WoWSims'
+  item data), what it wears and the bag items it can wear are screened by EP with its WoWSims weights (an item with
+  random suffixes by its best one, which is simmed and named; on-use stats for their duration over their cooldown),
+  the best per slot group simmed as swaps into the worn gear (3 paired 1,000-iteration blocks, items with effects and
+  weapons 10,000 iterations; d and its sigma; the best of what the character can have now first, those of the whole
+  pool it can't have now too), then a coordinate descent for the hit cap, ring and trinket pairs and set bundles among
+  what it can have now only (what it can't never makes the set, so it never decides how the rest ranks; ranked
+  later, by its gain); ranked again when the gear key (worn items with enchants and suffixes, talents, race, side, the
+  lens) stayed changed for 120 s or the WoWSims release changed; new bag items simmed alone. Only an item that can be
+  had now (a source on the player's side, from the research's facts, else WoWSims'; worn; in the bags) is ranked; the
+  next upgrade is the largest gain over 2 sigma among those, not worn or in the bags, and never one that needs a
+  profession the character isn't known to have. The professions don't reach the engine yet (the Recorder keeps its
+  skill lines in its session, which nothing ingests), so they count as unknown: ring enchants are never simmed and
+  an item with `requiredProfession` is never named next. New on the player's disk (contract 5): `data/bis.json`
+  (`{"v": 1, "chars": {key: {"tag", "gear_key", "dps", "t", "class", "spec", "faction", "skills", "slots": {group:
+  [{"id", "sfx", "rank", "d", "s", "how": "sim"|"worn", "avail": "now"|"later"|"nosrc", "req", "name" (with a
+  suffix), "bag", "with", "cond", "together" (a set piece the best set holds with another new piece of its set, gaining
+  nothing alone)}]}, "set": {slot: id}, "next": {"id", "slot", "d", "s", "sfx", "name", "avail",
+  "source"} or null, "enchants": {inventory slot: {"slot", "item", "id", "name", "d", "s"}}, "told": {rules key:
+  when}}}}`; key "Name-Realm" when the engine knows the realm, which it doesn't yet, so "Name"), and in the addon's
+  `Data/Live.lua` the `chars` section: `chars["<key>"] = { bis = { [<item id>] = { "<group>", <rank>, <d> } } }`,
+  with `"~"` fourth when |d| is under 2 sigma (about the same as what is worn), or `nil` for d and `"s"` fourth for a
+  "together" set piece, and, fifth (after `"~"`, `"s"` or `nil`), the profession the item needs while the character
+  isn't known to have it; d rounded to 0.1; an empty section while
+  `gear.bis` is off. The group words are player text (contract 8): Head, Neck, Shoulder, Back, Chest, Wrist, Hands,
+  Waist, Legs, Feet, Ring, Trinket, Main Hand (two-handers too), Off Hand, Ranged. In the game (contract 8), on an
+  item ranked for this character the tooltip's second Glide line is the BiS line instead of the source line (two
+  Glide lines at most: the frozen upgrade line, then one; a BiS line that fails or finds no entry leaves the source
+  line): "Glide BiS #2 for Head, +6.1 DPS: <where it comes from>", "Glide BiS #1 for Head: you wear it" (the addon
+  checks the equipped slots itself), "Glide BiS #3 for Neck, about the same as yours: <source>", "Glide BiS #1 for
+  Legs, with its set: <source>" (a set piece that gains only with another piece of its set: the real-data check had
+  Manaflare Pants and Mantle each -10.5 and -5.4 DPS alone, +1.6 together), "Glide BiS #1 for Chest, +9.0 DPS
+  (needs Tailoring to wear): made with Tailoring"; the source part keeps " (web, unconfirmed)", is
+  left out while the source line is switched off, and the line is grey as the source line's for an item not to be had
+  yet or with no known source. The addon looks the character up as `Name-<realm>` (UnitFullName's realm, the
+  normalized one, GetRealmName with and without spaces), then `Name`. New: the Glide window's "Best-in-slot rank on
+  item tooltips" switch ("At 60: its rank for you (WoWSims)", after "Where items come from"), `/glide bis
+  [on|off]` (contract 7; "bis [on|off] - at level 60, where an item ranks for you on its tooltip (WoWSims sims of your
+  gear)"; its status "(N items ranked for this character)", "(none ranked for this character yet: level 60, a mage,
+  and a few minutes of the Glide app running; then /reload)" or "(Glide's item facts aren't loaded: restart WoW
+  once)"), GlideLinkDB section `bis` (`enabled`, default on; contract 5). New triggers: `next_upgrade` (`{"item",
+  "slot", "dps", "source"}`, priority 2) and `enchant_missing` (`{"slot", "item", "enchant", "dps"}`, priority 3:
+  only from addon 0.22.0, since an older one sends no enchants; one slot at a time,
+  at most every 10 minutes), both category gear and topic gear, at level 60, out of combat and alive, in a frame
+  that raised nothing else, said once per item (and suffix) or worn item (whichever enchant it names) and never
+  again after a restart (kept in `data/bis.json`'s `told`, the newest 64 per character), held untold while gear talk
+  is muted (`/coach gear off`); `vendor_treasure`'s category is gear now (it fell back to route; the gear switch
+  mutes it). The prompt's REFERENCE gains `gear.next_upgrades` (`[{"slot", "item", "dps", "plus_minus" (2 sigma),
+  "source"}]`, up to 3 slots, the ranker's next first; trimmed to 1 by its own step before quests go down to 3); the
+  system prompt's Gear
+  paragraph says how to word them (one number, the reasons only when asked, WoWSims' raid target counting no undead
+  or area bonuses). The coach gains the `bis_slot` tool (`{"slot"}` -> `{"slot", "ranks": [{"item", "rank", "d",
+  "source", "avail", "worn"?, "with_set"?, "about_same"?, "needs"?}]}`, a local tool beside `item_info`). Player
+  text (contract 8):
+  the offline lines "Next upgrade: <item> (<slot>, about +<d> DPS): <source>." and "Your <slot> has no enchant:
+  <enchant> is worth about <d> DPS." ("have" for shoulders, bracers, gloves, legs and boots; slots said as head,
+  neck, shoulders, cloak, chest, bracers, gloves, belt, legs, boots, ring, trinket, main hand, off hand, ranged
+  weapon; d a whole number from 2 up, one decimal below), and the answers to "what's best in slot for my neck?"
+  without a model: "Best for your <slot>: <item>, about +<d> DPS: <source>.", "Best for your <slot>: <item>, and you
+  wear it.", "Best for your <slot>: <item>, with its set: <source>.", "Best for your <slot>: <item>, about the same as
+  yours: <source>.", "I have nothing ranked for your
+  <slot> yet." and "I haven't ranked your gear yet; that takes level 60 and WoWSims." New settings (Settings, Gear
+  upgrades): `gear.bis` (default on, "Rank gear for each slot with WoWSims at level 60"; off: nothing is ranked,
+  shown or said) and `gear.bis_lens` ("now", or "all": a later phase's items simmed too, for the coach when asked;
+  "Gear to sim for the ranks"); each applies after a coach restart. The player asked (2026-11-24). Pinned by
+  `tests/test_bis.py`, `tests/test_bis_rules.py`, `tests/test_bis_wiring.py`, `tests/test_bis_cli.py` (exit 77
+  without a local WoWSims runner), `tests/test_sim_queue.py`, `tests/test_simbuild.py`, `tests/test_sim_weights.py`,
+  `tests/test_state_items.py`, `tests/test_page_sizes.py`, `tests/test_addon_gear.py`, `tests/test_addon_compare.py`,
+  `tests/test_addon_panel.py` and `tests/test_versions.py`; the `addon` golden re-recorded (the new switch's texts)
+  and the `desktop` golden (the two new Settings fields). The strip frames in the goldens are unchanged (the mocked
+  worn items carry no enchant or suffix), and so are the engine probes (a simulated run ranks nothing).

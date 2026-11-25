@@ -4,7 +4,8 @@ level-60 mage is weighed once its gear and talents are in (and settled after a c
 otherwise; the weights go to data/sim_weights.json, to the addon's Data/SimWeights.lua in the WoW folder (the file the
 addon ships, empty, when there are none) and to the coach's gear advice (gear.Gear: the WoWSims profile at 60, its
 title, a bag item scored with them); the chat says so the first time and after a new WoWSims; a failure is tried again
-later; below 60 or another class: nothing.
+later; below 60 or another class: nothing. An enchant or random suffix put on (or changed) is a change to weigh again:
+the requests carry them, what WoWSims' item database doesn't know left out.
 
 Run: python3 tests/test_sim_weights.py   (prints OK)
 """
@@ -16,6 +17,7 @@ import tempfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.join(ROOT, "companion"))
+import item_db  # noqa: E402
 import sim_weights  # noqa: E402
 import simbuild  # noqa: E402
 from gear import Gear  # noqa: E402
@@ -47,6 +49,7 @@ class FakeWS:
         if self.fail:
             raise simbuild.SimError(self.fail)
         self.sims += 1
+        self.last = req
         bs = req["raid"]["parties"][0]["players"][0].get("bonusStats")
         s, p = (bs["stats"], bs["pseudoStats"]) if bs else ([0] * 39, [0] * 40)
         return 600 + 0.52 * s[5] + 0.45 * s[3] + 4.7 * p[15]
@@ -72,9 +75,9 @@ try:
     os.makedirs(os.path.join(wow, "Interface", "AddOns", "Glide", "Data"))
     clock, said = [1000.0], []
     ws, st, gear = FakeWS(), FakeState(), Gear({"kind": "Speedrun"})
-    on = [True]
+    on, db = [True], [None]
     sw = sim_weights.SimWeights(home, ws, lambda: st, gear, lambda: wow, lambda: on[0], emit=said.append,
-                                now=lambda: clock[0])
+                                now=lambda: clock[0], item_db_fn=lambda: db[0])
 
     # the file the addon ships is what the app writes when no character has weights
     shipped = open(os.path.join(ROOT, "addon", "Glide", "Data", "SimWeights.lua"), encoding="utf-8").read()
@@ -134,6 +137,49 @@ try:
     clock[0] += sim_weights.SETTLE_S + 1
     sw.tick()
     check(ws.sims > n and len(said) == 2, "weighed after the change settled, no chat line")
+
+    # ---- an enchant or random suffix put on: a change, weighed again once settled; the requests carry them, what
+    # WoWSims' item database doesn't know left out (it refuses a suffix it doesn't know) -------------------------------
+    def key_now():
+        return sw.key(sw.character(st, st.summary()))
+
+    plain = key_now()
+    st.gear["W"] = [dict(it, enchant=0) if it["key"] == "7" else it for it in st.gear["W"]]
+    check(key_now() == plain, "no enchant, and an addon that doesn't send them: the same")
+    db[0] = item_db.ItemDB.load(json.dumps({"items": [], "randomSuffixes": [{"id": 12734, "name": "of Magic"}],
+                                            "enchants": [{"effectId": 2544, "name": "Arcanum of Focus", "type": 1,
+                                                          "extraTypes": [9]}]}), None, "v1.0.5")
+    st.gear["W"] = [dict(it, enchant=2544) if it["key"] == "7" else dict(it, suffix=-12734) if it["key"] == "15" else
+                    dict(it, enchant=99999) if it["key"] == "9" else it for it in st.gear["W"]]
+    enchanted = key_now()
+    check(enchanted != plain and "2544" in enchanted and "-12734" in enchanted, enchanted)
+    n, through = ws.sims, []
+    sw.sim_fn = lambda req, tag: through.append(tag) or ws.sim(req, tag)       # (the app's: the sim queue)
+    sw.tick()
+    check(ws.sims == n, "settling")
+    clock[0] += sim_weights.SETTLE_S + 1
+    sw.tick()
+    items = ws.last["raid"]["parties"][0]["players"][0]["equipment"]["items"]
+    check(ws.sims > n and sw.chars["Nine"]["key"] == enchanted and len(said) == 2, "weighed again, silently")
+    check(through == ["v1.0.5"] * (1 + len(simbuild.CLASSES["MAGE"]["weigh"])), "every sim through sim_fn")
+    sw.sim_fn = None
+    check(items[8] == {"id": 226933, "enchant": 2544} and items[3] == {"id": 272411, "randomSuffix": 12734} and
+          items[5] == {"id": 226929}, items)
+    st.gear["W"] = [dict(it, suffix=-12735) if it["key"] == "15" else it for it in st.gear["W"]]
+    check(key_now() != enchanted, "another suffix: a change too")
+    st.gear["W"] = [dict(it, suffix=-12734) if it["key"] == "15" else it for it in st.gear["W"]]
+    check(key_now() == enchanted, "back as it was")
+    check(sw.key(dict(sw.character(st, st.summary()), skills={"Enchanting"})) != enchanted,
+          "a ring's enchant counts for an enchanter")
+    db[0] = None
+    smoked = FakeWS()
+    sim_weights.smoke(smoked, "v1.0.4")
+    items = smoked.last["raid"]["parties"][0]["players"][0]["equipment"]["items"]
+    check(items[0] == {"id": 226935, "enchant": 2544} and items[3] == {"id": 10249, "randomSuffix": 12734},
+          "a new WoWSims is tried on a request with an enchant and a suffix")
+    sw.item_db_fn = lambda: 1 / 0
+    check(sw._item_db() is None, "no database (it failed): weighed without one")
+    sw.item_db_fn = lambda: db[0]
 
     # ---- a failure: tried again after RETRY_S, the old weights kept --------------------------------------------------
     st.tal = sim_weights.talent_list("0502052001001-55500001230133031-003")      # (Fire)

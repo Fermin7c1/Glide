@@ -2,6 +2,8 @@
 current step or the reason for it in plain words."""
 import sys
 
+from gear import PLURAL_SLOTS, dps_text
+
 # Plain meaning of the analyzer's why codes. The knowledge layer's own (knowledge/api/reasons.py) are used whenever
 # it is loaded; this copy (the same words, tests/test_helpers.py checks) is for an engine without it.
 WHY_TEXT = {
@@ -61,6 +63,10 @@ def callout(batch, ctx):
         wares = [u["item"] for u in f["upgrades"]] + f["potions"]
         where = " (%d yards %s)" % (f["yards"], f["direction"]) if f.get("yards") is not None else ""
         lines.append("%s%s sells %s, limited stock." % (f["vendor"], where, ", ".join(wares[:3])))
+    if "next_upgrade" in kinds:
+        lines.append(next_upgrade_line(kinds["next_upgrade"].facts))
+    if "enchant_missing" in kinds:
+        lines.append(enchant_missing_line(kinds["enchant_missing"].facts))
     if "reward_choice" in kinds:
         r = kinds["reward_choice"].facts["ranked"]
         if r and r[0]["gain"] > 0:
@@ -108,6 +114,28 @@ def callout(batch, ctx):
     if "fact_corrected" in kinds:
         lines.append(fact_corrected_line(kinds["fact_corrected"].facts))
     return " ".join(lines[:3])
+
+
+def next_upgrade_line(facts):
+    """The best item the character can get now, from Glide's best-in-slot sims (next_upgrade): "Next upgrade: <item>
+    (<slot>, about +<dps> DPS): <where it comes from>." A weapon paired with another (a one-hander and an off hand in
+    place of a two-hander) names both: "<item> with <other>"; a bonus the number leaves out (cond) says so."""
+    src = str(facts.get("source") or "").strip().rstrip(".")
+    item = facts.get("item") or "an item"
+    if facts.get("with"):
+        item += " with %s" % facts["with"]
+    cond = ", not counting its bonus against some creatures" if facts.get("cond") else ""
+    return "Next upgrade: %s (%s, about +%s DPS%s)%s." % (item, facts.get("slot") or "gear",
+                                                          dps_text(facts.get("dps")), cond, (": " + src) if src else "")
+
+
+def enchant_missing_line(facts):
+    """A worn item without an enchant, and the enchant worth most on it (enchant_missing): "Your <slot> has no
+    enchant: <enchant> is worth about <dps> DPS." ("have" for bracers, gloves, boots and the like)."""
+    slot = facts.get("slot") or "gear"
+    return "Your %s %s no enchant: %s is worth about %s DPS." % (slot, "have" if slot in PLURAL_SLOTS else "has",
+                                                                facts.get("enchant") or "an enchant",
+                                                                dps_text(facts.get("dps")))
 
 
 def fact_corrected_line(facts):

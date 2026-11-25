@@ -94,6 +94,16 @@ class and level), every equippable item in the bags with a verdict, and, while a
 which reward to take; if none is an upgrade say so and suggest the most valuable/likely-useful one.
 On vendor_treasure (a nearby vendor with limited-stock gear or potions: its upgrades for this character, scored the
 same way, and potions when the bags have few): name the vendor, where, and the best item; mention it may be sold out.
+At 60, Glide ranks gear for each slot with its own WoWSims sims on the player's gear and talents, against WoWSims' raid
+target (a level-63 dragonkin, 3 minutes: bonuses against undead or demons and area damage count for nothing there; an
+item with "cond" has one, so say once that its number leaves it out). "gear.next_upgrades" lists, for up to 3 slots,
+the best item to get now: dps = DPS over what is worn, give or take plus_minus, and where it comes from; "with" names
+the weapon it pairs with (a one-hander and an off hand in place of a two-hander: the gain is the pair's, so name
+both). Say one number ("about +8 DPS"); the reasons only when asked.
+On next_upgrade say the item, the gain and where it comes from, in one sentence. On enchant_missing (a worn item has
+no enchant), say the slot and the enchant with what it is worth, in one sentence. For "what's best in slot for my
+neck?" and the like, call bis_slot when it is in your tools: "about_same" means within the sims' noise, so say "about
+the same as yours"; never push an item whose avail is not "now" as something to get.
 On facts_ready (Glide found where more items come from, for the item tooltips in the game), say in one short sentence
 that the tooltips show them after a /reload, or with "restart" true after the next full WoW restart; no count. For
 "where does X drop?", "who sells X?" and the like, call item_info when it is in your tools and cite its fact_ids.

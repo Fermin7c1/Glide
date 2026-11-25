@@ -92,6 +92,8 @@
     "gear.spec": {"default": "", "kind": "text"},
     "gear.min_gain_pct": {"default": 3, "min": 0, "max": 50, "kind": "number"},
     "gear.sims": {"default": true, "kind": "bool"},
+    "gear.bis": {"default": true, "kind": "bool", "note": "Glide's own best-in-slot ranks at 60 (bis.py): every item of the band simmed on the character's gear through the sim queue in the background; the tooltip's BiS line (Data/Live.lua chars), the coach's next_upgrade and enchant_missing, bis_slot"},
+    "gear.bis_lens": {"default": "now", "kind": "text", "note": "which items the BiS ranks hold: now (what WoWSims places in the game now) or all (its later phase too)"},
 
     "research.enabled": {"default": true, "kind": "bool", "note": "look up where items come from (research.py): the source line on item tooltips in the game (Data/Live.lua) and the coach's item_info"},
     "research.web": {"default": true, "kind": "bool", "note": "look up on the web what nothing offline knows (research.WebResolver): one background call with web search on the fast model, within the two daily caps below"},

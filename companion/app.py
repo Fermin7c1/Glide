@@ -186,7 +186,9 @@ class App:
         self.app_version = os.environ.get("GLIDE_APP_VERSION") or None    # the desktop app that runs this engine
         self.refresher = None
         self._ws, self._ws_lock = None, threading.Lock()     # WoWSims (_wowsims), made on first use
+        self._idb = None                        # WoWSims' item database (_item_db), made on first use
         self.research = self.live = None        # item research and Data/Live.lua's writer (_start_research)
+        self.sim_queue = self.sim_weights = self.bis = None  # WoWSims' one line of runs, the weights, the BiS ranks
         import health
         self.health = health.Health(self)
         self.last_seq = None
@@ -235,7 +237,8 @@ class App:
             reminders=reminders.Reminders(None if self.args.sim else live_path("reminders.json")),
             memory=self.memory,
             on_watch=self.set_watch,
-            gear_fn=lambda: (self.rules.upgrades, self.rules.rewards, self.state.gear["W"], self.rules.bag_items),
+            gear_fn=lambda: (self.rules.upgrades, self.rules.rewards, self.state.gear["W"], self.rules.bag_items,
+                             self._bis_now()),
             system_fn=lambda: self.rules.addon_status,
             speak_fn=self.speak_early,
             watched_fn=lambda: self.rules.watched)
@@ -939,25 +942,42 @@ class App:
 
     def _start_sim_weights(self):
         """WoWSims weighs a level-60 character's own gear (sim_weights.py): the coach's gear advice and the addon's
-        upgrade line on item tooltips. WoWSims is downloaded on first use and kept current (wowsims.py)."""
+        upgrade line on item tooltips. WoWSims is downloaded on first use and kept current (wowsims.py). Its runs, and
+        the BiS ranks' (_start_bis), go through the one sim queue (sim_queue.py: one wowsimcli at a time, below normal
+        priority on a quarter of the cores, waiting while the player fights, is dead or in an instance), the weights
+        last (PRIO_WEIGHTS); the requests carry what WoWSims' item database knows of the gear's enchants and random
+        suffixes (_item_db)."""
         try:
+            import sim_queue
             import sim_weights
-            gear = self.rules.gear
+            gear, ws = self.rules.gear, self._wowsims()
+            self.sim_queue = queue = sim_queue.SimQueue(ws, lambda: sim_queue.busy(self.state))
             self.sim_weights = sim_weights.SimWeights(
-                ROOT, self._wowsims(), lambda: self.state, gear,
-                lambda: glideconfig.wow_dir(ROOT), lambda: gear.opt.get("sims"), emit=self.on_message).start()
+                ROOT, ws, lambda: self.state, gear,
+                lambda: glideconfig.wow_dir(ROOT), lambda: gear.opt.get("sims"), emit=self.on_message,
+                item_db_fn=self._item_db(), sim_fn=lambda req, tag: queue.sim(req, tag, sim_queue.PRIO_WEIGHTS)).start()
         except Exception as e:  # noqa: BLE001 - gear advice goes on with the stat weights it ships with
             log_once("sim_weights.start", e)
 
     def _wowsims(self):
-        """The one wowsims.WoWSims of this run (data/wowsims/state.json has one writer): the sim weights' and the item
-        research's."""
+        """The one wowsims.WoWSims of this run (data/wowsims/state.json has one writer): the sim weights', the item
+        research's and the BiS ranks'."""
         with self._ws_lock:
             if self._ws is None:
                 import sim_weights
                 import wowsims
                 self._ws = wowsims.WoWSims(ROOT, smoke=sim_weights.smoke)
             return self._ws
+
+    def _item_db(self):
+        """The one research.ItemDBSource of this run (WoWSims' item database, loaded in the background by whoever
+        asks first, once per WoWSims tag): the item research's, the sim weights' and the BiS ranks'."""
+        ws = self._wowsims()
+        with self._ws_lock:
+            if getattr(self, "_idb", None) is None:
+                import research
+                self._idb = research.ItemDBSource(ws)
+            return self._idb
 
     def _start_research(self):
         """Where items come from (research.py), on its own thread so the start never waits on it: the research worker
@@ -976,7 +996,7 @@ class App:
             import research
             import research_budget
             opt = settings.Settings("research", self.cfg.get("research") or {})
-            self.research = research.Research(ROOT, research.ItemDBSource(self._wowsims()), self.kb_handle,
+            self.research = research.Research(ROOT, self._item_db(), self.kb_handle,
                                               lambda: self.state, lambda: opt.get("enabled"))
             self.research.hover_fn = lambda: opt.get("hover")
             if opt.get("web"):
@@ -996,6 +1016,51 @@ class App:
             self.rules.live = self.live
         except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without item sources
             log_once("research.start", e)
+        self._start_bis()
+
+    def _start_bis(self):
+        """Glide's own best-in-slot ranks at 60 (bis.py's BisRanker, on its own thread; after the research, whose
+        facts say where each item comes from): every item of the character's band simmed on its own gear through the
+        sim queue (PRIO_BIS: before the weights, after asked sims), with the WoWSims weights (sim_weights.py) to screen
+        them. The ranks go to the gear (Gear.set_bis: the coach's next upgrade and missing enchants, rules._bis, which
+        keeps what it said with the ranker; the prompt's gear.next_upgrades; the bis_slot tool) and into the addon's
+        Data/Live.lua (chars[key].bis: the tooltip's "Glide BiS #2 for Head" line). gear.bis off: nothing is ranked and
+        none of it is shown or said; gear.bis_lens: "now" (what can be had now) or "all". The professions the
+        character has don't reach the engine (the Recorder keeps them in its session, which nothing reads yet), so
+        they count as unknown: ring enchants aren't simmed and an item that needs a profession is never "next"."""
+        queue, gear = getattr(self, "sim_queue", None), getattr(self.rules, "gear", None)
+        if queue is None or gear is None:
+            return                                  # (no sim queue: WoWSims couldn't be set up)
+        try:
+            import bis
+            import coach_tools
+            r = self.research
+            ranker = bis.BisRanker(ROOT, queue, self._item_db(), lambda: self.state, self._sim_weights_of,
+                                   sources_fn=r.facts if r is not None else None)
+            ranker.enabled_fn = gear.bis_on
+            ranker.lens_fn = lambda: gear.opt.get("bis_lens")
+            ranker.on_change = gear.set_bis
+            self.bis = ranker
+            self.rules.bis = ranker
+            coach_tools.bis = self._bis_now
+            if self.live is not None:
+                self.live.register("chars", lambda: ranker.live_section() if gear.bis_on() else {})
+            ranker.start()
+        except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without BiS ranks
+            log_once("bis.start", e)
+
+    def _sim_weights_of(self, name):
+        """The character's WoWSims weights (sim_weights.py's entry), or None."""
+        sw = getattr(self, "sim_weights", None)
+        return sw.chars.get(name) if sw is not None and name else None
+
+    def _bis_now(self):
+        """(the BiS ranks of the character playing or None, the item ids worn), as gear.Gear.bis_now gives them; None
+        while nothing ranks (a simulated run, gear.bis off): the coach's gear_fn and bis_slot tool."""
+        gear = getattr(self.rules, "gear", None)
+        if getattr(self, "bis", None) is None or gear is None or not gear.bis_on():
+            return None
+        return gear.bis_now(self.state)
 
     def _research_llm(self):
         """The LLM client the item research's web lookups use: the coach's, while the AI is on (else None: the

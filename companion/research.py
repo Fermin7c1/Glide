@@ -48,8 +48,9 @@ The game checks what the web said. A drop the player sees confirms it (the obser
 fact names dying CONTRA_KILLS times without the item (as the player's own loot observation counts kills: of one
 creature, KILL_DEDUP_S apart; the larger of the kills seen here and the knowledge base's observed looted kills; a name a
 page shortened is the same creature: _same_name) halves the fact's conf and looks it up again, each CONTRA_KILLS more
-halving it again. When the coach had said a web fact (item_info's answer), the game cast doubt on it, and the item's
-sources no longer hold that place, corrections() hands out {"item", "old", "new"} once: the rules' fact_corrected.
+halving it again. When the coach had said a web fact (item_info's answer, or the next upgrade or a best-in-slot answer:
+note_told), the game cast doubt on it, and the item's sources no longer hold that place, corrections() hands out
+{"item", "old", "new"} once: the rules' fact_corrected.
 
 data/research/facts.json: {"v": 1, "faction": the last character's, "facts": {"i:<id>": {"s": [Src], "bond",
 "price", "conf", "src", "t", "ttl", "name", "avail", "fa", "tag", "kb"}}, "neg": {"i:<id>": [t, fa]}, "seen":
@@ -1274,16 +1275,42 @@ class Research:
         out = {"id": iid, "name": name, "sources": texts, "avail": (f or {}).get("avail") or "nosrc", "fact_ids": ids}
         with self.lock:
             if line and top is not None and top.get("src") == "web" and f is self.found.get(key):
-                prev = self.told.get(key) or {}
-                self.told[key] = dict(_told_place(top), text=line, t=now)
-                if prev.get("fix"):                      # (a correction not said yet stays to be said)
-                    self.told[key]["fix"] = prev["fix"]
-                self.dirty = True
+                self._tell(key, top, line, now)
             elif not srcs:
                 self.ask(key, "question")
                 if key == self._web_job or (key in self.web_q and self._web_may()):
                     out["looking_up"] = True
         return out
+
+    def _tell(self, key, top, line, now):
+        """(Under the lock) The coach said a web fact's place (top, the item's leading source; line, the tooltip's
+        text): kept as told, so the game can correct it (_check_told)."""
+        prev = self.told.get(key) or {}
+        self.told[key] = dict(_told_place(top), text=line, t=now)
+        if prev.get("fix"):                              # (a correction not said yet stays to be said)
+            self.told[key]["fix"] = prev["fix"]
+        self.dirty = True
+
+    def note_told(self, item_id):
+        """The coach said where an item comes from outside item_info (the next upgrade, a best-in-slot answer): when
+        that is a web fact, it is kept as told the same way (corrected once if the game shows it wrong). -> True when
+        kept."""
+        iid = as_id(item_id)
+        if not iid:
+            return False
+        key, now, pack = "i:%d" % iid, self._now(), self._pack()
+        with self.lock:
+            f = self.found.get(key)
+            if f is None or self._expired_web(f, now):
+                return False
+            top = item_text.best(f.get("s") or [])
+            if top is None or top.get("src") != "web":
+                return False
+            line = self._line(iid, f, pack)
+            if not line:
+                return False
+            self._tell(key, top, line, now)
+            return True
 
     def ask_item(self, query):
         """A question the player asked about an item, by its name or id ("where does X drop?": coach_tools.item_asked,

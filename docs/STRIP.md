@@ -232,7 +232,7 @@ Worn gear; count and hash in core wn/wh.
 |---|---|---|---|
 | `g` | list | Entries (key = equipment slot) | ≤0.7 |
 
-Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6.
+Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6. Worn entries (W, 0.22) also carry the item link's enchant and random suffix ids as the codes EN and SX, e.g. EN2564/SX13002 (the suffix as the link has it, sign included), each only when non-zero and kept first when an entry is trimmed; the engine moves them out of the stats. From addon 0.22, a worn entry without EN has no enchant and one without SX no random suffix; from an older addon, which never sends them, both are unknown.
 
 ### `I0`..`I19`
 
@@ -242,7 +242,7 @@ Equippable gear in the bags; count and hash in core in/ih.
 |---|---|---|---|
 | `g` | list | Entries (key = bag.slot) | ≤0.7 |
 
-Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6.
+Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6. Worn entries (W, 0.22) also carry the item link's enchant and random suffix ids as the codes EN and SX, e.g. EN2564/SX13002 (the suffix as the link has it, sign included), each only when non-zero and kept first when an entry is trimmed; the engine moves them out of the stats. From addon 0.22, a worn entry without EN has no enchant and one without SX no random suffix; from an older addon, which never sends them, both are unknown.
 
 ### `R0`..`R19`
 
@@ -252,7 +252,7 @@ Quest reward choices on screen; count and hash in core rn/rh.
 |---|---|---|---|
 | `g` | list | Entries (key = choice index) | ≤0.7 |
 
-Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6.
+Entry: `key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats`; stats are CODE value pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6. Worn entries (W, 0.22) also carry the item link's enchant and random suffix ids as the codes EN and SX, e.g. EN2564/SX13002 (the suffix as the link has it, sign included), each only when non-zero and kept first when an entry is trimmed; the engine moves them out of the stats. From addon 0.22, a worn entry without EN has no enchant and one without SX no random suffix; from an older addon, which never sends them, both are unknown.
 
 ### `P0`..`P19`
 

@@ -2,7 +2,8 @@
 -- stats, so the companion can spot upgrades. Built on bag/equipment/quest events, not every frame.
 -- Entry: key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats
 --   key   = slot number (worn), bag.slot (bags) or choice index (rewards)
---   stats = CODE value pairs joined by "/" (codes match companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6
+--   stats = CODE value pairs joined by "/" (codes match companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6; a worn
+--           entry also carries its enchant and random suffix ids as EN<id> and SX<id> (only when non-zero)
 local _, ns = ...
 
 local Safe = ns.Safe
@@ -83,10 +84,10 @@ local function itemStats(link)
 end
 ns.ItemStats = itemStats          -- (Compare.lua: the upgrade line on item tooltips)
 
--- the stats an entry keeps when they don't all fit its page, most worth keeping first (a weapon's speed and damage,
--- armor, the main stats); codes not listed go before any of these
-local KEEP = { "DP", "WS", "AR", "ST", "AG", "SA", "IN", "SI", "AP", "RA", "SP", "HL", "CR", "HT", "CS", "HS", "MR",
-               "HR", "DF", "DG", "PA", "FI", "FR", "AC", "NA", "SH" }
+-- the stats an entry keeps when they don't all fit its page, most worth keeping first (a worn item's enchant and
+-- suffix ids, a weapon's speed and damage, armor, the main stats); codes not listed go before any of these
+local KEEP = { "EN", "SX", "DP", "WS", "AR", "ST", "AG", "SA", "IN", "SI", "AP", "RA", "SP", "HL", "CR", "HT", "CS",
+               "HS", "MR", "HR", "DF", "DG", "PA", "FI", "FR", "AC", "NA", "SH" }
 local KEEP_RANK = {}
 for i, code in ipairs(KEEP) do KEEP_RANK[code] = i end
 
@@ -139,14 +140,32 @@ local function itemEntry(link)
     return cache[link]
 end
 
--- key:entry in at most `max` bytes (default: one page's chunk), or nil (and true while the item isn't loaded)
-local function summarize(key, link, max)
+-- the stats plus the enchant and random suffix ids the link carries (EN, SX; only the non-zero ones). The fields
+-- are counted after "item:" (2 = enchant, 7 = suffix), so the colon in Forever's "|cnIQ4:" colour prefix doesn't
+-- shift them. The cached stats table is never changed: a copy carries the ids.
+local function withLinkIds(stats, link)
+    local body = link:match("item:([%-%d:]*)")
+    if not body then return stats end
+    local f = {}
+    for v in (body .. ":"):gmatch("([^:]*):") do f[#f + 1] = v end
+    local en, sx = tonumber(f[2] or ""), tonumber(f[7] or "")
+    if (not en or en == 0) and (not sx or sx == 0) then return stats end
+    local out = {}
+    for code, v in pairs(stats) do out[code] = v end
+    if en and en ~= 0 then out.EN = en end
+    if sx and sx ~= 0 then out.SX = sx end
+    return out
+end
+
+-- key:entry in at most `max` bytes (default: one page's chunk), or nil (and true while the item isn't loaded);
+-- worn: also the link's enchant and suffix ids (worn entries only: the engine moves them out of the stats)
+local function summarize(key, link, max, worn)
     link = Safe(link)
     if not link then return nil end
     local e, missing = itemEntry(link)
     if not e then return nil, missing end
     local head = key .. ":" .. e[1] .. ":"
-    return head .. statsText(e[2], (max or CHUNK) - #head)
+    return head .. statsText(worn and withLinkIds(e[2], link) or e[2], (max or CHUNK) - #head)
 end
 
 ns.GearSummarize = summarize          -- Extras.lua: vendor treasure items, in the same format
@@ -162,7 +181,7 @@ local function build()
     local worn, bags, missing = {}, {}, false
     for slot = 1, 18 do
         if slot ~= 4 then
-            local e, miss = summarize(slot, GetInventoryItemLink("player", slot))
+            local e, miss = summarize(slot, GetInventoryItemLink("player", slot), nil, true)
             if e then worn[#worn + 1] = e end
             missing = missing or miss
         end
@@ -205,6 +224,8 @@ for _, e in ipairs({ "PLAYER_LOGIN", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHA
     "PLAYER_LEVEL_UP" }) do
     ns.On(e, function() ns.GearDirty() end)
 end
+-- an enchant put on a worn item changes its link; this fires for that (PLAYER_EQUIPMENT_CHANGED may not)
+ns.On("UNIT_INVENTORY_CHANGED", function(unit) if unit == "player" then ns.GearDirty() end end)
 ns.On("QUEST_COMPLETE", function() rewards(true) end)       -- the reward choices on screen
 ns.On("QUEST_FINISHED", function() rewards(false) end)
 

@@ -98,6 +98,8 @@ export const MANIFEST: Record<string, ManifestEntry> = {
   "gear.spec": {"default":"","kind":"text"},
   "gear.min_gain_pct": {"default":3,"min":0,"max":50,"kind":"number"},
   "gear.sims": {"default":true,"kind":"bool"},
+  "gear.bis": {"default":true,"kind":"bool"},
+  "gear.bis_lens": {"default":"now","kind":"text"},
   "research.enabled": {"default":true,"kind":"bool"},
   "research.web": {"default":true,"kind":"bool"},
   "research.web_per_day": {"default":20,"min":0,"max":100,"kind":"int"},

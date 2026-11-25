@@ -4,7 +4,7 @@ changes only with the quest log or the kit (cached), then the live part, each sh
 import json
 
 import coach_prompts as prompts
-from gear import ARMOR_LABEL, SLOT_NAMES, WEAPON_LABEL
+from gear import ARMOR_LABEL, SLOT_NAMES, WEAPON_LABEL, bis_parts, next_upgrades
 from geo import Geo
 from log import log_once
 from state import as_int
@@ -60,7 +60,7 @@ TOPIC_NEEDS = {"route": set(LIVE_SECTIONS),
 TRIGGER_TOPIC = {"low_health_in_combat": "combat", "target_tapped": "combat",
                  "buffs_dropped": "buffs", "buff_expiring": "buffs",
                  "gear_upgrade": "gear", "reward_choice": "gear", "vendor_treasure": "gear", "facts_ready": "gear",
-                 "fact_corrected": "gear",
+                 "fact_corrected": "gear", "next_upgrade": "gear", "enchant_missing": "gear",
                  "addon_outdated": "system",
                  "bags_nearly_full": "upkeep", "low_durability": "upkeep", "consumables_low": "upkeep",
                  "training_available": "upkeep", "talent_points_unspent": "upkeep"}
@@ -73,8 +73,10 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
     id order (with quest_priority for trimming), gear and the addon status. state: the GameState (or None);
     knowledge: glide.db's reader, read only while there is no knowledge pack; geo: the place describer; pack: the
     knowledge layer (quests and map names, names instead of ids in the extras); watched_fn, gear_fn, system_fn: the
-    app's getters for watched buffs, gear and addon status; talent_plan: the next talent pick; item_brief(item id):
-    what is known of the hovered item (hovered_item)."""
+    app's getters for watched buffs, gear and addon status (gear_fn -> (upgrades, rewards, worn, bag items) and, at
+    60, a fifth: Glide's best-in-slot ranks for the character, as Gear.bis_now gives them, for gear.next_upgrades);
+    talent_plan: the next talent pick; item_brief(item id): what is known of an item (the hovered item's
+    hovered_item, and the names and sources of the next upgrades)."""
     st = state
     # quests and map names from the knowledge base (kb.db); glide.db only without one
     if pack is not None and getattr(pack, "ok", False):
@@ -160,7 +162,8 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
         player["hovered_item"] = hv
     gear = None
     if gear_fn:
-        ups, rewards, worn, bag_items = gear_fn()
+        got = gear_fn()
+        ups, rewards, worn, bag_items = got[:4]
         gear = {"equipped": {SLOT_NAMES.get(int(i["key"]), i["key"]): i["name"] for i in worn
                              if str(i["key"]).isdigit()},
                 "upgrades_in_bags": [{k: u[k] for k in ("item", "slot_name", "replaces", "gain", "wait_level")}
@@ -170,6 +173,10 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
                                              for u in bag_items[:12]],
                 "trained_skills": trained_skills(s.get("skills")),
                 "quest_reward_choices": rewards or None}
+        if len(got) > 4 and got[4] is not None:
+            nu = bis_next(got[4], worn, item_brief)
+            if nu:
+                gear["next_upgrades"] = nu
     if me:
         area, _ = geo.area_at(me["map"], me["x"], me["y"])
         player["standing_in"] = area
@@ -188,6 +195,23 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
            "quests_in_log": [str(q) for q in (s.get("quests") or {})], "gear": gear,
            "system": {"glidelink": system_fn()} if system_fn else None}
     return ctx
+
+
+NEXT_UPGRADES = 3                  # gear.next_upgrades: slots at most (reference_trims takes it down to 1)
+
+
+def bis_next(got, worn, brief_fn=None):
+    """gear.next_upgrades from Glide's best-in-slot ranks (gear.next_upgrades: the best item to get now for up to
+    NEXT_UPGRADES slots, its DPS gain give or take 2 sigma, where it comes from), or []. got: the ranks, or (ranks,
+    worn item ids) (Gear.bis_now); worn: the worn items, when got carries no ids."""
+    try:
+        cb, ids = bis_parts(got)
+        if not ids:
+            ids = {i.get("id") for i in worn or () if isinstance(i.get("id"), int)}
+        return next_upgrades(cb, ids, brief_fn, NEXT_UPGRADES)
+    except Exception as e:  # noqa: BLE001 - the gear section goes without them
+        log_once("context.next_upgrades", e)
+        return []
 
 
 HOVER_NOTE = "under the player's mouse in the game now: 'this' or 'that item' means it"
@@ -437,7 +461,7 @@ def shrink_hovered(player):
 def reference_trims(ref, order=()):
     """fit() steps for REFERENCE, least important first: quest flavour text, then the quests furthest down the
     route (quest_priority: the current step's quests first, then the next steps', then the rest of the log),
-    bag items beyond 6, community notes beyond 2, then quests down to 3."""
+    bag items beyond 6, community notes beyond 2, the next upgrades beyond 1, then quests down to 3."""
     quests = ref.get("quests") or {}
     gear = ref.get("gear") or {}
     order = [q for q in order if q in quests]
@@ -458,4 +482,4 @@ def reference_trims(ref, order=()):
             return False
         return step
     return [details, quest(8), drop_list(gear, "equippable_items_in_bags", 6),
-            drop_list(ref, "community", 2), quest(3)]
+            drop_list(ref, "community", 2), drop_list(gear, "next_upgrades", 1), quest(3)]

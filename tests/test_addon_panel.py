@@ -66,7 +66,7 @@ for b in buttons:
 assert P.status.text and "Streaming" in P.status.text, P.status.text
 want = ["Coach commentary", "Route", "Combat", "Buffs", "Gear", "Pace", "Upkeep", "Voice",
         "Auto repair", "Bag cleanup", "New spells on level up", "Upgrades on item tooltips", "Where items come from",
-        "Stacks on cooldown bars", "Data strip", "Minimap button"]
+        "Best-in-slot rank on item tooltips", "Stacks on cooldown bars", "Data strip", "Minimap button"]
 assert [b.label.text for b in boxes] == want, [b.label.text for b in boxes]
 
 
@@ -100,6 +100,12 @@ src = labels["Where items come from"]                            # the source li
 assert src.checked and ns.SourcesOn() and src.desc.text.startswith("On item tooltips")
 click(src); assert not ns.SourcesOn() and G.GlideLinkDB.sources.enabled is False
 click(src); assert ns.SourcesOn() and src.checked
+bis = labels["Best-in-slot rank on item tooltips"]               # the BiS rank on item tooltips: on by default
+assert bis.checked and ns.BisOn() and bis.desc.text.startswith("At 60")
+click(bis); assert not ns.BisOn() and G.GlideLinkDB.bis.enabled is False and not bis.checked
+click(bis); assert ns.BisOn() and bis.checked
+bis.scripts.OnEnter(bis)
+assert "/glide bis on|off" in " ".join(G.GameTooltip.lines.values()), "its tooltip names the command"
 
 # ---- the master switch greys out the kinds, and a greyed kind can't be clicked ---------------------------------
 click(labels["Coach commentary"])
@@ -153,6 +159,10 @@ G.SlashCmdList.GLIDE("sources off")
 assert not labels["Where items come from"].checked
 G.SlashCmdList.GLIDE("sources on")
 assert labels["Where items come from"].checked
+G.SlashCmdList.GLIDE("bis off")
+assert not labels["Best-in-slot rank on item tooltips"].checked
+G.SlashCmdList.GLIDE("bis on")
+assert labels["Best-in-slot rank on item tooltips"].checked
 
 # ---- tooltips explain each option; the window keeps its place ------------------------------------------------------
 labels["Bag cleanup"].scripts.OnEnter(labels["Bag cleanup"])

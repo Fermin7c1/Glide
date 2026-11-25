@@ -137,7 +137,12 @@ CORE = (
 _LIST_N = Key("n", "int", "Pages in the list (count)", "Extras.lua", "0.10")
 _LIST_H = Key("h", "int", "List hash (the same on every page of the list)", "Extras.lua", "0.10")
 GEAR_ENTRY = ("key:itemID:equipLoc:classID:subclassID:ilvl:quality:reqLevel:usable:name:stats; stats are CODE value "
-              "pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6")
+              "pairs joined by / (codes as companion/gear.py), e.g. ST5/SA3/AR120/DP7.4/WS2.6. Worn entries (W, 0.22) "
+              "also carry the item link's enchant and random suffix ids as the codes EN and SX, e.g. EN2564/SX13002 "
+              "(the suffix as the link has it, sign included), each only when non-zero and kept first when an entry "
+              "is trimmed; the engine moves them out of the stats. From addon 0.22, a worn entry without EN has no "
+              "enchant and one without SX no random suffix; from an older addon, which never sends them, both are "
+              "unknown")
 
 PAGES = (
     Page("B", False, "Who the player is", "State.lua", "≤0.7", (

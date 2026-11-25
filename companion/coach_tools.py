@@ -1,10 +1,12 @@
 """The coach's own tools and spoken commands, next to the knowledge layer's: reminders ("remind me to repair"), the
 memory of the player across sessions (and the reflection that updates it), where an item comes from (the engine's
-research, research.py: "where does Magister's Crown drop?"), and feature switches said out loud ("quest briefings
-off"). Tool definitions for the model, the tool calls, and the local handling of clear requests."""
+research, research.py: "where does Magister's Crown drop?"), Glide's own best-in-slot ranks for a slot (bis.py: "what's
+best in slot for my neck?"), and feature switches said out loud ("quest briefings off"). Tool definitions for the
+model, the tool calls, and the local handling of clear requests."""
 import json
 import re
 
+import gear as gear_mod
 import memory as memory_mod
 import reminders as reminders_mod
 from log import log_once
@@ -56,12 +58,31 @@ ITEM_TOOLS = [
      "input_schema": {"type": "object", "required": ["item"], "properties": {
          "item": {"type": "string", "description": "the item's name (e.g. Magister's Crown) or its item id"}}}},
 ]
-ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS)
+BIS_TOOLS = [
+    {"name": "bis_slot", "description": (
+        "Glide's own best-in-slot ranks for one gear slot of the character playing (level 60): WoWSims sims of each "
+        "item on the player's own gear and talents. For 'what's best in slot for my neck?', 'what's my best "
+        "trinket?'. Rows best first: item, rank (1 = best), d = DPS over what they wear now, source = where it comes "
+        "from, avail: now (can be had now), later (a later phase), nosrc (no known source); worn: they wear it; "
+        "in_bags: it is in their bags already (say so, not where it comes from); "
+        "with_set: best only together with another piece of its item set (d is what it alone would change: say "
+        "'with its set', not that number); about_same: within the sims' noise; with: the weapon it was simmed with "
+        "(a one-hander and an off hand in place of a two-hander: d is the pair's, name both); cond: its bonus "
+        "against undead, demons or the like, or in an area, isn't in d (say so once); needs: a profession it needs."),
+     "input_schema": {"type": "object", "required": ["slot"], "properties": {
+         "slot": {"type": "string", "description": "the slot: head, neck, shoulders, back, chest, wrists, hands, "
+                                                   "waist, legs, feet, ring, trinket, main hand, off hand, ranged"}}}},
+]
+ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS + BIS_TOOLS)
 # the tools the coach runs itself; every other tool call goes to the knowledge layer (api.dispatch)
 LOCAL_TOOLS = ("reminder_add", "reminder_list", "reminder_done", "web_search",
                "memory_remember", "memory_forget", "memory_list") + ITEM_TOOL_NAMES
 # the engine's research worker (research.Research), set by the app once it runs: item_info answers from it
 research = None
+# Glide's best-in-slot ranks for the character playing, set by the app once the ranker runs (bis.py): a callable
+# -> the ranks (bis.json's "chars" entry) or (ranks, worn item ids), as gear.Gear.bis_now gives them; bis_slot
+# answers from it, with the names and sources from the research
+bis = None
 
 
 def reminder_view(rem):
@@ -257,12 +278,16 @@ def apply_reflection(memory, text, emit, since=None, now=None):
 
 # ---- where items come from (research.py) ---------------------------------------------------------------------------
 def item_tools():
-    """The item tool definitions while the research worker runs (none before)."""
-    return list(ITEM_TOOLS) if research is not None else []
+    """The item tool definitions: item_info while the research worker runs, bis_slot while the best-in-slot ranker
+    does (none before)."""
+    return (list(ITEM_TOOLS) if research is not None else []) + (list(BIS_TOOLS) if bis is not None else [])
 
 
 def run_item_tool(name, args):
-    """item_info on the research worker's facts -> {"id", "name", "sources": [texts], "avail", "fact_ids"}."""
+    """item_info on the research worker's facts -> {"id", "name", "sources": [texts], "avail", "fact_ids"}; bis_slot on
+    the best-in-slot ranks -> {"slot", "ranks": bis_slot rows}."""
+    if name == "bis_slot":
+        return bis_tool(args)
     r = research
     if r is None:
         return {"error": "item lookups are not available"}
@@ -322,7 +347,11 @@ LOOKING_UP = "I don't know where %s comes from yet; I'm looking it up, ask me ag
 def item_command(question, ai_ok, hovered=None):
     """'where does Magister's Crown drop?' answered from the research facts while the AI is off (ai_ok false; with
     it the model asks item_info): "<item>: <where it comes from>." ("where does this drop?": the hovered item, see
-    item_question). Returns the spoken answer, or None."""
+    item_question); and 'what's best in slot for my neck?' from the best-in-slot ranks (bis_command). Returns the
+    spoken answer, or None."""
+    said = bis_command(question, ai_ok)
+    if said:
+        return said
     r = research
     if r is None or ai_ok:
         return None
@@ -359,6 +388,111 @@ def item_brief(item_id):
     question's context), or None while it doesn't run."""
     r = research
     return r.brief(item_id) if r is not None else None
+
+
+# ---- Glide's own best-in-slot ranks (bis.py) -------------------------------------------------------------------------
+def _bis_now():
+    """(the ranks of the character playing or None, the item ids worn) from the bis hook."""
+    b = bis
+    if b is None:
+        return None, set()
+    try:
+        got = b() if callable(b) else b
+    except Exception as e:  # noqa: BLE001 - no ranks
+        log_once("coach_tools.bis", e)
+        return None, set()
+    return gear_mod.bis_parts(got)
+
+
+def bis_slot(slot):
+    """A slot's best-in-slot ranks for the character playing, best first (the coach's bis_slot tool): [{"item",
+    "rank", "d" (DPS over what is worn now), "source" (where it comes from), "avail" (now, later, nosrc)}, with "worn",
+    "about_same" and "needs" when so: gear.bis_rows]; [] when nothing is ranked for it."""
+    cb, worn = _bis_now()
+    if not cb:
+        return []
+    return gear_mod.bis_rows(cb, slot, worn, item_brief) or []
+
+
+def bis_tool(args):
+    """The bis_slot tool -> {"slot": the slot as the coach says it, "ranks": bis_slot rows}, or {"error"}."""
+    slot = str((args or {}).get("slot") or "").strip()
+    if not slot:
+        return {"error": "which slot?"}
+    if gear_mod.slot_group(slot) is None:
+        return {"error": "no gear slot called %r" % slot}
+    if _bis_now()[0] is None:
+        return {"error": "Glide hasn't ranked this character's gear yet (it ranks at level 60, with WoWSims)"}
+    return {"slot": gear_mod.slot_word(slot), "ranks": bis_slot(slot)}
+
+
+BIS_QUESTIONS = [re.compile(p) for p in (
+    r"(?:what is |which is |tell me )?(?:my |the )?(?:best in slot|bis)(?: item| gear| pick)? (?:for|in|on) (.+?)",
+    r"(?:what is |which is |what are )?(?:my |the )?best (.+?)(?: for me| i can get)?",
+    r"(?:what is |which is )?(?:my |the )?(.+?) (?:best in slot|bis)",
+    r"(?:best in slot|bis) (.+?)")]
+
+
+def bis_question(question):
+    """The slot a 'what's best in slot for my neck?' / 'what's my best trinket?' / 'bis bracers' question asks about
+    (a slot group, gear.slot_group), or None."""
+    q = " ".join(str(question or "").lower().replace("best-in-slot", "best in slot").split()).strip(" .!?")
+    q = re.sub(r"^what'?s ", "what is ", q)
+    for pat in BIS_QUESTIONS:
+        m = pat.fullmatch(q)
+        if m:
+            group = gear_mod.slot_group(m.group(1))
+            if group:
+                return group
+    return None
+
+
+def bis_command(question, ai_ok):
+    """'what's best in slot for my neck?' answered from the best-in-slot ranks while the AI is off (ai_ok false;
+    with it the model asks bis_slot): the best item the character can get now for the slot, in one line with one
+    number. Returns the spoken answer, or None."""
+    if ai_ok or bis is None:
+        return None
+    group = bis_question(question)
+    if not group:
+        return None
+    said = gear_mod.SLOT_SPOKEN[group]
+    cb, worn = _bis_now()
+    if cb is None:
+        return "I haven't ranked your gear yet; that takes level 60 and WoWSims."
+    rows = gear_mod.bis_rows(cb, group, worn, item_brief, ids=True) or []
+    best = next((r for r in rows if r.get("item") and (r.get("worn") or r.get("avail") == "now")), None)
+    if best is None:
+        return "I have nothing ranked for your %s yet." % said
+    item = best["item"] + (" with %s" % best["with"] if best.get("with") else "")
+    if best.get("worn"):
+        return "Best for your %s: %s, and you wear it." % (said, best["item"])
+    if best.get("with_set"):
+        gain = "with its set"
+    elif best.get("about_same") or not (best.get("d") or 0) > 0:
+        gain = "about the same as yours"
+    else:
+        gain = "about +%s DPS" % gear_mod.dps_text(best["d"])
+        if best.get("cond"):
+            gain += ", not counting its bonus against some creatures"
+    if best.get("in_bags"):
+        return "Best for your %s: %s, %s, and it's in your bags." % (said, item, gain)
+    src = str(best.get("source") or "").strip().rstrip(".")
+    if src:
+        _note_told(best.get("id"))
+    return "Best for your %s: %s, %s%s." % (said, item, gain, (": " + src) if src else "")
+
+
+def _note_told(item_id):
+    """The research keeps a web source said aloud as told (Research.note_told): corrected once if the game shows it
+    wrong."""
+    note = getattr(research, "note_told", None)
+    if note is None or item_id is None:
+        return
+    try:
+        note(item_id)
+    except Exception as e:  # noqa: BLE001 - said; no correction then
+        log_once("coach_tools.bis_told", e)
 
 
 # ---- feature switches said or typed ("quest briefings off") --------------------------------------------------------

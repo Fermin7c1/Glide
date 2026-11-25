@@ -12,7 +12,7 @@ class CoachDeps:
     reminders: Any = None                     # reminders.Reminders: "remind me to repair ..."
     memory: Any = None                        # memory.Memory: what the coach learned about the player
     on_watch: Optional[Callable] = None       # callback(name, on) for WATCH/UNWATCH directives
-    gear_fn: Optional[Callable] = None        # -> (upgrades, rewards, worn items, bag items)
+    gear_fn: Optional[Callable] = None        # -> (upgrades, rewards, worn items, bag items, BiS ranks or None)
     system_fn: Optional[Callable] = None      # -> dict of system status (addon version...)
     speak_fn: Optional[Callable] = None       # callback(text, kind, urgent): say a sentence now (streamed replies)
     watched_fn: Optional[Callable] = None     # -> set of watched buff names

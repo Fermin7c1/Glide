@@ -175,6 +175,7 @@
    true,
    true,
    true,
+   true,
    true
   ],
   "shown": true,
@@ -215,6 +216,8 @@
    "At 60: what an item changes in your DPS (WoWSims)",
    "Where items come from",
    "On item tooltips: the boss, quest, vendor or craft",
+   "Best-in-slot rank on item tooltips",
+   "At 60: its rank for you (WoWSims)",
    "Stacks on cooldown bars",
    "Debuff stacks on you (Arcane Blast) in the Cooldown Manager",
    "Data strip",

@@ -20,9 +20,11 @@ PAGE_MAX = 124                       # State.lua: PAGE_MAX + 6, where RefreshPag
 
 L = lua51.LuaRuntime(unpack_returned_tuples=True)
 L.execute(wowmock.MOCK)
-# the longest gear entry: a long name, the longest equip slot, and every stat the addon knows, at three digits
+# the longest gear entry: a long name, the longest equip slot, and every stat the addon knows, at three digits; its
+# link (a Forever one, with the colour prefix) carries the longest enchant and suffix ids, which worn entries send
+# (/EN8737/SX13784)
 L.execute(r"""
-MONSTER = "|Hitem:999999|h"
+MONSTER = "|cnIQ4:|Hitem:999999:8737:::::13784:999999:60:::::|h"
 local CODES = {"STRENGTH", "AGILITY", "STAMINA", "INTELLECT", "SPIRIT", "ATTACK_POWER", "RANGED_ATTACK_POWER",
   "HIT_RATING", "CRIT_RATING", "HIT_SPELL_RATING", "CRIT_SPELL_RATING", "HEALTH_REGEN", "POWER_REGEN0",
   "DEFENSE_SKILL_RATING", "DODGE_RATING", "PARRY_RATING"}
@@ -151,14 +153,20 @@ g = state.pages["G"]
 assert g["gn"] == "w" * 40 and g["gg"] == "w" * 40 and g["gx"] == "w" * 27, g
 s0 = state.pages["S0"]
 assert len(s0["el"]) == 70 and s0["tx"] and set(s0["tx"]) == {"w"}, s0
-# gear: every worn, bag and reward entry fits its page whole, keeping the stats that count (weapon dps and speed,
-# armor, the main stats) and dropping the least useful (school-only spell damage first)
+# gear: every worn, bag and reward entry fits its page whole, keeping the stats that count (a worn item's enchant
+# and suffix ids, weapon dps and speed, armor, the main stats) and dropping the least useful (school-only spell
+# damage first); only worn entries carry the ids, and the engine moves them out of the stats
 gear = {k: state.gear[k] for k in ("W", "I", "R")}
 assert [len(gear[k]) for k in ("W", "I", "R")] == [17, 36, 6], {k: len(v) for k, v in gear.items()}
 for item in gear["W"] + gear["I"] + gear["R"]:
     st = item["stats"]
     assert item["id"] == 999999 and item["name"] == "\u00e9" * 12 and item["loc"] == "INVTYPE_WEAPONMAINHAND", item
-    assert st["DP"] == 999.9 and st["WS"] == 3.9 and st["AR"] == 9999 and st["ST"] == 999 and "SH" not in st, st
+    assert st["DP"] == 999.9 and st["WS"] == 3.9 and st["AR"] == 9999 and "SH" not in st, st
+    assert "EN" not in st and "SX" not in st, st
+for item in gear["W"]:
+    assert item["enchant"] == 8737 and item["suffix"] == 13784, item
+for item in gear["I"] + gear["R"]:
+    assert "enchant" not in item and "suffix" not in item and item["stats"]["ST"] == 999, item
 assert gear["I"][-1]["key"] == "4.36", gear["I"][-1]
 ranks = state.skills()["ranks"]
 assert ranks and all(re.fullmatch(r"[A-Za-z -]+ 300/300", r) for r in ranks), ranks

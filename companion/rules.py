@@ -1,9 +1,11 @@
 """Rules engine: turns state changes into coaching triggers (no AI here)."""
 import math
+import re
 import time
 from typing import Any
 
 from geo import compass, relative_label
+import gear as gear_mod
 import settings
 from state import as_int
 from log import log_once
@@ -30,7 +32,9 @@ CATEGORY = {
     "hearth_bound": "route",
     "low_health_in_combat": "combat", "died": "combat", "released": "combat", "resurrected": "combat",
     "buff_expiring": "buffs", "buffs_dropped": "buffs",
-    "gear_upgrade": "gear", "reward_choice": "gear", "quests_accepted": "route",
+    "gear_upgrade": "gear", "reward_choice": "gear", "quests_accepted": "route", "vendor_treasure": "gear",
+    # Glide's own best-in-slot ranks at 60 (see Rules._bis)
+    "next_upgrade": "gear", "enchant_missing": "gear",
     "pace_review": "pace", "level_up": "pace", "spell_learned": "pace",
     "bags_nearly_full": "upkeep", "low_durability": "upkeep",
     "addon_outdated": None,                      # always reported
@@ -47,6 +51,15 @@ TALENT_GRACE_S = 30               # unspent talent points: say so once per level
 DECAY_XP_WINDOW = 0.15            # turnin_decay_soon: within 15% of the level's XP from levelling
 DECAY_COOLDOWN_S = 600            # ... at most once per quest every 10 minutes
 LIVE_POLL_S = 5                   # facts_ready: how often Data/Live.lua's writer is asked for news
+BIS_POLL_S = 5                    # next_upgrade / enchant_missing: how often the best-in-slot ranks are looked at
+BIS_ADDON = (0, 22, 0)            # the oldest addon that sends worn enchants: from it on, no EN code means no enchant
+ENCHANT_GAP_S = 600               # enchant_missing: one slot at a time, at most once in this long
+
+
+def version_tuple(v):
+    """An addon version as a tuple ("0.22.0" -> (0, 22, 0)); () for none."""
+    m = re.match(r"\s*(\d+(?:\.\d+)*)", str(v or ""))
+    return tuple(int(x) for x in m.group(1).split(".")) if m else ()
 
 
 def allowed(kind, flags):
@@ -105,6 +118,9 @@ class Rules:
         self.vendor_told = set()      # vendor treasure indexes already pointed out this session
         self.live: Any = None         # live_data.LiveData (the addon's Data/Live.lua), set by the app
         self.research: Any = None     # research.Research (its corrections), set by the app
+        self.bis: Any = None          # bis.BisRanker (what the coach was told, kept in data/bis.json), set by the app
+        self.bis_said = set()         # next_upgrade / enchant_missing keys said this session
+        self.enchant_t = 0.0          # when enchant_missing was last raised
 
     def watch(self, name, on=True):
         n = name.strip().lower()
@@ -247,7 +263,163 @@ class Rules:
         self._extras(state, s, busy, out)
         self._live(s, out)
         self._corrected(s, out)
+        self._bis(state, s, out)
         return out
+
+    def _bis(self, state, s, out):
+        """Glide's own best-in-slot ranks at 60 (bis.BisRanker, handed to the gear with Gear.set_bis), said once per
+        change and never again after a restart (what was told is kept in data/bis.json: BisRanker.told / mark_told):
+        next_upgrade, the best item the character can get now ({item, slot, dps, source}, with "with" (the weapon it
+        is paired with: the gain is the pair's) and "cond" (a bonus the number leaves out) when so; priority 2), and
+        enchant_missing, a worn item without an enchant and the enchant worth most on it ({slot, item, enchant, dps},
+        priority 3: one slot at a time, at most every ENCHANT_GAP_S; only from addon BIS_ADDON on, since an older one
+        doesn't send enchants). Said at a quiet moment: after the session started, out of combat, alive, in a frame that
+        raised nothing else. While the player has gear talk muted (/coach gear off) they wait, untold."""
+        g, ranker = self.gear, self.bis
+        if g is None or ranker is None or not self.started or out or s.get("combat") or s.get("dead") \
+                or (s.get("level") or 0) < 60 or not self._ready("bis", BIS_POLL_S):
+            return
+        try:
+            cb = g.bis_for(s.get("name")) if g.bis_on() else None
+            worn = state.gear.get("W") or []
+            if not cb or not worn:
+                return
+            flags = s.get("coach_flags") or {}
+            sends = version_tuple(s.get("addon_version")) >= BIS_ADDON        # (worn enchants and suffixes)
+            t = self._next_upgrade(cb, state, flags, ranker, sends)
+            if t is None and sends:
+                t = self._enchant_missing(cb, state, worn, flags, ranker)
+            if t is not None:
+                out.append(t)
+        except Exception as e:  # noqa: BLE001 - an extra; never break the rules loop
+            log_once("rules.bis", e)
+
+    def _bis_item(self, iid, state):
+        """(name, where it comes from) of an item: the research's brief, else the name the game sent for it."""
+        b = {}
+        if self.research is not None:
+            try:
+                b = self.research.brief(iid) or {}
+            except Exception as e:  # noqa: BLE001 - the game's name
+                log_once("rules.bis_brief", e)
+        name = b.get("name")
+        if not name:
+            for kind in ("W", "I", "R"):
+                for it in state.gear.get(kind) or ():
+                    if it.get("id") == iid and it.get("name"):
+                        name = it["name"]
+        return name, b.get("comes_from")
+
+    def _told(self, key, ranker):
+        """Whether a next_upgrade / enchant_missing key was said (this session, or before: the ranker keeps it); one
+        said before is remembered here, so the ranker isn't asked again every poll."""
+        if key in self.bis_said:
+            return True
+        if ranker.told(key):
+            self.bis_said.add(key)
+            return True
+        return False
+
+    @staticmethod
+    def _has(state, iid, sfx, sfx_known):
+        """Whether the character wears the item, or has it in the bags (the addon sends no suffix for those: the item
+        is enough); a worn one with another random suffix than sfx isn't it. sfx_known: the addon sends worn suffixes
+        (from BIS_ADDON: a worn entry without one has none); else a worn one's suffix is unknown, so the item is
+        enough."""
+        for kind in ("W", "I"):
+            for it in state.gear.get(kind) or ():
+                if it.get("id") != iid:
+                    continue
+                worn_sfx = (as_int(it.get("suffix")) or 0 if sfx_known else None) if kind == "W" else None
+                if not sfx or worn_sfx is None or abs(worn_sfx) == abs(sfx):
+                    return True
+        return False
+
+    def _next_upgrade(self, cb, state, flags, ranker, sfx_known=False):
+        """next_upgrade from the ranks' "next" (the largest gain beyond the sims' noise among items the character can
+        get now, with a source and no profession it lacks): not while it is worn (with that random suffix) or in the
+        bags already (not ranked again yet, or gear_upgrade's), once per item and suffix. A weapon simmed with a
+        partner (a one-hander and an off hand in place of a two-hander) names it ("with"): the gain is the pair's;
+        "cond" when its bonus against a creature type or in an area isn't in the number. A web source said is kept as
+        told by the research (Research.note_told), so the game can correct it."""
+        nx = cb.get("next")
+        if not isinstance(nx, dict) or not isinstance(nx.get("id"), int) or nx.get("avail") not in (None, "now") \
+                or not gear_mod.beyond_noise(nx.get("d"), nx.get("s")):
+            return None
+        iid, sfx = nx["id"], as_int(nx.get("sfx"), 0) or 0
+        if self._has(state, iid, sfx, sfx_known):
+            return None
+        key = "next_upgrade|%d|%d" % (iid, sfx)
+        if self._told(key, ranker) or not allowed("next_upgrade", flags):
+            return None
+        name, source = self._bis_item(iid, state)
+        if nx.get("sfx") and isinstance(nx.get("name"), str) and nx["name"]:
+            name = nx["name"]                      # (the ranker's, with the random suffix it was simmed with)
+        if not name:
+            return None                            # (nothing to call it yet: never an id)
+        if not source and isinstance(nx.get("source"), str):
+            source = nx["source"]
+        facts = {"item": name, "slot": gear_mod.slot_word(nx.get("slot")), "dps": round(float(nx["d"]), 1),
+                 "source": source or None}
+        if nx.get("with"):
+            mate = nx.get("with_name") if isinstance(nx.get("with_name"), str) else None
+            mate = mate or self._bis_item(nx["with"], state)[0]
+            if not mate:
+                return None                        # (a pair's gain, and no name for the other half yet)
+            facts["with"] = mate
+        if nx.get("cond"):
+            facts["cond"] = True
+        self.bis_said.add(key)
+        ranker.mark_told(key)
+        self._note_told(iid)
+        return Trigger("next_upgrade", facts, 2)
+
+    def _note_told(self, iid):
+        """The research keeps a web source the coach said as told (Research.note_told): corrected once if the game
+        shows it wrong."""
+        note = getattr(self.research, "note_told", None)
+        if note is None:
+            return
+        try:
+            note(iid)
+        except Exception as e:  # noqa: BLE001 - said; no correction then
+            log_once("rules.bis_told", e)
+
+    def _enchant_missing(self, cb, state, worn, flags, ranker):
+        """enchant_missing from the ranks' "enchants" (gear.bis_enchants): the worn item it names has no enchant
+        now (the addon sends EN only when there is one), the gain is beyond the sims' noise; the largest first. Said
+        once per worn item: the told key names the item, not the enchant (two close enchants can trade places in a later
+        rank after an unrelated gear change, and nothing about this item changed)."""
+        now = time.time()
+        if now - self.enchant_t < ENCHANT_GAP_S:
+            return None
+        by_id = {it.get("id"): it for it in worn}
+        best = None
+        for e in gear_mod.bis_enchants(cb):
+            it = by_id.get(e["item"]) if e["item"] is not None else self._worn_in(worn, e["slot"])
+            if it is None or it.get("enchant") or not e["name"] or not gear_mod.beyond_noise(e["d"], e["s"]):
+                continue
+            key = "enchant_missing|%s" % it.get("id")
+            if self._told(key, ranker):
+                continue
+            if best is None or e["d"] > best[0]["d"]:
+                best = (e, it, key)
+        if best is None or not allowed("enchant_missing", flags):
+            return None
+        e, it, key = best
+        self.bis_said.add(key)
+        ranker.mark_told(key)
+        self.enchant_t = now
+        return Trigger("enchant_missing", {"slot": gear_mod.slot_word(e["slot"]), "item": it.get("name"),
+                                           "enchant": e["name"], "dps": round(e["d"], 1)}, 3)
+
+    @staticmethod
+    def _worn_in(worn, slot):
+        """The one worn item in a slot group (by the slot it is worn in), or None (none, or two: rings, trinkets)."""
+        group = gear_mod.slot_group(slot)
+        hits = [it for it in worn
+                if group and gear_mod.slot_group(gear_mod.SLOT_NAMES.get(as_int(it.get("key"), 0) or 0, "")) == group]
+        return hits[0] if len(hits) == 1 else None
 
     def _corrected(self, s, out):
         """fact_corrected: a web fact the coach said about where an item comes from turned out wrong (the creature it

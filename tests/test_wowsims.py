@@ -37,6 +37,19 @@ req = json.load(open(inp, encoding="utf-8"))
 p = req["raid"]["parties"][0]["players"][0]
 if p.get("name") == "crash":
     sys.stderr.write("panic: bad request\n"); sys.exit(2)
+if p.get("name") == "env":                  # (what the runner was started with: its environment and priority)
+    import os
+    prio = 0
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        k32.GetCurrentProcess.restype = ctypes.c_void_p
+        k32.GetPriorityClass.argtypes = [ctypes.c_void_p]
+        prio = k32.GetPriorityClass(k32.GetCurrentProcess())
+    probe = {"keys": sorted(k for k in os.environ if k.upper().endswith("_API_KEY")),
+             "gomaxprocs": os.environ.get("GOMAXPROCS"), "prio": prio}
+    json.dump({"raidMetrics": {"parties": [{"players": [{"dps": {"avg": 1}}]}]}, "probe": probe}, open(out, "w"))
+    sys.exit(0)
 if p.get("name") == "bad":
     json.dump({"error": {"message": "unknown field \"frob\""}}, open(out, "w")); sys.exit(0)
 sp = ((p.get("bonusStats") or {}).get("stats") or [0] * 6)[5]
@@ -169,6 +182,29 @@ try:
         except SimError as e:
             check(want in str(e), e)
     check(wowsims.dps({"raidMetrics": {"parties": [{"players": [{"dps": {"avg": 3}}]}]}})["avg"] == 3, "dps()")
+
+    # ---- a run outside the sim queue (the smoke test of a new release): never the engine's API keys, never at full
+    # speed (regression: it inherited the keys, at the engine's priority on every core, beside the queue's run) --------
+    env_req = {"raid": {"parties": [{"players": [{"name": "env"}]}]}}
+    os.environ["GLIDE_FAKE_API_KEY"] = "secret"
+    saved_gmp = os.environ.pop("GOMAXPROCS", None)
+    try:
+        probe = ws.run(env_req)["probe"]
+        check(probe["keys"] == [] and probe["gomaxprocs"] == str(max(1, (os.cpu_count() or 1) // 4)), probe)
+        if os.name == "nt":
+            check(probe["prio"] == 0x4000, ("below normal priority", hex(probe["prio"])))     # BELOW_NORMAL
+        env = wowsims.runner_env(3)
+        check(env["GOMAXPROCS"] == "3" and "GLIDE_FAKE_API_KEY" not in env and "PATH" in {k.upper() for k in env},
+              "runner_env")
+        os.environ["GOMAXPROCS"] = "2"
+        check(wowsims.runner_env()["GOMAXPROCS"] == "2", "the engine's own GOMAXPROCS kept")
+        given = ws.run(env_req, env=dict(os.environ, GOMAXPROCS="5"))["probe"]
+        check(given["gomaxprocs"] == "5" and given["keys"], "an environment given is used as it is")
+    finally:
+        del os.environ["GLIDE_FAKE_API_KEY"]
+        os.environ.pop("GOMAXPROCS", None)
+        if saved_gmp is not None:
+            os.environ["GOMAXPROCS"] = saved_gmp
 
     # ---- the first install, when the smoke test's rotation can't be fetched: not set aside, tried again later --------
     flaky = [True]

@@ -8,6 +8,14 @@
 -- drops from Darkmaster Gandling, Scholomance", from the facts the Glide app writes into Data/Live.lua (ns.live.items,
 -- read at login and /reload). Grey for an item you can't get yet or with no known source, " (web, unconfirmed)" after
 -- a fact found only on the web. On by default; the Glide window or "/glide sources on|off".
+-- On an item Glide ranked for this character (at 60: the Glide app sims your own gear with WoWSims and writes the
+-- ranks into Data/Live.lua, ns.live.chars[<Name-Realm or Name>].bis), the BiS line takes the source line's place, so a
+-- tooltip never has more than two Glide lines: "Glide BiS #2 for Head, +6.1 DPS: sold by Deliana, Ironforge",
+-- "Glide BiS #1 for Head: you wear it" (the addon sees what you wear), "about the same as yours" when the sims can't
+-- tell the two apart, "with its set" for a set piece that is best only with another piece of its set, "+32.0 DPS with
+-- Better Orb" for a one-hander ranked with an off hand in place of a two-hander. An item with random suffixes shows its
+-- rank on the suffix it was ranked with only ("of Sorcery", not "of the Monkey"). On by default; the Glide window or
+-- "/glide bis on|off".
 -- And the item the player is looking at (ns.hover, for State.lua's core key hv): the same item on a tooltip for
 -- 0.75 s, so the Glide app knows which item "this" is in a question and looks it up before it's asked. A "|" in a
 -- source line's text is the Glide app's own escaping ("||"): the line never carries a colour or texture code.
@@ -22,6 +30,9 @@ function ns.SetCompare(on) settings().enabled = not not on; ns.OnSettingsChanged
 local function sourceSettings() return ns.LinkSection("sources", DEFAULTS) end
 function ns.SourcesOn() return sourceSettings().enabled ~= false end
 function ns.SetSources(on) sourceSettings().enabled = not not on; ns.OnSettingsChanged() end
+local function bisSettings() return ns.LinkSection("bis", DEFAULTS) end
+function ns.BisOn() return bisSettings().enabled ~= false end
+function ns.SetBis(on) bisSettings().enabled = not not on; ns.OnSettingsChanged() end
 
 local GetItemInfoInstant = (C_Item and C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
 local GetItemInfo = (C_Item and C_Item.GetItemInfo) or _G.GetItemInfo
@@ -110,18 +121,107 @@ local function lineFor(link)
 end
 ns.CompareLine = lineFor
 
---- The source line for an item id, from ns.live.items[id] = { text, a = "n" (now) | "l" (later) | "x" (no known
---- source), w = 1 (found on the web) }: its text and colour, or nil.
-local function sourceLine(id)
+--- Where an item comes from, from ns.live.items[id] = { text, a = "n" (now) | "l" (later) | "x" (no known source),
+--- w = 1 (found on the web) }: the text (" (web, unconfirmed)" after a web fact) and true when the item can't be had
+--- yet or has no known source; or nil.
+local function sourceOf(id)
     local items = type(ns.live) == "table" and ns.live.items
     local e = id and type(items) == "table" and items[id]
     local text = type(e) == "table" and e[1]
     if type(text) ~= "string" or text == "" then return nil end
-    text = "Glide: " .. text .. (e.w == 1 and " (web, unconfirmed)" or "")
-    if e.a == "l" or e.a == "x" then return text, 0.6, 0.6, 0.6 end
-    return text, 0.4, 0.8, 1
+    return text .. (e.w == 1 and " (web, unconfirmed)" or ""), e.a == "l" or e.a == "x"
+end
+
+--- The source line for an item id: its text and colour (grey for an item not out yet or with no known source), or nil.
+local function sourceLine(id)
+    local text, grey = sourceOf(id)
+    if not text then return nil end
+    if grey then return "Glide: " .. text, 0.6, 0.6, 0.6 end
+    return "Glide: " .. text, 0.4, 0.8, 1
 end
 ns.SourceLine = sourceLine
+
+--- This character's entry in ns.live.chars, or nil: "Name-Realm" when the Glide app knows the realm (the realm as the
+--- game gives it, with or without its spaces), else "Name".
+local function myChar()
+    local chars = type(ns.live) == "table" and ns.live.chars
+    local name = Safe(UnitName("player"))
+    if type(chars) ~= "table" or type(name) ~= "string" or name == "" then return nil end
+    local tried = {}
+    local function at(realm)
+        if type(realm) ~= "string" or realm == "" or tried[realm] then return nil end
+        tried[realm] = true
+        local e = chars[name .. "-" .. realm]
+        return type(e) == "table" and e or nil
+    end
+    local shown = GetRealmName and Safe(GetRealmName())
+    local normalized = _G.GetNormalizedRealmName
+    local e = at(UnitFullName and Safe(select(2, UnitFullName("player"))))
+        or at(normalized and Safe(normalized())) or at(shown)
+        or at(type(shown) == "string" and (shown:gsub("%s", "")) or nil)
+    if e then return e end
+    e = chars[name]
+    return type(e) == "table" and e or nil
+end
+
+--- An item link's item id and random suffix id (the link's field 7, counted after "item:" as Gear.lua does, so the
+--- colon in Forever's "|cnIQ4:" colour prefix doesn't shift it; without its sign, 0 for none), or nil.
+local function linkIds(link)
+    local body = type(link) == "string" and link:match("item:([%-%d:]*)")
+    if not body then return nil end
+    local f = {}
+    for v in (body .. ":"):gmatch("([^:]*):") do f[#f + 1] = v end
+    local id = tonumber(f[1] or "")
+    if not id then return nil end
+    return id, math.abs(tonumber(f[7] or "") or 0)
+end
+
+--- True when the player wears an item with this id (and, given one, this random suffix: without its sign).
+local function wearing(id, sfx)
+    for slot = 1, 18 do
+        local lid, lsfx = linkIds(Safe(GetInventoryItemLink("player", slot)))
+        if lid == id and (not sfx or lsfx == sfx) then return true end
+    end
+    return false
+end
+
+--- The BiS line for an item id (link: the tooltip's item link, for its random suffix), from this character's
+--- ns.live.chars[key].bis[id] = { slot, rank, d, "~" (about the same as what you wear: within the sims' noise) or "s"
+--- (best only with its set: d nil), the profession it needs to wear (when you don't have it), the random suffix it
+--- was ranked with (without its sign), the weapon its d was simmed with (a one-hander and an off hand in place of a
+--- two-hander: the pair's d) }: its text and colour (grey as the source line's), or nil (not ranked: the source line
+--- shows instead; so for another random suffix of the item, or a tooltip without a link to tell). Where the item
+--- comes from closes the line while the source line is switched on.
+local function bisLine(id, link)
+    local ch = id and myChar()
+    local bis = ch and ch.bis
+    local e = type(bis) == "table" and bis[id]
+    if type(e) ~= "table" then return nil end
+    local slot, rank, d = e[1], tonumber(e[2]), tonumber(e[3])
+    if type(slot) ~= "string" or slot == "" or not rank or rank < 1 then return nil end
+    local sfx = tonumber(e[6])
+    sfx = sfx and sfx ~= 0 and math.abs(sfx) or nil
+    if sfx then
+        local lid, lsfx = linkIds(link)
+        if lid ~= id or lsfx ~= sfx then return nil end            -- (ranked with another suffix)
+    end
+    local text = ("Glide BiS #%d for %s"):format(rank, slot)
+    if wearing(id, sfx) then return text .. ": you wear it", 0.4, 0.8, 1 end
+    if e[4] == "~" then
+        text = text .. ", about the same as yours"
+    elseif e[4] == "s" then
+        text = text .. ", with its set"
+    elseif d then
+        text = text .. (", %+.1f DPS"):format(d)
+    end
+    if type(e[7]) == "string" and e[7] ~= "" then text = text .. " with " .. e[7] end
+    if type(e[5]) == "string" and e[5] ~= "" then text = text .. (" (needs %s to wear)"):format(e[5]) end
+    local src, grey = sourceOf(id)
+    if src and ns.SourcesOn() then text = text .. ": " .. src end
+    if grey then return text, 0.6, 0.6, 0.6 end
+    return text, 0.4, 0.8, 1
+end
+ns.BisLine = bisLine
 
 local function linkOf(tooltip)
     if TooltipUtil and TooltipUtil.GetDisplayedItem then
@@ -218,16 +318,26 @@ local function hookHide(tip)
 end
 ns.On("PLAYER_LOGIN", function() hookHide(GameTooltip); hookHide(ItemRefTooltip) end)
 
--- the two lines and the hover, each on its own: one that fails leaves the others
+-- the item id a tooltip shows: its link's, else the one its data carries (a tooltip filled without a link)
+local function shownId(tooltip, data)
+    return linkedId(tooltip) or (type(data) == "table" and tonumber(Safe(data.id))) or nil
+end
+
+-- the lines and the hover, each on its own: one that fails leaves the others. Two Glide lines at most: the upgrade
+-- line, then the BiS line on an item ranked for this character, else (or when the BiS line fails) the source line.
 local function onTooltip(tooltip, data)
     if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
     if ns.CompareOn() then
         add(tooltip, "compare", nil, pcall(function() return lineFor(Safe(linkOf(tooltip))) end))
     end
-    if ns.SourcesOn() then
-        add(tooltip, "sources", true, pcall(function()
-            return sourceLine(linkedId(tooltip) or (type(data) == "table" and tonumber(Safe(data.id))))
-        end))
+    local ranked = false
+    if ns.BisOn() then
+        local ok, text, r, g, b = pcall(function() return bisLine(shownId(tooltip, data), Safe(linkOf(tooltip))) end)
+        add(tooltip, "bis", true, ok, text, r, g, b)
+        ranked = ok and text ~= nil
+    end
+    if not ranked and ns.SourcesOn() then
+        add(tooltip, "sources", true, pcall(function() return sourceLine(shownId(tooltip, data)) end))
     end
     local ok, err = pcall(function()
         local id = linkedId(tooltip)
@@ -278,4 +388,19 @@ ns.Command("sources", "sources [on|off] - where an item comes from on its toolti
             not loaded and "(Glide's item facts aren't loaded: restart WoW once)"
               or n > 0 and ("(%d items known)"):format(n)
               or "(none known yet: the Glide app finds them while it runs; then /reload)")
+    end)
+
+ns.Command("bis", "bis [on|off] - at level 60, where an item ranks for you on its tooltip (WoWSims sims of your gear)",
+    function(rest)
+        local a = (rest or ""):lower():match("^(%S*)")
+        if a == "on" or a == "off" then ns.SetBis(a == "on") end
+        local loaded = type(ns.live) == "table"
+        local ch = loaded and myChar()
+        local n = 0
+        for _ in pairs(ch and type(ch.bis) == "table" and ch.bis or {}) do n = n + 1 end
+        Print("best-in-slot rank on item tooltips", ns.OnOff(ns.BisOn()),
+            not loaded and "(Glide's item facts aren't loaded: restart WoW once)"
+              or n > 0 and ("(%d items ranked for this character)"):format(n)
+              or "(none ranked for this character yet: level 60, a mage, and a few minutes of the Glide app running; "
+                .. "then /reload)")
     end)

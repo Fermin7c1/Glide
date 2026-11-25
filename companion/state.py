@@ -347,8 +347,15 @@ class GameState:
 
     _hash = staticmethod(list_hash)
 
+    # stat codes that are ids, not stats: a worn entry's enchant and random suffix (addon 0.22, sent only when
+    # non-zero; the suffix as the link has it), moved into their own keys
+    ITEM_IDS = (("EN", "enchant"), ("SX", "suffix"))
+
     @staticmethod
     def parse_item(e):
+        """A W/I/R/D gear entry -> {"key", "id", "loc", "cls", "sub", "ilvl", "quality", "req", "usable", "name",
+        "stats": {code: value}} plus int "enchant" and "suffix" only when the entry carries them (absent = unknown,
+        e.g. an older addon, not "none"), or None."""
         p = e.split(":", 10)
         if len(p) < 10:
             return None
@@ -359,9 +366,13 @@ class GameState:
                 stats[code] = float(part[len(code):])
             except ValueError:
                 pass
-        return {"key": p[0], "id": as_int(p[1]), "loc": p[2], "cls": as_int(p[3]), "sub": as_int(p[4]),
+        item = {"key": p[0], "id": as_int(p[1]), "loc": p[2], "cls": as_int(p[3]), "sub": as_int(p[4]),
                 "ilvl": as_int(p[5], 0), "quality": as_int(p[6], 0), "req": as_int(p[7], 0), "usable": p[8] != "0",
                 "name": p[9], "stats": stats}
+        for code, key in GameState.ITEM_IDS:
+            if code in stats:
+                item[key] = int(stats.pop(code))
+        return item
 
     def _rebuild_gear(self, kind):
         lk = {"W": ("wn", "wh"), "I": ("in", "ih"), "R": ("rn", "rh")}[kind]

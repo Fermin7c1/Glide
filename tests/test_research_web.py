@@ -366,6 +366,12 @@ try:
           "looking_up" not in info and info["fact_ids"] == ["res:i:18842"], info)
     check(r.told["i:18842"]["text"] == "drops from Golemagg the Incinerator, Molten Core" and
           r.told["i:18842"]["npc"] == 11988, ("what the coach said is noted", r.told))
+    # the same when the coach said it outside item_info (the next upgrade, a best-in-slot answer: note_told), so the
+    # game can correct it there too (regression: only item_info's answers were kept as told)
+    del r.told["i:18842"]
+    check(r.note_told(18842) is True and r.told["i:18842"]["text"] == "drops from Golemagg the Incinerator, Molten Core"
+          and r.told["i:18842"]["npc"] == 11988, ("note_told", r.told.get("i:18842")))
+    check(r.note_told(None) is False and r.note_told(123456789) is False, "nothing known: nothing told")
     check(r.brief(18842) == {"id": 18842, "name": "Staff of Dominance",
                              "comes_from": "drops from Golemagg the Incinerator, Molten Core (web, unconfirmed)"},
           r.brief(18842))
