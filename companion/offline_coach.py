@@ -27,7 +27,8 @@ def why_phrases():
 
 
 def callout(batch, ctx):
-    """A rule-based callout for the trigger batch: at most three short lines, the most pressing first."""
+    """A rule-based callout for the trigger batch: at most three short lines, the most pressing first; a talent_check's
+    line is never the one cut (it is said once per WoWSims release and talents: the check is told when raised)."""
     kinds = {t.kind: t for t in batch}
     p = ctx["player"]
     lines = []
@@ -113,7 +114,45 @@ def callout(batch, ctx):
         lines.append(facts_ready_line(kinds["facts_ready"].facts))
     if "fact_corrected" in kinds:
         lines.append(fact_corrected_line(kinds["fact_corrected"].facts))
+    if "talent_check" in kinds:
+        return " ".join(lines[:2] + [talent_check_line(kinds["talent_check"].facts)])
     return " ".join(lines[:3])
+
+
+# ---- sims the coach runs for the player (sims.py): the lines said without a model ------------------------------
+NO_WOWSIMS = "I can't sim that without WoWSims."
+
+
+def _signed(d):
+    """A DPS change as said: "+8", "-3", "+0.8"."""
+    t = dps_text(abs(float(d or 0)))
+    return ("-" if float(d or 0) < 0 else "+") + t
+
+
+def sim_item_line(item, worn, d, about_same=False):
+    """An item swap WoWSims simmed on the player's gear: "WoWSims: <item> over your <worn>, about +<d> DPS on your
+    gear." ("about the same as yours" within the sims' noise; worn None: no worn item named)."""
+    over = " over your %s" % worn if worn else ""
+    gain = "about the same as yours" if about_same else "about %s DPS" % _signed(d)
+    return "WoWSims: %s%s, %s on your gear." % (item or "that item", over, gain)
+
+
+def sim_talent_line(build, pct, about_same=False, tree=None):
+    """A talent build WoWSims simmed on the player's gear, with its own rotation: "WoWSims' <build> build sims about
+    <pct>% higher on your gear, with its own rotation." (lower; "about the same as yours" within the sims' noise). A
+    talent string that is no WoWSims build (build None) is simmed with its tree's rotation, and says so."""
+    if about_same:
+        how = "about the same as yours"
+    else:
+        how = "about %s%% %s" % (dps_text(abs(float(pct or 0))), "lower" if float(pct or 0) < 0 else "higher")
+    if not build:
+        return "Those talents sim %s on your gear, with WoWSims' %s rotation." % (how, tree or "own")
+    return "WoWSims' %s build sims %s on your gear, with its own rotation." % (build, how)
+
+
+def talent_check_line(facts):
+    """A WoWSims talent build that sims clearly higher than the player's own on their gear (talent_check)."""
+    return sim_talent_line(facts.get("build") or "other", facts.get("pct"))
 
 
 def next_upgrade_line(facts):

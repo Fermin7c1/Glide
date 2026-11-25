@@ -1,10 +1,12 @@
 """The coach's own tools and spoken commands, next to the knowledge layer's: reminders ("remind me to repair"), the
 memory of the player across sessions (and the reflection that updates it), where an item comes from (the engine's
 research, research.py: "where does Magister's Crown drop?"), Glide's own best-in-slot ranks for a slot (bis.py: "what's
-best in slot for my neck?"), and feature switches said out loud ("quest briefings off"). Tool definitions for the
-model, the tool calls, and the local handling of clear requests."""
+best in slot for my neck?"), WoWSims sims the player asks for (sims.py: "sim this", "what if I wear Eye of the
+Beast?"), and feature switches said out loud ("quest briefings off"). Tool definitions for the model, the tool calls,
+and the local handling of clear requests."""
 import json
 import re
+from typing import Any
 
 import gear as gear_mod
 import memory as memory_mod
@@ -73,7 +75,23 @@ BIS_TOOLS = [
          "slot": {"type": "string", "description": "the slot: head, neck, shoulders, back, chest, wrists, hands, "
                                                    "waist, legs, feet, ring, trinket, main hand, off hand, ranged"}}}},
 ]
-ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS + BIS_TOOLS)
+SIM_TOOLS = [
+    {"name": "wowsims_sim", "description": (
+        "Sim with WoWSims, on the player's own gear and talents (level 60), an item swap or a talent build the player "
+        "asks about: 'sim this', 'what if I wear Eye of the Beast?', 'would the Arcane Fire build be better for me?'. "
+        "Only for the player's question; it takes up to half a minute. Rows best first: what (the item or build), d "
+        "(DPS over what they have now), pct (a build: percent of their DPS), plus_minus (2 sigma), about_same (within "
+        "the sims' noise: say 'about the same as yours'), said (the answer in one line). Say one number with 'about' "
+        "and that WoWSims simmed it; a build is simmed with its own rotation. The coach screen shows an Open in "
+        "WoWSims link with it: never read a link out."),
+     "input_schema": {"type": "object", "required": [], "properties": {
+         "items": {"type": "array", "items": {"type": "string"},
+                   "description": "items to sim in place of what the player wears: names, ids, or 'this' for the "
+                                  "item they hover in the game"},
+         "talents": {"type": "string", "description": "a talent build: a WoWSims build's name ('Arcane Fire', "
+                                                      "'FFB') or a WoWSims talent string"}}}},
+]
+ITEM_TOOL_NAMES = tuple(t["name"] for t in ITEM_TOOLS + BIS_TOOLS + SIM_TOOLS)
 # the tools the coach runs itself; every other tool call goes to the knowledge layer (api.dispatch)
 LOCAL_TOOLS = ("reminder_add", "reminder_list", "reminder_done", "web_search",
                "memory_remember", "memory_forget", "memory_list") + ITEM_TOOL_NAMES
@@ -83,6 +101,11 @@ research = None
 # -> the ranks (bis.json's "chars" entry) or (ranks, worn item ids), as gear.Gear.bis_now gives them; bis_slot
 # answers from it, with the names and sources from the research
 bis = None
+# the sims the coach runs for the player (sims.Sims), set by the app once WoWSims can run: an object with ask(char_key,
+# variants) -> sim_compare Results and link(char_key) -> the character's WoWSims link or None (a sims.Sims also has
+# simulate / answer, which find the items and say the answer); wowsims_sim and "sim this" run through it
+sims: Any = None
+_last_link: str | None = None         # the link of the last sim the tool or the command ran (its answer's message)
 
 
 def reminder_view(rem):
@@ -279,15 +302,19 @@ def apply_reflection(memory, text, emit, since=None, now=None):
 # ---- where items come from (research.py) ---------------------------------------------------------------------------
 def item_tools():
     """The item tool definitions: item_info while the research worker runs, bis_slot while the best-in-slot ranker
-    does (none before)."""
-    return (list(ITEM_TOOLS) if research is not None else []) + (list(BIS_TOOLS) if bis is not None else [])
+    does (none before), and wowsims_sim while sims on request can run (sim_tools)."""
+    return (list(ITEM_TOOLS) if research is not None else []) + (list(BIS_TOOLS) if bis is not None else []) + \
+        sim_tools()
 
 
-def run_item_tool(name, args):
+def run_item_tool(name, args, budget_s=None):
     """item_info on the research worker's facts -> {"id", "name", "sources": [texts], "avail", "fact_ids"}; bis_slot on
-    the best-in-slot ranks -> {"slot", "ranks": bis_slot rows}."""
+    the best-in-slot ranks -> {"slot", "ranks": bis_slot rows}; wowsims_sim through the sims (sim_tool; budget_s: the
+    seconds the answer may still take, None: gear.sim_seconds)."""
     if name == "bis_slot":
         return bis_tool(args)
+    if name == "wowsims_sim":
+        return sim_tool(args, budget_s)
     r = research
     if r is None:
         return {"error": "item lookups are not available"}
@@ -493,6 +520,202 @@ def _note_told(item_id):
         note(item_id)
     except Exception as e:  # noqa: BLE001 - said; no correction then
         log_once("coach_tools.bis_told", e)
+
+
+# ---- sims the coach runs for the player (sims.py) ----------------------------------------------------------------
+def _sims_mod():
+    """The sims module (imported when first used: it brings WoWSims' pieces along)."""
+    import sims as sims_mod
+    return sims_mod
+
+
+def sim_tools():
+    """The wowsims_sim tool definition while the sims run and are offered (a WoWSims runner on this PC,
+    gear.sim_questions on: the hook's offered()), else none."""
+    s = sims
+    if s is None:
+        return []
+    offered = getattr(s, "offered", None)
+    try:
+        ok = offered() if callable(offered) else True
+    except Exception as e:  # noqa: BLE001 - not offered then
+        log_once("coach_tools.sim_offered", e)
+        ok = False
+    return list(SIM_TOOLS) if ok else []
+
+
+def _plain_rows(results):
+    """Rows of Results for a hook without describe (sims.Sims has it): the label and the number only."""
+    sm, rows = _sims_mod(), []
+    for r in sorted(results or (), key=lambda r: -float(r.get("d") or 0)):
+        d, s = float(r.get("d") or 0), float(r.get("s") or 0)
+        same = sm.about_same(d, s)
+        rows.append({"what": str(r.get("label") or ""), "d": round(d, 1), "plus_minus": round(2 * s, 1),
+                     "about_same": same,
+                     "said": sm.offline_coach.sim_item_line(r.get("label") or "that item", None, d, same)})
+    return rows
+
+
+def _simulate(items, talents, budget_s) -> dict:
+    """The hook's simulate (sims.Sims), or for a hook with only ask and link: item ids and a talent string simmed as
+    they are. -> {"rows", "said", "link", "problems"}."""
+    s, sm = sims, _sims_mod()
+    run: Any = getattr(s, "simulate", None)
+    if run is not None:
+        return run(items, talents, budget_s)
+    variants = [{"kind": "item", "id": int(str(q).strip(" #")), "slot": None, "sfx": None, "ench": None}
+                for q in items or () if str(q).strip(" #").isdigit()]
+    if talents:
+        variants.append({"kind": "talents", "talents": str(talents).strip(), "apl": None, "name": None})
+    if not variants:
+        return {"rows": [], "said": sm.FAILED, "link": None, "problems": []}
+    rows = _plain_rows(s.ask(None, variants))
+    url = s.link(None)
+    return {"rows": rows, "said": " ".join(r["said"] for r in rows[:2]) or sm.FAILED, "link": url, "problems": []}
+
+
+def sim_tool(args, budget_s=None):
+    """The wowsims_sim tool -> {"results": rows ({"what", "d", "plus_minus", "about_same", "said"}, "pct" for a build),
+    "said" (the answer in one line), "credit", "problems" (what couldn't be simmed), "link" (that the coach screen shows
+    one)}, or {"error", "say"} (what to tell the player)."""
+    global _last_link
+    _last_link = None                     # (a call that fails leaves no link: never an earlier sim's on this answer)
+    a = args or {}
+    items = a.get("items")
+    if isinstance(items, str):
+        items = [items]
+    items = [str(x) for x in items or () if str(x).strip()]
+    talents = str(a.get("talents") or "").strip() or None
+    if sims is None:
+        from offline_coach import NO_WOWSIMS
+        return {"error": "WoWSims isn't available on this PC", "say": NO_WOWSIMS}
+    if not items and not talents:
+        return {"error": "which item or talent build?"}
+    sm = _sims_mod()
+    try:
+        got = _simulate(items, talents, budget_s)
+    except sm.Unsimmable as e:
+        return {"error": str(e), "say": str(e)}
+    except Exception as e:  # noqa: BLE001 - WoWSims failed: say so
+        log_once("coach_tools.sim", e)
+        return {"error": "WoWSims couldn't sim it: %s" % e, "say": sm.FAILED}
+    _last_link = got.get("link")
+    keep = ("what", "kind", "d", "pct", "plus_minus", "about_same", "worn", "said")
+    out = {"results": [{k: r[k] for k in keep if k in r} for r in got.get("rows") or ()], "said": got.get("said"),
+           "credit": sm.CREDIT}
+    if got.get("problems"):
+        out["problems"] = got["problems"]
+    if sm.link_field(got.get("link")):
+        out["link"] = "shown on the coach screen as Open in WoWSims"
+    return out
+
+
+# (kind, said outright: "sim ..." is a sim whatever follows; the others only for gear, or a build, the coach knows)
+SIM_QUESTIONS = [(kind, outright, re.compile(p, re.I)) for kind, outright, p in (
+    (None, True, r"(?:wowsims\s+)?sim(?:ulate)?\s+(?:me\s+|for me\s+)?(.+)"),
+    ("items", False, r"what (?:if|about if) i (?:wear|wore|equip|equipped|use|used|swap in|swapped in) "
+                     r"(.+?)(?: instead)?"),
+    ("talents", False, r"what (?:if|about if) i (?:go|went|switch to|switched to|spec into|specced into|spec|specced) "
+                       r"(.+?)(?: instead)?"),
+    (None, False, r"how much (?:dps )?(?:would|does|will) (.+?) (?:add|give|gain)(?: me)?"))]
+_BUILD_WORDS = re.compile(r"\b(?:build|talents?|spec)\b", re.I)
+_TALENT_STRING = re.compile(r"[0-9-]*[0-9][0-9-]*")
+_SPLIT = re.compile(r"\s*(?:,|\band\b|\bor\b|\bvs\.?|\bversus\b)\s*", re.I)
+
+
+def sim_question(question, is_gear=None, builds=()):
+    """What a 'sim this' / 'what if I wear X?' / 'sim the Arcane Fire build' question asks to sim: ("items", [names or
+    "this"]) or ("talents", a build's name or talent string); None for another question. "sim ..." is one whatever
+    follows; "what if I wear / use X?" and "how much would X give?" only when every X is gear (is_gear(name) -> True:
+    sims.Sims.is_gear; none given: never), "what if I go / switch to X?" only for a build: a build, talents or spec
+    word, a talent string, or one of builds (the words a build of the class is called by: sims.Sims.build_words, or a
+    function giving them, called only for a question that could be one), so "what if I go to Westfall?" or "what if I
+    use my hearthstone?" is another question."""
+    q = " ".join(str(question or "").split()).strip(" .!?")
+    for kind, outright, pat in SIM_QUESTIONS:
+        m = pat.fullmatch(q)
+        if not m:
+            continue
+        what = re.sub(r"^(?:the|an?|my)\s+", "", m.group(1).strip(" '\""), flags=re.I)
+        if not what:
+            return None
+        build = bool(_BUILD_WORDS.search(what) or _TALENT_STRING.fullmatch(what))
+        if not build and builds:
+            try:
+                words: Any = builds() if callable(builds) else builds
+            except Exception as e:  # noqa: BLE001 - no build words then
+                log_once("coach_tools.sim_builds", e)
+                words = ()
+            build = bool(words) and _sims_mod()._build_word(what) in set(words or ())
+        if kind == "talents" or build:
+            return ("talents", what) if build or outright else None
+        names = [re.sub(r"^(?:the|an?|my)\s+", "", x, flags=re.I) for x in _SPLIT.split(what) if x.strip()]
+        if not names:
+            return None
+        if outright or (is_gear is not None and all(_gear(is_gear, n) for n in names)):
+            return "items", names
+        return None
+    return None
+
+
+def _gear(is_gear, name):
+    try:
+        return bool(is_gear(name))
+    except Exception as e:  # noqa: BLE001 - not known as gear: another question
+        log_once("coach_tools.sim_gear", e)
+        return False
+
+
+def sim_command(question, ai_ok):
+    """'sim this', 'what if I wear Eye of the Beast?', 'sim the Arcane Fire build' answered with a WoWSims sim while no
+    model can (ai_ok false: the AI off, no knowledge pack, or the model answering takes no tools; with one the model
+    asks wowsims_sim, or says it can't): {"text": the offline line, "link": the message's link field or None}; without
+    WoWSims, "I can't sim that without WoWSims." None for another question (sim_question, with the hook's is_gear and
+    build_words: "what if I go to Westfall?" is no sim)."""
+    global _last_link
+    if ai_ok:
+        return None
+    s = sims
+    got = sim_question(question, getattr(s, "is_gear", None), getattr(s, "build_words", None) or ())
+    if got is None:
+        return None
+    from offline_coach import NO_WOWSIMS
+    if s is None:
+        return {"text": NO_WOWSIMS, "link": None}
+    sm = _sims_mod()
+    kind, what = got
+    items, talents = (what, None) if kind == "items" else (None, what)
+    answer: Any = getattr(s, "answer", None)
+    if answer is not None:
+        text, url = answer(items, talents)
+    else:
+        try:
+            r = _simulate(items, talents, None)
+            text, url = r["said"], r["link"]
+        except sm.Unsimmable as e:
+            text, url = str(e), None
+        except Exception as e:  # noqa: BLE001 - WoWSims failed: say so
+            log_once("coach_tools.sim_command", e)
+            text, url = sm.FAILED, None
+    _last_link = url
+    return {"text": text, "link": sm.link_field(url)}
+
+
+def sim_message_link(batch=(), tools=(), said=None):
+    """The "Open in WoWSims" field a coach-screen message carries ({"text", "url", "credit"}, sims.link_field), or None:
+    a callout with a talent_check trigger (its link fact; said: an offline callout's text, which has to say the talent
+    check's line: offline_coach.talent_check_line), an answer that ran wowsims_sim (tools: the tool names the answer
+    called; the last sim's link)."""
+    from offline_coach import talent_check_line
+    urls = [(getattr(t, "facts", None) or {}).get("link") for t in batch or ()
+            if getattr(t, "kind", None) == "talent_check"
+            and (said is None or talent_check_line(getattr(t, "facts", None) or {}) in said)]
+    if "wowsims_sim" in (tools or ()):
+        urls.append(_last_link)
+    if not any(urls):
+        return None
+    sm = _sims_mod()
+    return next((f for f in (sm.link_field(u) for u in urls) if f), None)
 
 
 # ---- feature switches said or typed ("quest briefings off") --------------------------------------------------------

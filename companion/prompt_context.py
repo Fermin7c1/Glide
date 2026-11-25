@@ -60,7 +60,7 @@ TOPIC_NEEDS = {"route": set(LIVE_SECTIONS),
 TRIGGER_TOPIC = {"low_health_in_combat": "combat", "target_tapped": "combat",
                  "buffs_dropped": "buffs", "buff_expiring": "buffs",
                  "gear_upgrade": "gear", "reward_choice": "gear", "vendor_treasure": "gear", "facts_ready": "gear",
-                 "fact_corrected": "gear", "next_upgrade": "gear", "enchant_missing": "gear",
+                 "fact_corrected": "gear", "next_upgrade": "gear", "enchant_missing": "gear", "talent_check": "gear",
                  "addon_outdated": "system",
                  "bags_nearly_full": "upkeep", "low_durability": "upkeep", "consumables_low": "upkeep",
                  "training_available": "upkeep", "talent_points_unspent": "upkeep"}

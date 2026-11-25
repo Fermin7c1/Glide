@@ -1000,6 +1000,15 @@ const SPEAKER = {
 };
 const FEED_MAX = 80;
 
+// a sim's "Open in WoWSims": only a link to WoWSims' own site shows, with its credit beside it (the app checks the same
+// pattern before it opens one: desktop/src/renderer/coach.ts)
+const WOWSIMS_LINK = /^https:\/\/www\.wowsims\.com\/forever\/[\w\-.~:\/?#[\]@!$&'()*+,;=%]{0,4000}$/;
+const WOWSIMS_CREDIT = 'WoWSims (wowsims.com/forever)';
+/** @param {CoachMessage} m */
+const simLink = (m) => m.link && WOWSIMS_LINK.test(String(m.link.url))
+  ? ` <a class="wowsims" href="${esc(m.link.url)}" target="_blank" rel="noopener noreferrer">${esc(m.link.text || 'Open in WoWSims')}</a>`
+    + `<span class="credit">${esc(m.link.credit || WOWSIMS_CREDIT)}</span>` : '';
+
 /** @param {CoachMessage} m */
 function showMessage(m) {
   const el = document.createElement('div'), unchecked = new Set(m.facts_unknown || []);
@@ -1014,7 +1023,7 @@ function showMessage(m) {
     ? `<span class="facts">Web: ${m.web_sources.filter((w) => /^https?:\/\//.test(w.url)).map(source).join(', ')}</span>` : '';
   const speaker = SPEAKER[m.kind] || m.kind;
   el.title = m.model ? `${speaker}, ${m.model}` : '';
-  el.innerHTML = `<span class="ts">${clockTime(m.t * 1000)}</span><span class="by">${esc(speaker)}:</span>${esc(m.text)}${video}${web}${facts}`;
+  el.innerHTML = `<span class="ts">${clockTime(m.t * 1000)}</span><span class="by">${esc(speaker)}:</span>${esc(m.text)}${video}${simLink(m)}${web}${facts}`;
   const feed = $('feed');
   feed.appendChild(el);
   while (feed.children.length > FEED_MAX) feed.firstElementChild.remove();
@@ -1045,6 +1054,20 @@ function initFeedFollow() {
     else followFeed();                 // the layout moved it: back to the newest, if it follows
   }, { passive: true });
   if (typeof ResizeObserver === 'function') new ResizeObserver(followFeed).observe(f);
+}
+
+// "Open in WoWSims" in the app's frame: the app opens it in the browser (shell:open), never this frame or a window of
+// the app's own; in a browser it opens in a new tab as it is
+function initFeedLinks() {
+  if (window.parent === window) return;
+  const open = (/** @type {MouseEvent} */ e) => {
+    const a = /** @type {HTMLElement} */ (e.target).closest?.('a.wowsims');
+    if (!a || e.button > 1) return;
+    e.preventDefault();
+    window.parent.postMessage({ glide: 'open', url: a.getAttribute('href') }, '*');
+  };
+  $('feed').addEventListener('click', open);
+  $('feed').addEventListener('auxclick', open);         // a middle click too
 }
 
 // the engine's messages once each: a reconnect replays its recent ones in "init" (the page's own "You:" lines stay)
@@ -1946,3 +1969,4 @@ initArrangeMode();
 connectToEngine();
 initAskForm();
 initFeedFollow();
+initFeedLinks();

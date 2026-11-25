@@ -20,6 +20,7 @@ import sys
 import threading
 import time
 import traceback
+import types
 
 if sys.version_info < (3, 12):      # checked before the engine's own imports, which use 3.12 (the bundled version)
     sys.exit("Glide's engine needs Python 3.12 or newer, this is Python %s. Install it with:\n"
@@ -189,6 +190,7 @@ class App:
         self._idb = None                        # WoWSims' item database (_item_db), made on first use
         self.research = self.live = None        # item research and Data/Live.lua's writer (_start_research)
         self.sim_queue = self.sim_weights = self.bis = None  # WoWSims' one line of runs, the weights, the BiS ranks
+        self.sims = None                        # the sims the coach runs for the player (_start_sims)
         import health
         self.health = health.Health(self)
         self.last_seq = None
@@ -1017,6 +1019,7 @@ class App:
         except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without item sources
             log_once("research.start", e)
         self._start_bis()
+        self._start_sims()
 
     def _start_bis(self):
         """Glide's own best-in-slot ranks at 60 (bis.py's BisRanker, on its own thread; after the research, whose
@@ -1044,10 +1047,55 @@ class App:
             self.rules.bis = ranker
             coach_tools.bis = self._bis_now
             if self.live is not None:
-                self.live.register("chars", lambda: ranker.live_section() if gear.bis_on() else {})
+                self.live.register("chars", self._live_chars)
             ranker.start()
         except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without BiS ranks
             log_once("bis.start", e)
+
+    def _start_sims(self):
+        """The sims the coach runs for the player (sims.py's Sims, on its own thread; after the BiS ranks, on the same
+        sim queue, WoWSims and item database): an item swap or a talent build the player asks about (the coach's
+        wowsims_sim tool and "sim this" said or typed, through coach_tools.sims; "/glide sim <item link>" in the game,
+        the addon's request in core hv, which the worker takes from the game state, GameState.sim_request, and answers
+        spoken, with the coach's emit), each at PRIO_ASKED; and the talent check (WoWSims' own talent builds against
+        the player's, once per WoWSims release and per talent change at 60, in the background), which the rules say
+        once (rules.sims: talent_check). Every answer carries the Open in WoWSims link (wowsims_link.py). The
+        addon's Data/Live.lua gets each character's link (/glide wowsims) and its asked item sims (the tooltip's
+        upgrade line) in the chars section beside the BiS ranks (_live_chars). Started even before a WoWSims runner
+        is here (it comes with the weights at 60), so a question gets "I can't sim that without WoWSims."; the
+        character's WoWSims weights pick which random suffixes and bag weapons a sim tries. gear.sim_questions,
+        gear.talent_check, gear.sim_seconds."""
+        queue, gear = getattr(self, "sim_queue", None), getattr(self.rules, "gear", None)
+        if queue is None or gear is None:
+            return                                  # (no sim queue: WoWSims couldn't be set up)
+        try:
+            import coach_tools
+            import sims
+            opt = types.SimpleNamespace(get=lambda name: gear.opt.get(name))     # (read as set now, each time)
+            s = sims.Sims(ROOT, queue, self._item_db(), lambda: self.state, opt)
+            coach = getattr(self, "coach", None)
+            s.emit = coach.emit if coach is not None else self.on_message
+            r = self.research
+            if r is not None:
+                s.find_fn = r._find
+                s.name_fn = lambda i: (r.brief(i) or {}).get("name")
+            s.weights_fn = lambda name: (self._sim_weights_of(name) or {}).get("w")
+            self.sims = s
+            coach_tools.sims = s
+            self.rules.sims = s
+            if self.live is not None:
+                self.live.register("chars", self._live_chars)
+            s.start()
+        except Exception as e:  # noqa: BLE001 - the coach goes on without sims on request
+            log_once("sims.start", e)
+
+    def _live_chars(self):
+        """Data/Live.lua's chars section: the BiS ranks' per-character fields (while gear.bis is on) merged with the
+        sims' (the link, the asked item sims), whichever of them runs."""
+        import sims
+        gear, ranker, s = getattr(self.rules, "gear", None), getattr(self, "bis", None), getattr(self, "sims", None)
+        ranks = ranker.live_section() if ranker is not None and gear is not None and gear.bis_on() else {}
+        return sims.merge_chars(ranks, s.live_section() if s is not None else {})
 
     def _sim_weights_of(self, name):
         """The character's WoWSims weights (sim_weights.py's entry), or None."""

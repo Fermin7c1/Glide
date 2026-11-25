@@ -22,6 +22,12 @@ class GameState:
     # the addon's own hold (State.lua): with no frames at all (WoW minimised or behind a window: the strip can't be read)
     # the last item is kept until that hold would have ended, HOVER_HOLD after it
     ADDON_HOVER_HOLD = 15
+    # a sim request (core hv's request form, /glide sim) the frames carried again within this many seconds is the one
+    # already seen: the addon sends each for 3 s, so the same form after a longer gap is a new request (its nonce came
+    # round again, or a crash cost the addon the one it saved)
+    SIM_REQUEST_GAP = 10
+    # a request sim_request() didn't take within this many seconds is dropped: its answer would come out of nowhere
+    SIM_REQUEST_KEEP = 30
 
     def __init__(self):
         self.core = {}
@@ -63,6 +69,8 @@ class GameState:
         self._scale = {}           # ui_map -> list of estimated heights (yards) from movement
         self._hover = None         # (item id, the last frame that carried it): core hv, addon 0.21.0
         self._hover_gone = None    # the first frame without hv after the last one with it
+        self._sim_seen = None      # (the last sim request in hv as (id, sfx, ench, n), the last frame with it): 0.23.0
+        self._sim_new = deque(maxlen=3)    # (request, the frame it came in) not yet taken by sim_request()
 
     # -------------------------------------------------------------------------------------------
     def update(self, core, page, now=None):
@@ -98,6 +106,10 @@ class GameState:
         self._track_xp(now)
         self._track_step(now)
         hv = as_int(core.get("hv"))
+        req = strip_spec.hv_request(core.get("hv")) if hv is None else None
+        if req:
+            self._sim_seen_in(req, now)
+            hv = req["id"]          # (the item asked about is the one the player points at: "this" in a question)
         if hv and hv > 0:
             self._hover, self._hover_gone = (hv, now), None
         elif self._hover is not None and self._hover_gone is None:
@@ -323,9 +335,9 @@ class GameState:
 
     def hovered(self, now=None):
         """The item the player looked at last on a tooltip (core hv: the same item 0.75 s, held by the addon 15 s after
-        it left): {"id", "t": the last frame that carried it}, or None once frames came without it for HOVER_HOLD
-        seconds (an optional core key, so a long core leaves it out of a frame now and then and sends it in the next;
-        the short hold covers that). With no frames at all (WoW minimised, or the Glide window over the strip while
+        it left; or the item of a sim request in its place, /glide sim): {"id", "t": the last frame that carried it},
+        or None once frames came without it for HOVER_HOLD seconds (an optional core key, so a long core leaves it out
+        of a frame now and then and sends it in the next; the short hold covers that). With no frames at all (WoW minimised, or the Glide window over the strip while
         the player types the question) it is kept until the addon's own hold would have ended: ADDON_HOVER_HOLD +
         HOVER_HOLD after the last frame with it."""
         h, gone = self._hover, self._hover_gone
@@ -334,6 +346,29 @@ class GameState:
                 or now - h[1] > self.ADDON_HOVER_HOLD + self.HOVER_HOLD:
             return None
         return {"id": h[0], "t": h[1]}
+
+    def _sim_seen_in(self, req, now):
+        """A frame carried sim request `req` (core hv's request form): new unless it is the request the last such
+        frame carried, at most SIM_REQUEST_GAP seconds before."""
+        form = (req["id"], req["sfx"], req["ench"], req["n"])
+        last = self._sim_seen
+        if last is None or last[0] != form or now - last[1] > self.SIM_REQUEST_GAP:
+            self._sim_new.append((dict(req), now))
+            log("link", "sim request: item %d (suffix %d, enchant %d), nonce %d" % form)
+        self._sim_seen = (form, now)
+
+    def sim_request(self, now=None):
+        """The sim the player asked for with /glide sim (core hv in its request form, addon 0.23.0): {"id", "sfx",
+        "ench", "n"}: the item, its random suffix (without its sign) and its enchant, 0 for none, and the addon's
+        nonce. Each request once, oldest first: a call takes it, and the frames repeating it (the addon sends one for
+        3 s) don't bring it back; a new nonce, or the same request after SIM_REQUEST_GAP seconds without it, is a new
+        one. None when there is none left, or those left came more than SIM_REQUEST_KEEP seconds ago (dropped)."""
+        now = time.time() if now is None else now
+        while self._sim_new:
+            req, t = self._sim_new.popleft()
+            if now - t <= self.SIM_REQUEST_KEEP:
+                return req
+        return None
 
     def corpse(self):
         c = self.core

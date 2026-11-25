@@ -807,6 +807,18 @@
    ],
    "t": 1792933296.398176,
    "spoken": "New quest: Return to Rorian. Bring word of the Al'Aketh to Rorian the Dayseeker in Thendal Grove."
+  },
+  {
+   "kind": "answer",
+   "text": "WoWSims: Eye of the Beast over your Briarwood Reed, about +2 DPS on your gear.",
+   "speak": true,
+   "model": "WoWSims",
+   "t": 1792933298.5,
+   "link": {
+    "text": "Open in WoWSims",
+    "url": "https://www.wowsims.com/forever/mage/dps/?i=gtm#eNqT2sTIwSLAIZXOxc7x/Q2vxAdhLhaO5vWMQPLHG14uNo7OAIF9yVzMHCfygEIfgUIsHJ/A5NN+kKKvYPZnMDntggBQ4f9EIPPPWkYgsykVyHy/DqTu8zSQwKecRYxsXCxcTByMu5jkDEwNjAxMjYyMDQ0MjQ0NTY0NdU1NDYDAWBeIXzClfGBKaWRmAAMTh1nMrO45mSmpG5iZKpgAVMYuLw==",
+    "credit": "WoWSims (wowsims.com/forever)"
+   }
   }
  ]
 }

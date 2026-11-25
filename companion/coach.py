@@ -77,6 +77,13 @@ for their play, not how it was built), and this: %s At most %d words. No list, n
 
 CONVO_LABEL = {"answer": "coach answered", "callout": "coach callout", "review": "coach pace review",
                "briefing": "coach quest briefing", "reminder": "coach reminder", "banter": "coach aside"}
+# trigger facts the model never sees: a WoWSims link (talent_check's) is for the coach screen, never read out
+SCREEN_ONLY_FACTS = frozenset(("link",))
+
+
+def prompt_facts(facts):
+    """A trigger's facts as the prompt and the recent log carry them: without SCREEN_ONLY_FACTS."""
+    return {k: v for k, v in (facts or {}).items() if k not in SCREEN_ONLY_FACTS}
 
 
 class Coach:
@@ -154,6 +161,7 @@ class Coach:
         self.tone = None                      # the last reply's TONE: line (in character: how to deliver it)
         self.said_t = None                    # when the coach last said a line out loud (time.time())
         self._speech = None                   # the reply being spoken while it streams (EarlySpeech)
+        self._question_turn = False           # the turn being answered is the player's question (wowsims_sim's only)
         self._barges = 0                      # how many times the player talked over the coach (barge)
         self.reminder_ticker = ReminderTicker(self)
         self.reflector = Reflector(self)
@@ -229,7 +237,8 @@ class Coach:
             self.pending += triggers
             self.recent_triggers = (self.recent_triggers + [(t.kind, t.facts) for t in triggers])[-12:]
             for t in triggers:
-                self.recent.append({"t": now, "type": "trigger", "kind": t.kind, "facts": short_json(t.facts, 300)})
+                self.recent.append({"t": now, "type": "trigger", "kind": t.kind,
+                                    "facts": short_json(prompt_facts(t.facts), 300)})
         self.wake.set()
 
     def brief(self, qid):
@@ -405,19 +414,23 @@ class Coach:
         """One tool call from the tool-use loop: the coach's own tools (reminders, memory, the local web search) here,
         everything else through the knowledge layer on the turn's live context."""
         if name in coach_tools.LOCAL_TOOLS:
-            return self._local_tool(name, args)
+            return self._local_tool(name, args, budget_s)
         return self.api.dispatch(name, args, ctx, budget_s=min(self.api.TOOL_BUDGET_S, max(1.0, budget_s)))
 
-    def _local_tool(self, name, args):
+    def _local_tool(self, name, args, budget_s=None):
         """One of the coach's own tools (coach_tools.LOCAL_TOOLS): the local web search, memory, where an item comes
-        from, reminders."""
+        from, the best-in-slot ranks, a WoWSims sim (within budget_s: the seconds the answer's tools have left),
+        reminders."""
         if name == "web_search":
             self.llm.count_web_search()
             return websearch.search(args.get("query"))
         if name.startswith("memory_"):
             return coach_tools.run_memory_tool(self.deps.memory, name, args, self.emit)
+        if name == "wowsims_sim" and not self._question_turn:
+            # (offered with every tool set, so the cached prefix stays one; sims only for what the player asks)
+            return {"error": "wowsims_sim is only for the player's own question; nothing was simmed"}
         if name in coach_tools.ITEM_TOOL_NAMES:
-            return coach_tools.run_item_tool(name, args)
+            return coach_tools.run_item_tool(name, args, max(1.0, budget_s) if budget_s is not None else None)
         if self.deps.reminders is None:
             return {"error": "reminders are not available"}
         return coach_tools.run_reminder_tool(self.deps.reminders, name, args, self._summary(), self._now())
@@ -646,14 +659,14 @@ class Coach:
             self.last_call = time.time()
             return self._emit_offline(question, self.offline(batch, ctx, question),
                                       bool(batch) and min(t.priority for t in batch) <= 2 or bool(question),
-                                      "offline" + (" (%s)" % held if held else ""))
+                                      "offline" + (" (%s)" % held if held else ""), batch)
         if not llm.keys.get(prov):
             text = self.offline(batch, ctx, question)
             if question:
                 text = "No %s for %s; pick another model in the dashboard. %s" % (
                     {"openrouter": "OPENROUTER_API_KEY", "gemini": "GEMINI_API_KEY"}.get(prov, "ANTHROPIC_API_KEY"),
                     model, text or "")
-            return self._emit_offline(question, text, bool(question), "offline (no %s key)" % prov)
+            return self._emit_offline(question, text, bool(question), "offline (no %s key)" % prov, batch)
         user = self._user_message(ctx, trigger, question=bool(question), triggers=triggers if batch else None,
                                   cc=llm.ref_marker(model))
         limit = self._word_limit(question, voice, deep, batch, chat)
@@ -668,10 +681,12 @@ class Coach:
             return fn(t, msg_kind, u, tone, not getattr(speech, "words", 0)) if tone else fn(t, msg_kind, u)
         speech = EarlySpeech(say_early, limit, urgent) if speak_fn and speaks else None
         barges, self._speech = self._barges, speech
+        self._question_turn = bool(question)
         try:
             text, meta = self._ask_model(model, user, kctx, question, voice, deep, speech)
         finally:
             self._speech = None
+            self._question_turn = False
         barged = self._barges != barges            # the player talked over it (push-to-talk): it isn't said
         self.last_call = time.time()
         if not text and question and llm.suspended and llm.suspended_for == prov:
@@ -711,6 +726,9 @@ class Coach:
         if meta.get("web"):
             msg["web_sources"] = meta["web"][:5]
             msg["model"] += " · web search"
+        link = coach_tools.sim_message_link(batch, meta.get("tools") or ())
+        if link:
+            msg["link"] = link                     # a sim's "Open in WoWSims" (talent_check, or the wowsims_sim tool)
         if self.pack is not None:
             self._ground(msg, facts, had_facts)
         self.emit(msg)
@@ -722,18 +740,46 @@ class Coach:
         self._convo_before = list(self.convo)
         self.convo.append({"t": self._now(), "who": "player", "kind": "voice" if voice else "typed",
                            "text": question})
-        done = self._local_command(question) or self._memory_command(question) or self._reminder_command(question)             or self._item_command(question)
+        done = self._local_command(question) or self._memory_command(question) or self._reminder_command(question)
+        if not done:
+            sim = self._sim_command(question, voice)
+            if sim is not None:
+                msg = {"kind": "answer", "text": sim["text"], "speak": True, "model": "WoWSims", "t": time.time()}
+                if sim.get("link"):
+                    msg["link"] = sim["link"]
+                self.emit(msg)
+                return msg
+            done = self._item_command(question)
         if not done:
             return None
         msg = {"kind": "answer", "text": done, "speak": True, "model": "local", "t": time.time()}
         self.emit(msg)
         return msg
 
+    def _sim_command(self, question, voice=False):
+        """'sim this', 'what if I wear Eye of the Beast?', 'sim the Arcane Fire build' answered with a WoWSims sim by
+        the coach itself (coach_tools.sim_command) while no model can take the question with tools (the AI off, no key
+        for the model that answers it, no knowledge pack, or a model without tools) -> {"text", "link"}, else None.
+        A model that can gets it whether or not wowsims_sim is offered (no WoWSims here yet, gear.sim_questions off:
+        the prompt has it say it can't sim), so a question that only looks like one ("what if I go to Westfall?")
+        still gets its answer."""
+        model = self._answer_model(voice)
+        ai_ok = self.llm.enabled and self.llm.keys.get(models_mod.provider(model)) and self.pack is not None \
+            and self._tools_ok(model)
+        return coach_tools.sim_command(question, bool(ai_ok))
+
+    def _answer_model(self, voice):
+        """The model a question is answered by (_respond): the deep model, or the fast one for a spoken question while
+        voice_question_model is "fast"."""
+        return self.cfg.get("fast_model" if voice and self.opt.get("voice_question_model") == "fast" else "deep_model")
+
     @staticmethod
     def _turn_text(batch, question, voice):
-        """The request's last part: the player's question (with a note on spoken ones), or the triggers."""
+        """The request's last part: the player's question (with a note on spoken ones), or the triggers (without the
+        facts only the coach screen shows: prompt_facts)."""
         if not question:
-            return "Triggers since last callout: " + short_json([{"kind": t.kind, **t.facts} for t in batch], 800)
+            return "Triggers since last callout: " + short_json([{"kind": t.kind, **prompt_facts(t.facts)}
+                                                                 for t in batch], 800)
         text = "The player asks: " + question
         if voice:
             text += ("\n(Asked out loud mid-play via push-to-talk; the question is a speech-to-text "
@@ -741,11 +787,15 @@ class Coach:
                      "the direct answer first.)")
         return text
 
-    def _emit_offline(self, question, text, speak, model_note):
-        """Send an offline answer or callout (when there is one). -> the message, or None."""
+    def _emit_offline(self, question, text, speak, model_note, batch=()):
+        """Send an offline answer or callout (when there is one; a callout's batch: a talent_check's link goes with
+        it when the text says its line). -> the message, or None."""
         if not text:
             return None
         msg = {"kind": "answer" if question else "callout", "text": text, "speak": speak, "model": model_note}
+        link = None if question else coach_tools.sim_message_link(batch, said=text)     # (only with its line said)
+        if link:
+            msg["link"] = link
         self.emit(msg)
         return msg
 

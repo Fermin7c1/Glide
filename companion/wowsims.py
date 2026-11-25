@@ -10,7 +10,8 @@ runner, wowsimcli, from the project's official GitHub releases, and keeps it on 
   match fewer than MISSES times) is tried again after RETRY_S, never sooner.
 - Files a request needs from the project at that release (a spec's rotation, ui/specs/.../*.apl.json) come from
   raw.githubusercontent.com at the release's tag, kept beside its runner; one a newer release no longer has falls
-  back to an older release's copy.
+  back to an older release's copy. A rotation in WoWSims' own language (.apl.siml) is converted to the JSON a request
+  carries by the runner itself, offline (siml_parse).
 - Data files read without simming (the item database research.py reads) are read at data_tag(): the release in use,
   else the latest release's tag, looked up at most once a day without downloading its runner.
 - data/wowsims/state.json: {"current": tag, "checked": time, "failed": {tag: why}, "data": {"tag", "t"}} ("data":
@@ -51,6 +52,7 @@ MAX_ZIP = 96 * 1024 * 1024                                   # the runner's zip 
 MAX_FILE = 8 * 1024 * 1024                                   # a file from the repository (a rotation: a few KB)
 TIMEOUT_S = 60
 SIM_TIMEOUT_S = 300
+SIML_TIMEOUT_S = 60                                           # converting a .siml (about 0.1 s)
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")        # a release tag, as a folder name (never . or ..)
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 BELOW_NORMAL = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
@@ -306,6 +308,37 @@ class WoWSims:
                     raise FetchError("WoWSims %s has no %s (%s)" % (tag, path, e)) from e
         with open(here, "rb") as fh:
             return fh.read()
+
+    def siml_parse(self, path, tag=None, timeout=SIML_TIMEOUT_S):
+        """A .siml file of WoWSims' repository at the release (file(): a spec's .apl.siml rotation) as the protojson it
+        loads as, converted offline by the release's runner (wowsimcli siml parse -json): an .apl.siml rotation comes
+        out as the APLRotation a request carries in player.rotation, as an .apl.json holds it. -> a dict; raises
+        SimError when it doesn't load (the runner's own reason)."""
+        tag = tag or self.current()
+        if not tag:
+            raise SimError("WoWSims isn't installed yet")
+        name = path.rsplit("/", 1)[-1]
+        if not name.endswith(".siml") or not re.match(r"^[\w.-]+$", name):
+            raise SimError("not a WoWSims .siml file: %r" % path)
+        body = self.file(path, tag)
+        argv = (self._command(tag) if self._command else [self.exe(tag)])
+        with tempfile.TemporaryDirectory(prefix="glide-siml-") as tmp:
+            src = os.path.join(tmp, name)                     # (its name says what kind it is: .apl.siml)
+            with open(src, "wb") as fh:
+                fh.write(body)
+            r = subprocess.run(argv + ["siml", "parse", "-json", src], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=timeout, env=runner_env(),
+                               creationflags=NO_WINDOW | BELOW_NORMAL)
+        if r.returncode != 0:
+            why = (r.stderr or r.stdout or "").strip().replace(src, name) or "exit %d" % r.returncode
+            raise SimError("WoWSims %s couldn't read %s: %s" % (tag, path, why[-300:]))
+        try:
+            out = json.loads(r.stdout)
+        except ValueError as e:
+            raise SimError("WoWSims %s read %s as no JSON" % (tag, path)) from e
+        if not isinstance(out, dict):
+            raise SimError("WoWSims %s read %s as no message" % (tag, path))
+        return out
 
     # ---- simming ------------------------------------------------------------------------------------------------
     def run(self, request, tag=None, timeout=SIM_TIMEOUT_S, env=None, creationflags=None):

@@ -208,13 +208,56 @@ optional[#optional + 1] = function()
 end
 -- hv: the item the player is looking at on a tooltip (Compare.lua's ns.hover: the same item for 0.75 s), and for 15 s
 -- after it left, so the app knows which item "this" is in a question, and looks it up (ns.HoverCheck first: a tooltip
--- that no longer shows its item drops it)
+-- that no longer shows its item drops it). While a sim request goes out, hv carries that instead (below).
 local HOVER_HOLD = 15
 optional[#optional + 1] = function()
     if ns.HoverCheck then ns.HoverCheck() end
+    local ask = ns.SimAsking and ns.SimAsking()
+    if ask then return "hv=" .. ask end
     local id = tonumber(ns.hover)
     if not id and ns.hoverAt and GetTime() - ns.hoverAt <= HOVER_HOLD then id = tonumber(ns.hoverLast) end
     if id and id > 0 then return "hv=" .. floor(id) end
+end
+
+-- hv's request form, "hv=<id>.<sfx>.<ench>!<n>": /glide sim (Compare.lua) asks the Glide app to sim an item on the
+-- player's gear with WoWSims (the item link's random suffix without its sign, and its enchant: 0 for none). n is a
+-- nonce, 1 to 9, the next one for each request and kept across reloads (GlideLinkDB.sim.n), so the same item asked
+-- again is a new request. A request takes hv's place for SIM_SEND seconds from the first core that carries it (the
+-- hover comes back after), under the same budget as the hover; one asked meanwhile waits its turn (SIM_QUEUE at most),
+-- and one the strip never sent (switched off) is dropped SIM_KEEP seconds after it was asked.
+local SIM_SEND, SIM_KEEP, SIM_QUEUE = 3, 30, 3
+local asks = {}                         -- { form, at = when asked, from = the first core that carried it }
+
+local function pruneAsks(now)
+    for i = #asks, 1, -1 do
+        local a = asks[i]
+        if (a.from and now - a.from >= SIM_SEND) or (not a.from and now - a.at > SIM_KEEP) then table.remove(asks, i) end
+    end
+end
+
+--- Ask for a sim of an item (sfx: its random suffix, ench: its enchant; nil or 0 for none) -> its request form, or
+--- nil and why: "item" (no item id, or a number too long for the form) or "busy" (SIM_QUEUE requests still waiting).
+function ns.SimRequest(id, sfx, ench)
+    id, sfx, ench = tonumber(id), math.abs(tonumber(sfx) or 0), math.abs(tonumber(ench) or 0)
+    if not (id and id >= 1 and id <= 999999 and sfx <= 99999 and ench <= 99999) then return nil, "item" end  -- (nan too)
+    pruneAsks(GetTime())
+    if #asks >= SIM_QUEUE then return nil, "busy" end
+    local db = ns.LinkSection("sim", {})
+    local n = floor(tonumber(db.n) or 0) % 9 + 1
+    db.n = n
+    local form = ("%d.%d.%d!%d"):format(floor(id), floor(sfx), floor(ench), n)
+    asks[#asks + 1] = { form = form, at = GetTime() }
+    return form
+end
+
+--- The request form hv carries now, or nil: the first request in turn, for SIM_SEND seconds from its first core.
+function ns.SimAsking()
+    local now = GetTime()
+    pruneAsks(now)
+    local a = asks[1]
+    if not a then return nil end
+    a.from = a.from or now
+    return a.form
 end
 
 function ns.CoreOptional(core)

@@ -21,9 +21,10 @@ The addon draws a grid of cells at the top-left corner of the game window (Strip
   `key=value` pairs joined by `;`. Values never hold `;`, `=`, `|` or line breaks (the addon replaces them).
   A page starts with `pg=<id>;` and is at most 124 bytes with it; a page that doesn't fit the room the core leaves
   waits for a later frame instead of being cut. Pages that changed go first, then the rest in turn.
-- **Optional core keys** (`lg`, addon 0.20.0 and later; `hv`, 0.21.0) go last, and only into a core of at most 442
-  bytes with them (573 bytes at the defaults - 6 framing - the `|` - a 124-byte page), so the largest page still
-  fits; those left out of a frame go into the next frame whatever its size (State.lua ns.CoreOptional).
+- **Optional core keys** (`lg`, addon 0.20.0 and later; `hv`, 0.21.0, and its sim request form, 0.23.0) go last,
+  and only into a core of at most 442 bytes with them (573 bytes at the defaults - 6 framing - the `|` - a 124-byte
+  page), so the largest page still fits; those left out of a frame go into the next frame whatever its size
+  (State.lua ns.CoreOptional).
 - **Lists** spread over numbered pages (`Q0`, `Q1`, ...; at most 20). Entries are joined by `,`, fields inside an
   entry by `:`. The engine takes a list only once it has all its chunks and their joined text matches the list's
   hash (protocol.list_hash, State.lua ns.Hash: h = (h * 31 + byte) mod 65521 over the UTF-8 bytes). Quest, buff
@@ -107,7 +108,7 @@ Sent in every frame, in this order. Types: int, str, flag (1/0), bitmask (an int
 | `e2` | event | Second newest ring event | State.lua | ≤0.7 |
 | `e3` | event | Third newest ring event | State.lua | ≤0.7 |
 | `lg` | int | Generation of the addon's Data/Live.lua this UI load read (the facts the Glide app wrote; only above 0; optional, see Frame) | State.lua | 0.20 |
-| `hv` | int | Item id the player is looking at: the same item on a tooltip (GameTooltip or ItemRefTooltip) for 0.75 s (Compare.lua), sent while it shows and 15 s after; optional, see Frame | State.lua | 0.21 |
+| `hv` | str | Item id the player is looking at: the same item on a tooltip (GameTooltip or ItemRefTooltip) for 0.75 s (Compare.lua), sent while it shows and 15 s after. From 0.23, a sim request takes its place for 3 s: `<id>.<sfx>.<ench>!<n>` (/glide sim: the item, its random suffix without its sign and its enchant, 0 for none; n a nonce 1-9, the next one for each request and kept across reloads, so the same item asked again is a new request; strip_spec.hv_request reads it); optional, see Frame | State.lua | 0.21 |
 
 ## Pages
 

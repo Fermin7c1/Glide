@@ -266,6 +266,8 @@ body { background: radial-gradient(1200px 800px at 45% 35%, #151821 0%, var(--ni
 .msg.error .by, .msg.urgent .by { color: var(--behind); }
 .msg.urgent { color: var(--ink); }
 .msg .facts { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.msg a.wowsims { white-space: nowrap; }
+.msg .credit { margin-left: 8px; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 .msg .factbad { color: var(--behind); }
 .msg.ungrounded .by::after { content: " (unchecked)"; color: var(--warn); }
 .ask { display: flex; gap: 8px; margin-top: 10px; flex: none; }

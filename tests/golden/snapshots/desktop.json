@@ -1027,6 +1027,32 @@
       },
       {
        "def": true,
+       "help": "Ask the coach \"what if I wear Eye of the Beast?\" or \"would the Arcane Fire build be better for me?\", or type /glide sim and shift-click an item in the game, and Glide sims that swap or talent build on your own gear with WoWSims right away. You hear one number (\"about +8 DPS on your gear\", or \"about the same as yours\" when the difference is within the sim's noise), and the coach screen shows an Open in WoWSims link that opens your character on WoWSims' site. In the game, /glide wowsims gives you the same link to copy. Mage for now.",
+       "key": "companion.gear.sim_questions",
+       "label": "Sim what I ask about with WoWSims at level 60",
+       "restart": true,
+       "type": "bool"
+      },
+      {
+       "def": true,
+       "help": "At level 60, Glide sims WoWSims' own talent builds for your class on your gear, each with its own rotation, in the background, once for each new WoWSims and each time you change talents. If one comes out at least 3% higher than yours, the coach tells you once, with a link to try it in WoWSims.",
+       "key": "companion.gear.talent_check",
+       "label": "Tell me when one of WoWSims' talent builds sims higher",
+       "restart": true,
+       "type": "bool"
+      },
+      {
+       "def": 30,
+       "help": "A sim you ask for stops after this long and answers with what it has. A question you ask out loud may stop sooner, so the answer isn't late.",
+       "key": "companion.gear.sim_seconds",
+       "label": "Longest wait for a sim I ask for (seconds)",
+       "max": 120,
+       "min": 5,
+       "restart": true,
+       "type": "number"
+      },
+      {
+       "def": true,
        "help": "Glide finds out where the gear you could use comes from (the boss that drops it, the quest that gives it, who sells it, the craft that makes it) and says it on item tooltips in the game and when you ask the coach. It reads WoWSims' open item data (wowsims.com/forever) and Glide's own knowledge of the game. New facts reach the game after a /reload; the very first time, after a WoW restart.",
        "key": "companion.research.enabled",
        "label": "Look up where items come from",

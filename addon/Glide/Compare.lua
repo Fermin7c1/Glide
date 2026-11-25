@@ -19,6 +19,12 @@
 -- And the item the player is looking at (ns.hover, for State.lua's core key hv): the same item on a tooltip for
 -- 0.75 s, so the Glide app knows which item "this" is in a question and looks it up before it's asked. A "|" in a
 -- source line's text is the Glide app's own escaping ("||"): the line never carries a colour or texture code.
+-- "/glide sim <shift-clicked item>" asks the Glide app to sim that item on your gear with WoWSims (State.lua's
+-- ns.SimRequest: hv's request form); the answer comes from the app, spoken and on its overlay. Once the app has simmed
+-- an item for this character (ns.live.chars[key].sim), the upgrade line takes the simmed number in place of the
+-- weights' estimate, its text unchanged, set against the worn item the sim replaced (a ring or trinket: the one the sim
+-- picked), while that slot and the other of its pair hold what they held then (the sim was on that gear).
+-- "/glide wowsims" shows the link that opens this character in WoWSims (ns.live.chars[key].link) in a box to copy.
 local _, ns = ...
 local rec = ns.rec
 local Safe, Print = ns.Safe, ns.Print
@@ -77,6 +83,9 @@ local function score(stats, w)
     return t
 end
 
+local simmed            -- (id, link, slots) -> the DPS change the Glide app simmed for the item and the worn item's
+                        -- link it was set against, or nil (below)
+
 --- The line for an item: its text and colour, or nil.
 local function lineFor(link)
     local e = mine()
@@ -112,6 +121,8 @@ local function lineFor(link)
         if old == nil or s < old then old, worn = s, wl end
     end
     local dps = (new - old) * (e.perRef or 0)
+    local okSim, sim, simWorn = pcall(simmed, id, link, slots)  -- (a broken Live.lua entry leaves the estimate)
+    if okSim and sim then dps, worn = sim, simWorn end          -- (named against what it was simmed against)
     local pct = (e.dps and e.dps > 0) and dps / e.dps * 100 or 0
     local against = worn and worn:match("%[(.-)%]") or "an empty slot"
     local text = ("Glide (%s): %+.1f DPS (%+.1f%%) vs %s"):format(e.spec or "WoWSims", dps, pct, against)
@@ -164,8 +175,9 @@ local function myChar()
     return type(e) == "table" and e or nil
 end
 
---- An item link's item id and random suffix id (the link's field 7, counted after "item:" as Gear.lua does, so the
---- colon in Forever's "|cnIQ4:" colour prefix doesn't shift it; without its sign, 0 for none), or nil.
+--- An item link's item id, random suffix id (the link's field 7, counted after "item:" as Gear.lua does, so the
+--- colon in Forever's "|cnIQ4:" colour prefix doesn't shift it; without its sign, 0 for none) and enchant id (field 2,
+--- 0 for none), or nil.
 local function linkIds(link)
     local body = type(link) == "string" and link:match("item:([%-%d:]*)")
     if not body then return nil end
@@ -173,7 +185,44 @@ local function linkIds(link)
     for v in (body .. ":"):gmatch("([^:]*):") do f[#f + 1] = v end
     local id = tonumber(f[1] or "")
     if not id then return nil end
-    return id, math.abs(tonumber(f[7] or "") or 0)
+    return id, math.abs(tonumber(f[7] or "") or 0), math.abs(tonumber(f[2] or "") or 0)
+end
+
+-- the slots whose item changed since this UI load read Data/Live.lua (once in the world: what the login does isn't a
+-- change), the quick check: a sim the Glide app wrote there was on the gear before (the items' ids are checked too)
+local inWorld, swapped = false, {}
+ns.On("PLAYER_ENTERING_WORLD", function() inWorld = true end)
+local PAIR = { [11] = 12, [12] = 11, [13] = 14, [14] = 13, [16] = 17, [17] = 16 }   -- a slot -> the other of its pair
+
+--- Whether a slot holds the item id it held when the Glide app simmed (0: nothing there), unchanged since Live.lua
+--- was read.
+local function holds(slot, want)
+    if swapped[slot] or type(want) ~= "number" then return false end
+    return ((linkIds(Safe(GetInventoryItemLink("player", slot)))) or 0) == want
+end
+
+--- The DPS change the Glide app simmed with WoWSims for an item (link: the tooltip's, for its random suffix) and the
+--- link of the worn item it was set against (nil: an empty slot), from this character's ns.live.chars[key].sim[id] =
+--- { d, the random suffix it was simmed with (without its sign, 0: none), the slot it went in, the item id worn there
+--- (0: none), and for a ring, trinket or weapon the item id in the other slot of the pair (0: none) }; nil when there
+--- is none, it was simmed with another suffix or in a slot the line doesn't compare against, or one of those two
+--- slots holds another item now (worn since the sim, before this login too) or changed since Live.lua was read.
+simmed = function(id, link, slots)
+    local ch = id and myChar()
+    local sims = ch and ch.sim
+    local e = type(sims) == "table" and sims[id]
+    if type(e) ~= "table" then return nil end
+    local d, sfx, slot = tonumber(e[1]), math.abs(tonumber(e[2]) or 0), tonumber(e[3])
+    if not d or d ~= d or d == math.huge or d == -math.huge or not slot then return nil end
+    local _, lsfx = linkIds(link)
+    if (lsfx or 0) ~= sfx then return nil end                      -- (simmed with another suffix, or none)
+    local ours = false
+    for _, s in ipairs(slots) do
+        if s == slot then ours = true end
+    end
+    if not ours or not holds(slot, tonumber(e[4])) then return nil end
+    if PAIR[slot] and not holds(PAIR[slot], tonumber(e[5])) then return nil end
+    return d, Safe(GetInventoryItemLink("player", slot))
 end
 
 --- True when the player wears an item with this id (and, given one, this random suffix: without its sign).
@@ -363,7 +412,11 @@ if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and
         end)
     end
 end
-ns.On("PLAYER_EQUIPMENT_CHANGED", function() cache, cached = {}, 0 end)
+ns.On("PLAYER_EQUIPMENT_CHANGED", function(slot)
+    cache, cached = {}, 0
+    slot = tonumber(Safe(slot))
+    if inWorld and slot then swapped[slot] = true end
+end)
 
 ns.Command("compare", "compare [on|off] - at level 60, what an item changes in your DPS on its tooltip (WoWSims weights)",
     function(rest)
@@ -404,3 +457,101 @@ ns.Command("bis", "bis [on|off] - at level 60, where an item ranks for you on it
               or "(none ranked for this character yet: level 60, a mage, and a few minutes of the Glide app running; "
                 .. "then /reload)")
     end)
+
+-- ---- /glide sim: the Glide app sims an item on your gear -----------------------------------------------------------
+-- "/glide sim" with an item shift-clicked into the chat line (or an item id): the request goes to the Glide app in
+-- hv's request form (State.lua), with the item's random suffix and enchant, and the app answers by voice and on its
+-- overlay. Gear only, as far as the client can tell at once (an item it hasn't seen yet goes, and the app tells).
+ns.Command("sim", "sim <item> - shift-click an item: the Glide app sims it on your gear with WoWSims", function(rest)
+    rest = rest or ""
+    local link = rest:match("(|c[^|]*|H.-|h.-|h|r)") or rest:match("(|H.-|h.-|h)")
+    local id, sfx, ench = linkIds(link or rest)
+    if not id then id, sfx, ench = tonumber(rest:match("^%s*(%d+)%s*$")), 0, 0 end
+    if not id then
+        Print("shift-click an item after /glide sim to sim it on your gear")
+        return
+    end
+    local name = link or ("item " .. id)
+    local okLoc, loc = pcall(function() return select(4, GetItemInfoInstant(link or id)) end)
+    if okLoc and loc ~= nil and not SLOTS[loc] then
+        Print(name, "isn't gear, so there's nothing to sim")
+        return
+    end
+    local form, why = ns.SimRequest(id, sfx, ench)
+    if not form then
+        Print(why == "busy" and "still sending your last sims: ask again in a few seconds"
+            or "can't read that item: shift-click it from your bags or a chat link")
+        return
+    end
+    local stripOff = ns.StripOn and not ns.StripOn()
+    Print("simming", name, "on your gear: the Glide app answers in a moment"
+        .. (stripOff and " (the data strip is off, so the app can't see it: /glide strip on)" or ""))
+end)
+
+-- ---- /glide wowsims: your character in WoWSims ---------------------------------------------------------------------
+-- The link the Glide app wrote for this character (ns.live.chars[key].link: the setup the app simmed) in a popup's
+-- edit box, selected for Ctrl+C, since the game can't open a browser. A popup, not the Glide window: an edit box there
+-- would taint it. Only a link to WoWSims' own site is shown.
+local SITE = "https://www.wowsims.com/forever/"
+local POPUP = "GLIDE_WOWSIMS_LINK"
+local shownUrl
+
+local function editBoxOf(dialog)
+    if type(dialog) ~= "table" then return nil end
+    if dialog.GetEditBox then return dialog:GetEditBox() end
+    return dialog.editBox or dialog.EditBox
+end
+
+-- the link into the popup's edit box (no letter limit: a link is longer than the default), all of it selected
+local function fill(dialog)
+    local box = editBoxOf(dialog)
+    if not box or not shownUrl then return end
+    if box.SetMaxLetters then box:SetMaxLetters(0) end
+    if box.SetMaxBytes then box:SetMaxBytes(0) end
+    box:SetText(shownUrl)
+    box:HighlightText()
+    if box.SetFocus then box:SetFocus() end
+end
+
+local function closeBox(box)
+    local parent = box and box.GetParent and box:GetParent()
+    if parent and parent.Hide then parent:Hide() end
+end
+
+--- Shows the link in the popup -> true, or false when the client has no popups (the link is printed instead).
+local function showLink(url)
+    local dialogs, show = _G.StaticPopupDialogs, _G.StaticPopup_Show
+    if type(dialogs) ~= "table" or type(show) ~= "function" then return false end
+    shownUrl = url
+    if not dialogs[POPUP] then
+        dialogs[POPUP] = {
+            text = "Your character in WoWSims (wowsims.com/forever). Copy the link with Ctrl+C and paste it into your "
+                .. "browser.",
+            button1 = _G.CLOSE or "Close",
+            hasEditBox = true, editBoxWidth = 350, maxLetters = 0,
+            OnShow = function(self) fill(self) end,
+            -- the text stays the link: typing over it puts it back, selected
+            EditBoxOnTextChanged = function(box)
+                if shownUrl and box:GetText() ~= shownUrl then box:SetText(shownUrl); box:HighlightText() end
+            end,
+            EditBoxOnEnterPressed = closeBox,
+            EditBoxOnEscapePressed = closeBox,
+            timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+        }
+    end
+    local dialog = show(POPUP, nil, nil, url)
+    if dialog then fill(dialog) end
+    return dialog ~= nil
+end
+
+ns.Command("wowsims", "wowsims - a link that opens your character in WoWSims, to copy into your browser", function()
+    local loaded = type(ns.live) == "table"
+    local ch = loaded and myChar()
+    local url = ch and ch.link
+    if type(url) ~= "string" or url:sub(1, #SITE) ~= SITE or url:find("[%s|]") then
+        Print(not loaded and "Glide's item facts aren't loaded: restart WoW once"
+            or "no WoWSims link for this character yet: level 60, a mage, and the Glide app running; then /reload")
+        return
+    end
+    if not showLink(url) then Print(url) end
+end)

@@ -92,7 +92,30 @@ function connectEvents(url: string): void {
   });
 }
 
+/** The one kind of link the coach page asks the app to open: a sim's "Open in WoWSims" (the page shows only these:
+ * companion/static/dashboard.js, the same pattern). */
+export const WOWSIMS_LINK = /^https:\/\/www\.wowsims\.com\/forever\/[\w\-.~:\/?#[\]@!$&'()*+,;=%]{0,4000}$/;
+
+/** A message from the coach page in the frame asking to open a link ({glide: "open", url}): the url when it is a WoWSims
+ * link and the message comes from the coach page itself (the frame's window, the engine's origin), else null. */
+export function linkToOpen(e: Pick<MessageEvent, "source" | "origin" | "data">, frame: Window | null | undefined,
+                           engineUrl: string | null): string | null {
+  const d = e.data as { glide?: unknown; url?: unknown } | null;
+  if (!frame || e.source !== frame || !engineUrl || !d || d.glide !== "open" || typeof d.url !== "string") return null;
+  try {
+    if (e.origin !== new URL(engineUrl).origin) return null;
+  } catch {
+    return null;
+  }
+  return WOWSIMS_LINK.test(d.url) ? d.url : null;
+}
+
 export function wireCoach(): void {
+  // the coach page's "Open in WoWSims" opens in the browser, never in the app
+  window.addEventListener("message", (e) => {
+    const url = linkToOpen(e, $<HTMLIFrameElement>("dash").contentWindow, live.engineUrl);
+    if (url) call("shell:open", url);
+  });
   $("eng-start").onclick = () => call("engine:start");
   $("empty-start").onclick = () => call("engine:start");
   $("eng-stop").onclick = () => call("engine:stop");

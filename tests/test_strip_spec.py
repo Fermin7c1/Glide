@@ -154,6 +154,14 @@ hovered = [c for c in (core_now(), core_now()) if c.get("hv")]
 assert hovered and hovered[0]["hv"] == "18842", "core hv: the item on a tooltip"
 frames.append((hovered[0], pages_now()))
 L.execute("ns.hover = nil")
+# a sim request (/glide sim: State.lua's ns.SimRequest): hv's request form in its place, the item, its random suffix
+# without its sign, its enchant and a nonce; the engine takes it once (GameState.sim_request, checked below)
+form = ns.SimRequest(18842, -13002, 2564)
+assert form == "18842.13002.2564!1", form
+asked = [c for c in (core_now(), core_now()) if c.get("hv")]
+assert asked and asked[0]["hv"] == form, "core hv: a sim request"
+assert spec.hv_request(asked[0]["hv"]) == {"id": 18842, "sfx": 13002, "ench": 2564, "n": 1}
+frames.append((asked[0], pages_now()))
 
 # ---- what it sends is registered -----------------------------------------------------------------------------
 problems = []
@@ -319,6 +327,7 @@ summary = state.summary()
 assert summary["training"] and summary["vendor_treasure"] and summary["talents"] and summary["rxp_settings"], summary
 assert state.gear["R"] and summary["skills"]["ranks"] and summary["arrow"].get("arrow"), (state.gear, summary["arrow"])
 assert (state.hovered() or {}).get("id") == 18842, state.hovered()
+assert state.sim_request() == {"id": 18842, "sfx": 13002, "ench": 2564, "n": 1} and state.sim_request() is None
 
 problems = ["engine reads core key %r (%s), not in strip_spec.CORE" % (k, WHERE.get(("core", None, k)))
             for k in sorted(READ_CORE - set(spec.CORE_BY_NAME))]

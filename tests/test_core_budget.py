@@ -2,7 +2,8 @@
 """The core's byte budget (docs/STRIP.md, Frame): the core goes in every frame and one page rides along in what it
 leaves, so a core longer than 442 bytes (the strip's 573 bytes at its defaults, minus 6 of framing, the "|" and a
 124-byte page) leaves the largest page no room. Optional core keys (lg: the generation of Data/Live.lua the UI
-loaded; hv: the item the player is looking at on a tooltip) go last, and only into a core that stays within 442 bytes;
+loaded; hv: the item the player is looking at on a tooltip, or in its place a sim request, /glide sim, at its longest
+here) go last, and only into a core that stays within 442 bytes;
 those left out of a frame go into the next frame whatever its size (so long as the frame holds them whole), so they're
 never held back for long and a page still gets its room every other frame. Checked on the real addon (State.lua's core and pages, Strip.lua's frames, Codec.lua's bytes,
 read back with the engine's companion/protocol.py) under Lua 5.1 with the mocked WoW API, at the edges of the budget,
@@ -20,9 +21,10 @@ import wowmock  # noqa: E402
 
 CAPACITY, PAGE = 573, 124                     # the default strip (96 x 8 cells), the longest page with its "pg=<id>;"
 BUDGET = CAPACITY - 6 - 1 - PAGE              # 442
-# every optional key at its longest: lg, a generation of 7 digits (a write every 15 s for four years); hv, an item id
-# of 6 digits (the client's ids are below 300000)
-LONGEST = {"lg": 9999999, "hv": 999999}
+# every optional key at its longest: lg, a generation of 7 digits (a write every 15 s for four years); hv in its sim
+# request form (addon 0.23.0), longer than the item id the player looks at: an item id of 6 digits (the client's ids
+# are below 300000), a random suffix and an enchant of 5 (State.lua's ns.SimRequest sends no longer ones), the nonce
+LONGEST = {"lg": "9999999", "hv": "999999.99999.99999!9"}
 EXTRA = sum(len(";%s=%s" % kv) for kv in LONGEST.items())
 TAIL = "".join(";%s=%s" % kv for kv in LONGEST.items())        # the optional keys, in the addon's order
 # the longest core in the player's logs (data/live/20261109-202756.jsonl, 443 of 235,049 frames' cores; the median is
@@ -64,11 +66,20 @@ ns.RefreshPages()
 big = ns.NextPage()
 assert big.startswith("pg=Y;") and len(big) == PAGE, (len(big), big[:20])
 
+# the real request form is never longer than hv's longest here, and the hover's item id is shorter
+form = ns.SimRequest(999999, -99999, 99999)
+assert form and len(form) == len(LONGEST["hv"]) and form.startswith("999999.99999.99999!"), form
+for args in ((1000000, 0, 0), (1, 100000, 0), (1, 0, 100000)):
+    assert ns.SimRequest(*args) == (None, "item"), args          # (too long for the form: not sent)
+assert len("999999") < len(LONGEST["hv"])
+# from here the request at its longest is whatever the test says (the real one goes out for 3 s of the mock's clock)
+L.execute("SIM_ASK = nil; ns.SimAsking = function() return SIM_ASK end")
+
 
 def optional(on):
     """Every optional key at its longest, or none."""
-    ns.live.gen = LONGEST["lg"] if on else 0
-    ns.hover = LONGEST["hv"] if on else None
+    ns.live.gen = int(LONGEST["lg"]) if on else 0
+    G.SIM_ASK = LONGEST["hv"] if on else None
 
 
 def frame():
@@ -111,22 +122,28 @@ def core_of(n):
 optional(True)
 # a short core: the optional keys in every frame, last, and the largest page beside them
 core, kv, page = frame()
-assert core.endswith(TAIL) and kv["lg"] == "9999999" and kv["hv"] == "999999" and page == big, core[-40:]
+assert core.endswith(TAIL) and kv["lg"] == LONGEST["lg"] and kv["hv"] == LONGEST["hv"] and page == big, core[-40:]
 assert len(core) < BUDGET - 50, len(core)
 # one of them alone: just it
-ns.hover = None
+G.SIM_ASK = None
 core, kv, page = frame()
 assert core.endswith(";lg=9999999") and "hv" not in kv and page == big, core[-40:]
-ns.live.gen, ns.hover = 0, LONGEST["hv"]
+ns.live.gen, G.SIM_ASK = 0, LONGEST["hv"]
 core, kv, page = frame()
-assert core.endswith(";hv=999999") and "lg" not in kv and page == big, core[-40:]
+assert core.endswith(";hv=" + LONGEST["hv"]) and "lg" not in kv and page == big, core[-40:]
+# the request takes the hover's place, which comes back after it
+ns.hover = 18842
+assert frame()[1]["hv"] == LONGEST["hv"]
+G.SIM_ASK = None
+assert frame()[1]["hv"] == "18842"
+ns.hover = None
 optional(True)
 
 # the core is BUDGET bytes with them: still every frame, and the page fits exactly
 core_of(BUDGET - EXTRA)
 for _ in range(3):
     core, kv, page = frame()
-    assert len(core) == BUDGET and kv["lg"] == "9999999" and kv["hv"] == "999999" and page == big, (len(core), len(page))
+    assert len(core) == BUDGET and kv["lg"] == LONGEST["lg"] and kv["hv"] == LONGEST["hv"] and page == big, (len(core), len(page))
 
 # a byte more: left out of one frame (the page fits), in the next whatever its size (the page waits), and so on
 for n in (BUDGET - EXTRA + 1, BUDGET):
@@ -152,9 +169,9 @@ assert ns.CoreOptional(WORST) == WORST + TAIL, "in the next frame"
 assert ns.CoreOptional(WORST) == WORST, "and out of the one after"
 # hv alone (no Live.lua facts yet): the same
 ns.live.gen = 0
-assert ns.CoreOptional(WORST) == WORST + ";hv=999999", "hv alone, in the next frame"
+assert ns.CoreOptional(WORST) == WORST + ";hv=" + LONGEST["hv"], "hv alone, in the next frame"
 assert ns.CoreOptional(WORST) == WORST, "and out of the one after"
-ns.live.gen = LONGEST["lg"]
+ns.live.gen = int(LONGEST["lg"])
 # a core no frame could hold whole with them never gets them (the encoder would cut lg's value)
 huge = "x" * (CAPACITY - 7 - EXTRA + 1)
 assert ns.CoreOptional(huge) == huge and ns.CoreOptional(huge) == huge and ns.CoreOptional(huge) == huge

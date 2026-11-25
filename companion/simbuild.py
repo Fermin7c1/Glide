@@ -7,7 +7,15 @@ The request is WoWSims' RaidSimRequest in protojson (proto/api.proto at github.c
     {"raid": {"parties": [{"players": [player], "buffs": partyBuffs}], "buffs": raidBuffs, "debuffs": debuffs},
      "encounter": encounter, "simOptions": {"iterations", "randomSeed"}}
 WoWSims sims every character at level 60 and has no healer sims: only the classes in CLASSES are simmed (one spec per
-talent tree, the tree with the most points). Pure: no files, no network (an enchant or suffix left out is logged).
+talent tree, the tree with the most points). Pure: no files, no network (an enchant or suffix left out is logged), but
+presets(), which reads the spec's presets.ts through the WoWSims runner (wowsims.WoWSims.file).
+
+WoWSims' own talent builds (presets: {name: (talents string, rotation path)}) are read from the spec's presets.ts at
+the release, with a narrow pattern (parse_presets): each makePresetBuild whose talents are a makePresetTalents string
+and whose rotation a makePresetAPLRotation of an imported .apl.json or .apl.siml (a simple rotation isn't a file: such
+a build is left out); then each talent preset no such build took that has an APL preset of the same name (WoWSims'
+warrior pairs them by name). A build made from a .siml (makePresetBuildFromSiml) isn't read. An .apl.siml rotation
+is converted by the runner (wowsims.WoWSims.siml_parse) where it is loaded (sim_compare.rotation).
 
 A worn item is the ItemSpec {"id", "enchant", "randomSuffix"} (common.proto; v1.0.4's runner reads randomSuffix and
 random_suffix alike). WoWSims v1.0.4 refuses the whole request for an item or suffix id it doesn't know, ignores an
@@ -20,6 +28,8 @@ on an item is worth, against the reference stat (a caster's spell damage: EP). F
 ratings (HT, CR: 10 hit and 14 crit rating to 1%, and either counts for spells too), and older "chance ... with
 spells by 1%" lines as percents (HS, CS): both are weighed.
 """
+import posixpath
+import re
 import threading
 
 from log import log
@@ -51,7 +61,7 @@ ENCOUNTER = {"duration": 180, "durationVariation": 5, "executeProportion20": 0.2
                           "canCrush": True}]}
 
 # per class: WoWSims' class and spec, the talent trees in the game's tab order, each tree's rotation file in WoWSims'
-# repository, the stats weighed (code, "s" stat or "p" pseudo-stat index, the amount added) with the reference first,
+# repository, its spec's presets.ts (WoWSims' talent builds, each with its own rotation: presets()), the stats weighed (code, "s" stat or "p" pseudo-stat index, the amount added) with the reference first,
 # and the buffs and consumables of WoWSims' preset for it (ui/specs/<class>/<spec>/presets.ts)
 CLASSES = {
     "MAGE": {
@@ -61,6 +71,7 @@ CLASSES = {
         "apl": {"Arcane": "ui/specs/mage/dps/apls/arcane.apl.json",
                 "Fire": "ui/specs/mage/dps/apls/deepFire.apl.json",
                 "Frost": "ui/specs/mage/dps/apls/frost.apl.json"},
+        "presets": "ui/specs/mage/dps/presets.ts",
         "weigh": [("SP", "s", 5, 50), ("IN", "s", 3, 50), ("SI", "s", 13, 50), ("MR", "s", 31, 10),
                   ("AC", "s", 6, 50), ("FI", "s", 7, 50), ("FR", "s", 8, 50), ("CR", "s", 18, 28), ("HT", "s", 17, 20),
                   ("CS", "p", 15, 2), ("HS", "p", 13, 2)],
@@ -238,3 +249,115 @@ def stat_weights(cls, sim, request_for):
     ref = per[weigh[0][0]]
     return {"dps": round(base, 1), "per_ref": round(ref, 4),
             "w": {code: round(max(0.0, v / ref), 3) for code, v in per.items()}}
+
+
+# ---- WoWSims' talent builds (presets.ts) --------------------------------------------------------------------------
+_Q = r"""(['"])"""                                                       # a quote, matched again by its group
+_CONST = r"export\s+const\s+(\w+)(?:\s*:\s*[\w.]+)?\s*=\s*(?:\w+\.)?"
+_IMPORT_APL = re.compile(r"""^[ \t]*import\s+(\w+)\s+from\s+(['"])(\./[\w./-]+?\.apl\.(?:json|siml))\2""", re.M)
+_APL_PRESET = re.compile(_CONST + r"makePresetAPLRotation\(\s*" + _Q + r"([^'\"\n]{1,80})\2\s*,\s*(\w+)\s*[,)]")
+_TALENT_PRESET = re.compile(_CONST + r"makePresetTalents\(\s*" + _Q + r"([^'\"\n]{1,80})\2\s*,\s*"
+                            r"SavedTalents\.create\(\s*\{\s*talentsString\s*:\s*" + _Q + r"([0-9-]{1,80})\4\s*,?\s*\}\s*\)")
+_BUILD_PRESET = re.compile(_CONST + r"makePresetBuild\(\s*" + _Q + r"([^'\"\n]{1,80})\2\s*,\s*\{")
+_TALENTS_STRING = re.compile(r"^[0-9]*(?:-[0-9]*){0,2}$")
+MAX_BODY = 4000                                                          # a build's {...}: a few hundred characters
+
+
+def _strip_comments(src):
+    """TypeScript without its // and /* */ comments (a commented-out build or rotation isn't one); quoted text kept
+    as it is (a tooltip's "https://...")."""
+    out, i, n, quote = [], 0, len(src), None
+    while i < n:
+        c = src[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(src[i + 1])
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+        elif c in "'\"`":
+            quote = c
+            out.append(c)
+            i += 1
+        elif src.startswith("//", i):
+            j = src.find("\n", i)
+            i = n if j < 0 else j
+        elif src.startswith("/*", i):
+            j = src.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            out.append(" ")
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def _braced(src, i):
+    """The text of a {...} whose opening brace ends at i, or None."""
+    depth = 1
+    for j in range(i, min(len(src), i + MAX_BODY)):
+        if src[j] == "{":
+            depth += 1
+        elif src[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[i:j]
+    return None
+
+
+def _field(body, name):
+    m = re.search(r"(?<![\w.])%s\s*:\s*(\w+)\s*(?:[,}]|$)" % name, body, re.M)
+    return m.group(1) if m else None
+
+
+def parse_presets(text, base):
+    """WoWSims' talent builds in a spec's presets.ts (text; base: its folder in the repository, "ui/specs/mage/dps"),
+    by the narrow pattern the module says: {name: (talents string, rotation path in the repository)}, the builds in the
+    file's order, then the talent presets paired with an APL preset by name. A build whose name another took goes under
+    its talent preset's name (warrior's three "Pre-BiS"); one whose talents or rotation isn't such a preset is left out."""
+    src = _strip_comments(text or "")
+    files = {}
+    for m in _IMPORT_APL.finditer(src):
+        path = posixpath.normpath(posixpath.join(base, m.group(3)))
+        if path.startswith("ui/specs/") and ".." not in path.split("/"):
+            files[m.group(1)] = path
+    apls = {m.group(1): (m.group(3), files[m.group(4)]) for m in _APL_PRESET.finditer(src) if m.group(4) in files}
+    talents = {m.group(1): (m.group(3), m.group(5)) for m in _TALENT_PRESET.finditer(src)
+               if _TALENTS_STRING.match(m.group(5)) and any(ch not in "0-" for ch in m.group(5))}
+    out, used = {}, set()
+    for m in _BUILD_PRESET.finditer(src):
+        body = _braced(src, m.end())
+        t, r = (_field(body, "talents"), _field(body, "rotation")) if body is not None else (None, None)
+        if t not in talents or r not in apls:
+            continue
+        name = m.group(3).strip()
+        if name in out:
+            name = talents[t][0].strip()
+        if name and name not in out:
+            out[name] = (talents[t][1], apls[r][1])
+            used.add(t)
+    by_name = {name.strip(): path for name, path in apls.values()}
+    for t, (name, string) in talents.items():
+        name = name.strip()
+        if t not in used and name in by_name and name not in out:
+            out[name] = (string, by_name[name])
+    return out
+
+
+def presets(cls, ws, tag=None):
+    """WoWSims' talent builds for a class at a release (tag; None: the one in use): {name: (talents string, rotation
+    path)}, read from its spec's presets.ts (parse_presets) through ws (wowsims.WoWSims: fetched once, kept beside the
+    runner). {} when the file has none the pattern reads; raises SimError for a class WoWSims doesn't sim here, and
+    wowsims.FetchError when the file can't be had."""
+    conf = CLASSES.get(str(cls or "").upper())
+    if conf is None or not conf.get("presets"):
+        raise SimError("WoWSims has no sim for %s here" % (str(cls or "").capitalize() or "this class"))
+    path = conf["presets"]
+    text = ws.file(path, tag).decode("utf-8-sig", "replace")
+    found = parse_presets(text, posixpath.dirname(path))
+    if not found:
+        log("simbuild", "WoWSims' %s has no talent builds Glide reads" % path)
+    return found

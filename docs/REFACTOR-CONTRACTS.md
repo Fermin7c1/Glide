@@ -1228,3 +1228,108 @@ they don't spell out.
   `tests/test_addon_panel.py` and `tests/test_versions.py`; the `addon` golden re-recorded (the new switch's texts)
   and the `desktop` golden (the two new Settings fields). The strip frames in the goldens are unchanged (the mocked
   worn items carry no enchant or suffix), and so are the engine probes (a simulated run ranks nothing).
+- **Addon 0.23.0 and the engine, contracts 1, 3, 5, 7 and 8 additive: sims the coach runs for the player, and Open in
+  WoWSims (the BiS plan's Phase 3).** At 60, an item swap or a talent build the player asks about is simmed with
+  WoWSims on their own gear (new `companion/sims.py` `Sims`, wired by `App._start_sims` after the BiS ranks, on the
+  one sim queue, WoWSims and item database; new `companion/sim_compare.py`: one seed for every variant, 1,000
+  iterations then 10,000 for those within 3 sigma of the leader, `gear.sim_seconds` at most, every finished run kept
+  by its request so a sim asked again costs nothing; a ring or trinket set against the weaker of the two worn (a second
+  copy of one worn in one slot, when it can be worn twice, against the other: "You already wear <item>." only for the
+  slot asked, its only slot, both slots, or an item that is unique, has a limitCategory or isn't in WoWSims' item
+  data), a two-hander emptying the off hand, an item's random suffix the best three by EP when none is given, the worn enchant
+  moved over where it fits; d and its sigma, "about the same as yours" within 2 sigma). Asked sims run at
+  `PRIO_ASKED` (normal priority, half the cores, never waiting for the player); the talent check runs in the
+  background (`PRIO_BIS`) with no deadline, waiting as the queue waits for the player (`sim_compare.compare` with
+  `budget_s` None; at another priority than `PRIO_ASKED` a variant left out for time raises `sim_compare.Late`, so a
+  check is never kept with a build missing, and is tried again without counting toward giving up). WoWSims' talent builds come from the spec's `presets.ts` at the release
+  (`simbuild.presets` / `parse_presets`, a narrow pattern: `makePresetBuild` with a `makePresetTalents` string and a
+  `makePresetAPLRotation` of an imported `.apl.json` or `.apl.siml`, then talent presets paired with a rotation of the
+  same name; `simbuild.CLASSES["MAGE"]["presets"]`; mage v1.0.4: Arcane, Arcane Fire, FFB, Fire, Frost Incin, Frost
+  Med), each simmed with its own rotation (an `.apl.siml` converted offline by the runner:
+  `wowsims.WoWSims.siml_parse`, `wowsimcli siml parse -json`); a talent string that is no WoWSims build uses its
+  tree's rotation, and the answer says so. **Contract 1:** core `hv` gains a request form (its type is now str):
+  `hv=<id>.<sfx>.<ench>!<n>` (the item, its random suffix without its sign and its enchant, 0 for none; n a nonce 1-9,
+  the next one per request and kept across reloads in `GlideLinkDB.sim.n`), sent by `/glide sim` in place of the
+  hovered item for 3 s from the first frame that carries it, under the same 442-byte optional-key budget (the longest,
+  `999999.99999.99999!9`, pinned by `tests/test_core_budget.py`); up to 3 wait their turn, one never sent is dropped
+  after 30 s. The engine reads it with `strip_spec.hv_request` (`HV_REQUEST`); `GameState.sim_request()` gives each
+  request once (a different form, or the same after more than 10 s without it, is a new one; one not taken within
+  30 s is dropped), and the requested item counts as the hovered one (`GameState.hovered`). STRIP.md regenerated.
+  **Contract 3:** a message may carry `link: {"text": "Open in WoWSims", "url", "credit": "WoWSims
+  (wowsims.com/forever)"}` (`CoachLink` in `desktop/src/shared/engine.ts`): sim answers (the `wowsims_sim` tool's,
+  the coach's own `"model": "WoWSims"` answers to "sim this" without a model, and to the addon's request) and
+  `talent_check` callouts. The coach screen shows it after the text with the credit beside it, only for a url that is
+  `https://www.wowsims.com/forever/` followed by URL-safe characters (4,000 at most; `WOWSIMS_LINK` in
+  `companion/static/dashboard.js` and `desktop/src/renderer/coach.ts`); in a browser it opens in a new tab, in the
+  app's frame a click posts `{glide: "open", url}` to the app's window, which opens it through the existing
+  `shell:open` only when the message comes from the coach frame's window and the engine's origin. The overlay over
+  the game shows the text only. The link is WoWSims' own share link (new `companion/wowsims_link.py`, standard
+  library only): `https://www.wowsims.com/forever/<page>/?i=gtm#<base64(zlib(IndividualSimSettings))>`, the page by
+  class and the tree with the most points, `api_version` 2, carrying the gear (enchants and random suffixes, an empty
+  entry per empty slot), the talents and all of misc (race, name, reaction time, channel clip delay, distance, mage
+  armor, professions; Enchanting named for an enchanted ring) as the request Glide simmed has them (`?i=gt` and no
+  misc for a spec whose options Glide doesn't encode); rotation, consumables, buffs and encounter are left to the
+  page's WoWSims presets, which are what the request uses. **Contract 5:** new `data/sims.json` (`{"v": 1, "chars":
+  {key: {"gk": the gear key (with whether the character enchants), "link" (made only with WoWSims' item data), "sim":
+  {item id: {"d", "s", "gk", "t", "tag", "slot", "over", "pair"?, "sfx"?}}, "asked": [{"t", "label", "d",
+  "s", "iters", "variant", "gk"}] (the 20 newest), "checks": {"<tag>|<talents>": {"t", and for a build clearly higher
+  "build", "talents", "pct", "d", "s", "link"}}, "told": {"talent_check|<tag>|<talents>": when}}}}`, key as in
+  bis.json); `Data/Live.lua`'s `chars[key]` gains `link = "<url>"` (the character's setup as Glide sims it, for
+  `/glide wowsims`) and `sim = { [<item id>] = { <d>, <suffix>, <slot>, <over>, <pair> } }` (asked item sims on the
+  gear worn now at the WoWSims release in use: d rounded to 0.1, 0 within 2 sigma; the suffix without its sign, 0 for
+  none; the inventory slot it went in; the item id worn there that it replaced, 0 for none; for a ring, trinket or
+  weapon slot the item id in the other slot of its pair, 0 for none; another gear drops them, noted even while WoWSims
+  can't run, and another release leaves them out), merged
+  with the BiS ranks' `bis` by one provider (`App._live_chars`, `sims.merge_chars`; the sims' fields stay while
+  `gear.bis` is off); GlideLinkDB section `sim` (`n`, the last nonce). **Contract 7:** `/glide sim <shift-clicked
+  item or item id>` ("sim <item> - shift-click an item: the Glide app sims it on your gear with WoWSims") and
+  `/glide wowsims` ("wowsims - a link that opens your character in WoWSims, to copy into your browser"). **Triggers:**
+  `talent_check` (`{"build", "pct", "link"}`, priority 3, category gear, topic gear): once per WoWSims release and
+  per talent change at 60, after the talents stayed 120 s, WoWSims' builds for the class (no Skyborne build for
+  another race) are simmed against the player's own; one at least 3% higher and beyond 2 sigma is said once per
+  release and talents (kept in sims.json's `told`, across restarts), out of combat, alive, in a frame that raised
+  nothing else, held untold while gear talk is muted; its link goes on the message and never into the prompt or the
+  recent log (`coach.prompt_facts`). The coach gains the local `wowsims_sim` tool (`{"items": [names, ids or
+  "this"], "talents": a build's name or a talent string}` -> `{"results": [{"what", "kind", "d", "pct",
+  "plus_minus", "about_same", "worn", "said"}], "said", "credit", "problems", "link"}` or `{"error", "say"}`),
+  offered only while a WoWSims runner is here and `gear.sim_questions` is on, within the answer's remaining tool
+  time, and run only on a turn that answers the player's question (on a callout or review turn it returns an error
+  and sims nothing); while no model can take the question with tools (the AI off, no key for the model that answers
+  it, no knowledge pack, or that model takes no tools) "sim this", "what if I wear X?", "sim the Arcane Fire build"
+  are answered by the coach itself (`coach_tools.sim_command`), "what if I wear / use X?" and "how much would X give
+  me?" only when X is gear (`Sims.is_gear`) and "what if I go X?" only for a build (a build, talents or spec word, a
+  talent string, or one of the class's WoWSims builds or trees: `Sims.build_words`); with a model the question is
+  the model's, whether or not the tool is offered. The addon's request is answered by the sims' worker, spoken. On a
+  tooltip the upgrade line's number is the simmed d when the character has one for that item and suffix, simmed in a
+  slot the line compares against, and that slot and the other of its pair still hold the items they held then and
+  didn't change since the UI loaded; the line then names the worn item the sim replaced (the text is unchanged). An
+  offline `talent_check` callout never loses its line to the three-line cut, and its link goes only on a callout
+  whose text says it. **Contract 8:** "WoWSims:
+  <item> over your <worn>, about +<d> DPS on your gear." ("..., about the same as yours on your gear."; no "over"
+  part when nothing is worn there; "<item> with <weapon>" for a one-hander simmed with an off hand from the bags),
+  "WoWSims' <build> build sims about <pct>% higher on your gear, with its own rotation." ("lower", "about the same as
+  yours"), "Those talents sim about <pct>% higher on your gear, with WoWSims' <tree> rotation.", "I can't sim that
+  without WoWSims.", "WoWSims sims level 60 characters only.", "WoWSims can't sim your class yet.", "I can sim that
+  once your gear and talents are in from the game.", "I can only sim the character you're playing.", "Sims on request
+  are off in Glide's settings.", "WoWSims couldn't sim that.", "I don't know an item called <x>.", "Which item? Point
+  at it in the game, or name it.", "WoWSims has no build called <x>.", "You already wear <item>.", "That's the build
+  you have."; on the coach screen "Open in WoWSims" and the credit "WoWSims (wowsims.com/forever)"; the system
+  prompt's Gear paragraph says how to use `wowsims_sim` and word `talent_check`, and never to read a link out. In the
+  game: "shift-click an item after /glide sim to sim it on your gear", "<item> isn't gear, so there's nothing to
+  sim", "still sending your last sims: ask again in a few seconds", "can't read that item: shift-click it from your
+  bags or a chat link", "simming <item> on your gear: the Glide app answers in a moment" (with " (the data strip is
+  off, so the app can't see it: /glide strip on)"), the `/glide wowsims` popup "Your character in WoWSims
+  (wowsims.com/forever). Copy the link with Ctrl+C and paste it into your browser." (an edit box holding the link,
+  selected; the link printed when the client has no popups), "Glide's item facts aren't loaded: restart WoW once" and
+  "no WoWSims link for this character yet: level 60, a mage, and the Glide app running; then /reload". New settings
+  (Settings, Gear upgrades): `gear.sim_questions` (default on, "Sim what I ask about with WoWSims at level 60"),
+  `gear.talent_check` (default on, "Tell me when one of WoWSims' talent builds sims higher") and `gear.sim_seconds`
+  (30, 5 to 120, "Longest wait for a sim I ask for (seconds)"); each applies after a coach restart. The player asked
+  (2026-11-24). Pinned by `tests/test_sims.py`, `tests/test_sims_wiring.py`, `tests/test_sim_compare.py` and
+  `tests/test_presets_parse.py` (their real-runner parts only with a local WoWSims), `tests/test_wowsims_link.py`
+  (`wowsimcli decodelink` reads the links back; exit 77 without a local runner), `tests/test_coach_link.py`,
+  `tests/test_addon_sim.py`, `tests/test_core_budget.py`, `tests/test_strip_spec.py` and `tests/test_versions.py`;
+  the `dashboard` golden re-recorded (its fixture, `tests/golden/fixtures/dashboard_init.json`, gains a sim answer with
+  its link, so the coach screen's text has "Open in WoWSims" and the credit) and the `desktop` golden (the three new
+  Settings fields). The addon and engine probes are unchanged (no request is sent in the mock; a simulated run starts
+  no sims).

@@ -94,6 +94,9 @@
     "gear.sims": {"default": true, "kind": "bool"},
     "gear.bis": {"default": true, "kind": "bool", "note": "Glide's own best-in-slot ranks at 60 (bis.py): every item of the band simmed on the character's gear through the sim queue in the background; the tooltip's BiS line (Data/Live.lua chars), the coach's next_upgrade and enchant_missing, bis_slot"},
     "gear.bis_lens": {"default": "now", "kind": "text", "note": "which items the BiS ranks hold: now (what WoWSims places in the game now) or all (its later phase too)"},
+    "gear.sim_questions": {"default": true, "kind": "bool", "note": "sims on request (sims.py): the coach's wowsims_sim tool, 'sim this' said or typed, and /glide sim in the game, each simmed on the player's gear with WoWSims at once, with an Open in WoWSims link"},
+    "gear.talent_check": {"default": true, "kind": "bool", "note": "at 60, WoWSims' own talent builds simmed against the player's once per WoWSims release and talent change, in the background; the coach says one that sims at least 3% higher (talent_check)"},
+    "gear.sim_seconds": {"default": 30, "min": 5, "max": 120, "kind": "number", "note": "the longest a sim on request may take (fewer when a spoken answer has less time left)"},
 
     "research.enabled": {"default": true, "kind": "bool", "note": "look up where items come from (research.py): the source line on item tooltips in the game (Data/Live.lua) and the coach's item_info"},
     "research.web": {"default": true, "kind": "bool", "note": "look up on the web what nothing offline knows (research.WebResolver): one background call with web search on the fast model, within the two daily caps below"},

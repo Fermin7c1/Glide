@@ -33,8 +33,8 @@ CATEGORY = {
     "low_health_in_combat": "combat", "died": "combat", "released": "combat", "resurrected": "combat",
     "buff_expiring": "buffs", "buffs_dropped": "buffs",
     "gear_upgrade": "gear", "reward_choice": "gear", "quests_accepted": "route", "vendor_treasure": "gear",
-    # Glide's own best-in-slot ranks at 60 (see Rules._bis)
-    "next_upgrade": "gear", "enchant_missing": "gear",
+    # Glide's own best-in-slot ranks at 60 (see Rules._bis); a WoWSims talent build that sims higher (_talent_check)
+    "next_upgrade": "gear", "enchant_missing": "gear", "talent_check": "gear",
     "pace_review": "pace", "level_up": "pace", "spell_learned": "pace",
     "bags_nearly_full": "upkeep", "low_durability": "upkeep",
     "addon_outdated": None,                      # always reported
@@ -54,6 +54,7 @@ LIVE_POLL_S = 5                   # facts_ready: how often Data/Live.lua's write
 BIS_POLL_S = 5                    # next_upgrade / enchant_missing: how often the best-in-slot ranks are looked at
 BIS_ADDON = (0, 22, 0)            # the oldest addon that sends worn enchants: from it on, no EN code means no enchant
 ENCHANT_GAP_S = 600               # enchant_missing: one slot at a time, at most once in this long
+TALENT_POLL_S = 5                 # talent_check: how often the sims' talent check is looked at
 
 
 def version_tuple(v):
@@ -121,6 +122,7 @@ class Rules:
         self.bis: Any = None          # bis.BisRanker (what the coach was told, kept in data/bis.json), set by the app
         self.bis_said = set()         # next_upgrade / enchant_missing keys said this session
         self.enchant_t = 0.0          # when enchant_missing was last raised
+        self.sims: Any = None         # sims.Sims (its talent check, and what was told: data/sims.json), set by the app
 
     def watch(self, name, on=True):
         n = name.strip().lower()
@@ -264,7 +266,29 @@ class Rules:
         self._live(s, out)
         self._corrected(s, out)
         self._bis(state, s, out)
+        self._talent_check(s, out)
         return out
+
+    def _talent_check(self, s, out):
+        """talent_check: one of WoWSims' own talent builds for the class sims at least 3% higher than the player's on
+        their gear, beyond the sims' noise, each with its own rotation (sims.Sims.talent_check: the check runs once per
+        WoWSims release and per talent change at 60, in the background) -> {build, pct, link} (link: the player's gear
+        with that build on WoWSims' site, for the coach screen), priority 3. Said once per release and talents (kept in
+        data/sims.json: Sims.mark_told), at a quiet moment: after the session started, out of combat, alive, in a frame
+        that raised nothing else; while gear talk is muted (/coach gear off) it waits, untold."""
+        sims = self.sims
+        if sims is None or not self.started or out or s.get("combat") or s.get("dead") \
+                or (s.get("level") or 0) < 60 or not self._ready("talent_check", TALENT_POLL_S):
+            return
+        try:
+            facts = sims.talent_check(s)
+            if not facts or not facts.get("build") or not allowed("talent_check", s.get("coach_flags") or {}):
+                return
+            sims.mark_told(facts["key"], facts.get("char"))
+            out.append(Trigger("talent_check", {"build": facts["build"], "pct": facts.get("pct"),
+                                                "link": facts.get("link")}, 3))
+        except Exception as e:  # noqa: BLE001 - an extra; never break the rules loop
+            log_once("rules.talent_check", e)
 
     def _bis(self, state, s, out):
         """Glide's own best-in-slot ranks at 60 (bis.BisRanker, handed to the gear with Gear.set_bis), said once per

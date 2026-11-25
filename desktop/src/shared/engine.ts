@@ -137,8 +137,12 @@ export interface CoachMessage {
   web_sources?: WebSource[];
   tool_calls?: number;
   tools?: unknown;
+  link?: CoachLink;               // a sim's "Open in WoWSims", with WoWSims' credit
 }
 export interface WebSource { url: string; title?: string }
+/** A message's link out: the coach screen shows it (its text, the credit beside it) only when url starts with
+ * https://www.wowsims.com/forever/, and opens it in the browser (in the app through shell:open). */
+export interface CoachLink { text: string; url: string; credit: string }
 
 /** event: community (data: Community | null): the community notes, sent when they change (and in init's state). */
 export type CommunityEvent = Community | null;
