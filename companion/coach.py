@@ -440,9 +440,13 @@ class Coach:
     def _item_command(self, question):
         """'where does Magister's Crown drop?' answered from the item research (coach_tools.item_command) while no
         model can take it with the item_info tool (the AI off, or no knowledge pack: tools go only with one); else
-        None."""
+        None. Whoever answers, its item goes to the research as a question (coach_tools.item_asked: looked up on the
+        web before anything else when nothing offline knows where it comes from). "Where does this drop?" means the
+        item the player hovers in the game (GameState.hovered)."""
+        hovered = coach_tools.hovered_id(self.state)
+        coach_tools.item_asked(question, hovered)
         ai_ok = self.llm.enabled and self.llm.keys.get(models_mod.provider(self.cfg.get("fast_model")))             and self.pack is not None
-        return coach_tools.item_command(question, bool(ai_ok))
+        return coach_tools.item_command(question, bool(ai_ok), hovered)
 
     def _local_command(self, question):
         """Push-to-talk / typed switches handled without the AI ('quest briefings off', 'turn on videos'; see
@@ -556,7 +560,7 @@ class Coach:
         d = self.deps
         return prompt_context.game_context(s, st, self.k, self.geo, self.pack, deep=deep, watched_fn=d.watched_fn,
                                            gear_fn=d.gear_fn, system_fn=d.system_fn,
-                                           talent_plan=self.talent_pick(s))
+                                           talent_plan=self.talent_pick(s), item_brief=coach_tools.item_brief)
 
     def _wow_folder(self):
         """The WoW folder (RestedXP's saved files), looked up once ("" when it isn't found)."""

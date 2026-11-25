@@ -108,10 +108,12 @@ def _block(rows):
 
 
 def _item_row(item_id, e, consts=None):
-    """One items row: [id] = { "text", a = "n", w = 1 }, or None for an entry without text."""
+    """One items row: [id] = { "text", a = "n", w = 1 }, or None for an entry without text. A "|" in the text is
+    doubled: the game's tooltips read "|c", "|n", "|T" as colours, line breaks and textures, "||" as a "|"."""
     text = e.get("t")
     if not text or not isinstance(text, str):
         return None
+    text = text.replace("|", "||")
     if consts is not None:
         consts.update((("n", item_id), ("s", text)))
     row = "    [%d] = { %s" % (item_id, lua_string(text))

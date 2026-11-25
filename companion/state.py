@@ -16,6 +16,12 @@ from knowledge.values import as_int  # noqa: E402
 
 class GameState:
     XP_WINDOW = 900                # seconds of XP history behind xp_per_hour
+    # seconds hovered() keeps the last item after the frames stop carrying it: a frame now and then without the optional
+    # key; the addon itself holds hv 15 s after the tooltip closed, so "this" means it for those 15 s, not twice that
+    HOVER_HOLD = 3
+    # the addon's own hold (State.lua): with no frames at all (WoW minimised or behind a window: the strip can't be read)
+    # the last item is kept until that hold would have ended, HOVER_HOLD after it
+    ADDON_HOVER_HOLD = 15
 
     def __init__(self):
         self.core = {}
@@ -55,6 +61,8 @@ class GameState:
         self.gauges = None         # measured from the strip's StatusBars (secret values)
         self.map_sizes = {}        # ui_map -> (width, height) in yards, from the addon
         self._scale = {}           # ui_map -> list of estimated heights (yards) from movement
+        self._hover = None         # (item id, the last frame that carried it): core hv, addon 0.21.0
+        self._hover_gone = None    # the first frame without hv after the last one with it
 
     # -------------------------------------------------------------------------------------------
     def update(self, core, page, now=None):
@@ -89,6 +97,11 @@ class GameState:
             self._rebuild_gear("R")
         self._track_xp(now)
         self._track_step(now)
+        hv = as_int(core.get("hv"))
+        if hv and hv > 0:
+            self._hover, self._hover_gone = (hv, now), None
+        elif self._hover is not None and self._hover_gone is None:
+            self._hover_gone = now
         mp, px, py = as_int(core.get("mp")), as_int(core.get("px")), as_int(core.get("py"))
         if mp and px is not None and py is not None:
             self._estimate_scale(now, mp, px / 100.0, py / 100.0)
@@ -307,6 +320,20 @@ class GameState:
         if n <= 0:
             return None
         return {"count": n, "last": self.pages.get("E", {}).get("ex") or None}
+
+    def hovered(self, now=None):
+        """The item the player looked at last on a tooltip (core hv: the same item 0.75 s, held by the addon 15 s after
+        it left): {"id", "t": the last frame that carried it}, or None once frames came without it for HOVER_HOLD
+        seconds (an optional core key, so a long core leaves it out of a frame now and then and sends it in the next;
+        the short hold covers that). With no frames at all (WoW minimised, or the Glide window over the strip while
+        the player types the question) it is kept until the addon's own hold would have ended: ADDON_HOVER_HOLD +
+        HOVER_HOLD after the last frame with it."""
+        h, gone = self._hover, self._hover_gone
+        now = time.time() if now is None else now
+        if h is None or (gone is not None and now - gone > self.HOVER_HOLD) \
+                or now - h[1] > self.ADDON_HOVER_HOLD + self.HOVER_HOLD:
+            return None
+        return {"id": h[0], "t": h[1]}
 
     def corpse(self):
         c = self.core

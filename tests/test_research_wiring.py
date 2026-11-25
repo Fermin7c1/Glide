@@ -5,6 +5,10 @@ folder with addon 0.20.0, and no threads (each worker's poll run by hand): the r
 WoWSims' data tag through the app's one WoWSims, the facts land in the addon's Data/Live.lua, the addon's "lg" core
 key is observed from the game state, the rules' facts_ready nudge says a restart is needed the first time, the coach
 offers item_info and answers "where does X drop?" itself without a model, and research.enabled off looks nothing up.
+R2: with research.web on (the default) the worker gets a WebResolver on the coach's LLM client (none while the AI is
+off) within a Budget read from the settings (research.web_per_day, research.usd_per_day; ledger
+data/research/spend.json), research.hover is its hover switch, the rules ask it for corrections (fact_corrected), and
+an item question goes to it as a question whoever answers; research.web off: no web lookups at all.
 
 Run: python3 tests/test_research_wiring.py   (prints OK)
 """
@@ -67,9 +71,9 @@ class FakeState:
         return {"class": "MAGE", "level": 60, "faction": "Alliance", "target": {}, "resting": True}
 
 
-def make_app(home, enabled=True):
+def make_app(home, enabled=True, **opt):
     a = glide_app.App.__new__(glide_app.App)
-    a.cfg = {"research": {"enabled": enabled}}
+    a.cfg = {"research": dict(opt, enabled=enabled)}
     a.state, a.rules, a.kb_handle, a.versions = FakeState(), Rules({}), KnowledgeHandle(), versions
     a._ws, a._ws_lock = FakeWoWSims(), threading.Lock()
     a.research = a.live = None
@@ -100,6 +104,18 @@ try:
     check(isinstance(a.research, research.Research) and isinstance(a.live, live_data.LiveData), "both made")
     check(coach_tools.research is a.research and a.rules.live is a.live, "the coach's tool and the rules use them")
     check(a._wowsims() is ws and "items" in a.live.providers, "the app's one WoWSims; the items section registered")
+    # R2: the web lookups (research.web on by default), the hover switch, the rules' corrections
+    wr = a.research.web
+    check(isinstance(wr, research.WebResolver) and a.rules.research is a.research, "web resolver and corrections")
+    check(wr.budget.settings_fn() == {"web": True, "web_per_day": 20, "usd_per_day": 0.2} and
+          wr.budget.path == os.path.join(home, "data", "research", "spend.json") and wr.budget.allow() == (True, None),
+          "the caps from settings_manifest.json")
+    check(a.research.hover_fn() is True and wr.ready() == (False, "no model"), "no coach yet: nothing goes out")
+    a.coach = types.SimpleNamespace(llm=types.SimpleNamespace(enabled=False))
+    check(a._research_llm() is None, "the AI off: no client")
+    a.coach.llm.enabled = True
+    check(a._research_llm() is a.coach.llm, "the coach's own LLM client")
+    del a.coach
     check(a.live.write() is False, "nothing looked up yet: the shipped file stays")
     a.research.tick()
     check(("assets/database/db.json", "v1.0.4") in ws.fetched and
@@ -134,7 +150,7 @@ try:
     # the coach: item_info offered and run locally; "where does X drop?" answered without a model
     fake = types.SimpleNamespace(api=None, deps=types.SimpleNamespace(reminders=None, memory=None),
                                  llm=types.SimpleNamespace(web_off=True, enabled=False, keys={}),
-                                 cfg={"fast_model": "claude-haiku-4-5-20251001"}, pack=None)
+                                 cfg={"fast_model": "claude-haiku-4-5-20251001"}, pack=None, state=None)
     check("item_info" in [d["name"] for d in coach_mod.Coach._tools(fake)], "the tool is offered")
     info = coach_mod.Coach._local_tool(fake, "item_info", {"item": "magisters crown"})
     check(info["id"] == 16686 and info["sources"][0] == "drops from Darkmaster Gandling, Scholomance" and
@@ -142,6 +158,32 @@ try:
     check(coach_mod.Coach._item_command(fake, "Where does the Magister's Crown drop?") ==
           "Magister's Crown: drops from Darkmaster Gandling, Scholomance.", "answered offline")
     check(coach_mod.Coach._item_command(fake, "how far to Scholomance?") is None, "not an item question")
+    # an item question goes to the research as one, whoever answers (here an item WoWSims places: nothing to look up)
+    asked = []
+    a.research.ask = lambda fact, why: asked.append((fact, why))
+    coach_mod.Coach._item_command(fake, "Where does the Magister's Crown drop?")
+    check(asked == [("i:16686", "question")], asked)
+    # "where does this drop?": the item the player hovers in the game (GameState.hovered), nothing without one
+    check(coach_mod.Coach._item_command(fake, "where does this drop?") is None and len(asked) == 1, asked)
+    fake.state = types.SimpleNamespace(hovered=lambda: {"id": 16686, "t": 0.0})
+    check(coach_mod.Coach._item_command(fake, "where does this drop?") ==
+          "Magister's Crown: drops from Darkmaster Gandling, Scholomance." and asked[-1] == ("i:16686", "question"),
+          asked)
+    del a.research.ask
+
+    # the rules say a correction once (research.Research.corrections)
+    a.research.told["i:16686"] = {"text": "drops from Golemagg", "fix": {"item": "Magister's Crown", "old":
+                                  "drops from Golemagg", "new": "drops from Darkmaster Gandling, Scholomance"}}
+    out = []
+    a.rules._corrected({}, out)
+    check([(t.kind, t.facts["new"]) for t in out] == [("fact_corrected", "drops from Darkmaster Gandling, "
+                                                                          "Scholomance")], out)
+    check(offline_coach.fact_corrected_line(out[0].facts) ==
+          "I had Magister's Crown wrong: drops from Darkmaster Gandling, Scholomance.", "the correction line")
+    a.rules.cool.pop("corrected", None)
+    out = []
+    a.rules._corrected({}, out)
+    check(out == [] and "i:16686" not in a.research.told, "once")
 
     # ---- research.enabled off: nothing looked up, nothing written ----------------------------------------------------
     home2 = os.path.join(tmp, "home2")
@@ -153,6 +195,13 @@ try:
     b.research.tick()
     check(b._ws.fetched == [] and b.research.facts(16686) is None, "switched off: nothing looked up")
     check(b.live.write() is False, "and nothing to write")
+
+    # ---- research.web off: no web lookups (the hover switch read as set) ---------------------------------------------
+    c = make_app(home2, web=False, hover=False)
+    c._start_research()
+    check(c.research.web is None and c.research.hover_fn() is False, "no web resolver; the hover off")
+    c.research.ask("i:18842", "question")
+    check(c.research.web_q == {}, "nothing queued")
 finally:
     glide_app.ROOT, research.Research.start, live_data.LiveData.start, coach_tools.research = saved
     shutil.rmtree(tmp, ignore_errors=True)

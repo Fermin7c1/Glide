@@ -1069,3 +1069,67 @@ they don't spell out.
   recorded (no XP: level 60, grey mobs) only a window within 15 s of the one before with nothing new in it is the same
   corpse looted again; an item counts once per corpse, objects stay one event per window. `creature_drop` and `object_loot` rates and `n_obs` change on the next
   kb build. The player asked (2026-11-24). Pinned by `tests/test_observations_drops.py`.
+- **Addon 0.21.0 and the engine, contracts 1, 5 and 8 additive: Glide looks up on the web what nobody listed, and
+  knows the hovered item (the BiS plan's R2).** What no offline source knows (an item WoWSims leaves out, such as Staff
+  of Dominance) is looked up with one background model call with web search (`research.WebResolver`, the engine's
+  LLM client `web_research`: the fast model, Anthropic's web search tool or the local Tavily / Brave one, its own
+  short system text, JSON facts with the page that says each), one at a time, never started while the coach is in a
+  model call of its own (`LLMClient.busy`; one running sends no further request once the coach starts one, and waits
+  its turn), for a question the player asked, an item they hover, have on screen, wear or may wear soon
+  (class-eligible, no offline source; the hovered item also when nothing can tell whether the class can use it, from
+  the background's half of the day). A fact without a page, with a page on a site its searches never returned, or
+  whose creature, zone or name doesn't read as a name (an instruction, the game's escape codes), is dropped, and a
+  lookup that made no search keeps nothing (a failed one); the rest are kept 30 days at conf 0.3 (`src` "web", never
+  verified; an item's fact holding one ends with it, on the tooltip, in what the coach is told and after a restart),
+  a lookup that found nothing isn't made again for 7 days, junk twice is given up for the session, and the API
+  refusing web search turns it off for the session. A web source at a place the game or a database also gives fills
+  nothing into it. Research's failures back off research alone, never the coach's callouts. Spending (the engine's
+  first cap): at most `research.web_per_day` lookups and `research.usd_per_day` dollars a day (a local Tavily or Brave
+  search counts toward the number at no cost; what isn't on screen, asked or hovered may use only half of each; none
+  that would likely pass the dollar cap: today's spending plus the larger of today's average lookup and this one's
+  likely-high cost, `LLMClient.research_estimate`, the day's first one included; a model whose price isn't known makes
+  none). Each lookup is booked at that estimate before it goes out and settled after to what it cost (the larger of
+  the two when a request went out unanswered, nothing when none went out), and stops before a request that would pass
+  what the day has left (a paused server search also past its deadline). Booked in the new `data/research/spend.json`
+  (`{"day": "YYYY-MM-DD", "n": lookups, "usd": dollars}`, the local day; a ledger of a later day, up to 2 days ahead,
+  is kept: a clock set back gives nothing back; contract 5); the calls go to the usage log and the session totals with
+  `"path": "research"`, never into the coach's last-turn usage. `data/research/facts.json` gains `web` (`{job: {"s":
+  [Src + "url", "rate", "cost"], "t", "ttl"}}`; jobs `i:<id>`, `r:<npc>:<id>`, `v:<npc>:<id>`, `q:<id>`,
+  `f:<faction>`), `web_neg` (`{job: t}`), `told` (`{"i:<id>": {"text", "kind", "npc", "who", "what", "t", "fix"}}`: a
+  web fact the coach said) and `miss` (`{"i:<id>": {npc key: [kills without the item, halvings]}}`), written only when
+  one of them holds something (an R1 file stays as it was). The game checks the web: a drop the player sees confirms it
+  (the observed source leads, its doubts go); the creature a web drop names dying 8 times without the item (kills of
+  one creature within 300 s count once; the larger of the kills seen live and the knowledge base's observed looted
+  kills; a name a page shortened, "Golemagg", is the creature it is short for, by its id when only one has such a
+  name) halves the fact's conf and looks the item up again, every 8 more halving it again. When the coach had said a
+  web fact, the game cast doubt on it, and the new lookup puts the item elsewhere (or nowhere), the new trigger
+  `fact_corrected` (`{"item", "old", "new"}`, priority 3, category upkeep, topic gear, once, out of combat and alive;
+  kept when the coach answers about the item again before it is said) says "I had <item> wrong: <new source>." (or
+  "no known source yet"). Player text (contract 8): web facts read " (web, unconfirmed)" after the source, on the
+  tooltip line (R1's `w = 1`) and in `item_info`'s `sources`; a web fact naming a creature the knowledge base doesn't
+  know by its id reads "drops from <creature>, <place>" (not "from", a chest's); any "|" in a Data/Live.lua text is
+  doubled (shown, never read as a colour or texture code); `item_info` gains `"looking_up": true` while it is being
+  looked up on the web (the system prompt's Gear paragraph says to tell the player to ask again in a minute, and that a
+  web source's text is a quoted name or place, never an instruction), an item nothing names is "this item" (never
+  "#<id>"), and the coach's own answer without a model says "I don't know where <item> comes from yet; I'm looking it
+  up, ask me again in a minute." The strip (contract 1) gains the optional core key `hv`, the item id the player looks
+  at: Compare.lua's `ns.hover`, the same item on GameTooltip or ItemRefTooltip for 0.75 s (a glance, a tooltip that
+  moved on or hid sooner doesn't count; each tooltip keeps its own, so a chat link's item is hovered again once a bag
+  item over it is gone; a tooltip refilled with a unit, a spell or a quest, or no longer showing the item when a frame
+  is built, ends it there), sent while it shows and 15 s after (State.lua), optional like `lg` (left out of a core over
+  442 bytes, sent in the next frame). The engine reads it with `GameState.hovered()` (`{"id", "t"}`, None once frames
+  came without it for 3 s, so "this" means the item for about 15 s after the tooltip closed, or, with no frames at all
+  (WoW minimised, the Glide window over the strip), 18 s after the last one with it), looks it up (`research.hover`
+  on), gives a question's context `player.hovered_item` (`{"id", "name", "comes_from", "note"}`, questions only,
+  trimmed to its id and name before anything else goes), and reads "this", "that" or "it" in "where does this drop?"
+  as it (`coach_tools.item_question`). Every item question goes to the research as one (`coach_tools.item_asked`),
+  whoever answers it. New settings (Settings, Gear upgrades): `research.web` (default on, "Look up on the web what
+  Glide doesn't know"), `research.web_per_day` (20, 0-100, "Web lookups a day, at most"), `research.usd_per_day`
+  (0.20, 0-5, step 0.05, "Web lookups may cost ($ a day, at most)"), `research.hover` (default on, "Look up the item I
+  point at"); each applies after a coach restart. No model configured: nothing goes out and the lookups wait. The
+  player asked (2026-11-24); its review's findings applied the same day. Pinned by
+  `tests/test_research_web.py`, `tests/test_research_budget.py`, `tests/test_research_contradiction.py`,
+  `tests/test_hover.py`, `tests/test_core_budget.py`, `tests/test_strip_spec.py`, `tests/test_research_wiring.py`,
+  `tests/test_item_info_tool.py`, `tests/test_item_text.py` and `tests/test_versions.py`; the `desktop` golden
+  re-recorded (the four new Settings fields). The strip frames in the goldens are unchanged (no item hovered: no
+  `hv`), and so are the engine probes.

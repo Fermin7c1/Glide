@@ -7,6 +7,7 @@ import re
 
 import memory as memory_mod
 import reminders as reminders_mod
+from log import log_once
 
 REMINDER_TOOLS = [
     {"name": "reminder_add", "description": (
@@ -284,31 +285,80 @@ ITEM_QUESTIONS = [re.compile(p, re.I) for p in (
     r"how to (?:get|obtain|farm) %s(.+?)" % _THE)]
 
 
-def item_question(question):
-    """The item a 'where does X drop?' / 'who sells X?' / 'how do I get X?' question asks about, or None."""
+THIS_ITEM = re.compile(r"(?:this|that|it)(?: (?:item|one|thing|piece))?", re.I)
+
+
+def hovered_id(state):
+    """The item id the player hovers in the game now (GameState.hovered: the addon holds it 15 s after the tooltip
+    closed), or None."""
+    fn = getattr(state, "hovered", None)
+    try:
+        hv = fn() if callable(fn) else None
+    except Exception as e:  # noqa: BLE001 - no hovered item
+        log_once("coach_tools.hovered", e)
+        return None
+    iid = hv.get("id") if isinstance(hv, dict) else None
+    return iid if isinstance(iid, int) and not isinstance(iid, bool) and iid > 0 else None
+
+
+def item_question(question, hovered=None):
+    """The item a 'where does X drop?' / 'who sells X?' / 'how do I get X?' question asks about, or None. "this",
+    "that" or "it" (THIS_ITEM) is the item the player hovers in the game (hovered: its id, GameState.hovered), as
+    "#<id>" (research.Research._find reads it); without one, None."""
     q = " ".join((question or "").split()).strip(" .!?")
     for pat in ITEM_QUESTIONS:
         m = pat.fullmatch(q)
         if m:
-            return m.group(1).strip(" '\"") or None
+            item = m.group(1).strip(" '\"") or None
+            if item and THIS_ITEM.fullmatch(item):
+                return "#%d" % hovered if isinstance(hovered, int) and hovered > 0 else None
+            return item
     return None
 
 
-def item_command(question, ai_ok):
+LOOKING_UP = "I don't know where %s comes from yet; I'm looking it up, ask me again in a minute."
+
+
+def item_command(question, ai_ok, hovered=None):
     """'where does Magister's Crown drop?' answered from the research facts while the AI is off (ai_ok false; with
-    it the model asks item_info): "<item>: <where it comes from>." Returns the spoken answer, or None."""
+    it the model asks item_info): "<item>: <where it comes from>." ("where does this drop?": the hovered item, see
+    item_question). Returns the spoken answer, or None."""
     r = research
     if r is None or ai_ok:
         return None
-    item = item_question(question)
+    item = item_question(question, hovered)
     if not item:
         return None
     info = r.item_info(item)
     if not info or info.get("id") is None:
         return None
     if not info.get("sources"):
-        return "I don't know where %s comes from yet." % info["name"]
-    return "%s: %s." % (info["name"], info["sources"][0].rstrip("."))
+        return (LOOKING_UP if info.get("looking_up") else "I don't know where %s comes from yet.") % info["name"]
+    name = str(info["name"])                     # ("this item" for one nothing names)
+    return "%s: %s." % (name[:1].upper() + name[1:], info["sources"][0].rstrip("."))
+
+
+def item_asked(question, hovered=None):
+    """A 'where does X drop?' question, whoever answers it (the model with item_info, or item_command): its item goes
+    to the research worker as a question (research.Research.ask_item: looked up on the web before anything else when
+    nothing offline knows where it comes from; "this": the hovered item, see item_question). -> the item id, or None
+    (no item question, an item no one knows)."""
+    r = research
+    item = item_question(question, hovered)
+    if r is None or not item:
+        return None
+    try:
+        return r.ask_item(item)
+    except Exception as e:  # noqa: BLE001 - the question is answered all the same
+        log_once("coach_tools.item_asked", e)
+        return None
+
+
+def item_brief(item_id):
+    """What the research worker knows of an item without a lookup (research.Research.brief: the hovered item in a
+    question's context), or None while it doesn't run."""
+    r = research
+    return r.brief(item_id) if r is not None else None
 
 
 # ---- feature switches said or typed ("quest briefings off") --------------------------------------------------------

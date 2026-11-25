@@ -89,6 +89,10 @@ check(text(outdoors) == "drops in Darkshore", "no name anywhere: the place")
 check(text(src("drop")) == "drops from enemies", "nothing known but a drop")
 check(text(src("drop", npc_name="Sothos and Jarien's Heirlooms", zone=2017, zone_name="Stratholme",
                 instance="Stratholme", difficulty=1)) == "from Sothos and Jarien's Heirlooms, Stratholme", "a chest")
+# a web fact names a creature, by name only when the knowledge base doesn't know it: a drop all the same (it read
+# "from Golemagg the Incinerator, Molten Core", as if a chest)
+check(text(src("drop", npc_name="Golemagg the Incinerator", zone_name="Molten Core", conf=0.3, src="web"))
+      == "drops from Golemagg the Incinerator, Molten Core", said[-1])
 check(text(src("trash", zone=2017, zone_name="Stratholme", instance="Stratholme", difficulty=1))
       == "drops from trash in Stratholme", said[-1])
 check(text(src("trash")) == "drops from trash", said[-1])

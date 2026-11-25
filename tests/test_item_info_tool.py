@@ -2,13 +2,15 @@
 """The coach's item_info tool (companion/coach_tools.py) over the engine's research (research.Research, faked here):
 offered only while the research runs, run as one of the coach's own tools, an empty or unknown request answered with
 an error; "where does X drop?" and the like recognised, and answered from the research facts while the AI is off
-("<item>: <where it comes from>."); and grounding takes the research's fact ids (ws:..., res:...) the way the coach
+("<item>: <where it comes from>."; one being looked up on the web says so); "this", "that" or "it" in such a question
+is the item the player hovers in the game (none hovered: not an item question); and grounding takes the research's fact ids (ws:..., res:...) the way the coach
 takes web: ones (knowledge/api/facts.py).
 
 Run: python3 tests/test_item_info_tool.py   (prints OK)
 """
 import os
 import sys
+import types
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, ROOT)
@@ -29,11 +31,14 @@ class FakeResearch:
     def item_info(self, query):
         self.asked.append(query)
         q = query.lower().replace("'", "")
-        if q in ("magisters crown", "16686"):
+        if q in ("magisters crown", "16686", "#16686"):
             return {"id": 16686, "name": "Magister's Crown", "avail": "now", "fact_ids": ["ws:i:16686"],
                     "sources": ["drops from Darkmaster Gandling, Scholomance", "sold by nobody"]}
         if q == "staff of hale magefire":
             return {"id": 13000, "name": "Staff of Hale Magefire", "sources": [], "avail": "nosrc", "fact_ids": []}
+        if q == "staff of dominance":                 # (nothing offline knows it: being looked up on the web)
+            return {"id": 18842, "name": "Staff of Dominance", "sources": [], "avail": "nosrc", "fact_ids": [],
+                    "looking_up": True}
         return {"id": None, "name": query, "sources": [], "avail": "nosrc", "fact_ids": [], "error": "unknown"}
 
 
@@ -77,6 +82,27 @@ try:
           "I don't know where Staff of Hale Magefire comes from yet.", "no source yet")
     check(coach_tools.item_command("where does Sword of Nowhere drop", False) is None, "an unknown item: not mine")
     check(coach_tools.item_command("what should I do next", False) is None, "not an item question")
+    # R2: nothing offline knows it, and the web is being asked: say so (the model hears it from item_info's looking_up)
+    check(coach_tools.item_command("Where does Staff of Dominance drop?", False) ==
+          "I don't know where Staff of Dominance comes from yet; I'm looking it up, ask me again in a minute.",
+          "looking it up")
+
+    # ---- "where does this drop?": the item the player hovers in the game (GameState.hovered) ----------------------
+    for q in ("Where does this drop?", "who sells that item", "how do I get it", "where does this one come from"):
+        check(coach_tools.item_question(q) is None, ("nothing hovered: not an item", q))
+        check(coach_tools.item_question(q, 16686) == "#16686", (q, coach_tools.item_question(q, 16686)))
+    check(coach_tools.item_question("Where does Magister's Crown drop?", 2361) == "Magister's Crown", "named: that one")
+    check(coach_tools.item_question("where does this quest start", 16686) is None, "not an item question")
+    check(coach_tools.item_command("Where does this drop?", False, 16686) ==
+          "Magister's Crown: drops from Darkmaster Gandling, Scholomance.", fake.asked[-1])
+    check(coach_tools.item_command("Where does this drop?", False) is None, "nothing hovered: the coach's own answer")
+    check(coach_tools.hovered_id(None) is None, "no game state")
+    check(coach_tools.hovered_id(types.SimpleNamespace(hovered=lambda: {"id": 16686, "t": 1.0})) == 16686 and
+          coach_tools.hovered_id(types.SimpleNamespace(hovered=lambda: None)) is None, "GameState.hovered")
+
+    def broken():
+        raise RuntimeError("x")
+    check(coach_tools.hovered_id(types.SimpleNamespace(hovered=broken)) is None, "a failing read: none")
 
     # ---- grounding: the research's fact ids are taken as they come (like web:), even without kb.db -----------------
     class NoKB(FactsMixin):

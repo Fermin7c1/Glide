@@ -1006,6 +1006,43 @@
        "label": "Look up where items come from",
        "restart": true,
        "type": "bool"
+      },
+      {
+       "def": true,
+       "help": "When nothing Glide has says where an item you could use comes from, Glide has your Fast model (AI models & keys) search the web for it, in the background. It never starts a lookup while the coach is answering you, and one already running stops when the coach starts. That uses your key and costs a little, usually a few cents a lookup, within the two limits below. What the web says reads \"(web, unconfirmed)\" in the game and from the coach, and if the game shows it was wrong (the boss it named keeps dying without it), the coach tells you once. Without a model and its key, or with a model whose price Glide doesn't know, nothing is looked up.",
+       "key": "companion.research.web",
+       "label": "Look up on the web what Glide doesn't know",
+       "restart": true,
+       "type": "bool"
+      },
+      {
+       "def": 20,
+       "help": "Items you aren't looking at (what you wear, the gear for your level) use at most half of them; the rest waits for what's on your screen, what you point at and what you ask about. A Tavily or Brave search counts too, though it costs nothing here.",
+       "key": "companion.research.web_per_day",
+       "label": "Web lookups a day, at most",
+       "max": 100,
+       "min": 0,
+       "restart": true,
+       "type": "number"
+      },
+      {
+       "def": 0.2,
+       "help": "Glide counts each lookup at its likely cost before it starts, doesn't start one that would go past this, and stops one partway before its next step would. A lookup's real cost is known only after, so a day can end a few cents over. It starts again after midnight. Lookups for your questions count too.",
+       "key": "companion.research.usd_per_day",
+       "label": "Web lookups may cost ($ a day, at most)",
+       "max": 5,
+       "min": 0,
+       "restart": true,
+       "step": 0.05,
+       "type": "number"
+      },
+      {
+       "def": true,
+       "help": "When you hold the mouse on an item in the game for a moment, Glide looks it up before you ask (on the web too, when nothing Glide has says where it comes from). Off: it waits until you ask. Either way, \"is this any good?\" or \"where does this drop?\" means the item you point at.",
+       "key": "companion.research.hover",
+       "label": "Look up the item I point at",
+       "restart": true,
+       "type": "bool"
       }
      ],
      "title": "Gear upgrades"

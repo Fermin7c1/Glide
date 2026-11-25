@@ -206,6 +206,16 @@ optional[#optional + 1] = function()
     local gen = type(ns.live) == "table" and tonumber(ns.live.gen)
     if gen and gen > 0 then return "lg=" .. floor(gen) end
 end
+-- hv: the item the player is looking at on a tooltip (Compare.lua's ns.hover: the same item for 0.75 s), and for 15 s
+-- after it left, so the app knows which item "this" is in a question, and looks it up (ns.HoverCheck first: a tooltip
+-- that no longer shows its item drops it)
+local HOVER_HOLD = 15
+optional[#optional + 1] = function()
+    if ns.HoverCheck then ns.HoverCheck() end
+    local id = tonumber(ns.hover)
+    if not id and ns.hoverAt and GetTime() - ns.hoverAt <= HOVER_HOLD then id = tonumber(ns.hoverLast) end
+    if id and id > 0 then return "hv=" .. floor(id) end
+end
 
 function ns.CoreOptional(core)
     local extra = {}

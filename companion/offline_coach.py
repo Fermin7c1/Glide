@@ -105,7 +105,15 @@ def callout(batch, ctx):
             f.get("quest"), f.get("xp_now"), f.get("xp_after_level_up")))
     if "facts_ready" in kinds:
         lines.append(facts_ready_line(kinds["facts_ready"].facts))
+    if "fact_corrected" in kinds:
+        lines.append(fact_corrected_line(kinds["fact_corrected"].facts))
     return " ".join(lines[:3])
+
+
+def fact_corrected_line(facts):
+    """What to say when a web fact the coach told the player about where an item comes from turned out wrong
+    (fact_corrected): "I had <item> wrong: <where it comes from now>." """
+    return "I had %s wrong: %s." % (facts.get("item") or "that item", str(facts.get("new") or "").rstrip("."))
 
 
 def facts_ready_line(facts):

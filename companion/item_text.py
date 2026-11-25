@@ -5,7 +5,8 @@ item_db Srcs, from WoWSims, the knowledge base, the player's own observations or
     drops from Darkmaster Gandling, Scholomance       drops from Magmadar or Garr, Molten Core (two bosses, one place)
     drops from Magmadar and 3 others, Molten Core     drops from Strider Clutchmother (no place known)
     drops in Zephras Isle (a drop known by its place only)        drops from enemies (nothing more known)
-    from Sothos and Jarien's Heirlooms, Stratholme (a chest or an event)
+    from Sothos and Jarien's Heirlooms, Stratholme (a chest or an event; a web fact's creature the knowledge base
+        doesn't know by name still "drops from")
     drops from trash in Stratholme      drops from trash      world drop
     reward of General Drakkisath's Demise (2-quest chain, ends at Marshal Maxwell, Burning Steppes), with either part
         or neither: (2-quest chain), (ends at Old Man Heming); "a quest reward" for a quest without a name
@@ -127,8 +128,8 @@ def source_text(src, kb=None):
     place = src.get("instance") or src.get("zone_name")
     who = src.get("npc_name") or (_creature_name(kb, src.get("npc")) if kind in ("drop", "vendor", "rep") else None)
     if kind == "drop":
-        if who:
-            return ("drops from " if src.get("npc") else "from ") + _at(who, place)
+        if who:     # (a name without a creature id is a chest or an event, but a web fact names a creature)
+            return ("drops from " if src.get("npc") or src.get("src") == "web" else "from ") + _at(who, place)
         return "drops in %s" % place if place else "drops from enemies"
     if kind == "trash":
         return "drops from trash in %s" % place if place else "drops from trash"

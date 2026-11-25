@@ -6,7 +6,10 @@ dashboard shows.
 
 The coach holds one LLMClient and hands it its system prompt (system_fn), the runner for the tools a model calls
 (run_tool) and where status messages go (emit). Each call says which model path it is for ("fast" or "deep"), so a
-reflection running beside a callout books its tokens and picks its options for its own path."""
+reflection running beside a callout books its tokens and picks its options for its own path. The engine's item
+research makes its own background calls with web search (web_research), booked to RESEARCH_PATH, and waits while the
+coach is in a call of its own (busy)."""
+import functools
 import json
 import os
 import re
@@ -25,6 +28,10 @@ from log import log_once
 
 MEMORY_WRITES = ("memory_remember", "memory_forget")   # refused once an answer read web results
 RESULT_CHARS = 6000              # hard cap of one tool_result (api.dispatch already trims to ~1,500 tokens)
+RESEARCH_PATH = "research"       # the item research's background calls: booked apart from the coach's fast and deep
+SEARCH_USD = 0.01                # one server-side web search ($10 per 1,000)
+SEARCH_TOKENS = 5000             # input tokens one web search's results may add (an estimate on the high side)
+PROMPT_TOKENS = 1500             # a research request's own text: the system text, the question, the tool
 
 
 def api_message(detail):
@@ -75,6 +82,38 @@ def _no_tool(name, args, ctx, budget_s):
     return {"error": "no tools here"}
 
 
+def _coach_turn(fn):
+    """A model call of the coach's own (call_once, call_tools): counted while it runs, so busy() can tell the
+    engine's background research to wait for it."""
+    @functools.wraps(fn)
+    def run(self, *a, **kw):
+        with self._acct:
+            self._turns += 1
+        try:
+            return fn(self, *a, **kw)
+        finally:
+            with self._acct:
+                self._turns -= 1
+    return run
+
+
+def _urls(blocks, out):
+    """Add to `out` every page URL in a reply's search results and citations (the server's web_search_tool_result
+    blocks, however deep the filtering tool nests them, and the text blocks' citations)."""
+    for b in blocks or ():
+        if not isinstance(b, dict):
+            continue
+        u = b.get("url")
+        if isinstance(u, str) and u.startswith(("http://", "https://")) and u not in out:
+            out.append(u)
+        for key in ("content", "citations"):
+            v = b.get(key)
+            if isinstance(v, list):
+                _urls(v, out)
+            elif isinstance(v, dict):
+                _urls([v], out)
+
+
 class LLMClient:
     """The model calls behind the coach. emit(message dict): status and error messages for the dashboard;
     system_fn(cache marker) -> the system prompt blocks; run_tool(name, args, ctx, budget_s): one tool call a model
@@ -113,8 +152,11 @@ class LLMClient:
         self.web_basic = False                # the API refused the filtering web search tool: use the basic one
         self.backoff_until = 0                # transient errors (overloaded, rate limit, network): pause calls
         self.fails = 0
+        self.research_backoff_until = 0       # the same for the item research's background calls alone: a slow or
+        self.research_fails = 0               # failing lookup never pauses the coach
         self.last_latency = 0.0
         self.last_usage = {}                  # summed usage of the last turn (evals)
+        self._turns = 0                       # the coach's own calls running now (busy)
 
     def provider_for(self, model):
         """The provider that serves this model id, or None (a custom endpoint that isn't configured)."""
@@ -219,6 +261,8 @@ class LLMClient:
                     self._suspend(fatal, e.code, detail, model)
                     return None, attempt
                 without = self._without_refused_web_tool(e.code, detail, body)
+                if without is not None and path == RESEARCH_PATH and self.web_off:
+                    return None, attempt           # (research without web search is no research: not sent again)
                 if without is not None:
                     body = without
                     continue
@@ -234,13 +278,13 @@ class LLMClient:
                     time.sleep(float(self.opt.get("busy_retry_s")))
                     continue
                 self.stats["errors"] += 1
-                self._back_off(busy, label)
+                self._back_off(busy, label, path)
                 self.emit({"kind": "error", "text": "%s %s (%s): %s" % (label, e.code, model, api_message(detail)),
                            "speak": False})
                 return None, attempt
             except Exception as e:
                 self.stats["errors"] += 1
-                self._back_off(True, label)
+                self._back_off(True, label, path)
                 self.emit({"kind": "error", "text": "%s unreachable (%.0fs): %s" % (label, time.time() - t0, e),
                            "speak": False})
                 return None, attempt
@@ -281,18 +325,51 @@ class LLMClient:
         if self.suspended_for in (None, prov):
             self.suspended, self.suspended_for = None, None
         self.fails, self.backoff_until = 0, 0
+        self.research_fails, self.research_backoff_until = 0, 0
+
+    def _price(self, model):
+        """A model's price ({"in", "out", "cache_read", "cache_write"} $/MTok), or None when it isn't known."""
+        price = self.catalog.price(model) if self.catalog is not None else models_mod.anthropic_price(model)
+        return price if price and price.get("in") is not None else None
+
+    def _cost(self, model, u):
+        """What one answered request cost in dollars (the provider's own figure, else the catalog's price for its
+        tokens), its server-side web searches included; None when the price isn't known (a custom endpoint)."""
+        cost = u.get("cost_usd")
+        if cost is None:
+            cost = models_mod.cost_usd(self._price(model), u)
+        searches = int(((u.get("server_tool_use") or {}).get("web_search_requests")) or 0)
+        if searches:
+            cost = (cost or 0.0) + searches * SEARCH_USD          # $10 per 1,000 searches
+        return cost
+
+    @staticmethod
+    def _round_cost(price, ctx_tokens, searches, max_tokens):
+        """What one research request may cost, on the high side: its context (ctx_tokens) and the results of the
+        server searches it may run (SEARCH_TOKENS each) read as input, a whole answer of max_tokens, and the
+        searches."""
+        return models_mod.cost_usd(price, {"input_tokens": ctx_tokens + searches * SEARCH_TOKENS,
+                                           "output_tokens": max_tokens}) + searches * SEARCH_USD
+
+    def research_estimate(self, model=None, max_searches=3, max_tokens=1500):
+        """What one web_research lookup would likely cost at most, before it goes out (research_budget.Budget.allow
+        and reserve): every search it may make, their results read as input (SEARCH_TOKENS each), its own text and a
+        whole answer, at the model's price (a local Tavily / Brave search costs nothing here). None when the
+        model's price isn't known: no lookup is made on a model whose cost can't be counted."""
+        model = model or self.cfg.get("fast_model") or ""
+        price = self._price(model)
+        if price is None:
+            return None
+        _, local = self.web_search_tools(model, max_searches)
+        return self._round_cost(price, PROMPT_TOKENS + (max_searches * SEARCH_TOKENS if local else 0),
+                                0 if local else max_searches, max_tokens)
 
     def _account(self, model, body, u, path):
         """Count one answered request: tokens (read from cache, written to it, uncached), web searches and the cost,
-        in the session totals, its path's totals (`path`: "fast" | "deep"), the last turn's usage and the app's
-        usage log."""
-        cost = u.get("cost_usd")
-        if cost is None:
-            price = self.catalog.price(model) if self.catalog is not None else models_mod.anthropic_price(model)
-            cost = models_mod.cost_usd(price, u)
+        in the session totals, its path's totals (`path`: "fast" | "deep" | RESEARCH_PATH), the last turn's usage
+        (not for research: it runs beside the coach's turns) and the app's usage log."""
+        cost = self._cost(model, u)
         searches = int(((u.get("server_tool_use") or {}).get("web_search_requests")) or 0)
-        if searches:
-            cost = (cost or 0.0) + searches * 0.01                # $10 per 1,000 searches
         with self._acct:
             self.stats["calls"] += 1
             self.stats["in_tokens"] += (u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0)
@@ -300,7 +377,7 @@ class LLMClient:
             self.stats["uncached_in_tokens"] += u.get("input_tokens") or 0
             self.stats["cache_read_tokens"] += u.get("cache_read_input_tokens") or 0
             self.stats["cache_write_tokens"] += u.get("cache_creation_input_tokens") or 0
-            lu = self.last_usage
+            lu = self.last_usage if path != RESEARCH_PATH else {}
             for k in ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"):
                 lu[k] = lu.get(k, 0) + (u.get(k) or 0)
             if searches:
@@ -334,6 +411,125 @@ class LLMClient:
         prov = models_mod.provider(model)
         return bool(self.enabled and self.keys.get(prov) and not self.suspension_for(prov)
                     and time.time() >= self.backoff_until)
+
+    def busy(self):
+        """Whether the coach is in a model call of its own now (a question, a callout, a review, a briefing): the
+        engine's background research waits until it isn't."""
+        return self._turns > 0
+
+    def web_search_tools(self, model, max_searches):
+        """The web search tool a background call on this model gets, as questions get it: Anthropic's server tool on
+        Claude models (the basic one where the filtering one was refused or is switched off), else the local
+        Tavily / Brave tool when one of their keys is set. -> ([tool definition], local?) or (None, False) when the
+        model can't search."""
+        if self.web_off:
+            return None, False
+        if models_mod.provider(model) == "anthropic":
+            return [websearch.server_tool(max_searches, model,
+                                          basic=self.web_basic or not self.opt.get("web_search_filtered"))], False
+        if websearch.backend():
+            return [dict(websearch.LOCAL_DEF)], True
+        return None, False
+
+    def web_research(self, prompt, system="", max_searches=3, max_tokens=1500, deadline_s=90.0, model=None,
+                     max_usd=None):
+        """One background call with web search for the engine's item research (research.WebResolver): the prompt
+        with a short system text of its own (not the coach's), web search as the questions get it
+        (web_search_tools) and no other tool; the fast model unless `model` says otherwise. Booked to RESEARCH_PATH
+        in the session's totals and the usage log, never in the coach's last turn, and not counted as the coach
+        being busy; its failures back off research alone (never the coach's callouts). A long server search
+        (pause_turn) is continued; local searches run here, at most max_searches, then the answer is asked for (also
+        after deadline_s). It stops before any request that would pass max_usd (what this lookup may spend, with
+        that request at its likely-high cost: _round_cost), before any after the first while the coach is in a call
+        of its own (busy), and before continuing a paused search after deadline_s. The API refusing web search turns
+        it off for the session (_without_refused_web_tool) and the call stops there.
+        -> (the answer text or None, meta): meta {"cost_usd": what this call's answered requests cost, "sent":
+        requests sent (one sent and not answered may still be billed), "calls": requests answered, "cost_unknown":
+        an answered request whose price isn't known, "searches": server-side searches, "local_searches", "urls":
+        every page URL its searches returned or its answer cited, "why": why there is no text ("unavailable", "no
+        tools", "no web search", "refused", "failed", "model refused", "empty", "busy", "budget", "deadline"),
+        "stop": the last stop_reason}."""
+        meta: dict[str, Any] = {"cost_usd": 0.0, "sent": 0, "calls": 0, "cost_unknown": False, "searches": 0,
+                                "local_searches": 0, "urls": [], "why": None, "stop": None}
+        model = model or self.cfg.get("fast_model") or ""
+        if not model or not self.available(model) or time.time() < self.research_backoff_until:
+            meta["why"] = "unavailable"
+            return None, meta
+        if self.catalog is not None and not self.catalog.supports_tools(model):
+            meta["why"] = "no tools"
+            return None, meta
+        tools, local = self.web_search_tools(model, max_searches)
+        if not tools:
+            meta["why"] = "refused" if self.web_off else "no web search"
+            return None, meta
+        opts = self.model_options(model, False) if self.opt.get("tune_thinking") else {}
+        messages: list[dict[str, Any]] = [{"role": "user", "content": prompt}]
+        price = self._price(model)
+        ctx = (len(system or "") + len(str(prompt or "")) + len(json.dumps(tools))) // 3      # (tokens, roughly)
+        t0, force, data = time.time(), False, None
+        for _ in range(max_searches + 3):
+            if meta["sent"] and self.busy():
+                meta["why"] = "busy"                # (the coach began a call: this lookup waits for another time)
+                return None, meta
+            if max_usd is not None and price is not None and meta["cost_usd"] + self._round_cost(
+                    price, ctx, 0 if force or local else max_searches, max_tokens) > max_usd:
+                meta["why"] = "budget"              # (the next request could pass what the day has left)
+                return None, meta
+            body: dict[str, Any] = {"model": model, "max_tokens": max_tokens, "messages": list(messages),
+                                    "tools": tools, "tool_choice": {"type": "none" if force else "auto"}}
+            if system:
+                body["system"] = [{"type": "text", "text": system}]
+            meta["sent"] += 1
+            data, opts = self.post(body, opts, RESEARCH_PATH)
+            if data is None:
+                meta["why"] = "refused" if self.web_off else "failed"
+                return None, meta
+            u = data.get("usage") or {}
+            meta["calls"] += 1
+            cost = self._cost(model, u)
+            if u.get("cost_usd") is None and price is None:
+                meta["cost_unknown"] = True         # (searches priced at most: its tokens' price isn't known)
+            meta["cost_usd"] += cost or 0.0
+            meta["searches"] += int(((u.get("server_tool_use") or {}).get("web_search_requests")) or 0)
+            ctx = sum(u.get(k) or 0 for k in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens",
+                                              "output_tokens")) or ctx
+            content = [b for b in (data.get("content") or []) if isinstance(b, dict)]
+            _urls(content, meta["urls"])
+            meta["stop"] = data.get("stop_reason")
+            if meta["stop"] == "refusal":
+                meta["why"] = "model refused"
+                return None, meta
+            if meta["stop"] == "pause_turn" and not force:
+                if time.time() - t0 >= deadline_s:
+                    meta["why"] = "deadline"        # (a paused server search is resumed or left: left, past it)
+                    return None, meta
+                messages.append({"role": "assistant", "content": content})
+                continue
+            uses = [b for b in content if b.get("type") == "tool_use"]
+            if force or not uses or meta["stop"] != "tool_use":
+                break
+            messages.append({"role": "assistant", "content": content})
+            results = []
+            for b in uses:
+                if b.get("name") == "web_search" and local and meta["local_searches"] < max_searches:
+                    self.count_web_search()
+                    meta["local_searches"] += 1
+                    res = websearch.search((b.get("input") or {}).get("query"))
+                    _urls(res.get("results") or [], meta["urls"])
+                else:
+                    res = {"error": "no more searches; answer with what you have"}
+                txt = json.dumps(res, separators=(",", ":"), ensure_ascii=False, default=str)[:RESULT_CHARS]
+                results.append({"type": "tool_result", "tool_use_id": b.get("id"), "content": txt})
+                ctx += len(txt) // 3                # (read with the next request)
+            messages.append({"role": "user", "content": results})
+            if meta["local_searches"] >= max_searches or time.time() - t0 >= deadline_s:
+                force = True
+        text = "".join(b.get("text", "") for b in (data or {}).get("content") or [] if isinstance(b, dict)
+                       and b.get("type") == "text").strip()
+        if not text:
+            meta["why"] = "empty"
+            return None, meta
+        return text, meta
 
     # ------------------------------------------------------------------------------------------
     def model_name(self, model):
@@ -390,6 +586,7 @@ class LLMClient:
                        % (data.get("stop_reason"), u.get("output_tokens", 0)), "speak": False})
         return text
 
+    @_coach_turn
     def call_once(self, model, user, max_tokens, deep=False, tools=None, schema=None, on_text=None):
         """One-shot answer (live callouts, and everything without the knowledge layer), booked to the deep or fast
         path. `tools`: sent with tool_choice none only to share the questions' cached prefix (see caching). `schema`:
@@ -431,6 +628,7 @@ class LLMClient:
         again, _ = self.post(retry, opts, path)
         return again if again is not None else data
 
+    @_coach_turn
     def call_tools(self, model, messages, tools, max_calls, deadline_s, ctx=None, max_tokens=600, deep=False,
                    on_text=None):
         """Tool-use loop for questions and reviews. Sends tools (tool_choice auto); on stop_reason "tool_use" runs
@@ -548,8 +746,12 @@ class LLMClient:
         provider it came from."""
         return self.suspended if self.suspended_for in (None, prov) else None
 
-    def _back_off(self, transient, label="Claude API"):
+    def _back_off(self, transient, label="Claude API", path=None):
         if not transient:
+            return
+        if path == RESEARCH_PATH:               # (the item research's own: the coach's calls go on)
+            self.research_fails += 1
+            self.research_backoff_until = time.time() + min(600, 15 * 2 ** (self.research_fails - 1))
             return
         self.fails += 1
         wait = min(600, 15 * 2 ** (self.fails - 1))        # 15 s, 30 s, 1 min ... 10 min

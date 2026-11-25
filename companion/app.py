@@ -965,15 +965,27 @@ class App:
         a new tag; the knowledge base; the drops the player sees), the coach's item_info tool, and the facts written
         into the addon's Data/Live.lua (live_data.py: every poll when they changed; the addon's reloads and its "lg"
         observed from the game state) with the rules' facts_ready nudge. research.enabled off: nothing is looked up
-        (what is known stays)."""
+        (what is known stays). With research.web on, what nothing offline knows is looked up on the web with the
+        coach's LLM client (research.WebResolver: no model configured, nothing goes out), within the daily caps
+        (research_budget.Budget: research.web_per_day, research.usd_per_day); the item the player hovers in the game
+        (GameState.hovered, read by the worker's poll) is looked up while research.hover is on; and the rules say a
+        web fact the coach gave that the game showed wrong (fact_corrected)."""
         try:
             import coach_tools
             import live_data
             import research
+            import research_budget
             opt = settings.Settings("research", self.cfg.get("research") or {})
             self.research = research.Research(ROOT, research.ItemDBSource(self._wowsims()), self.kb_handle,
-                                              lambda: self.state, lambda: opt.get("enabled")).start()
+                                              lambda: self.state, lambda: opt.get("enabled"))
+            self.research.hover_fn = lambda: opt.get("hover")
+            if opt.get("web"):
+                budget = research_budget.Budget(ROOT, lambda: {k: opt.get(k) for k in ("web", "web_per_day",
+                                                                                         "usd_per_day")})
+                self.research.set_web(research.WebResolver(self._research_llm, budget))
+            self.research.start()
             coach_tools.research = self.research
+            self.rules.research = self.research
 
             def wow():
                 return glideconfig.wow_dir(ROOT)
@@ -984,6 +996,12 @@ class App:
             self.rules.live = self.live
         except Exception as e:  # noqa: BLE001 - tooltips and the coach go on without item sources
             log_once("research.start", e)
+
+    def _research_llm(self):
+        """The LLM client the item research's web lookups use: the coach's, while the AI is on (else None: the
+        lookups wait, silently)."""
+        llm = getattr(getattr(self, "coach", None), "llm", None)
+        return llm if llm is not None and getattr(llm, "enabled", False) else None
 
     def _sync_rxp_imports(self):
         """The RestedXP strings added in the app that RestedXP doesn't have yet back in the addon's

@@ -60,19 +60,21 @@ TOPIC_NEEDS = {"route": set(LIVE_SECTIONS),
 TRIGGER_TOPIC = {"low_health_in_combat": "combat", "target_tapped": "combat",
                  "buffs_dropped": "buffs", "buff_expiring": "buffs",
                  "gear_upgrade": "gear", "reward_choice": "gear", "vendor_treasure": "gear", "facts_ready": "gear",
+                 "fact_corrected": "gear",
                  "addon_outdated": "system",
                  "bags_nearly_full": "upkeep", "low_durability": "upkeep", "consumables_low": "upkeep",
                  "training_available": "upkeep", "talent_points_unspent": "upkeep"}
 
 
 def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=None, gear_fn=None, system_fn=None,
-                 talent_plan=None):
-    """Everything the model sees about the game for summary s: the player (buffs, kit, extras), the guide step,
-    the current and next RestedXP steps with their places described, up to a full quest log in quest id order (with
-    quest_priority for trimming), gear and the addon status. state: the GameState (or None); knowledge: glide.db's
-    reader, read only while there is no knowledge pack; geo: the place describer; pack: the knowledge layer (quests
-    and map names, names instead of ids in the extras); watched_fn, gear_fn, system_fn: the app's getters for watched
-    buffs, gear and addon status; talent_plan: the next talent pick."""
+                 talent_plan=None, item_brief=None):
+    """Everything the model sees about the game for summary s: the player (buffs, kit, extras, the item they hover),
+    the guide step, the current and next RestedXP steps with their places described, up to a full quest log in quest
+    id order (with quest_priority for trimming), gear and the addon status. state: the GameState (or None);
+    knowledge: glide.db's reader, read only while there is no knowledge pack; geo: the place describer; pack: the
+    knowledge layer (quests and map names, names instead of ids in the extras); watched_fn, gear_fn, system_fn: the
+    app's getters for watched buffs, gear and addon status; talent_plan: the next talent pick; item_brief(item id):
+    what is known of the hovered item (hovered_item)."""
     st = state
     # quests and map names from the knowledge base (kb.db); glide.db only without one
     if pack is not None and getattr(pack, "ok", False):
@@ -153,6 +155,9 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
     if watched_fn:
         player["buffs_you_asked_me_to_watch"] = sorted(watched_fn())
     player_extras(s, player, st, pack, talent_plan)
+    hv = hovered_item(st, item_brief)
+    if hv:
+        player["hovered_item"] = hv
     gear = None
     if gear_fn:
         ups, rewards, worn, bag_items = gear_fn()
@@ -183,6 +188,38 @@ def game_context(s, state, knowledge, geo, pack=None, deep=False, watched_fn=Non
            "quests_in_log": [str(q) for q in (s.get("quests") or {})], "gear": gear,
            "system": {"glidelink": system_fn()} if system_fn else None}
     return ctx
+
+
+HOVER_NOTE = "under the player's mouse in the game now: 'this' or 'that item' means it"
+
+
+def hovered_item(st, brief_fn=None):
+    """The item the player points at in the game (GameState.hovered(): the addon holds it 15 s after the tooltip
+    closed), so "is this any good?" names it: {"id", "name", "comes_from" (the tooltip's source line), "note"} from
+    brief_fn(item id) (the engine's research worker: research.Research.brief, through coach_tools.item_brief) or the
+    character's own items; None when nothing is hovered. Questions only (user_message drops it from callouts)."""
+    fn = getattr(st, "hovered", None) if st is not None else None
+    try:
+        hv = fn() if callable(fn) else None
+    except Exception as e:  # noqa: BLE001 - an extra; never breaks the context
+        log_once("context.hovered", e)
+        return None
+    iid = as_int((hv or {}).get("id") if isinstance(hv, dict) else None, bool_ok=False)
+    if not iid or iid <= 0:
+        return None
+    out: dict = {"id": iid}
+    if brief_fn is not None:
+        try:
+            out.update({k: v for k, v in (brief_fn(iid) or {}).items() if v is not None})
+        except Exception as e:  # noqa: BLE001 - the id alone
+            log_once("context.hovered_brief", e)
+    if not out.get("name"):
+        for kind in ("W", "I", "R"):
+            for it in (getattr(st, "gear", None) or {}).get(kind) or ():
+                if as_int(it.get("id")) == iid and it.get("name"):
+                    out["name"] = it["name"]
+    out["note"] = HOVER_NOTE
+    return out
 
 
 def player_extras(s, player, st, pack=None, talent_plan=None):
@@ -307,6 +344,8 @@ def user_message(ctx, trigger, recent, question=False, triggers=None, cc=None):
         ref["community"] = k.pop("community")
     ref = {kk: v for kk, v in ref.items() if v not in (None, {}, [])}
     ref.pop("quest_priority", None)       # used for trimming only
+    if not question:
+        player.pop("hovered_item", None)      # ("this" is the player's word: a question's only)
     # a live callout gets the live sections its trigger is about (questions, reviews, briefings get everything)
     keep = needed_sections(triggers) if triggers and not question else None
     drop = set(LIVE_SECTIONS) - keep if keep is not None else set()
@@ -328,7 +367,7 @@ def user_message(ctx, trigger, recent, question=False, triggers=None, cc=None):
         live["route_quests_not_in_log"] = step_quests
     live.update({kk: v for kk, v in ctx.items() if kk != "player" and v not in (None, {}, [])})
     ref_txt = fit(ref, REF_CHARS, reference_trims(ref, order))
-    live_txt = fit(live, LIVE_CHARS, [drop_list(player, "buffs", 6)])
+    live_txt = fit(live, LIVE_CHARS, [drop_list(player, "buffs", 6), shrink_hovered(player)])
     head = ""
     if k is not None:
         head = ("KNOWLEDGE (computed by the knowledge layer for this moment; cite its fact ids):\n%s\n\n"
@@ -382,6 +421,18 @@ def drop_list(d, key, keep):
             return True
         return False
     return step
+
+def shrink_hovered(player):
+    """A fit() step for the live part: the hovered item (hovered_item) down to what names it, its id and name (where
+    it comes from and the note go); it stays, since a question's "this" may mean it."""
+    def step(_obj):
+        hv = player.get("hovered_item") if isinstance(player, dict) else None
+        if isinstance(hv, dict) and set(hv) - {"id", "name"}:
+            player["hovered_item"] = {k: hv[k] for k in ("id", "name") if k in hv}
+            return True
+        return False
+    return step
+
 
 def reference_trims(ref, order=()):
     """fit() steps for REFERENCE, least important first: quest flavour text, then the quests furthest down the

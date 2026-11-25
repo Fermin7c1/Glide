@@ -94,6 +94,10 @@
     "gear.sims": {"default": true, "kind": "bool"},
 
     "research.enabled": {"default": true, "kind": "bool", "note": "look up where items come from (research.py): the source line on item tooltips in the game (Data/Live.lua) and the coach's item_info"},
+    "research.web": {"default": true, "kind": "bool", "note": "look up on the web what nothing offline knows (research.WebResolver): one background call with web search on the fast model, within the two daily caps below"},
+    "research.web_per_day": {"default": 20, "min": 0, "max": 100, "kind": "int", "note": "web lookups a day at most (research_budget.Budget; a local Tavily or Brave search counts too)"},
+    "research.usd_per_day": {"default": 0.2, "min": 0, "max": 5, "kind": "number", "note": "dollars a day the web lookups may cost at most (the engine's first spending cap; data/research/spend.json)"},
+    "research.hover": {"default": true, "kind": "bool", "note": "look up the item the player hovers in the game before it is asked about (core key hv)"},
 
     "ptt.enabled": {"default": true, "kind": "bool"},
     "ptt.key": {"default": "F8", "kind": "text"},

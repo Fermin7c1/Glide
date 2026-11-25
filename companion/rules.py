@@ -39,8 +39,8 @@ CATEGORY = {
     # addon 0.10 extras (see Rules._extras)
     "training_available": "upkeep", "talent_points_unspent": "upkeep", "consumables_low": "upkeep",
     "flight_path_nearby": "route", "target_tapped": "combat",
-    # new item facts in the addon's Data/Live.lua (see Rules._live)
-    "facts_ready": "upkeep",
+    # new item facts in the addon's Data/Live.lua (see Rules._live); a web fact the coach said, shown wrong (_corrected)
+    "facts_ready": "upkeep", "fact_corrected": "upkeep",
 }
 CONSUMABLE_LOW = {"food": 4, "drink": 4, "ammo": 200}   # warn when a count drops to this or below
 TALENT_GRACE_S = 30               # unspent talent points: say so once per level, after this long
@@ -104,6 +104,7 @@ class Rules:
         self.tapped_told = {}         # npc id -> time
         self.vendor_told = set()      # vendor treasure indexes already pointed out this session
         self.live: Any = None         # live_data.LiveData (the addon's Data/Live.lua), set by the app
+        self.research: Any = None     # research.Research (its corrections), set by the app
 
     def watch(self, name, on=True):
         n = name.strip().lower()
@@ -245,7 +246,23 @@ class Rules:
         self._kb_triggers(s, out)
         self._extras(state, s, busy, out)
         self._live(s, out)
+        self._corrected(s, out)
         return out
+
+    def _corrected(self, s, out):
+        """fact_corrected: a web fact the coach said about where an item comes from turned out wrong (the creature it
+        named kept dying without it, and a new lookup put it elsewhere: research.Research.corrections, each handed
+        out once), said once, out of combat and alive."""
+        research = self.research
+        if research is None or s.get("combat") or s.get("dead") or not self._ready("corrected", LIVE_POLL_S):
+            return
+        try:
+            fixes = research.corrections()
+        except Exception as e:  # noqa: BLE001 - an extra; never break the rules loop
+            log_once("rules.corrected", e)
+            return
+        for f in fixes or ():
+            out.append(Trigger("fact_corrected", {"item": f.get("item"), "old": f.get("old"), "new": f.get("new")}, 3))
 
     def _live(self, s, out):
         """facts_ready: the engine wrote new item facts into the addon's Data/Live.lua since the coach last said so

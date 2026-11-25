@@ -8,6 +8,9 @@
 -- drops from Darkmaster Gandling, Scholomance", from the facts the Glide app writes into Data/Live.lua (ns.live.items,
 -- read at login and /reload). Grey for an item you can't get yet or with no known source, " (web, unconfirmed)" after
 -- a fact found only on the web. On by default; the Glide window or "/glide sources on|off".
+-- And the item the player is looking at (ns.hover, for State.lua's core key hv): the same item on a tooltip for
+-- 0.75 s, so the Glide app knows which item "this" is in a question and looks it up before it's asked. A "|" in a
+-- source line's text is the Glide app's own escaping ("||"): the line never carries a colour or texture code.
 local _, ns = ...
 local rec = ns.rec
 local Safe, Print = ns.Safe, ns.Print
@@ -140,7 +143,82 @@ local function add(tooltip, what, wrap, ok, text, r, g, b)
     end
 end
 
--- the two lines, each on its own: one that fails leaves the other
+--- The item id in the tooltip's link, or nil.
+local function linkedId(tooltip)
+    local link = Safe(linkOf(tooltip))
+    return type(link) == "string" and tonumber(link:match("item:(%d+)")) or nil
+end
+
+-- ---- the item the player is looking at ------------------------------------------------------------------------------
+-- Once the same item has shown on GameTooltip or ItemRefTooltip for 0.75 s, it is that tooltip's item until the
+-- tooltip hides or shows something else (another item, a unit, a spell, a quest): a glance while the mouse runs over
+-- bags or the auction house doesn't count. Each tooltip keeps its own; ns.hover is the one that settled last on a
+-- tooltip still showing it (a chat link's item again once a bag item over it is gone). ns.hoverLast and ns.hoverAt keep
+-- the last one and when it last showed (State.lua holds hv 15 s after). ns.HoverCheck (State.lua, every frame) drops a
+-- tooltip's item once it no longer shows it, should the game have refilled the tooltip without telling.
+local HOVER_AFTER = 0.75
+local pend = {}                 -- tooltip -> the item it shows before its 0.75 s: { id, linked (read off its link), seq }
+local settled = {}              -- tooltip -> the item it has shown 0.75 s and still shows: { id, linked, seq }
+local seq = 0
+local hoverTip                  -- the tooltip ns.hover is on
+
+--- ns.hover: the item settled last on a tooltip still showing it; none: hovered no more (ns.hoverAt: since when).
+local function pick()
+    local best
+    for tip, s in pairs(settled) do
+        if (tip.IsShown and not tip:IsShown()) or (s.linked and linkedId(tip) ~= s.id) then
+            settled[tip] = nil                                       -- (that tooltip moved on)
+        elseif not best or s.seq > settled[best].seq then
+            best = tip
+        end
+    end
+    local s = best and settled[best]
+    if s then
+        if ns.hover ~= s.id or hoverTip ~= best then
+            ns.hover, ns.hoverLast, ns.hoverAt, hoverTip = s.id, s.id, GetTime(), best
+        end
+    elseif ns.hover then
+        ns.hover, ns.hoverAt, hoverTip = nil, GetTime(), nil
+    end
+end
+function ns.HoverCheck() pick() end
+
+local function settle(tooltip, n)
+    local p = pend[tooltip]
+    if not p or p.seq ~= n then return end
+    pend[tooltip] = nil
+    if tooltip.IsShown and not tooltip:IsShown() then return end
+    -- still that item (one shown without a link: the tooltip still up is all that can be told)
+    if p.linked and linkedId(tooltip) ~= p.id then return end
+    settled[tooltip] = p
+    pick()
+end
+
+local function onItemShown(tooltip, id, linked)
+    if not id then return end
+    local p, s = pend[tooltip], settled[tooltip]
+    if (p and p.id == id) or (s and s.id == id) then return end              -- (the same item again: a refresh)
+    if s then settled[tooltip] = nil; pick() end                              -- (that tooltip moved on)
+    seq = seq + 1
+    local n = seq
+    pend[tooltip] = { id = id, linked = linked, seq = n }
+    C_Timer.After(HOVER_AFTER, function() pcall(settle, tooltip, n) end)
+end
+
+-- the tooltip hid, or shows something that isn't an item now (a unit, a spell, a quest link refilled into it)
+local function onTooltipGone(tooltip)
+    pend[tooltip] = nil
+    if settled[tooltip] then settled[tooltip] = nil; pick() end
+end
+
+local function hookHide(tip)
+    if type(tip) == "table" and tip.HookScript then
+        tip:HookScript("OnHide", function(self) pcall(onTooltipGone, self) end)
+    end
+end
+ns.On("PLAYER_LOGIN", function() hookHide(GameTooltip); hookHide(ItemRefTooltip) end)
+
+-- the two lines and the hover, each on its own: one that fails leaves the others
 local function onTooltip(tooltip, data)
     if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
     if ns.CompareOn() then
@@ -148,15 +226,32 @@ local function onTooltip(tooltip, data)
     end
     if ns.SourcesOn() then
         add(tooltip, "sources", true, pcall(function()
-            local link = Safe(linkOf(tooltip))
-            local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
-            return sourceLine(id or (type(data) == "table" and tonumber(Safe(data.id))))
+            return sourceLine(linkedId(tooltip) or (type(data) == "table" and tonumber(Safe(data.id))))
         end))
+    end
+    local ok, err = pcall(function()
+        local id = linkedId(tooltip)
+        onItemShown(tooltip, id or (type(data) == "table" and tonumber(Safe(data.id))), id ~= nil)
+    end)
+    if not ok and rec and rec.debug then Print("|cffff5555hover:|r", err) end
+end
+
+-- any other kind of data filled into one of the two tooltips (a unit, a spell or quest link clicked in chat: the game
+-- refills ItemRefTooltip without hiding it) ends its item there
+local function onOtherTooltip(tooltip, data)
+    if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
+    if type(data) == "table" and data.type ~= nil and data.type ~= Enum.TooltipDataType.Item then
+        onTooltipGone(tooltip)
     end
 end
 
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
     TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, onTooltip)
+    if TooltipDataProcessor.AllTypes ~= nil then
+        pcall(TooltipDataProcessor.AddTooltipPostCall, TooltipDataProcessor.AllTypes, function(tooltip, data)
+            pcall(onOtherTooltip, tooltip, data)
+        end)
+    end
 end
 ns.On("PLAYER_EQUIPMENT_CHANGED", function() cache, cached = {}, 0 end)
 

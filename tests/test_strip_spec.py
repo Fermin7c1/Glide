@@ -147,6 +147,13 @@ L.execute("SICK = false; TAXI = false")
 L.execute("LIVE_SHIPPED = ns.live; ns.live = { v = 1, gen = 7, t = 1795000000, items = {}, chars = {} }")
 assert "7" in (core_now().get("lg"), core_now().get("lg")), "core lg: the gen of the Data/Live.lua this UI load read"
 L.execute("ns.live = LIVE_SHIPPED")
+# an item the player is looking at on a tooltip (Compare.lua's ns.hover): the optional core key hv, as lg; the engine
+# keeps it for the question that follows (GameState.hovered, checked below)
+L.execute("ns.hover = 18842")
+hovered = [c for c in (core_now(), core_now()) if c.get("hv")]
+assert hovered and hovered[0]["hv"] == "18842", "core hv: the item on a tooltip"
+frames.append((hovered[0], pages_now()))
+L.execute("ns.hover = nil")
 
 # ---- what it sends is registered -----------------------------------------------------------------------------
 problems = []
@@ -311,6 +318,7 @@ for core, pages in frames:
 summary = state.summary()
 assert summary["training"] and summary["vendor_treasure"] and summary["talents"] and summary["rxp_settings"], summary
 assert state.gear["R"] and summary["skills"]["ranks"] and summary["arrow"].get("arrow"), (state.gear, summary["arrow"])
+assert (state.hovered() or {}).get("id") == 18842, state.hovered()
 
 problems = ["engine reads core key %r (%s), not in strip_spec.CORE" % (k, WHERE.get(("core", None, k)))
             for k in sorted(READ_CORE - set(spec.CORE_BY_NAME))]
