@@ -27,9 +27,11 @@ import app as glide_app  # noqa: E402
 import bis  # noqa: E402
 import coach_tools  # noqa: E402
 import live_data  # noqa: E402
+import pursuit  # noqa: E402
 import research  # noqa: E402
 import sim_queue  # noqa: E402
 import sim_weights  # noqa: E402
+import sims  # noqa: E402
 import versions  # noqa: E402
 from gear import Gear  # noqa: E402
 from knowledge_layer import KnowledgeHandle  # noqa: E402
@@ -104,10 +106,13 @@ CB = {"tag": "v1.0.4", "gear_key": "k", "dps": 629.1, "faction": "Alliance", "sk
 
 tmp = tempfile.mkdtemp(prefix="glide-bis-wiring-")
 saved = (glide_app.ROOT, research.Research.start, live_data.LiveData.start, sim_weights.SimWeights.start,
-         bis.BisRanker.start, coach_tools.research, coach_tools.bis)
+         bis.BisRanker.start, sims.Sims.start, pursuit.Planner.start, coach_tools.research, coach_tools.bis,
+         coach_tools.sims, coach_tools.pursuit)
 try:
-    for cls in (research.Research, live_data.LiveData, sim_weights.SimWeights, bis.BisRanker):
-        cls.start = lambda self: self                     # (no threads)
+    for cls in (research.Research, live_data.LiveData, sim_weights.SimWeights, bis.BisRanker, sims.Sims,
+                pursuit.Planner):
+        cls.start = lambda self: self                     # (no threads: one left polling can print while Python
+        #                                                   shuts down, a fatal error on CI's stdout)
     wow = os.path.join(tmp, "wow")
     glide = os.path.join(wow, "Interface", "AddOns", "Glide")
     os.makedirs(os.path.join(glide, "Data"))
@@ -191,8 +196,12 @@ try:
     b._start_research()
     check(b.bis is None and "chars" not in b.live.providers and isinstance(b.research, research.Research),
           "the research without the ranks")
+    left = [t.name for t in threading.enumerate() if t.name in ("research", "research-web", "live-data", "sim-weights",
+                                                                  "bis", "sims", "sims-talents", "pursuit", "sim-queue")]
+    check(not left, "no worker left running: %s" % left)
 finally:
     (glide_app.ROOT, research.Research.start, live_data.LiveData.start, sim_weights.SimWeights.start,
-     bis.BisRanker.start, coach_tools.research, coach_tools.bis) = saved
+     bis.BisRanker.start, sims.Sims.start, pursuit.Planner.start, coach_tools.research, coach_tools.bis,
+     coach_tools.sims, coach_tools.pursuit) = saved
     shutil.rmtree(tmp, ignore_errors=True)
 print("OK")

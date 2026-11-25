@@ -38,6 +38,7 @@ import offline_coach  # noqa: E402
 import coach as coach_mod  # noqa: E402
 import coach_tools  # noqa: E402
 import live_data  # noqa: E402
+import pursuit  # noqa: E402
 import research  # noqa: E402
 import settings  # noqa: E402
 import sim_queue  # noqa: E402
@@ -146,11 +147,13 @@ def fake_link(char, req):
 
 tmp = tempfile.mkdtemp(prefix="glide-sims-wiring-")
 saved = (glide_app.ROOT, research.Research.start, live_data.LiveData.start, sim_weights.SimWeights.start,
-         bis.BisRanker.start, sims_mod.Sims.start, coach_tools.research, coach_tools.bis, coach_tools.sims,
-         coach_tools._last_link)
+         bis.BisRanker.start, sims_mod.Sims.start, pursuit.Planner.start, coach_tools.research, coach_tools.bis,
+         coach_tools.sims, coach_tools.pursuit, coach_tools._last_link)
 try:
-    for cls in (research.Research, live_data.LiveData, sim_weights.SimWeights, bis.BisRanker, sims_mod.Sims):
-        cls.start = lambda self: self                     # (no threads)
+    for cls in (research.Research, live_data.LiveData, sim_weights.SimWeights, bis.BisRanker, sims_mod.Sims,
+                pursuit.Planner):
+        cls.start = lambda self: self                     # (no threads: one left polling can print while Python
+        #                                                   shuts down, a fatal error on CI's stdout)
     wow = os.path.join(tmp, "wow")
     glide = os.path.join(wow, "Interface", "AddOns", "Glide")
     os.makedirs(os.path.join(glide, "Data"))
@@ -343,9 +346,12 @@ try:
     d = make_app(home, {})
     d._start_research()
     check(d.sims is None and coach_tools.sims is None and "chars" not in d.live.providers, "no queue, no sims")
+    left = [t.name for t in threading.enumerate() if t.name in ("research", "live-data", "sim-weights", "bis", "sims",
+                                                                  "pursuit")]
+    check(not left, "no polling worker left running: %s" % left)
 finally:
     (glide_app.ROOT, research.Research.start, live_data.LiveData.start, sim_weights.SimWeights.start,
-     bis.BisRanker.start, sims_mod.Sims.start, coach_tools.research, coach_tools.bis, coach_tools.sims,
-     coach_tools._last_link) = saved
+     bis.BisRanker.start, sims_mod.Sims.start, pursuit.Planner.start, coach_tools.research, coach_tools.bis,
+     coach_tools.sims, coach_tools.pursuit, coach_tools._last_link) = saved
     shutil.rmtree(tmp, ignore_errors=True)
 print("OK")
