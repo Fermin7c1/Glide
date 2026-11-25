@@ -9,6 +9,7 @@ looks only where AtlasLoot's dungeon module lives; load() reads again only when 
 Run: python3 tests/test_atlasloot_rates.py   (prints OK)
 """
 import builtins
+import codecs
 import os
 import shutil
 import subprocess
@@ -32,6 +33,8 @@ def refuse(*_a, **_k):
     raise AssertionError("atlasloot_rates ran something")
 
 
+codecs.lookup("utf-8-sig")      # (the codec the reader decodes with, loaded first: Python loads a codec's module the
+#                                  first time it's used, through exec, which a fresh interpreter would trip below)
 saved = (subprocess.Popen, os.system, builtins.eval, builtins.exec)
 subprocess.Popen, os.system, builtins.eval, builtins.exec = refuse, refuse, refuse, refuse  # type: ignore[assignment]
 try:
