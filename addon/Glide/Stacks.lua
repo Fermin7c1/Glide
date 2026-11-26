@@ -2,8 +2,9 @@
 -- never those of a stacking debuff on you (Arcane Blast): an item writes its stack text before it finds that debuff
 -- (it looks your auras up as helpful ones first, and finds the debuff after), then only its timer moves.
 --
--- Glide writes the count after the item has found the aura, on a text of its own laid over the item's (the same font,
--- the same place), only when the item's own text had no aura to show: Blizzard's frames are never written to. In
+-- Glide writes the count after the item has found the aura, on a text of its own laid over the item's (the same place
+-- and font face, drawn larger, outlined and in gold so it reads on the icon), only when the item's own text had no
+-- aura to show: Blizzard's frames are never written to. In
 -- combat the count is a secret value: handed to the game to draw as it is, never read (a count of 0, an aura that
 -- doesn't stack, shows nothing). On by default; the Glide window or "/glide stacks on|off".
 local _, ns = ...
@@ -30,15 +31,34 @@ local function ownText(item)
     if type(apps) == "table" and apps.Applications then return apps.Applications end
 end
 
---- Our text, laid over the item's own (its font, its bottom-right corner; sized by its own text: the item's is empty
---- whenever ours shows, and an icon item's sizes to its text): made the first time it's needed.
+-- the count drawn to stand out on the icon (a small white number blends into Arcane Blast's purple and white): the
+-- item's own font face at about 1.6 times its size (16 to 28), a thick black outline with a shadow, in gold
+local SCALE, MIN_SIZE, MAX_SIZE = 1.6, 16, 28
+local GOLD = { 1, 0.82, 0.1 }
+
+local function style(fs, own)
+    fs:SetFontObject(own:GetFontObject())      -- (the item's own font: what shows if its face can't be read)
+    local face, size = own:GetFont()
+    if type(face) ~= "string" or face == "" then face, size = fs:GetFont() end
+    if type(face) == "string" and face ~= "" then
+        size = math.floor(math.min(MAX_SIZE, math.max(MIN_SIZE, (tonumber(size) or 12) * SCALE)) + 0.5)
+        fs:SetFont(face, size, "THICKOUTLINE")
+    end
+    fs:SetTextColor(GOLD[1], GOLD[2], GOLD[3])
+    fs:SetShadowColor(0, 0, 0, 1)
+    fs:SetShadowOffset(1, -1)
+end
+
+--- Our text, laid over the item's own (its bottom-right corner, styled to stand out; sized by its own text: the
+--- item's is empty whenever ours shows, and an icon item's sizes to its text): made the first time it's needed.
 local function textFor(item)
     if texts[item] then return texts[item] end
     local own = ownText(item)
     local parent = own and own:GetParent()
     if not parent then return nil end
     local fs = parent:CreateFontString(nil, "OVERLAY")
-    fs:SetFontObject(own:GetFontObject())
+    fs:SetDrawLayer("OVERLAY", 7)                -- (over the icon's other art on its frame)
+    style(fs, own)
     fs:SetJustifyH(own:GetJustifyH())
     fs:SetPoint("BOTTOMRIGHT", own, "BOTTOMRIGHT", 0, 0)
     texts[item] = fs

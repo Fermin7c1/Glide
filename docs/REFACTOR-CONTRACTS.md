@@ -1456,3 +1456,8 @@ they don't spell out.
   77 without data/kb.db or the client's Map table), `tests/test_bis_wiring.py` and `tests/test_versions.py`; the
   `addon` golden re-recorded (the TOC gains `Pursuit.lua`) and the `desktop` golden (the new Settings group). The
   engine probes are unchanged (a simulated run starts no planner) and so is the knowledge probe.
+- **Addon 0.24.1, contract 8: the Cooldown Manager's stack count reads on the icon.** The count Stacks.lua draws
+  (addon 0.18.0) was the item's own small white number font, which blended into Arcane Blast's purple and white icon.
+  It keeps the item's font face and corner and is drawn about 1.6 times larger (16 to 28), with a thick black outline
+  and shadow, in gold, on the frame's top overlay sublevel; the item's font object stays when its face can't be read.
+  The player asked (2026-11-26). Pinned by `tests/test_addon_stacks.py`.

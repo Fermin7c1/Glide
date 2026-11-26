@@ -3,8 +3,10 @@
 for Blizzard's Tracked Bars and Tracked Buffs items that refresh in Blizzard's order (Blizzard_CooldownViewer,
 CooldownViewerBuffBarItemMixin:RefreshData): the player's auras looked up as helpful ones, the item's own stack text
 written, then a debuff on the player found (RefreshActive). So a stacking debuff (Arcane Blast) had no count:
-- Glide shows its count on a text of its own laid over the item's (its font, its bottom-right corner, sized by its
-  own text), after the item found it, and again on each stack change; never for a buff the item's own text shows,
+- Glide shows its count on a text of its own laid over the item's (its bottom-right corner, sized by its own text;
+  its font face drawn about 1.6 times larger, 16 to 28, with a thick outline, a shadow and in gold so it reads on the
+  icon; the item's font object when its face can't be read), after the item found it, and again on each stack
+  change; never for a buff the item's own text shows,
   nor for an aura that doesn't stack, nor on an item hooked while shown until its next refresh says which it is;
 - in combat the count is a secret value: handed to the game as it is, never compared (0 shows nothing);
 - the Cooldown Manager may load before or after Glide; items acquired later, and ones already shown, are hooked;
@@ -38,11 +40,24 @@ function hooksecurefunc(t, name, fn)
 end
 
 -- font strings and frames as the Cooldown Manager items have them
+FACES = { NumberFontNormalSmall = { "Fonts\\ARIALN.TTF", 12, "OUTLINE" }, NumberFontNormal = { "Fonts\\ARIALN.TTF", 14, "OUTLINE" },
+          Tiny = { "Fonts\\ARIALN.TTF", 6, "" } }
 local function newText(parent, font)
   local fs = { parent = parent, font = font, justify = "RIGHT" }
   function fs:SetText(t) self.text = t end function fs:GetText() return self.text end
   function fs:GetParent() return self.parent end
-  function fs:GetFontObject() return self.font end function fs:SetFontObject(f) self.font = f end
+  function fs:GetFontObject() return self.font end
+  function fs:SetFontObject(f) self.font = f; self.face = nil end
+  function fs:GetFont()
+    if self.face then return unpack(self.face) end
+    if self.noFace then return nil end
+    local f = FACES[self.font]; if f then return f[1], f[2], f[3] end
+  end
+  function fs:SetFont(face, size, flags) self.face = { face, size, flags } end
+  function fs:SetTextColor(r, g, b) self.color = { r, g, b } end
+  function fs:SetShadowColor(r, g, b, a) self.shadow = { r, g, b, a } end
+  function fs:SetShadowOffset(x, y) self.shadowAt = { x, y } end
+  function fs:SetDrawLayer(layer, sub) self.layer, self.sublayer = layer, sub end
   function fs:GetJustifyH() return self.justify end function fs:SetJustifyH(j) self.justify = j end
   function fs:SetPoint(point, rel, relPoint, x, y) self.point, self.over, self.relPoint, self.x, self.y = point, rel, relPoint, x, y end
   return fs
@@ -115,9 +130,13 @@ blast.debuff = L.eval("{ applications = 3 }")
 bars.Acquire(bars, blast)
 assert blast.own.text == "" and text(blast) == 3, (blast.own.text, text(blast))
 fs = ours(blast)
-assert fs.font == "NumberFontNormalSmall" and same(fs.over, blast.own) and fs.layer == "OVERLAY" and fs.justify == "RIGHT" \
+assert same(fs.over, blast.own) and fs.layer == "OVERLAY" and fs.sublayer == 7 and fs.justify == "RIGHT" \
     and fs.point == "BOTTOMRIGHT" and fs.relPoint == "BOTTOMRIGHT" and fs.x == 0 and fs.y == 0, \
-    "the same font and corner as the item's own text (sized by its own: the item's is empty then)"
+    "the same corner as the item's own text (sized by its own: the item's is empty then), on top"
+face = list(fs.face.values())
+assert face == ["Fonts\\ARIALN.TTF", 19, "THICKOUTLINE"], face            # (12 x 1.6, the bar's own font face)
+assert list(fs.color.values()) == [1, 0.82, 0.1] and list(fs.shadow.values()) == [0, 0, 0, 1] and \
+    list(fs.shadowAt.values()) == [1, -1], "gold, with a black shadow: it reads on Arcane Blast's purple and white"
 blast.debuff = L.eval("{ applications = 4 }")             # a stack more: the item refreshes (UNIT_AURA)
 blast.RefreshData(blast)
 assert text(blast) == 4, text(blast)
@@ -161,8 +180,29 @@ assert text(blast) == "", text(blast)
 icon = G.newItem("icon")
 icon.debuff = L.eval("{ applications = 2 }")
 icons.Acquire(icons, icon)
-assert text(icon) == 2 and ours(icon).font == "NumberFontNormal" and same(ours(icon).over, icon.own) and \
-    ours(icon).point == "BOTTOMRIGHT", text(icon)
+assert text(icon) == 2 and same(ours(icon).over, icon.own) and ours(icon).point == "BOTTOMRIGHT", text(icon)
+assert list(ours(icon).face.values()) == ["Fonts\\ARIALN.TTF", 22, "THICKOUTLINE"], "14 x 1.6 on the icon view"
+
+# sizes kept between 16 and 28 whatever the item's font; a face that can't be read: the item's font object, in gold
+tiny = G.newItem("bar")
+tiny.own.font = "Tiny"
+tiny.debuff = L.eval("{ applications = 2 }")
+bars.Acquire(bars, tiny)
+assert list(ours(tiny).face.values())[1] == 16, "never smaller than 16"
+L.execute('FACES.Huge = { "Fonts\\\\ARIALN.TTF", 40, "" }')
+huge = G.newItem("bar")
+huge.own.font = "Huge"
+huge.debuff = L.eval("{ applications = 2 }")
+bars.Acquire(bars, huge)
+assert list(ours(huge).face.values())[1] == 28, "never larger than 28"
+blank = G.newItem("bar")
+blank.own.noFace = True
+L.execute('FACES.Unknown = nil')
+blank.own.font = "Unknown"
+blank.debuff = L.eval("{ applications = 2 }")
+bars.Acquire(bars, blank)
+assert ours(blank).font == "Unknown" and ours(blank).face is None and list(ours(blank).color.values()) == [1, 0.82, 0.1] \
+    and text(blank) == 2, "the item's own font object, still gold"
 
 # back in the pool: nothing of the last aura stays
 icon.ResetCooldownData(icon)
